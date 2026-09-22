@@ -86,6 +86,14 @@ FIN_TIP_FLAT = 7.0           # length of the flat pad at the tip that touches th
 FIN_EDGE_FILLET = 3.8        # rounding on the fin edges. Just under half of FIN_TIP_THICK
                              # gives fully rounded, cast-looking edges
 
+FIN_WALL = 3.0               # die-cast wall thickness. The fin is hollow, open on the side facing
+                             # the body (like a production casting); 0 = solid
+FIN_BOLTS_Z_FRAC = (0.35, 0.65)  # bolt heights, as fractions along the fin root (bottom to top)
+FIN_BOLT_CLEAR = 4.5         # M4 clearance hole through the body wall and the chassis ring
+FIN_BOLT_PILOT = 3.3         # M4 tapping hole in the fin's internal boss
+FIN_BOSS_DIA = 9.0           # cast boss inside the hollow fin that the bolt screws into
+FIN_BOSS_LENGTH = 14.0
+
 # ---------------------------------------------------------------------------
 # 7. Foot and base collar (gold, one part). The collar is the gold ring under
 #    the body; the foot is the short cylinder below it, kept clear of the ground.
@@ -152,11 +160,42 @@ BATTERY_CLEARANCE = 1.0      # gap kept between the battery and the inner wall
 # The build tries every orientation of the battery box and picks the one that
 # sits lowest in the body (lowest centre of mass).
 
+# Passive radiator (bought-in): rear-facing oval, mounted from inside on a
+# moulded flat seat. It goes in through the driver opening before the driver.
+PR_W = 40.0                  # oval width (horizontal)
+PR_H = 60.0                  # oval height (vertical: fits the tall body better)
+PR_DEPTH = 15.0              # frame + diaphragm travel, used as its volume envelope
+PR_FLANGE = 4.0              # frame rim that sits on the seat (opening is smaller by this)
+PR_RING_WIDTH = 4.0          # seat extends this far beyond the radiator
+PR_ANGLE_DEG = 180.0         # 180 = dead rear
+PR_Z_FRAC = 0.62             # centre height (fraction of body height); same as the driver
+PR_MASS = 60.0
+
+# Internal chassis (steel), fitted in pieces because nothing wider than the
+# openings (collar ~48 mm, cone ~54 mm, driver hole ~60 mm) can get inside:
+# * 3 fin brackets: curved plates hugging the wall behind each fin. The fin
+#   bolts go through the body into them, and each bracket bolts to the ballast cup.
+# * a spine plate standing on the ballast cup behind the driver. It carries the
+#   PCBs and has a tab under the driver magnet.
+CHASSIS_THICK = 1.2          # sheet thickness
+CHASSIS_BRACKET_WIDTH = 30.0 # width of each fin bracket along the wall
+CHASSIS_WEB_OFFSET = 7.0     # bracket web sits beside the bolt line, clear of the bolt heads
+CHASSIS_GAP = 0.3            # clearance to the inner wall
+
+# Ballast: a steel cup round the upright battery, bolted onto the foot. The
+# foot, the cup and the battery go in together through the collar opening. Its
+# diameter is set by that opening and its height by the mass.
+BALLAST_MASS_G = 581.0       # sized so the total reaches TARGET_MASS_G; report.md shows the
+                             # ballast needed whenever other parts change
+TARGET_MASS_G = 1800.0       # the report compares the total against this
+
+BUTYL_MASS_G = 50.0          # damping pads on the inside of the shell
+BUTYL_DENSITY = 1.6          # used to subtract their volume from the air volume
+
 # Masses of bought-in parts, used for the centre of mass (grams)
 BATTERY_MASS = 95.0
 DRIVER_MASS = 65.0
-PCB_MASS = 30.0              # amplifier, BT and USB board, assumed just above the battery
-PCB_ABOVE_BATTERY = 12.0     # centre of the PCB mass above the top of the battery
+PCB_MASS = 30.0              # amplifier + BT board, mounted on the chassis spine
 
 # ---------------------------------------------------------------------------
 # 11. Materials: production intent, used for mass and centre of mass.
@@ -166,18 +205,21 @@ MATERIAL_DENSITY = {          # g/cm^3
     "pc_abs": 1.20,           # moulded PC/ABS, then gloss lacquered
     "aluminium": 2.70,        # gold-anodised aluminium
     "zinc_diecast": 6.60,     # Zamak die-cast, gold plated
-    "stainless": 7.90,
-    "brass": 8.50,
+    "steel": 7.85,            # galvanised sheet steel / steel bar
+    "stainless_304": 8.00,    # perforated stainless sheet, gold PVD
+    "brass": 8.50,            # solid brass, turned
     "pla": 1.24,              # typical FDM prototype
 }
 PART_MATERIALS = {
     "body": "pc_abs",
     "nose_cone": "aluminium",
-    "fins": "zinc_diecast",
+    "fins": "zinc_diecast",   # hollow die-casting, see FIN_WALL
     "foot": "zinc_diecast",   # includes the base collar
-    "grille": "aluminium",    # perforated sheet
+    "grille": "stainless_304",
     "bezel": "aluminium",
-    "knob": "aluminium",
+    "knob": "brass",
+    "chassis": "steel",       # internal sled
+    "ballast": "steel",       # internal ballast slug
 }
 
 # ---------------------------------------------------------------------------

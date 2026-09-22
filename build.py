@@ -33,7 +33,7 @@ RED_RGB = _hex(p.RED_HEX)
 
 
 # How each part is turned for 3D printing, and why (listed in the report too).
-def _print_pose(name, shape, info):
+def _print_pose(name, shape, internal=()):
     if name.startswith("body"):
         # upside down: the flat top rim sits on the bed and the walls lean
         # < 45 deg almost everywhere, so it prints without support
@@ -55,6 +55,8 @@ def _print_pose(name, shape, info):
     elif name == "knob":
         s = Rot(90, 0, 0) * shape
         why = "front face down on the bed, shaft bore facing up"
+    elif name in internal:
+        s, why = shape, "internal production part (as assembled; printing is optional)"
     else:
         s, why = shape, "as modelled"
     bb = s.bounding_box()
@@ -74,15 +76,18 @@ def export_all(m):
     for name, shape in m.parts.items():
         s = shape
         s.label = name
-        s.color = Color(*(RED_RGB if name.startswith("body") else GOLD_RGB))
+        s.color = Color(*(RED_RGB if name.startswith("body") else
+                          (0.55, 0.56, 0.58) if name in m.internal else GOLD_RGB))
         children.append(s)
     assy = Compound(children=children, label="atelier_rocket_speaker")
     export_step(assy, str(OUT / "atelier_assembly.step"))
 
     poses = {}
+    (stl_dir / "internal").mkdir()
     for name, shape in m.parts.items():
-        s, why = _print_pose(name, shape, m.info)
-        export_stl(s, str(stl_dir / f"{name}.stl"),
+        s, why = _print_pose(name, shape, m.internal)
+        sub = stl_dir / "internal" if name in m.internal else stl_dir
+        export_stl(s, str(sub / f"{name}.stl"),
                    tolerance=p.STL_TOLERANCE, angular_tolerance=p.STL_ANGULAR_TOLERANCE)
         poses[name] = why
     return poses
@@ -91,7 +96,7 @@ def export_all(m):
 def write_report(m, poses, build_seconds):
     I = m.info
     bb = analysis.overall_dims(m)
-    air_body, air_cone = analysis.air_volume(m)
+    air_body, air_cone = analysis.air_volume(m, p)
     rows, total_m, com = analysis.mass_properties(m, p)
     tips = analysis.tip_angles(m, com)
     worst = tips[0]
@@ -124,9 +129,10 @@ def write_report(m, poses, build_seconds):
     L("")
     L("## Internal air volume")
     L("")
-    L(f"* **Body: {air_body:.3f} L** (the inner cavity minus the driver envelope "
-      f"({p.DRIVER_DIA:g} x {p.DRIVER_DEPTH:g} mm), the battery envelope, the driver mount "
-      f"and the spigots).")
+    L(f"* **Body: {air_body:.3f} L**. That's the inner cavity minus the driver ({p.DRIVER_DIA:g} x "
+      f"{p.DRIVER_DEPTH:g} mm), passive radiator ({p.PR_W:g} x {p.PR_H:g} x {p.PR_DEPTH:g} mm oval), "
+      f"battery, ballast cup, chassis, driver/radiator seats, spigots, and "
+      f"{p.BUTYL_MASS_G / p.BUTYL_DENSITY:.0f} cm3 of butyl pads.")
     L(f"* Nose cone interior: {air_cone:.3f} L more, if the cone is left open to the body "
       f"(total {air_body + air_cone:.3f} L).")
     L("* For a sealed box, the knob shaft, LED and USB-C openings must be sealed.")
@@ -143,7 +149,11 @@ def write_report(m, poses, build_seconds):
         L(f"* Battery goes in through the {f(2 * I['r_in_top'])} mm top opening "
           f"(needs {f(I['battery_min_opening'])} mm): {ok(2 * I['r_in_top'] >= I['battery_min_opening'])}")
     L(f"* Top (nose cone) opening: {f(2 * I['r_in_top'])} mm; bottom (collar) opening: "
-      f"{f(2 * I['r_in_bottom'])} mm. Both are for PCBs, wiring, battery and knob/LED boards.")
+      f"{f(2 * I['r_in_bottom'])} mm. Every internal part is sized to pass through one of them "
+      f"(the chassis is fitted as {I['chassis_pieces']} pieces).")
+    L(f"* Fin brackets reach the ballast cup to bolt to it: {ok(I['bracket_reaches_cup'])}")
+    for a, b, v in I["clashes"]:
+        L(f"* {a.capitalize()} vs {b}: {ok(v < 1.0)}" + ("" if v < 1.0 else f" ({v / 1000:.1f} cm3 overlap)"))
     L("")
     L("## Mass and centre of mass (production materials)")
     L("")
@@ -154,11 +164,27 @@ def write_report(m, poses, build_seconds):
         L(f"| {r['name']} | {r['material']} | {v} | {f(r['mass_g'])} |")
     L(f"| **Total** | | | **{f(total_m)}** |")
     L("")
+    fin_rho = p.MATERIAL_DENSITY[p.PART_MATERIALS["fins"]]
+    fin_solid = I["fin_solid_volume"] / 1000 * fin_rho
+    fin_hollow = next(r["mass_g"] for r in rows if r["name"] == "fin_1")
+    L(f"* **Fins:** hollow die-cast with a {p.FIN_WALL:g} mm wall: **{f(fin_hollow)} g each, "
+      f"{f(fin_hollow * p.FIN_COUNT)} g for all {p.FIN_COUNT}** (solid would be {f(fin_solid)} g each, "
+      f"{f(fin_solid * p.FIN_COUNT)} g).")
+    ballast_now = next((r["mass_g"] for r in rows if r["name"] == "ballast"), 0.0)
+    need = p.TARGET_MASS_G - (total_m - ballast_now)
+    delta = total_m - p.TARGET_MASS_G
+    L(f"* **Target: {f(p.TARGET_MASS_G, 0)} g. Total: {f(total_m)} g "
+      f"({'+' if delta >= 0 else ''}{f(delta)} g).**")
+    L(f"* **Ballast needed to hit the target: {f(need)} g**; `BALLAST_MASS_G` is set to "
+      f"{f(p.BALLAST_MASS_G)} g. The steel cup is {f(I['ballast_dia'])} mm OD x "
+      f"{f(I['ballast_h'])} mm tall (top at {f(I['ballast_top'])} mm).")
+    L("")
     L(f"* **Centre of mass: {f(com[2])} mm above the ground** "
       f"({f(100 * com[2] / bb.max.Z, 0)}% of overall height), "
       f"offset {f(math.hypot(com[0], com[1]))} mm from the axis (towards the front grille and knob).")
     L(f"* Battery: {I['battery_orientation']}, bottom at {f(I['battery_z_bottom'])} mm, "
-      f"centre at {f(I['battery_z_centre'])} mm (the lowest position that fits).")
+      f"centre at {f(I['battery_z_centre'])} mm (the lowest position that fits and can be "
+      f"fitted through the {f(I['insert_opening_dia'])} mm opening).")
     L("")
     L("## Stability")
     L("")
@@ -173,15 +199,19 @@ def write_report(m, poses, build_seconds):
       "tip angle = atan(distance from CoM to the line / CoM height). For reference, the "
       "AV-equipment safety standard IEC 62368-1 tilts products by 10 deg in its stability test.")
     L("* The worst direction is towards the front, because the grille, bezel, knob and driver pull the "
-      "CoM slightly forward, and a fin pair (not a single fin) faces that way. The solid zinc foot and "
-      "collar act as ballast.")
+      "CoM slightly forward, and a fin pair (not a single fin) faces that way.")
+    L(f"* Mass low down: the {f(p.BALLAST_MASS_G, 0)} g steel ballast cup, the solid zinc foot and "
+      "collar, and the battery all sit in the bottom third. The ballast adds mass, which makes the "
+      "product feel solid and resist being nudged, but it only helps the tip angle as far as it "
+      "lowers the CoM.")
     L("")
     L("## Parts and print orientation (output/stl)")
     L("")
     L("| STL | Production material | Print orientation |")
     L("|---|---|---|")
     for name, why in poses.items():
-        L(f"| {name}.stl | {p.PART_MATERIALS[m.part_material_key[name]]} | {why} |")
+        path = f"internal/{name}.stl" if name in m.internal else f"{name}.stl"
+        L(f"| {path} | {p.PART_MATERIALS[m.part_material_key[name]]} | {why} |")
     L("")
     (OUT / "report.md").write_text("\n".join(lines) + "\n")
     return dict(air=air_body, com=com, total=total_m, tip=worst["angle"])

@@ -9,14 +9,17 @@ import numpy as np
 from build123d import CenterOf, Vector
 
 
-def air_volume(model):
+def air_volume(model, p):
     """Air inside the sealed body: the inner cavity minus everything that
-    sits in it (spigots, driver mount, driver and battery envelopes)."""
+    sits in it (spigots, mounts, chassis, ballast, driver, passive radiator and
+    battery envelopes, and the butyl damping pads)."""
     air = model.envelopes["body_cavity"]
     for name, part in model.parts.items():
         air = air - part
-    air = air - model.envelopes["driver"] - model.envelopes["battery"]
-    body_l = air.volume / 1e6
+    for env in ("driver", "battery", "passive_radiator"):
+        air = air - model.envelopes[env]
+    butyl_l = p.BUTYL_MASS_G / p.BUTYL_DENSITY / 1000.0
+    body_l = air.volume / 1e6 - butyl_l
     cone_l = model.info["cone_cavity_volume"] / 1e6
     return body_l, cone_l
 
@@ -39,11 +42,15 @@ def mass_properties(model, p):
     I = model.info
     drv = model.envelopes["driver"].center(CenterOf.MASS)
     bat = model.envelopes["battery"].center(CenterOf.MASS)
-    bat_top = bat.Z + (bat.Z - I["battery_z_bottom"])
-    pcb = Vector(0, 0, bat_top + p.PCB_ABOVE_BATTERY)
+    pcb = Vector(*I["pcb_pos"])                      # on the chassis spine
+    prad = model.envelopes["passive_radiator"].center(CenterOf.MASS)
+    body_names = [n for n in model.parts if n.startswith("body")]
+    butyl = sum((model.parts[n].center(CenterOf.MASS) for n in body_names), Vector()) / len(body_names)
     for name, mass, c in (("battery (bought-in)", p.BATTERY_MASS, bat),
                           ("driver (bought-in)", p.DRIVER_MASS, drv),
-                          ("PCB (bought-in)", p.PCB_MASS, pcb)):
+                          ("passive radiator (bought-in)", p.PR_MASS, prad),
+                          ("PCB (bought-in)", p.PCB_MASS, pcb),
+                          ("butyl damping pads", p.BUTYL_MASS_G, butyl)):
         rows.append(dict(name=name, material="-", volume_cm3=None, mass_g=mass, com_z=c.Z))
         total_m += mass
         moment += mass * np.array([c.X, c.Y, c.Z])

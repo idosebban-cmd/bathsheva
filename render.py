@@ -161,12 +161,17 @@ def _plotter(model, p, size, section=False):
     gold = dict(color=hex_linear(p.GOLD_HEX), pbr=True, metallic=p.GOLD_METALLIC,
                 roughness=p.GOLD_ROUGHNESS)
     clip = dict(normal=(1, 0, 0), origin=(0, 0, 0), invert=True) if section else None
+    steel = dict(color=hex_linear("#8C8F94"), pbr=True, metallic=1.0, roughness=0.45)
+    internal = getattr(model, "internal", set())
     for name, shape in model.parts.items():
+        if name in internal and not section:
+            continue                                   # hidden inside anyway
         mesh = _to_mesh(shape)
         if section:
             mesh = mesh.clip(**clip)
         is_red = name.startswith("body")
-        actor = pl.add_mesh(mesh, smooth_shading=True, **(red if is_red else gold))
+        style = red if is_red else steel if name in internal else gold
+        actor = pl.add_mesh(mesh, smooth_shading=True, **style)
         if is_red and p.BODY_CLEARCOAT > 0:
             prop = actor.GetProperty()
             prop.SetCoatStrength(p.BODY_CLEARCOAT)
@@ -176,8 +181,12 @@ def _plotter(model, p, size, section=False):
 
     if not section:
         _add_led(pl, model, p)
+        # passive radiator diaphragm, seen through the rear opening
+        pl.add_mesh(_to_mesh(model.envelopes["passive_radiator"], 0.2), color=(0.06, 0.06, 0.07),
+                    pbr=True, metallic=0.0, roughness=0.6)
     else:
-        colours = {"driver": (0.15, 0.15, 0.17), "battery": (0.2, 0.45, 0.75)}
+        colours = {"driver": (0.15, 0.15, 0.17), "battery": (0.2, 0.45, 0.75),
+                   "passive_radiator": (0.35, 0.2, 0.45)}
         for name, env in model.envelopes.items():
             if name in colours:
                 pl.add_mesh(_to_mesh(env, 0.3).clip(**clip), color=colours[name], opacity=0.9)

@@ -29,6 +29,7 @@ from build123d import (
     Box,
     Cylinder,
     Edge,
+    Ellipse,
     Face,
     GeomType,
     Kind,
@@ -354,10 +355,134 @@ def build(p) -> Model:
     fins, tips = _build_fins(p, I, r_out, outer_solid, z0, bh, R)
     I["fin_tips"] = tips
 
-    # ---- battery envelope -------------------------------------------------
-    batt, batt_info = _place_battery(p, r_in, battery_floor_z, zt)
+    fin_angles = [p.FIN_ANGLE_OFFSET_DEG + k * 360 / p.FIN_COUNT for k in range(p.FIN_COUNT)]
+    rho = lambda key: p.MATERIAL_DENSITY[p.PART_MATERIALS[key]]
+
+    def radial_cyl(radius, ang, z, r0, r1):
+        """Cylinder pointing outward from the axis at angle ang, from radius r0 to r1."""
+        return Rot(0, 0, ang - 90) * Pos(r0, 0, z) * Rot(0, 90, 0) * Cylinder(radius, r1 - r0, align=MIN)
+
+    # ---- fins bolt through the body wall into the chassis rings ------------
+    bolt_z = I["fin_bolt_z"]
+    for ang in fin_angles:
+        for zb in bolt_z:
+            body = body - radial_cyl(p.FIN_BOLT_CLEAR / 2, ang, zb, r_in(zb) - 3, r_out(zb) + 1)
+
+    # ---- passive radiator (rear) ------------------------------------------
+    zp = z0 + bh * p.PR_Z_FRAC
+    pr_rot = Rot(0, 0, p.PR_ANGLE_DEG - 180)          # built facing +Y (rear)
+
+    def y_oval(w, h, y0, y1):
+        return Pos(0, y1, zp) * extrude(Plane.XZ * Ellipse(w / 2, h / 2), amount=y1 - y0)
+
+    ow, oh = p.PR_W / 2 + p.PR_RING_WIDTH, p.PR_H / 2 + p.PR_RING_WIDTH
+    y_wall = []
+    for th in np.linspace(0, 2 * math.pi, 72, endpoint=False):
+        x, z = ow * math.cos(th), zp + oh * math.sin(th)
+        ri = r_in(z)
+        if ri > abs(x):
+            y_wall.append(math.sqrt(ri * ri - x * x))
+    y_pr = min(y_wall) - 0.5                           # flat seat, just inside the wall
+    ow2, oh2 = p.PR_W - 2 * p.PR_FLANGE, p.PR_H - 2 * p.PR_FLANGE
+    pr_seat = (y_oval(2 * ow, 2 * oh, y_pr, y_pr + 100) & offset_solid(-p.WALL + 0.3)) \
+        - y_oval(ow2, oh2, y_pr - 5, y_pr + 100)
+    body = body + pr_rot * pr_seat
+    body = body - pr_rot * y_oval(ow2, oh2, y_pr - 5, r_out(zp) + 10)
+    m.envelopes["passive_radiator"] = pr_rot * y_oval(p.PR_W, p.PR_H, y_pr - p.PR_DEPTH, y_pr)
+    I.update(z_pr=zp)
+
+    # ---- base module: ballast cup + battery ---------------------------------
+    # Everything inside has to pass through an opening: the collar opening
+    # (nose_tail), or the cone opening (nose). The foot, the ballast cup and the
+    # battery go in together from below as one "base module". The ballast is a
+    # steel sleeve round the upright battery, so the battery stays as low as it can.
+    if p.SPLIT_MODE == "nose_tail":
+        open_r = r_in(z0)
+    elif p.SPLIT_MODE == "nose":
+        open_r = inner[-1, 0]
+    else:
+        open_r = R  # clamshell: the body opens fully
+    I["insert_opening_dia"] = 2 * open_r
+    batt, batt_info = _place_battery(p, r_in, battery_floor_z, zt,
+                                     max_footprint=2 * (open_r - p.FIT_CLEARANCE))
     m.envelopes["battery"] = batt
     I.update(batt_info)
+    bb = batt.bounding_box()
+
+    r_bal = min(open_r, r_in(battery_floor_z)) - p.FIT_CLEARANCE - 0.5
+    vol_bal = p.BALLAST_MASS_G / rho("ballast") * 1000.0      # mm^3
+    pocket_w, pocket_d = bb.size.X + 2 * p.BATTERY_CLEARANCE, bb.size.Y + 2 * p.BATTERY_CLEARANCE
+    area = math.pi * r_bal ** 2 - pocket_w * pocket_d
+    h_bal = vol_bal / area
+    cup_top = battery_floor_z
+    if h_bal > 0.1:
+        cup = Pos(0, 0, battery_floor_z) * Cylinder(r_bal, h_bal, align=MIN)
+        cup = cup - Pos(0, 0, battery_floor_z - 1) * Box(pocket_w, pocket_d, h_bal + 2, align=MIN)
+        m.parts["ballast"] = _one_solid(cup)
+        m.part_material_key["ballast"] = "ballast"
+        cup_top = battery_floor_z + h_bal
+    I.update(ballast_dia=2 * r_bal, ballast_h=h_bal, ballast_top=cup_top)
+
+    # ---- chassis (steel, fitted in pieces) ------------------------------------
+    # * 3 fin brackets: curved plates hugging the wall behind each fin. The fin
+    #   bolts pass through the body into them, and a web + flange bolts each
+    #   bracket to the ballast cup, so fin loads go into steel, not plastic.
+    # * a spine plate standing on the cup behind the driver, carrying the PCBs,
+    #   with a tab under the driver magnet.
+    t = p.CHASSIS_THICK
+    g = -p.WALL - p.CHASSIS_GAP
+    inside_ch = offset_solid(g)
+    wall_plate = band(g - t, g)
+    z_lo, z_hi = min(bolt_z) - 8, max(bolt_z) + 8
+    pieces = []
+    for ang in fin_angles:
+        r_mid = r_in((z_lo + z_hi) / 2)
+        half = math.degrees(p.CHASSIS_BRACKET_WIDTH / 2 / r_mid)
+        plate = wall_plate & _sector(ang - half, ang + half, z_lo, z_hi)
+        # web, offset to one side of the bolt line so it clears the bolt heads
+        web = Rot(0, 0, ang - 90) * Pos(r_bal + 0.3, p.CHASSIS_WEB_OFFSET, z_lo + 4) * Box(
+            100, t, z_hi - z_lo - 8, align=(Align.MIN, Align.CENTER, Align.MIN))
+        flange = Rot(0, 0, ang - 90) * Pos(r_bal + 0.3, p.CHASSIS_WEB_OFFSET, z_lo + 4) * Box(
+            t, 14, z_hi - z_lo - 8, align=(Align.MIN, Align.CENTER, Align.MIN))
+        br = (plate + (web & inside_ch) + flange)
+        for zb in bolt_z:
+            br = br - radial_cyl(p.FIN_BOLT_CLEAR / 2, ang, zb, r_in(zb) - 10, r_out(zb) + 1)
+        pieces.append(_one_solid(br))
+    y_sp = I["y_driver_seat"] + p.DRIVER_DEPTH + 1.5         # just behind the driver magnet
+    z_sp0 = max(cup_top, bb.max.Z) + 0.5
+    z_sp1 = zt - p.CONE_SPIGOT_DEPTH - 5
+    w_sp = 2 * r_bal                                          # fits through the opening
+    spine = Pos(0, y_sp, z_sp0) * Box(w_sp, t, z_sp1 - z_sp0,
+                                      align=(Align.CENTER, Align.MIN, Align.MIN))
+    foot_fl = Pos(0, y_sp - 8, z_sp0) * Box(w_sp, 16 + t, t,
+                                            align=(Align.CENTER, Align.MIN, Align.MIN))
+    z_tab = zg - p.DRIVER_DIA / 2 - 0.5
+    y_tab0 = I["y_driver_seat"] + p.DRIVER_DEPTH * 0.4
+    tab = Pos(0, y_tab0, z_tab - t) * Box(24, y_sp - y_tab0 + t, t,
+                                          align=(Align.CENTER, Align.MIN, Align.MIN))
+    spine = _one_solid((spine + foot_fl + tab) & inside_ch)
+    pieces.append(spine)
+    chassis = None
+    for sol in pieces:
+        chassis = sol if chassis is None else chassis + sol
+    m.parts["chassis"] = chassis
+    m.part_material_key["chassis"] = "chassis"
+    I.update(chassis_spine_y=y_sp, chassis_top=z_sp1, chassis_pieces=len(pieces),
+             pcb_pos=(0.0, y_sp + t + 6.0, (z_sp0 + z_sp1) / 2),
+             bracket_reaches_cup=cup_top >= z_hi - 4)
+
+    # ---- fit checks between the internal items ------------------------------
+    items = {"driver": m.envelopes["driver"], "battery": batt,
+             "passive radiator": m.envelopes["passive_radiator"], "chassis": m.parts["chassis"]}
+    if "ballast" in m.parts:
+        items["ballast"] = m.parts["ballast"]
+    names = list(items)
+    clashes = []
+    for i in range(len(names)):
+        for j in range(i + 1, len(names)):
+            v = (items[names[i]] & items[names[j]]).volume
+            clashes.append((names[i], names[j], v))
+    I["clashes"] = clashes
 
     # ---- shadow line at the cone joint --------------------------------------
     body = _one_solid(body)
@@ -368,10 +493,7 @@ def build(p) -> Model:
     # ---- split the body ----------------------------------------------------
     if p.SPLIT_MODE == "fin_clamshell":
         a0 = p.FIN_ANGLE_OFFSET_DEG
-        wedge_pts = [(0, 0)] + [
-            (_dir(a).X * 400, _dir(a).Y * 400) for a in np.linspace(-a0, a0, 9)]
-        wedge = Pos(0, 0, -10) * extrude(
-            Face(Wire(Polyline(*wedge_pts, close=True).edges())), amount=H + 20)
+        wedge = _sector(-a0, a0, -10, H + 10)
         m.parts["body_front"] = _one_solid(body & wedge)
         m.parts["body_rear"] = _one_solid(body - wedge)
         m.part_material_key.update(body_front="body", body_rear="body")
@@ -381,6 +503,8 @@ def build(p) -> Model:
     else:
         raise ValueError(f"Unknown SPLIT_MODE {p.SPLIT_MODE!r}")
 
+    m.internal = {"chassis", "ballast"}
+    parts_internal = {k: m.parts.pop(k) for k in ("ballast", "chassis") if k in m.parts}
     m.parts["nose_cone"] = cone
     for i, f in enumerate(fins):
         m.parts[f"fin_{i + 1}"] = f
@@ -391,7 +515,14 @@ def build(p) -> Model:
     m.parts["knob"] = knob
     for k in ("nose_cone", "foot", "grille", "bezel", "knob"):
         m.part_material_key[k] = k
+    m.parts.update(parts_internal)                      # internal parts last
     return m
+
+
+def _sector(a0, a1, zlo, zhi):
+    """A pie-slice prism around the axis between angles a0..a1 (0 = front)."""
+    pts = [(0, 0)] + [(_dir(a).X * 400, _dir(a).Y * 400) for a in np.linspace(a0, a1, 9)]
+    return Pos(0, 0, zlo) * extrude(Face(Wire(Polyline(*pts, close=True).edges())), amount=zhi - zlo)
 
 
 def _chamfer_rim(solid, z, r, size):
@@ -475,6 +606,35 @@ def _build_fins(p, I, r_out, outer_solid, z0, bh, R):
             break
         except Exception:
             continue
+    I["fin_solid_volume"] = _one_solid(blank - outer_solid).volume
+
+    # bolt positions along the root
+    bolt_z = [z_rb + f * (z_rt - z_rb) for f in p.FIN_BOLTS_Z_FRAC]
+    I["fin_bolt_z"] = bolt_z
+
+    def along_x(radius, x0, x1, z):
+        return Pos(x0, 0, z) * Rot(0, 90, 0) * Cylinder(radius, x1 - x0, align=MIN)
+
+    if p.FIN_WALL > 0:
+        # Hollow it like a die-casting: a core FIN_WALL in from every outside
+        # surface, open on the root side against the body. Cast bosses inside
+        # take the M4 bolts that come through the body from the chassis.
+        w = p.FIN_WALL
+        core2d = offset(face, amount=-w, kind=Kind.ARC).faces()[0]
+        min_core = 1.5                                   # stop where the core gets too thin
+        u_lim = (ta - 2 * w - min_core) / slope
+        cav_pts = [(0, -(ta - 2 * w) / 2), (u_lim, -min_core / 2),
+                   (u_lim, min_core / 2), (0, (ta - 2 * w) / 2)]
+        cav_wedge = Pos(0, 0, -5) * extrude(
+            Face(Wire(Polyline(*cav_pts, close=True).edges())), amount=z_rt + 20)
+        cavity = extrude(core2d, amount=ta, both=True) & cav_wedge
+        for zb in bolt_z:
+            ro = r_out(zb)
+            cavity = cavity - along_x(p.FIN_BOSS_DIA / 2, ro - 4, ro + p.FIN_BOSS_LENGTH, zb)
+        blank = blank - cavity
+    for zb in bolt_z:
+        ro = r_out(zb)
+        blank = blank - along_x(p.FIN_BOLT_PILOT / 2, ro - 6, ro + p.FIN_BOSS_LENGTH - 4, zb)  # blind
     blank = _one_solid(blank - outer_solid)
     foot_pad = blank & Box(400, 400, 0.6, align=MIN)
     u_c = foot_pad.center().X  # centre of the ground contact patch
@@ -493,11 +653,15 @@ def _build_fins(p, I, r_out, outer_solid, z0, bh, R):
 # ---------------------------------------------------------------------------
 # battery
 # ---------------------------------------------------------------------------
-def _place_battery(p, r_in, z_floor, z_top):
-    """Try the battery box in each orientation; keep the one whose centre is lowest."""
+def _place_battery(p, r_in, z_floor, z_top, max_footprint=1e9):
+    """Try the battery box in each orientation; keep the one whose centre is
+    lowest. Orientations whose footprint can't pass through the assembly
+    opening (max_footprint) are skipped, so the battery can actually be fitted."""
     L, W, T = p.BATTERY_SIZE
     best = None
     for (h, a, b) in ((T, L, W), (W, L, T), (L, W, T)):
+        if math.hypot(a, b) > max_footprint:
+            continue
         half_diag = math.hypot(a, b) / 2 + p.BATTERY_CLEARANCE
         zb = z_floor
         while zb + h < z_top:

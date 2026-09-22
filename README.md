@@ -8,7 +8,7 @@ One command regenerates everything in `output/`:
 | File | What it is |
 |---|---|
 | `output/atelier_assembly.step` | Full assembly, one named and coloured solid per part. Send this to the industrial designer; it opens in Fusion 360, SolidWorks, Onshape, Rhino, FreeCAD... |
-| `output/stl/*.stl` | One STL per part, already turned to a sensible print orientation and sitting on the bed (z = 0) |
+| `output/stl/*.stl` | One STL per visible part, already turned to a sensible print orientation and sitting on the bed (z = 0). Internal production parts (chassis, ballast) are in `stl/internal/` |
 | `output/renders/*.png` | Front, side, rear, three-quarter, a cut-away section showing the internals, an overview sheet and a front/side/three-quarter sheet |
 | `output/report.md` | Dimensions, internal air volume, mass, centre of mass, tip-over angle, print notes |
 
@@ -54,6 +54,7 @@ Edit a value, save and run `python build.py`. The most useful ones:
 | Use a different driver or battery | `DRIVER_DIA`, `DRIVER_DEPTH`, `BATTERY_SIZE`, `BATTERY_MASS` |
 | Change the split lines | `SPLIT_MODE` (see below) |
 | Change materials (affects mass, CoM and tipping) | `PART_MATERIALS`, `MATERIAL_DENSITY` |
+| Change the target weight or ballast | `TARGET_MASS_G`, `BALLAST_MASS_G` (the report tells you the ballast needed) |
 | Change render colours and finish | `RED_HEX`, `GOLD_HEX`, `BODY_ROUGHNESS`, `BODY_CLEARCOAT`, `GOLD_ROUGHNESS` |
 | Change the joint line | `JOINT_SHADOW_LINE` (0 = no line) |
 
@@ -102,7 +103,22 @@ are measured around the axis from the front.
   plug engagement.
 * **Knob:** a low 5 mm disc. A hidden 10 mm boss on its back sits in a hole in the body wall, so the
   6 mm blind shaft bore still gets about 6.5 mm of grip on the encoder shaft.
-* **Cut-away render** (`render_section.png`): the driver is shown in black and the battery in blue.
+* **Passive radiator:** a 60 × 40 mm vertical oval on the rear at driver height, above the
+  rear fin. It sits on a flat moulded seat inside and goes in through the driver
+  opening before the driver.
+* **Ballast:** a steel cup round the upright battery, bolted onto the foot. The foot, the cup
+  and the battery go in together through the collar opening as one "base module".
+  `BALLAST_MASS_G` sets its mass (its height follows from that); `report.md` shows
+  how much is needed to reach `TARGET_MASS_G`.
+* **Chassis:** steel, fitted in 4 pieces, because nothing wider than the ~48–60 mm openings can
+  get in. There are 3 fin brackets hugging the wall behind the fins (the fins bolt through the
+  body into them with M4 bolts, heads inside) that bolt to the ballast cup, plus a
+  spine behind the driver that carries the PCBs and has a tab under the driver magnet.
+* **Fins:** hollow die-castings with a 3 mm wall (`FIN_WALL`), open against the body, with
+  cast bosses for the bolts.
+* **Fit checks:** the report checks every pair of internal items for overlaps.
+* **Cut-away render** (`render_section.png`): the driver is shown in black, the battery in blue,
+  the passive radiator in purple and the steel parts in grey.
 
 ## Renders
 
