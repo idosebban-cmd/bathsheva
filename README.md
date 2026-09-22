@@ -10,7 +10,9 @@ One command regenerates everything in `output/`:
 | `output/atelier_assembly.step` | Full assembly, one named and coloured solid per part. Send this to the industrial designer; it opens in Fusion 360, SolidWorks, Onshape, Rhino, FreeCAD... |
 | `output/stl/*.stl` | One STL per visible part, already turned to a sensible print orientation and sitting on the bed (z = 0). Internal production parts (chassis, ballast) are in `stl/internal/` |
 | `output/renders/*.png` | Front, side, rear, three-quarter, a cut-away section showing the internals, an overview sheet and a front/side/three-quarter sheet |
-| `output/report.md` | Dimensions, internal air volume, mass, centre of mass, tip-over angle, print notes |
+| `output/report.md` | Dimensions, internal air volume, mass against the target, centre of mass, tip-over angle, fit checks, and the assembly steps that need a professional |
+| `output/print_prototype/` | Ready-to-print looks-like set: visible parts only, solid fins, no internals, plus `PRINT_NOTES.md` (material, orientation, supports per part) |
+| `output/pr_comparison/` | From `python compare_pr.py`: base-firing vs rear passive radiator, renders and a numbers table |
 
 ![overview](output/renders/render_overview.png)
 
@@ -29,9 +31,10 @@ pip install -r requirements.txt
 
 ```bash
 source .venv/bin/activate
-python build.py              # everything (~1 min; add ~30 s with the honeycomb grille on)
+python build.py              # everything (~2 min with the honeycomb grilles)
 python build.py --no-render  # skip the PNGs when you only need the CAD
-python build.py --hex        # honeycomb grille on for this run only
+python build.py --flat       # honeycomb off for this run (much faster while iterating)
+python compare_pr.py         # compare passive radiator layouts (~4 min)
 ```
 
 ## Changing the design
@@ -54,7 +57,8 @@ Edit a value, save and run `python build.py`. The most useful ones:
 | Use a different driver or battery | `DRIVER_DIA`, `DRIVER_DEPTH`, `BATTERY_SIZE`, `BATTERY_MASS` |
 | Change the split lines | `SPLIT_MODE` (see below) |
 | Change materials (affects mass, CoM and tipping) | `PART_MATERIALS`, `MATERIAL_DENSITY` |
-| Change the target weight or ballast | `TARGET_MASS_G`, `BALLAST_MASS_G` (the report tells you the ballast needed) |
+| Change the target weight or ballast | `TARGET_MASS_G`, `BALLAST_MASS_G` (`"auto"` sizes it to the target), ballast material in `PART_MATERIALS` |
+| Move the passive radiator | `PR_POSITION` = `"base"` (down-firing, smooth back) or `"rear"` (oval behind a gold cover) |
 | Change render colours and finish | `RED_HEX`, `GOLD_HEX`, `BODY_ROUGHNESS`, `BODY_CLEARCOAT`, `GOLD_ROUGHNESS` |
 | Change the joint line | `JOINT_SHADOW_LINE` (0 = no line) |
 
@@ -103,13 +107,18 @@ are measured around the axis from the front.
   plug engagement.
 * **Knob:** a low 5 mm disc. A hidden 10 mm boss on its back sits in a hole in the body wall, so the
   6 mm blind shaft bore still gets about 6.5 mm of grip on the encoder shaft.
-* **Passive radiator:** a 60 × 40 mm vertical oval on the rear at driver height, above the
-  rear fin. It sits on a flat moulded seat inside and goes in through the driver
-  opening before the driver.
-* **Ballast:** a steel cup round the upright battery, bolted onto the foot. The foot, the cup
-  and the battery go in together through the collar opening as one "base module".
-  `BALLAST_MASS_G` sets its mass (its height follows from that); `report.md` shows
-  how much is needed to reach `TARGET_MASS_G`.
+* **Passive radiator** (`PR_POSITION`):
+  * `"base"` (default): a round 44 mm unit fires down through a hole in the gold collar
+    into the gap above the ground, so the back stays smooth. The foot stub hangs on three
+    posts behind the fins, leaving an exit gap as big as the radiator's area. That lifts
+    the body about 9 mm, and the battery and ballast move up above the radiator.
+  * `"rear"`: a 60 × 40 mm oval on the rear at driver height, behind a perforated
+    gold cover and bezel that match the front grille.
+  * `python compare_pr.py` builds both and tabulates air volume, mass, centre of
+    mass, tip angle and ground clearance.
+* **Ballast:** a cup round the upright battery, narrow enough to pass the collar opening.
+  With `BALLAST_MASS_G = "auto"` it's sized to hit `TARGET_MASS_G`, but it never grows
+  into the driver; if the target needs more than fits, the report shows the shortfall.
 * **Chassis:** steel, fitted in 4 pieces, because nothing wider than the ~48–60 mm openings can
   get in. There are 3 fin brackets hugging the wall behind the fins (the fins bolt through the
   body into them with M4 bolts, heads inside) that bolt to the ballast cup, plus a
@@ -127,6 +136,12 @@ The PNGs use physically based materials: the body is oxblood lacquer
 brushed brass (`GOLD_HEX`, roughness 0.35). Metal needs something to reflect,
 so `render.py` generates a small "photo studio" (soft boxes and strip lights)
 as the environment. The backdrop is seamless, with soft contact shadows under the fin tips.
+
+## 3D-printed looks-like prototype
+
+`output/print_prototype/` holds just the visible parts, with solid fins and no internals, already
+oriented for printing. `PRINT_NOTES.md` there lists the material, orientation and supports for each part.
+The STLs in `output/stl/` are the production geometry (hollow fins, internals in `stl/internal/`).
 
 ## 3D-printing notes
 

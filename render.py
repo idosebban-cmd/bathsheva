@@ -25,7 +25,11 @@ VIEWS = {
     "side": (1.0, 0.0, 0.0),
     "rear": (0.0, 1.0, 0.0),
     "three_quarter": (0.62, -0.78, 0.18),
+    "three_quarter_rear": (0.62, 0.78, 0.18),
 }
+# Extra close-up: looking up at the base from below the collar (the ground is
+# left out), to show the down-firing radiator, the exit gap and the foot posts.
+UNDERSIDE = dict(position=(260.0, -330.0, -150.0), focal=(0.0, 0.0, 30.0), view_angle=24)
 
 
 def hex_rgb(h):
@@ -140,7 +144,7 @@ def _add_ground_shadow(pl, model):
     pl.add_mesh(grid, scalars="rgba", rgba=True, lighting=False, show_scalar_bar=False)
 
 
-def _plotter(model, p, size, section=False):
+def _plotter(model, p, size, section=False, shadow=True):
     global _ENV
     pl = pv.Plotter(off_screen=True, window_size=list(size), lighting="none")
     pl.set_background(BACKDROP, top=BACKDROP_TOP)
@@ -181,7 +185,7 @@ def _plotter(model, p, size, section=False):
 
     if not section:
         _add_led(pl, model, p)
-        # passive radiator diaphragm, seen through the rear opening
+        # passive radiator diaphragm, seen through its opening
         pl.add_mesh(_to_mesh(model.envelopes["passive_radiator"], 0.2), color=(0.06, 0.06, 0.07),
                     pbr=True, metallic=0.0, roughness=0.6)
     else:
@@ -191,7 +195,7 @@ def _plotter(model, p, size, section=False):
             if name in colours:
                 pl.add_mesh(_to_mesh(env, 0.3).clip(**clip), color=colours[name], opacity=0.9)
 
-    if not section:
+    if not section and shadow:
         _add_ground_shadow(pl, model)
     return pl
 
@@ -252,6 +256,18 @@ def render_views(model, p, out_dir: Path, views=None, prefix="render", section=T
     if all(t in written for t in trio):
         written.append(contact_sheet(trio, out_dir / f"{prefix}_front_side_34.png", scale=0.6))
     return written
+
+
+def render_underside(model, p, path):
+    pl = _plotter(model, p, p.RENDER_SIZE, shadow=False)
+    pl.camera.position = UNDERSIDE["position"]
+    pl.camera.focal_point = UNDERSIDE["focal"]
+    pl.camera.up = (0, 0, 1)
+    pl.camera.view_angle = UNDERSIDE["view_angle"]
+    pl.reset_camera_clipping_range()
+    pl.screenshot(str(path))
+    pl.close()
+    return path
 
 
 def contact_sheet(paths, out_path, scale=0.5):

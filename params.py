@@ -112,7 +112,8 @@ GRILLE_DIA_FRAC = 0.70       # grille diameter as a fraction of the body width a
 GRILLE_THICK = 1.2           # perforated sheet thickness
 GRILLE_RECESS = 1.5          # depth of the pocket the grille and bezel sit in
 GRILLE_LEDGE = 2.5           # width of the ledge the grille rests on (the sound opening is smaller by this)
-HEX_PATTERN_ENABLED = False  # honeycomb holes. False = plain disc (much faster while iterating on shape)
+HEX_PATTERN_ENABLED = True   # honeycomb holes (front grille and rear cover). False = plain disc,
+                             # which builds much faster while you iterate on the shape
 HEX_HOLE = 2.2               # hexagon size across the flats
 HEX_WEB = 0.7                # metal left between neighbouring holes
 
@@ -170,6 +171,23 @@ PR_RING_WIDTH = 4.0          # seat extends this far beyond the radiator
 PR_ANGLE_DEG = 180.0         # 180 = dead rear
 PR_Z_FRAC = 0.62             # centre height (fraction of body height); same as the driver
 PR_MASS = 60.0
+# Where the passive radiator goes:
+#   "base" - fires DOWN through the collar into the gap above the ground; the back
+#            stays smooth red. It must pass the collar opening, so it's a smaller
+#            round unit (below), and the foot stub hangs lower on posts to leave an
+#            exit gap, which can raise the body.
+#   "rear" - the 60 x 40 oval above on the rear, behind a perforated gold cover.
+PR_POSITION = "base"
+PR_BASE_DIA = 44.0           # round radiator frame (must pass the ~48 mm collar opening)
+PR_BASE_EFFECTIVE_DIA = 35.0 # radiating diameter (about 0.8 x frame)
+PR_BASE_DEPTH = 15.0
+PR_BASE_MASS = 40.0
+PR_BACK_CLEARANCE = 6.0      # air gap behind the radiator before the ballast/battery
+PR_EXIT_AREA_RATIO = 1.0     # exit gap under the collar vs the radiating area (1 = equal)
+FOOT_POSTS = 3               # posts that hang the foot stub under the collar (behind the fins)
+FOOT_POST_DIA = 4.0
+REAR_COVER_ENABLED = True    # gold perforated cover + bezel over the radiator opening, same
+                             # sheet, hole pattern, ledge, recess and bezel as the front grille
 
 # Internal chassis (steel), fitted in pieces because nothing wider than the
 # openings (collar ~48 mm, cone ~54 mm, driver hole ~60 mm) can get inside:
@@ -185,9 +203,10 @@ CHASSIS_GAP = 0.3            # clearance to the inner wall
 # Ballast: a steel cup round the upright battery, bolted onto the foot. The
 # foot, the cup and the battery go in together through the collar opening. Its
 # diameter is set by that opening and its height by the mass.
-BALLAST_MASS_G = 581.0       # sized so the total reaches TARGET_MASS_G; report.md shows the
-                             # ballast needed whenever other parts change
+BALLAST_MASS_G = "auto"      # "auto" = sized so the total hits TARGET_MASS_G, or a number in grams
 TARGET_MASS_G = 1800.0       # the report compares the total against this
+BALLAST_DRIVER_CLEARANCE = 3.0  # the cup stops this far below the driver; if the target needs
+                                # more steel than fits, the report shows the shortfall
 
 BUTYL_MASS_G = 50.0          # damping pads on the inside of the shell
 BUTYL_DENSITY = 1.6          # used to subtract their volume from the air volume
@@ -208,6 +227,7 @@ MATERIAL_DENSITY = {          # g/cm^3
     "steel": 7.85,            # galvanised sheet steel / steel bar
     "stainless_304": 8.00,    # perforated stainless sheet, gold PVD
     "brass": 8.50,            # solid brass, turned
+    "tungsten_alloy": 17.6,   # W-Ni-Fe heavy alloy ballast option (dense but costly)
     "pla": 1.24,              # typical FDM prototype
 }
 PART_MATERIALS = {

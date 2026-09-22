@@ -48,7 +48,7 @@ def mass_properties(model, p):
     butyl = sum((model.parts[n].center(CenterOf.MASS) for n in body_names), Vector()) / len(body_names)
     for name, mass, c in (("battery (bought-in)", p.BATTERY_MASS, bat),
                           ("driver (bought-in)", p.DRIVER_MASS, drv),
-                          ("passive radiator (bought-in)", p.PR_MASS, prad),
+                          ("passive radiator (bought-in)", p.PR_BASE_MASS if p.PR_POSITION == "base" else p.PR_MASS, prad),
                           ("PCB (bought-in)", p.PCB_MASS, pcb),
                           ("butyl damping pads", p.BUTYL_MASS_G, butyl)):
         rows.append(dict(name=name, material="-", volume_cm3=None, mass_g=mass, com_z=c.Z))
