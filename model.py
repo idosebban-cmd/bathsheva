@@ -115,13 +115,22 @@ def build(p) -> Model:
         # must pass at least PR_EXIT_AREA_RATIO x the radiator's area, so the foot
         # stub hangs lower on posts and the body may have to rise to make room.
         collar_h_ref = z0_ref * p.COLLAR_HEIGHT_FRAC
-        stub_h = z0_ref - collar_h_ref - p.FOOT_GROUND_GAP
         r_hole = p.PR_BASE_EFFECTIVE_DIA / 2 + 1.0
         sd = math.pi * (p.PR_BASE_EFFECTIVE_DIA / 2) ** 2
-        plenum = p.PR_EXIT_AREA_RATIO * sd / (2 * math.pi * r_hole - p.FOOT_POSTS * p.FOOT_POST_DIA)
-        z0 = max(z0_ref, p.FOOT_GROUND_GAP + stub_h + plenum + collar_h_ref)
-        I.update(pr_sd=sd, pr_hole_dia=2 * r_hole, pr_plenum=plenum, pr_stub_h=stub_h,
-                 pr_exit_area=(2 * math.pi * r_hole - p.FOOT_POSTS * p.FOOT_POST_DIA) * plenum)
+        # mesh ring just inside the collar's lower edge; add honeycomb rows until
+        # the open (hole) area reaches PR_EXIT_AREA_RATIO x the radiator area
+        r_mesh_out = R * p.BODY_BOTTOM_DIA_FRAC * 0.9 - p.BASE_MESH_INSET
+        r_mesh_mid = r_mesh_out - p.GRILLE_THICK / 2
+        n_around, _ = _hex_ring_counts(r_mesh_mid, 0.0, p)
+        hex_area = math.sqrt(3) / 2 * p.HEX_HOLE ** 2
+        rows = max(1, math.ceil(p.PR_EXIT_AREA_RATIO * sd / (n_around * hex_area)))
+        pitch = p.HEX_HOLE + p.HEX_WEB
+        perf_h = 2 * p.HEX_HOLE / math.sqrt(3) + (rows - 1) * pitch * math.sqrt(3) / 2 + 2 * p.HEX_WEB
+        plenum = perf_h + 2 * p.BASE_MESH_LAND
+        z0 = max(z0_ref, p.FOOT_GROUND_GAP + p.FOOT_NOZZLE_HEIGHT + plenum + collar_h_ref)
+        I.update(pr_sd=sd, pr_hole_dia=2 * r_hole, pr_plenum=plenum, mesh_rows=rows,
+                 mesh_holes=rows * n_around, pr_exit_area=rows * n_around * hex_area,
+                 mesh_dia=2 * r_mesh_out)
     I["z0_ref"] = z0_ref
     bh = (H - z0) / (1 + p.CONE_HEIGHT_FRAC)        # body height
     ch = bh * p.CONE_HEIGHT_FRAC                    # cone height
@@ -357,6 +366,7 @@ def build(p) -> Model:
 
     # ---- foot + base collar ----------------------------------------------
     foot_r = p.BODY_MAX_DIA * p.FOOT_DIA_FRAC / 2
+    base_extra = {}
     if not base_pr:
         collar_h = z0 * p.COLLAR_HEIGHT_FRAC
         collar = Pos(0, 0, z0 - collar_h) * Solid.make_cone(
@@ -368,28 +378,72 @@ def build(p) -> Model:
             foot = foot + Pos(0, 0, z0 - 0.5) * Cylinder(
                 r_in(z0) - p.FIT_CLEARANCE, p.FOOT_SPIGOT_HEIGHT + 0.5, align=MIN)
     else:
-        # collar = baffle for the down-firing radiator: a ring with a sound hole,
-        # a thin locating spigot round the radiator frame, and the foot stub hung
-        # below on posts that sit behind the fins
+        # collar = baffle for the down-firing radiator: a ring with a sound hole
+        # and a thin locating spigot round the radiator frame
         collar_h = collar_h_ref
-        collar = Pos(0, 0, z0 - collar_h) * Solid.make_cone(rb * 0.9, rb, collar_h)
-        collar = collar - Pos(0, 0, z0 - collar_h - 1) * Cylinder(r_hole, collar_h + 2, align=MIN)
+        z_cb = z0 - collar_h                                   # collar bottom
+        collar = Pos(0, 0, z_cb) * Solid.make_cone(rb * 0.9, rb, collar_h)
+        collar = collar - Pos(0, 0, z_cb - 1) * Cylinder(r_hole, collar_h + 2, align=MIN)
         spig_o = r_in(z0) - p.FIT_CLEARANCE
         spig_i = p.PR_BASE_DIA / 2 + 0.2
         if spig_o - spig_i < 1.0:
             raise ValueError("Base radiator too big for the collar opening (spigot wall < 1 mm)")
         spigot = Pos(0, 0, z0 - 0.5) * (Cylinder(spig_o, p.FOOT_SPIGOT_HEIGHT + 0.5, align=MIN)
                                         - Cylinder(spig_i, p.FOOT_SPIGOT_HEIGHT + 2, align=MIN))
-        stub_top = p.FOOT_GROUND_GAP + stub_h
-        stub = Pos(0, 0, p.FOOT_GROUND_GAP) * Cylinder(foot_r, stub_h, align=MIN)
-        foot = collar + spigot + stub
-        r_post = (foot_r + r_hole) / 2
-        for k in range(p.FOOT_POSTS):
-            ang = p.FIN_ANGLE_OFFSET_DEG + k * 360 / p.FOOT_POSTS
-            d = _dir(ang)
-            foot = foot + Pos(d.X * r_post, d.Y * r_post, stub_top - 0.5) * Cylinder(
-                p.FOOT_POST_DIA / 2, z0 - collar_h - stub_top + 1.0, align=MIN)
-        I.update(collar_bottom=z0 - collar_h, stub_top=stub_top)
+        foot = collar + spigot
+
+        # stepped engine nozzle: injector plate (closes the ring) -> throat -> bell
+        z_nt = z_cb - plenum                                   # nozzle top
+        z_g = p.FOOT_GROUND_GAP
+        exit_r = foot_r
+        throat_r = exit_r * p.FOOT_NOZZLE_THROAT_FRAC
+        nozzle = Pos(0, 0, z_nt - p.FOOT_NOZZLE_PLATE) * Cylinder(
+            r_mesh_out + 0.3, p.FOOT_NOZZLE_PLATE, align=MIN)
+        body_h_n = z_nt - p.FOOT_NOZZLE_PLATE - z_g            # throat + bell
+        seg = body_h_n / (p.FOOT_NOZZLE_STEPS + 1)
+        nozzle = nozzle + Pos(0, 0, z_nt - p.FOOT_NOZZLE_PLATE - seg) * Cylinder(
+            throat_r, seg + 0.2, align=MIN)                    # throat
+        # bell: each step is a short flared cone, wider at the bottom, so the
+        # stack reads as a stepped rocket-engine bell
+        prev_r = throat_r
+        for k in range(p.FOOT_NOZZLE_STEPS):
+            rk = throat_r + (exit_r - throat_r) * (k + 1) / p.FOOT_NOZZLE_STEPS
+            zk = z_nt - p.FOOT_NOZZLE_PLATE - seg * (k + 2)
+            top_r = prev_r + 0.35 * (rk - prev_r)
+            nozzle = nozzle + Pos(0, 0, zk) * Solid.make_cone(rk, top_r, seg + 0.2)
+            prev_r = rk
+        # deflector cone inside the mesh ring: blocks the view through the mesh
+        # and turns the airflow outward. Its tip stays thin at the collar hole
+        # so the hole still passes the full radiator area.
+        if p.BASE_DEFLECTOR:
+            r_def = r_mesh_out - p.GRILLE_THICK - p.BASE_DEFLECTOR_GAP
+            nozzle = nozzle + Pos(0, 0, z_nt - 0.2) * Solid.make_cone(r_def, 1.0, plenum - 0.3)
+            I["deflector_base_dia"] = 2 * r_def
+        nozzle = nozzle - Pos(0, 0, z_g - 1) * Cylinder(exit_r - 2.0, p.FOOT_NOZZLE_DISH + 1, align=MIN)
+        nozzle = _one_solid(nozzle)
+        try:
+            nozzle = _one_solid(fillet(nozzle.edges().filter_by(GeomType.CIRCLE)
+                                       .filter_by(lambda e: e.radius > exit_r - 0.1
+                                                  and abs(e.center().Z - z_g) < 0.01), 0.8))
+        except Exception:
+            pass
+
+        # perforated ring: same sheet and honeycomb as the front grille
+        mesh = Pos(0, 0, z_nt - 0.3) * (Cylinder(r_mesh_out, plenum + 0.6, align=MIN)
+                                        - Cylinder(r_mesh_out - p.GRILLE_THICK, plenum + 2, align=MIN))
+        mesh = _one_solid(mesh)
+        if p.HEX_PATTERN_ENABLED:
+            mesh = _cut_honeycomb_ring(mesh, r_mesh_mid, z_nt + p.BASE_MESH_LAND,
+                                       z_cb - p.BASE_MESH_LAND, p)
+        if p.FOOT_POSTS:
+            r_post = r_mesh_out - p.GRILLE_THICK - p.FOOT_POST_DIA / 2 - 1.0   # inside the mesh
+            for k in range(p.FOOT_POSTS):
+                d = _dir(p.FIN_ANGLE_OFFSET_DEG + k * 360 / p.FOOT_POSTS)
+                nozzle = nozzle + Pos(d.X * r_post, d.Y * r_post, z_nt - 0.5) * Cylinder(
+                    p.FOOT_POST_DIA / 2, plenum + 1.0, align=MIN)
+        base_extra = {"nozzle": nozzle, "base_mesh": mesh}
+        I.update(collar_bottom=z_cb, stub_top=z_nt, nozzle_exit_dia=2 * exit_r,
+                 nozzle_throat_dia=2 * throat_r)
     foot = _one_solid(fillet(foot.edges().sort_by(Axis.Z)[0], min(1.0, foot_r / 4)))
     I.update(foot_dia=2 * foot_r, collar_h=collar_h, pr_position=p.PR_POSITION)
     if base_pr:
@@ -561,6 +615,8 @@ def build(p) -> Model:
                   + grams(bezel, "bezel") + grams(knob, "knob")
                   + sum(grams(v, {"rear_grille": "grille", "rear_bezel": "bezel"}[k])
                         for k, v in rear_parts.items())
+                  + sum(grams(v, {"nozzle": "foot", "base_mesh": "grille"}[k])
+                        for k, v in base_extra.items())
                   + p.BATTERY_MASS + p.DRIVER_MASS + pr_mass + p.PCB_MASS + p.BUTYL_MASS_G)
         ch_mass = 115.0
         for _ in range(4):
@@ -624,11 +680,18 @@ def build(p) -> Model:
     m.parts["grille"] = grille
     m.parts["bezel"] = bezel
     m.parts["knob"] = knob
+    for k, v in base_extra.items():
+        m.parts[k] = v
+        m.part_material_key[k] = {"nozzle": "foot", "base_mesh": "grille"}[k]
+    if base_extra:
+        m.parts["collar"] = m.parts.pop("foot")
+        m.part_material_key["collar"] = "foot"
     for k, v in rear_parts.items():
         m.parts[k] = v
         m.part_material_key[k] = {"rear_grille": "grille", "rear_bezel": "bezel"}[k]
     for k in ("nose_cone", "foot", "grille", "bezel", "knob"):
-        m.part_material_key[k] = k
+        if k in m.parts:
+            m.part_material_key[k] = k
     m.parts.update(parts_internal)                      # internal parts last
     return m
 
@@ -805,6 +868,36 @@ def _place_battery(p, r_in, z_floor, z_top, max_footprint=1e9):
 # ---------------------------------------------------------------------------
 # honeycomb
 # ---------------------------------------------------------------------------
+def _hex_ring_counts(r_mid, band_h, p):
+    """Holes around a cylinder of mid-radius r_mid, and rows in a band of height band_h."""
+    pitch = p.HEX_HOLE + p.HEX_WEB
+    n_around = int(2 * math.pi * r_mid // pitch)
+    hex_r = p.HEX_HOLE / math.sqrt(3)
+    rows = int((band_h - 2 * hex_r) // (pitch * math.sqrt(3) / 2)) + 1 if band_h > 2 * hex_r else 0
+    return n_around, rows
+
+
+def _cut_honeycomb_ring(ring, r_mid, z_lo, z_hi, p):
+    """Punch the grille's honeycomb radially through a cylindrical band between
+    z_lo and z_hi (pointy-top hexagons, alternate rows offset by half a pitch)."""
+    from build123d import RegularPolygon, Compound
+    pitch = p.HEX_HOLE + p.HEX_WEB
+    hex_r = p.HEX_HOLE / math.sqrt(3)
+    n_around, rows = _hex_ring_counts(r_mid, z_hi - z_lo, p)
+    dz = pitch * math.sqrt(3) / 2
+    used = (rows - 1) * dz
+    z_start = (z_lo + z_hi) / 2 - used / 2
+    base = extrude(Plane.YZ * RegularPolygon(hex_r, 6, major_radius=True, rotation=30),
+                   amount=6, both=True)
+    tools = []
+    for j in range(rows):
+        off = 0.5 if j % 2 else 0.0
+        for i in range(n_around):
+            ang = (i + off) * 360.0 / n_around
+            tools.append(Rot(0, 0, ang) * Pos(r_mid, 0, z_start + j * dz) * base)
+    return _one_solid(ring - Compound(tools))
+
+
 def _cut_honeycomb(grille, radius, zg, p):
     """Punch a hexagonal hole pattern through a (curved) grille, along Y.
     radius is a number (round grille) or (half-width, half-height) for an oval.

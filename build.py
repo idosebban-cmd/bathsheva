@@ -51,11 +51,16 @@ def _print_pose(name, shape, info, internal=()):
         s = Rot(90, 0, 0) * Rot(0, 0, -info["fin_taper_half_deg"]) * Rot(0, 0, 90 - ang) * shape
         how = (f"lying on its side, tilted {info['fin_taper_half_deg']:.1f} deg so one tapered face "
                "is flat on the bed", "No (use a brim for adhesion)")
-    elif name == "foot" and info.get("pr_position") == "base":
+    elif name == "nozzle":
         s = shape
-        how = ("upright, foot stub on the bed",
-               "Yes, under the collar ring (it overhangs the posts by about 9 mm)")
-    elif name == "foot":
+        how = ("upright, exit rim on the bed (deflector cone on top)",
+               "Yes, under the injector plate rim, which overhangs the throat; the cone "
+               "and bell need none")
+    elif name == "base_mesh":
+        s = shape
+        how = ("upright as fitted (a ring standing on its lower edge)",
+               "No: vertical wall, and the pointy-top hexagons are self-supporting")
+    elif name in ("foot", "collar"):
         s = Rot(180, 0, 0) * shape
         how = ("upside down, spigot on the bed", "No")
     elif name in ("grille", "bezel", "rear_grille", "rear_bezel"):
@@ -112,6 +117,10 @@ PRINT_MATERIAL = {
     "fin": ("PLA+ or PETG", "Solid in this version. 30-40% infill adds some weight. The 3.3 mm "
             "pilot holes take M4 self-tapping screws from inside, or glue with epoxy"),
     "foot": ("PLA+", "Friction-fits into the body (0.2 mm clearance); sand to fit"),
+    "collar": ("PLA+", "Friction-fits into the body (0.2 mm clearance); sand to fit"),
+    "nozzle": ("PLA+ or resin", "0.08-0.12 mm layers to keep the steps crisp; glued to the mesh ring"),
+    "base_mesh": ("Resin (SLA/MSLA) recommended", "Same honeycomb as the grille. Glue its solid top "
+                  "band to the collar and its bottom band to the nozzle"),
     "grille": ("Resin (SLA/MSLA) recommended", "The 2.2 mm honeycomb with 0.7 mm webs is at the limit of "
                "FDM (needs a 0.2 mm nozzle). Glue into the recess"),
     "bezel": ("Resin or PLA+", "Glue into the recess over the grille edge"),
@@ -311,10 +320,13 @@ def write_report(m, poses, build_seconds):
         L(f"* **Fires down through the base** (the back stays smooth red). It's a round {p.PR_BASE_DIA:g} mm "
           f"radiator ({p.PR_BASE_EFFECTIVE_DIA:g} mm radiating, {I['pr_sd']:.0f} mm2) on the collar, "
           f"which acts as its baffle.")
-        L(f"* Exit path: a {f(I['pr_hole_dia'])} mm hole in the collar, then a {f(I['pr_plenum'])} mm "
-          f"gap between the collar ({f(I['collar_bottom'])} mm) and the foot stub ({f(I['stub_top'])} mm), "
-          f"which hangs on {p.FOOT_POSTS} posts behind the fins. Exit area {I['pr_exit_area']:.0f} mm2 "
-          f"({p.PR_EXIT_AREA_RATIO:g} x radiator area).")
+        L(f"* Exit path: a {f(I['pr_hole_dia'])} mm hole in the collar, then out through a "
+          f"{f(I['mesh_dia'])} mm diameter, {f(I['pr_plenum'])} mm tall ring of the grille's "
+          f"honeycomb sheet ({I['mesh_rows']} rows, {I['mesh_holes']} holes). Its open area is "
+          f"{I['pr_exit_area']:.0f} mm2 ({I['pr_exit_area'] / I['pr_sd']:.2f} x radiator area). "
+          "The ring hides the inside and carries the stepped gold nozzle below it "
+          f"(throat {f(I['nozzle_throat_dia'])} mm, exit {f(I['nozzle_exit_dia'])} mm, "
+          f"{p.FOOT_GROUND_GAP:g} mm off the ground)" + (", with posts hidden inside the ring." if p.FOOT_POSTS else "; there are no posts."))
         L(f"* That lifts the body from {f(I['z0_ref'])} mm to **{f(I['z0'])} mm off the ground**, and the "
           f"red body is {f((p.OVERALL_HEIGHT - I['z0_ref']) / (1 + p.CONE_HEIGHT_FRAC) - I['body_h'])} mm "
           f"shorter (overall height is fixed).")
@@ -402,6 +414,11 @@ def main():
         print("Rendering previews...")
         import render
         render.render_views(m, p, OUT / "renders")
+        if p.PR_POSITION == "base":
+            r = OUT / "renders"
+            under = render.render_underside(m, p, r / "render_underside.png")
+            render.contact_sheet([r / "render_front.png", r / "render_three_quarter_rear.png", under],
+                                 r / "render_base_nozzle_sheet.png", scale=0.6)
     print("Writing report...")
     s = write_report(m, poses, time.time() - t0)
     print(f"Done in {time.time() - t0:.0f} s -> {OUT}")

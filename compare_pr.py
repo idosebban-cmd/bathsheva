@@ -89,11 +89,11 @@ def main():
               f"area {ib['pr_sd']:.0f} mm2, against about "
               f"{3.1416 / 4 * (p.PR_W - 2 * p.PR_FLANGE) * (p.PR_H - 2 * p.PR_FLANGE):.0f} mm2 for the "
               f"{p.PR_W:g} x {p.PR_H:g} rear oval. It has to pass the collar opening.",
-              f"* Sound exits through a {ib['pr_hole_dia']:.0f} mm hole in the collar, then sideways through "
-              f"a {ib['pr_plenum']:.1f} mm gap between the collar ({ib['collar_bottom']:.1f} mm) and the "
-              f"foot stub ({ib['stub_top']:.1f} mm), which hangs on {p.FOOT_POSTS} posts behind the fins. "
-              f"Exit area {ib['pr_exit_area']:.0f} mm2 = {p.PR_EXIT_AREA_RATIO:g} x radiator area.",
-              f"* That gap lifts the body from {ib['z0_ref']:.1f} to {ib['z0']:.1f} mm off the ground "
+              f"* Sound exits through a {ib['pr_hole_dia']:.0f} mm hole in the collar, then out through a "
+              f"{ib['pr_plenum']:.1f} mm tall honeycomb mesh ring ({ib['mesh_holes']} holes, open area "
+              f"{ib['pr_exit_area']:.0f} mm2 = {ib['pr_exit_area'] / ib['pr_sd']:.2f} x radiator area). "
+              "The ring carries the stepped gold nozzle.",
+              f"* The ring and nozzle lift the body from {ib['z0_ref']:.1f} to {ib['z0']:.1f} mm off the ground "
               f"(overall height fixed, so the red body gets {results[1]['body_h'] - results[0]['body_h']:.1f} mm shorter).",
               f"* With steel, the most ballast that fits below the driver is {ib['ballast_max_g']:.0f} g, so "
               f"the total is {p.TARGET_MASS_G - results[0]['mass']:.0f} g short of the target. Tungsten "

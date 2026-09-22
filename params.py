@@ -183,8 +183,23 @@ PR_BASE_EFFECTIVE_DIA = 35.0 # radiating diameter (about 0.8 x frame)
 PR_BASE_DEPTH = 15.0
 PR_BASE_MASS = 40.0
 PR_BACK_CLEARANCE = 6.0      # air gap behind the radiator before the ballast/battery
-PR_EXIT_AREA_RATIO = 1.0     # exit gap under the collar vs the radiating area (1 = equal)
-FOOT_POSTS = 3               # posts that hang the foot stub under the collar (behind the fins)
+PR_EXIT_AREA_RATIO = 1.0     # open (hole) area of the base mesh vs the radiating area (1 = equal)
+
+# Base "engine" (only with PR_POSITION = "base"). Under the gold collar, a ring
+# of the same perforated honeycomb sheet as the front grille lets the radiator
+# breathe out while hiding the inside. The ring also carries the stepped gold
+# nozzle below it, so there are no visible posts.
+BASE_MESH_INSET = 1.0        # mesh ring sits this far inside the collar's lower edge (a small reveal)
+BASE_MESH_LAND = 1.5         # solid, unperforated band top and bottom, where it bonds to collar and nozzle
+FOOT_NOZZLE_HEIGHT = 8.0     # total height of the nozzle (injector plate + throat + bell steps)
+FOOT_NOZZLE_PLATE = 1.2      # injector plate that closes the bottom of the mesh ring
+FOOT_NOZZLE_STEPS = 3        # stepped bell below the throat, widening towards the ground
+FOOT_NOZZLE_THROAT_FRAC = 0.55  # throat radius as a fraction of the nozzle exit radius
+BASE_DEFLECTOR = True        # gold cone inside the mesh ring: hides the see-through view and turns
+BASE_DEFLECTOR_GAP = 4.0     # the air outward; its base stops this far inside the mesh
+FOOT_NOZZLE_DISH = 1.2       # shallow gold dish in the nozzle exit (reads as a nozzle, no dark hole)
+FOOT_POSTS = 0               # optional posts from collar to nozzle, hidden inside the mesh ring
+                             # (0 = the mesh ring carries the nozzle on its own)
 FOOT_POST_DIA = 4.0
 REAR_COVER_ENABLED = True    # gold perforated cover + bezel over the radiator opening, same
                              # sheet, hole pattern, ledge, recess and bezel as the front grille

@@ -108,10 +108,15 @@ are measured around the axis from the front.
 * **Knob:** a low 5 mm disc. A hidden 10 mm boss on its back sits in a hole in the body wall, so the
   6 mm blind shaft bore still gets about 6.5 mm of grip on the encoder shaft.
 * **Passive radiator** (`PR_POSITION`):
-  * `"base"` (default): a round 44 mm unit fires down through a hole in the gold collar
-    into the gap above the ground, so the back stays smooth. The foot stub hangs on three
-    posts behind the fins, leaving an exit gap as big as the radiator's area. That lifts
-    the body about 9 mm, and the battery and ballast move up above the radiator.
+  * `"base"` (default): a round 44 mm unit fires down through a hole in the gold collar,
+    so the back stays smooth. Below the collar the base is styled as a rocket engine:
+    * a ring of the front grille's honeycomb sheet, sized so its open area is at least the
+      radiator's area (`PR_EXIT_AREA_RATIO`), with a gold deflector cone inside that hides
+      the see-through view and turns the air outward;
+    * a stepped gold nozzle carried by the ring, 2 mm off the ground. There are no posts;
+      `FOOT_POSTS` can add some, hidden inside the ring.
+    
+    This lifts the body (see `report.md`), and the battery and ballast sit above the radiator.
   * `"rear"`: a 60 × 40 mm oval on the rear at driver height, behind a perforated
     gold cover and bezel that match the front grille.
   * `python compare_pr.py` builds both and tabulates air volume, mass, centre of
