@@ -9,7 +9,7 @@ One command regenerates everything in `output/`:
 |---|---|
 | `output/atelier_assembly.step` | Full assembly, one named and coloured solid per part. Send this to the industrial designer; it opens in Fusion 360, SolidWorks, Onshape, Rhino, FreeCAD... |
 | `output/stl/*.stl` | One STL per part, already turned to a sensible print orientation and sitting on the bed (z = 0) |
-| `output/renders/*.png` | Front, side, rear, three-quarter, a cut-away section showing the internals, and an overview sheet |
+| `output/renders/*.png` | Front, side, rear, three-quarter, a cut-away section showing the internals, an overview sheet and a front/side/three-quarter sheet |
 | `output/report.md` | Dimensions, internal air volume, mass, centre of mass, tip-over angle, print notes |
 
 ![overview](output/renders/render_overview.png)
@@ -29,7 +29,7 @@ pip install -r requirements.txt
 
 ```bash
 source .venv/bin/activate
-python build.py              # everything (~20 s; ~50 s with the honeycomb grille on)
+python build.py              # everything (~1 min; add ~30 s with the honeycomb grille on)
 python build.py --no-render  # skip the PNGs when you only need the CAD
 python build.py --hex        # honeycomb grille on for this run only
 ```
@@ -54,6 +54,8 @@ Edit a value, save and run `python build.py`. The most useful ones:
 | Use a different driver or battery | `DRIVER_DIA`, `DRIVER_DEPTH`, `BATTERY_SIZE`, `BATTERY_MASS` |
 | Change the split lines | `SPLIT_MODE` (see below) |
 | Change materials (affects mass, CoM and tipping) | `PART_MATERIALS`, `MATERIAL_DENSITY` |
+| Change render colours and finish | `RED_HEX`, `GOLD_HEX`, `BODY_ROUGHNESS`, `BODY_CLEARCOAT`, `GOLD_ROUGHNESS` |
+| Change the joint line | `JOINT_SHADOW_LINE` (0 = no line) |
 
 `_FRAC` values are proportions, so the shape keeps its character when you
 resize it. Values without `_FRAC` (wall thickness, knob, USB-C, driver) are real
@@ -98,8 +100,17 @@ are measured around the axis from the front.
 * **USB-C:** a stadium opening at 150° (30° off the rear fin), low down near the battery.
   It has a pocket on the inside that thins the wall to 1 mm, so a standard receptacle gets more
   plug engagement.
-* **Knob:** a 7 mm hole in the body for the encoder/pot bushing; the knob has a 6 mm shaft bore.
+* **Knob:** a low 5 mm disc. A hidden 10 mm boss on its back sits in a hole in the body wall, so the
+  6 mm blind shaft bore still gets about 6.5 mm of grip on the encoder shaft.
 * **Cut-away render** (`render_section.png`): the driver is shown in black and the battery in blue.
+
+## Renders
+
+The PNGs use physically based materials: the body is oxblood lacquer
+(`RED_HEX`) under a glossy clear coat, and the gold parts are fully metallic
+brushed brass (`GOLD_HEX`, roughness 0.35). Metal needs something to reflect,
+so `render.py` generates a small "photo studio" (soft boxes and strip lights)
+as the environment. The backdrop is seamless, with soft contact shadows under the fin tips.
 
 ## 3D-printing notes
 

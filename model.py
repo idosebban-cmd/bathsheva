@@ -30,6 +30,10 @@ from build123d import (
     Cylinder,
     Edge,
     Face,
+    GeomType,
+    Kind,
+    offset,
+    chamfer,
     Location,
     Plane,
     Polyline,
@@ -257,13 +261,24 @@ def build(p) -> Model:
     y_surf = -r_out(zk)
     y_back = -max(r_out(z) for z in np.linspace(zk - kr, zk + kr, 9)) - p.KNOB_BODY_GAP
     y_face = y_surf - p.KNOB_PROUD
-    knob = Pos(0, y_back, zk) * Rot(90, 0, 0) * Cylinder(kr, y_back - y_face, align=MIN)
-    knob = fillet(knob.edges().sort_by(Axis.Y)[0], 1.0)            # rounded front edge
-    knob = knob - Pos(0, y_back, zk) * Rot(90, 0, 0) * Cylinder(
-        p.KNOB_SHAFT_DIA / 2, 8, align=MIN)                          # shaft bore
+    knob_len = y_back - y_face
+    knob = Pos(0, y_back, zk) * Rot(90, 0, 0) * Cylinder(kr, knob_len, align=MIN)
+    knob = fillet(knob.edges().sort_by(Axis.Y)[0], min(1.0, knob_len / 4))  # rounded front edge
+    # hidden boss on the back, sitting in a hole in the body wall, so a low
+    # knob still gets enough grip on the encoder shaft
+    boss_len = p.KNOB_BOSS_LENGTH
+    knob = knob + Pos(0, y_back + boss_len, zk) * Rot(90, 0, 0) * Cylinder(
+        p.KNOB_BOSS_DIA / 2, boss_len + 0.5, align=MIN)
+    bore = knob_len + boss_len - p.KNOB_FACE_SKIN
+    knob = knob - Pos(0, y_back + boss_len, zk) * Rot(90, 0, 0) * Cylinder(
+        p.KNOB_SHAFT_DIA / 2, bore, align=MIN)                      # blind shaft bore
     knob = _one_solid(knob)
-    body = body - _front_cyl(p.KNOB_SHAFT_HOLE / 2, zk, depth=30, y_from=-r_out(zk) + 15)
+    body = body - _front_cyl(p.KNOB_BOSS_DIA / 2 + p.FIT_CLEARANCE * 2, zk, depth=30,
+                             y_from=-r_out(zk) + 15)
     body = body - _front_cyl(p.LED_DIA / 2, z_led, depth=30, y_from=-r_out(z_led) + 15)
+    # light pipe in the LED hole (render only, not a separate part)
+    m.envelopes["led"] = _front_cyl(p.LED_DIA / 2 - 0.05, z_led, depth=3,
+                                    y_from=-r_out(z_led) + 3.2)
     I.update(z_knob=zk, z_led=z_led)
 
     # ---- USB-C port --------------------------------------------------------
@@ -344,8 +359,13 @@ def build(p) -> Model:
     m.envelopes["battery"] = batt
     I.update(batt_info)
 
-    # ---- split the body ----------------------------------------------------
+    # ---- shadow line at the cone joint --------------------------------------
     body = _one_solid(body)
+    if p.JOINT_SHADOW_LINE > 0:
+        body = _chamfer_rim(body, zt, rt, p.JOINT_SHADOW_LINE)
+        cone = _chamfer_rim(cone, zt, rt, p.JOINT_SHADOW_LINE)
+
+    # ---- split the body ----------------------------------------------------
     if p.SPLIT_MODE == "fin_clamshell":
         a0 = p.FIN_ANGLE_OFFSET_DEG
         wedge_pts = [(0, 0)] + [
@@ -374,6 +394,16 @@ def build(p) -> Model:
     return m
 
 
+def _chamfer_rim(solid, z, r, size):
+    """Chamfer the outer circular edge at height z and radius r (the cone joint)."""
+    edges = [e for e in solid.edges()
+             if e.geom_type == GeomType.CIRCLE and abs(e.center().Z - z) < 0.01
+             and abs(e.radius - r) < 0.05]
+    if not edges:
+        raise ValueError("Could not find the cone-joint edge to chamfer")
+    return _one_solid(chamfer(edges, size))
+
+
 # ---------------------------------------------------------------------------
 # fins
 # ---------------------------------------------------------------------------
@@ -386,7 +416,7 @@ def _build_fins(p, I, r_out, outer_solid, z0, bh, R):
     u_tip = p.FIN_TIP_REACH_FRAC * R
     z_rt = z0 + bh * p.FIN_ROOT_TOP_FRAC
     z_rb = z0 + bh * p.FIN_ROOT_BOTTOM_FRAC
-    embed = 4.0  # start the outline inside the body, then trim flush
+    embed = 9.0  # start the outline inside the body, then trim flush
     top = (r_out(z_rt) - embed, z_rt)
     bot = (r_out(z_rb) - embed, z_rb)
     tip_out = (u_tip, 0.0)
@@ -415,23 +445,39 @@ def _build_fins(p, I, r_out, outer_solid, z0, bh, R):
         Edge.make_line(_xz(*bot), _xz(*top)),
     ])
     T0, T1 = p.FIN_ROOT_THICK, p.FIN_TIP_THICK
-    slab = extrude(Face(outline), amount=T0 / 2, both=True)
-    # taper: intersect with a wedge that is T0 thick at the body and T1 at the tip
     r_ref = r_out(z_rt)
-    wedge_pts = [(0, -T0 / 2), (r_ref, -T0 / 2), (u_tip + 1, -T1 / 2),
-                 (u_tip + 1, T1 / 2), (r_ref, T0 / 2), (0, T0 / 2)]
+    # Fully rounded "cast" edges: first round the corners of the flat outline
+    # (so the edge loop around the fin is smooth, with no sharp tip), then fillet
+    # that loop on both faces. OpenCascade can't fillet sharp corners at this size.
+    face = Face(outline)
+    r2d = min(p.FIN_TIP_FLAT / 2 - 0.1, 6.0)
+    try:
+        face = fillet(face.vertices(), r2d)
+    except Exception:
+        pass
+    slab = extrude(face, amount=(T0 + (T0 - T1)) / 2, both=True)
+    # taper: intersect with a wedge that is T0 thick at the body and T1 at the tip
+    # one straight taper (no crease): T0 where the fin leaves the body, T1 at the tip
+    slope = (T0 - T1) / (u_tip - r_ref)
+    ta, tb = T0 + slope * r_ref, T1 - slope
+    wedge_pts = [(0, -ta / 2), (u_tip + 1, -tb / 2), (u_tip + 1, tb / 2), (0, ta / 2)]
     wedge = Pos(0, 0, -5) * extrude(Face(Wire(Polyline(*wedge_pts, close=True).edges())),
                                     amount=z_rt + 20)
     blank = _one_solid(slab & wedge)
-    for rad in (p.FIN_EDGE_FILLET, p.FIN_EDGE_FILLET * 0.6, p.FIN_EDGE_FILLET * 0.3):
+    I["fin_fillet_used"] = 0.0
+    rmax = min(p.FIN_EDGE_FILLET, T1 / 2 - 0.2)
+    for rad in (rmax, rmax * 0.9, rmax * 0.8, rmax * 0.65, rmax * 0.5):
         try:
-            # round every edge except the straight root line (which gets trimmed anyway)
-            edges = [e for e in blank.edges() if e.center().X > r_ref - embed + 1.5]
+            # every edge except those buried in the body (trimmed off anyway)
+            edges = [e for e in blank.edges() if e.center().X > r_ref - embed + 2]
             blank = _one_solid(fillet(edges, rad))
+            I["fin_fillet_used"] = rad
             break
         except Exception:
             continue
     blank = _one_solid(blank - outer_solid)
+    foot_pad = blank & Box(400, 400, 0.6, align=MIN)
+    u_c = foot_pad.center().X  # centre of the ground contact patch
 
     fins, tips = [], []
     n = p.FIN_COUNT
@@ -439,7 +485,6 @@ def _build_fins(p, I, r_out, outer_solid, z0, bh, R):
         ang = p.FIN_ANGLE_OFFSET_DEG + k * 360 / n
         fins.append(Rot(0, 0, ang - 90) * copy.deepcopy(blank))  # own copy so STEP keeps separate names
         d = _dir(ang)
-        u_c = u_tip - p.FIN_TIP_FLAT / 2
         tips.append((d.X * u_c, d.Y * u_c))
     I.update(fin_tip_reach=u_tip, z_fin_root_top=z_rt, z_fin_root_bottom=z_rb)
     return fins, tips

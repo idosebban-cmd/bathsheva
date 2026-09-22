@@ -25,7 +25,7 @@ BODY_MAX_DIA = 95.0      # widest point of the red body
 # 2. Vertical budget
 #    OVERALL_HEIGHT = base clearance + body height + nose cone height
 # ---------------------------------------------------------------------------
-BASE_CLEARANCE_FRAC = 0.09   # ground to the underside of the red body, as a fraction of OVERALL_HEIGHT
+BASE_CLEARANCE_FRAC = 0.065  # ground to the underside of the red body, as a fraction of OVERALL_HEIGHT
 CONE_HEIGHT_FRAC = 0.22      # nose cone height as a fraction of BODY height (the brief asked for 20-25%)
 
 # ---------------------------------------------------------------------------
@@ -34,9 +34,9 @@ CONE_HEIGHT_FRAC = 0.22      # nose cone height as a fraction of BODY height (th
 #    or BODY_MAX_DIA (horizontal).
 # ---------------------------------------------------------------------------
 BODY_MAX_AT_FRAC = 0.45     # height of the widest point (0 = bottom, 1 = top of body)
-BODY_TOP_DIA_FRAC = 0.57     # diameter at the nose-cone joint
+BODY_TOP_DIA_FRAC = 0.62     # diameter at the nose-cone joint
 BODY_BOTTOM_DIA_FRAC = 0.55  # diameter where the body meets the gold base collar
-BODY_TOP_FULLNESS = 2.0      # shape of the upper body. 2 = smooth egg taper; higher = straighter,
+BODY_TOP_FULLNESS = 2.7      # shape of the upper body. 2 = smooth egg taper; higher = straighter,
                              # more cylindrical sides that turn in late. The nose cone
                              # continues the slope at the joint, so the joint stays smooth.
 BODY_BOTTOM_FULLNESS = 2.4   # same for the lower body (higher = rounder "belly" that tucks in late)
@@ -64,6 +64,8 @@ CONE_OGIVE = 1.0             # 0 = straight cone; 1 = fully curved ogive whose b
                              # continues the body's slope with no crease
 CONE_TIP_HALF_ANGLE_DEG = 32.0  # sharpness of the tip (half the included angle)
 CONE_WALL = 2.0              # wall thickness of the hollow cone
+JOINT_SHADOW_LINE = 0.4     # small chamfer on both sides of the body/cone joint: the surfaces
+                             # stay flush and read as one form, split by a thin dark line
 CONE_SPIGOT_DEPTH = 7.0      # how far the cone's locating spigot drops into the body
 CONE_SPIGOT_WALL = 2.0       # wall thickness of that spigot ring
 
@@ -78,17 +80,18 @@ FIN_ROOT_TOP_FRAC = 0.38     # where the fin's upper edge leaves the body (fract
 FIN_ROOT_BOTTOM_FRAC = 0.07  # where the fin's underside meets the body
 FIN_OUTER_BULGE = 0.60       # 0 = straight upper edge; higher = rounder "shoulder"
 FIN_UNDERCUT = 0.25          # 0 = straight underside; higher = deeper arch under the fin
-FIN_ROOT_THICK = 9.0         # thickness where the fin meets the body
-FIN_TIP_THICK = 4.0          # thickness at the tip (the fin tapers between the two)
-FIN_TIP_FLAT = 5.0           # length of the flat pad at the tip that touches the ground
-FIN_EDGE_FILLET = 1.5        # rounding on the fin edges
+FIN_ROOT_THICK = 17.0        # thickness where the fin meets the body
+FIN_TIP_THICK = 8.0          # thickness at the tip (the fin tapers between the two)
+FIN_TIP_FLAT = 7.0           # length of the flat pad at the tip that touches the ground
+FIN_EDGE_FILLET = 3.8        # rounding on the fin edges. Just under half of FIN_TIP_THICK
+                             # gives fully rounded, cast-looking edges
 
 # ---------------------------------------------------------------------------
 # 7. Foot and base collar (gold, one part). The collar is the gold ring under
 #    the body; the foot is the short cylinder below it, kept clear of the ground.
 # ---------------------------------------------------------------------------
-COLLAR_HEIGHT_FRAC = 0.30    # collar height as a fraction of the base clearance
-FOOT_DIA_FRAC = 0.24         # foot diameter as a fraction of BODY_MAX_DIA
+COLLAR_HEIGHT_FRAC = 0.35    # collar height as a fraction of the base clearance
+FOOT_DIA_FRAC = 0.35         # foot diameter as a fraction of BODY_MAX_DIA
 FOOT_GROUND_GAP = 2.0        # gap between the foot and the ground (the fins carry the weight)
 FOOT_SPIGOT_HEIGHT = 6.0     # in "nose_tail" mode: solid spigot that plugs into the body
                              # (it also acts as ballast and as the floor under the battery)
@@ -109,11 +112,13 @@ BEZEL_WIDTH = 4.0            # radial width of the raised gold ring
 BEZEL_PROUD = 1.5            # how far the ring stands above the red surface
 
 KNOB_DIA = 18.0
-KNOB_PROUD = 10.0            # knob face distance from the body surface
+KNOB_PROUD = 5.0             # knob face distance from the body surface (low, flat disc)
 KNOB_GAP_FRAC = 0.085        # clear gap between the bezel and the top of the knob (fraction of body height)
 KNOB_BODY_GAP = 0.5          # air gap behind the knob so it turns freely
 KNOB_SHAFT_DIA = 6.0         # potentiometer/encoder shaft (6 mm is standard)
-KNOB_SHAFT_HOLE = 7.0        # clearance hole in the body for the shaft or its bushing
+KNOB_BOSS_DIA = 10.0         # hidden boss on the back of the knob; it sits in a hole in the body
+KNOB_BOSS_LENGTH = 3.0       # (hidden under the knob) so the low knob still grips the shaft
+KNOB_FACE_SKIN = 1.2         # material left in front of the blind shaft bore
 LED_DIA = 3.0                # LED hole; centred between the bezel and the knob
 
 # ---------------------------------------------------------------------------
@@ -181,5 +186,15 @@ PART_MATERIALS = {
 STL_TOLERANCE = 0.05         # mm, maximum deviation of the STL triangles from the true surface
 STL_ANGULAR_TOLERANCE = 0.2  # radians
 RENDER_SIZE = (1200, 1600)   # width, height in pixels
-COLOUR_BODY = (0.50, 0.03, 0.04)   # deep red
-COLOUR_GOLD = (0.83, 0.65, 0.34)
+
+# ---------------------------------------------------------------------------
+# 13. Render look (PNG previews only; also used as the STEP part colours)
+# ---------------------------------------------------------------------------
+RED_HEX = "#8A1C15"          # warm deep oxblood lacquer
+GOLD_HEX = "#C4A15A"         # soft brushed brass
+BODY_ROUGHNESS = 0.22        # base paint under the clear coat
+BODY_CLEARCOAT = 1.0         # 0 = none, 1 = full gloss clear coat on top
+BODY_CLEARCOAT_ROUGHNESS = 0.04
+GOLD_METALLIC = 1.0
+GOLD_ROUGHNESS = 0.35        # soft, brushed reflections
+LED_HEX = "#FFE2B0"          # warm white status LED

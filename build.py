@@ -23,8 +23,13 @@ import params as p
 
 OUT = Path(__file__).parent / "output"
 
-GOLD_RGB = p.COLOUR_GOLD
-RED_RGB = p.COLOUR_BODY
+def _hex(h):
+    h = h.lstrip("#")
+    return tuple(int(h[i:i + 2], 16) / 255 for i in (0, 2, 4))
+
+
+GOLD_RGB = _hex(p.GOLD_HEX)
+RED_RGB = _hex(p.RED_HEX)
 
 
 # How each part is turned for 3D printing, and why (listed in the report too).
