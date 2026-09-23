@@ -77,6 +77,9 @@ def _print_pose(name, shape, info, internal=()):
         s = shape
         how = ("upright as fitted, standing on its lower edge",
                "Yes, build-plate-only supports under the lower third of the edge")
+    elif name == "grille_backing":
+        s = shape
+        how = ("upright as fitted (or cut from cloth)", "Build-plate-only supports if printed")
     elif name == "knob":
         s = Rot(90, 0, 0) * shape
         how = ("front face down on the bed, shaft bore facing up", "No")
@@ -135,6 +138,8 @@ PRINT_MATERIAL = {
     "grille": ("Resin (SLA/MSLA) recommended", "The 2.2 mm honeycomb with 0.7 mm webs is at the limit of "
                "FDM (needs a 0.2 mm nozzle). Glue into the recess"),
     "bezel": ("Resin or PLA+", "Glue into the recess over the grille edge"),
+    "grille_backing": ("Black speaker cloth (or matt black PLA)", "Cut the cloth to the STL outline "
+                       "and glue it behind the grille; if printing, 0.4 mm single-wall black"),
     "knob": ("Resin or PLA+", "Press-fits on a 6 mm shaft; for a mock-up, glue a short 6 mm dowel"),
 }
 
@@ -350,6 +355,7 @@ def write_report(m, poses, build_seconds):
         L("")
     if I["usbc_position"] == "collar":
         ra = I["usbc_right_angle_fit"]
+        yn = lambda x: "Yes" if x else "**No**"
         L("## USB-C port")
         L("")
         L(f"* **In the gold collar cup**, at {p.USBC_ANGLE_DEG:g} deg (midway between the side fin at "
@@ -376,11 +382,11 @@ def write_report(m, poses, build_seconds):
         L(f"| Straight plug (checked for any third-party cable), overmold {p.USBC_PLUG_OVERMOLD[0]:g} x "
           f"{p.USBC_PLUG_OVERMOLD[1]:g} x {p.USBC_PLUG_OVERMOLD[2]:g} mm | {f(I['usbc_plug_fin_clear'])} | "
           f"{f(I['usbc_plug_knob_clear'])} | {f(I['usbc_plug_lowest'])} | - | "
-          f"{ok(I['usbc_plug_lowest'] >= p.USBC_PLUG_GROUND_CLEAR and I['usbc_plug_fin_clear'] > 1)} |")
+          f"{yn(I['usbc_plug_lowest'] >= p.USBC_PLUG_GROUND_CLEAR and I['usbc_plug_fin_clear'] > 1)} |")
         for name, v in ra.items():
             fits = v["ground"] >= 1.0 and v["fins"] > 1 and v["knob"] > 0.5 and v["collar"] < 0.01 and v["body"] > 0.5
             L(f"| Right-angle, cable leaving {name} | {f(v['fins'])} | {f(v['knob'])} | {f(v['ground'])} | "
-              f"{f(v['body'])} | {ok(fits)} |")
+              f"{f(v['body'])} | {yn(fits)} |")
         L("")
         L("* A side-angled plug fits both ways up. An up/down-angled plug only fits one way: flipped "
           "over, its boot points into the ground. So the shipped cable should be side-angled, and "
@@ -469,7 +475,8 @@ def write_report(m, poses, build_seconds):
     L("2. **Moulding the body.** A one-piece shell whose belly (95 mm) is much wider than its end "
       "openings can't be injection-moulded on a simple core. It needs a collapsible core, "
       "or two halves welded together (the seam disappears under the lacquer), and the internal driver "
-      + ("seat" if no_pr else "and radiator seats") + " may have to become separate parts. This decision "
+      + ("seat may have to become a separate part" if no_pr else "and radiator seats may have to become "
+         "separate parts") + ". This decision "
       "affects the split strategy and the fitting sequence.")
     L(f"3. **Blind assembly and wiring.** The battery and ballast" + ("" if no_pr else " and radiator")
       + f" go in through a ~{f(I['insert_opening_dia'], 0)} mm opening, "

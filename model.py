@@ -954,7 +954,8 @@ def build(p, visual_only=False) -> Model:
                       + sum(grams(v, {"nozzle": "foot", "base_mesh": "grille",
                                       "vent_insert": "vent_insert", "base_foot": "foot"}[k])
                             for k, v in base_extra.items())
-                      + p.BATTERY_MASS + p.DRIVER_MASS + pr_mass + p.PCB_MASS + p.BUTYL_MASS_G)
+                      + p.BATTERY_MASS + p.DRIVER_MASS + pr_mass + p.PCB_MASS + p.BUTYL_MASS_G
+                      + (p.USBC_RECEPTACLE_MASS if usb_pos == "collar" else 0.0))
             ch_mass = 115.0
             for _ in range(4):
                 ballast_g = max(0.0, p.TARGET_MASS_G - others - ch_mass)
