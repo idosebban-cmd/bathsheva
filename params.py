@@ -204,7 +204,9 @@ PR_MASS = 60.0
 #            round unit (below), and the foot stub hangs lower on posts to leave an
 #            exit gap, which can raise the body.
 #   "rear" - the 60 x 40 oval above on the rear, behind a perforated gold cover.
-PR_POSITION = "base"
+#   "none" - (default) sealed enclosure, no radiator. The concept base (gold cup +
+#            small foot) with no vent; the collar is a solid plug sealing the body.
+PR_POSITION = "none"
 PR_BASE_DIA = 44.0           # round radiator frame (must pass the ~48 mm collar opening)
 PR_BASE_EFFECTIVE_DIA = 35.0 # radiating diameter (about 0.8 x frame)
 PR_BASE_DEPTH = 15.0
@@ -226,7 +228,7 @@ COLLAR_BOTTOM_DIA_FRAC = 0.30   # collar tapers from the body bottom to this (fr
 COLLAR_TOP_SLOPE = 0.35      # cup starts nearly vertical under the body (a convex bowl)...
 COLLAR_END_SLOPE = 2.0       # ...and curves in towards the foot (1 = 45 deg; 2 = a shallow bowl)
 COLLAR_WALL = 1.5            # collar bore wall
-FOOT_HEIGHT = 9.5            # small rounded foot (vent style)
+FOOT_HEIGHT = 13.0           # small foot height with no vent; the "vent" style takes BASE_VENT_GAP off this
 FOOT_ROUND = 3.5             # rounding on the foot's lower edge
 
 # Base "engine" (only with PR_POSITION = "base" and BASE_STYLE = "nozzle"). Under the gold collar, a ring

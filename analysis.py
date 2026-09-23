@@ -17,7 +17,8 @@ def air_volume(model, p):
     for name, part in model.parts.items():
         air = air - part
     for env in ("driver", "battery", "passive_radiator"):
-        air = air - model.envelopes[env]
+        if env in model.envelopes:
+            air = air - model.envelopes[env]
     butyl_l = p.BUTYL_MASS_G / p.BUTYL_DENSITY / 1000.0
     body_l = air.volume / 1e6 - butyl_l
     cone_l = model.info["cone_cavity_volume"] / 1e6
@@ -43,12 +44,14 @@ def mass_properties(model, p):
     drv = model.envelopes["driver"].center(CenterOf.MASS)
     bat = model.envelopes["battery"].center(CenterOf.MASS)
     pcb = Vector(*I["pcb_pos"])                      # on the chassis spine
-    prad = model.envelopes["passive_radiator"].center(CenterOf.MASS)
+    prad = (model.envelopes["passive_radiator"].center(CenterOf.MASS)
+            if "passive_radiator" in model.envelopes else None)
     body_names = [n for n in model.parts if n.startswith("body")]
     butyl = sum((model.parts[n].center(CenterOf.MASS) for n in body_names), Vector()) / len(body_names)
     for name, mass, c in (("battery (bought-in)", p.BATTERY_MASS, bat),
                           ("driver (bought-in)", p.DRIVER_MASS, drv),
-                          ("passive radiator (bought-in)", p.PR_BASE_MASS if p.PR_POSITION == "base" else p.PR_MASS, prad),
+                          ("passive radiator (bought-in)", 0.0 if prad is None else
+                           p.PR_BASE_MASS if p.PR_POSITION == "base" else p.PR_MASS, prad or Vector()),
                           ("PCB (bought-in)", p.PCB_MASS, pcb),
                           ("butyl damping pads", p.BUTYL_MASS_G, butyl)):
         rows.append(dict(name=name, material="-", volume_cm3=None, mass_g=mass, com_z=c.Z))

@@ -195,8 +195,9 @@ def _plotter(model, p, size, section=False, shadow=True):
     if not section:
         _add_led(pl, model, p)
         # passive radiator diaphragm, seen through its opening
-        pl.add_mesh(_to_mesh(model.envelopes["passive_radiator"], 0.2), color=(0.06, 0.06, 0.07),
-                    pbr=True, metallic=0.0, roughness=0.6)
+        if "passive_radiator" in model.envelopes:
+            pl.add_mesh(_to_mesh(model.envelopes["passive_radiator"], 0.2), color=(0.06, 0.06, 0.07),
+                        pbr=True, metallic=0.0, roughness=0.6)
     else:
         colours = {"driver": (0.15, 0.15, 0.17), "battery": (0.2, 0.45, 0.75),
                    "passive_radiator": (0.35, 0.2, 0.45)}

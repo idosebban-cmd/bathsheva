@@ -67,6 +67,11 @@ def _revolve_profile(pts_or_edges):
     return revolve(face, Axis.Z, 360)
 
 
+def _smooth_spline(points):
+    """Smooth B-spline within 0.01 mm of the points (robust in booleans)."""
+    return Edge.make_spline_approx(points, tol=0.01, max_deg=5)
+
+
 def _front_cyl(radius, z, depth=400.0, y_from=0.0):
     """Cylinder along -Y (pointing out of the front), centred at height z.
     Spans y in [y_from - depth, y_from]."""
@@ -77,6 +82,38 @@ def _dir(angle_deg):
     """Unit vector in the XY plane at an angle measured from the front (-Y)."""
     a = math.radians(angle_deg)
     return Vector(math.sin(a), -math.cos(a), 0)
+
+
+def _safe_cut(body, make_tool, info=None, label=""):
+    """body - tool, where make_tool(dz, long) builds the cutter shifted up by dz
+    (long=True: a longer cutter reaching further inside).
+    OpenCascade occasionally returns an invalid (empty or inside-out) solid for
+    a small hole at an unlucky spot on the curved spline surface. If that
+    happens, retry with a tiny vertical nudge (up to 1 mm) and note it."""
+    from OCP.BRepAlgoAPI import BRepAlgoAPI_Cut
+
+    def fuzzy_cut(a, b, fuzz):
+        op = BRepAlgoAPI_Cut()
+        op.SetFuzzyValue(fuzz)
+        return _one_solid(a._bool_op((a,), (b,), op))
+
+    v0 = body.volume
+    attempts = [(0.0, False, 0.0), (0.0, False, 1e-5), (0.0, False, 1e-4), (0.0, False, 1e-3)]
+    attempts += [(dz, lg, fz) for dz in (0.05, -0.05, 0.1, -0.1, 0.2, -0.2, 0.4, -0.4, 0.7, -0.7)
+                 for lg in (False, True) for fz in (0.0, 1e-4)]
+    for dz, long_, fz in attempts:
+        try:
+            tool = make_tool(dz, long_)
+            out = fuzzy_cut(body, tool, fz) if fz else body - tool
+        except Exception:
+            continue
+        # (volume integration on spline faces is only good to ~0.5 %, so this
+        # catches empty or inside-out results, not tiny differences)
+        if out.is_valid and 0.9 * v0 < out.volume < 1.01 * v0:
+            if (dz or long_ or fz) and info is not None:
+                info.setdefault("nudged_cuts", []).append((label, dz, "long" if long_ else "short", fz))
+            return out
+    raise RuntimeError(f"Boolean cut failed: {label}")
 
 
 def _one_solid(shape):
@@ -110,10 +147,12 @@ def build(p, visual_only=False) -> Model:
     z0_ref = p.BASE_CLEARANCE_FRAC * H              # underside of the body (styling value)
     z0 = z0_ref
     base_pr = p.PR_POSITION == "base"
-    if p.PR_POSITION not in ("base", "rear"):
+    no_pr = p.PR_POSITION == "none"                 # sealed enclosure, no passive radiator
+    if p.PR_POSITION not in ("base", "rear", "none"):
         raise ValueError(f"Unknown PR_POSITION {p.PR_POSITION!r}")
     base_nozzle = base_pr and p.BASE_STYLE == "nozzle"
     base_vent = base_pr and p.BASE_STYLE == "vent"
+    concept_base = base_vent or no_pr               # the concept's gold cup + small foot
     if base_pr and p.BASE_STYLE not in ("vent", "nozzle"):
         raise ValueError(f"Unknown BASE_STYLE {p.BASE_STYLE!r}")
     if base_nozzle:
@@ -159,9 +198,10 @@ def build(p, visual_only=False) -> Model:
         a_top = math.atan(-R * float(f(1.0, 1)) / bh)
         d0 = R * float(f(0.0, 1)) / bh                              # dr/dz at the bottom
         slope_bot = d0
-        outer_curve = Edge.make_spline(
-            [_xz(r, z) for r, z in prof],
-            tangents=[Vector(d0, 0, 1).normalized(), Vector(-math.sin(a_top), 0, math.cos(a_top))])
+        # an approximating spline (within 0.01 mm) rather than one forced through
+        # every point: the interpolated one has tiny ripples that made OpenCascade
+        # fail on small holes (LED, knob) at unlucky heights
+        outer_curve = _smooth_spline([_xz(r, z) for r, z in prof])
     else:
         rb = R * p.BODY_BOTTOM_DIA_FRAC
         rt = R * p.BODY_TOP_DIA_FRAC
@@ -215,7 +255,7 @@ def build(p, visual_only=False) -> Model:
         extend > 0 continues the ends straight up/down (used to open the shell)."""
         q = offset_pts(d)
         q = q[q[:, 0] > 0.5]
-        spline = Edge.make_spline([_xz(r, z) for r, z in q])
+        spline = _smooth_spline([_xz(r, z) for r, z in q])
         zb, ztop = q[0, 1] - extend, q[-1, 1] + extend
         edges = [
             Edge.make_line(_xz(0, zb), _xz(q[0, 0], zb)),
@@ -354,9 +394,14 @@ def build(p, visual_only=False) -> Model:
     knob = knob - Pos(0, y_back + boss_len, zk) * Rot(90, 0, 0) * Cylinder(
         p.KNOB_SHAFT_DIA / 2, bore, align=MIN)                      # blind shaft bore
     knob = _one_solid(knob)
-    body = body - _front_cyl(p.KNOB_BOSS_DIA / 2 + p.FIT_CLEARANCE * 2, zk, depth=30,
-                             y_from=-r_out(zk) + 15)
-    body = body - _front_cyl(p.LED_DIA / 2, z_led, depth=30, y_from=-r_out(z_led) + 15)
+    body = _safe_cut(body, lambda dz, lg: _front_cyl(
+        p.KNOB_BOSS_DIA / 2 + p.FIT_CLEARANCE * 2, zk + dz, depth=30 if lg else p.WALL + 2.4,
+        y_from=-r_out(zk) + (15 if lg else p.WALL + 1.2)), I, "knob hole")
+    # short cutter spanning just the wall: a long one intermittently makes
+    # OpenCascade return an invalid (inside-out) body here
+    body = _safe_cut(body, lambda dz, lg: _front_cyl(
+        p.LED_DIA / 2, z_led + dz, depth=30 if lg else p.WALL + 2.4,
+        y_from=-r_out(z_led) + (15 if lg else p.WALL + 1.2)), I, "LED hole")
     # light pipe in the LED hole (render only, not a separate part)
     m.envelopes["led"] = _front_cyl(p.LED_DIA / 2 - 0.05, z_led, depth=3,
                                     y_from=-r_out(z_led) + 3.2)
@@ -374,7 +419,7 @@ def build(p, visual_only=False) -> Model:
                                  align=(Align.CENTER, Align.MAX, Align.CENTER))
     pocket = Rot(0, 0, rot_z) * pocket
     pocket = pocket & offset_solid(-0.2)  # never break through the outside
-    body = body - port - pocket
+    body = _safe_cut(body, lambda dz, lg: Pos(0, 0, dz) * (port + pocket), I, "USB-C port")
     I.update(z_usbc=zu)
 
     # ---- nose cone ---------------------------------------------------------
@@ -429,7 +474,7 @@ def build(p, visual_only=False) -> Model:
     # ---- foot + base collar ----------------------------------------------
     foot_r = p.BODY_MAX_DIA * p.FOOT_DIA_FRAC / 2
     base_extra = {}
-    if not base_pr:
+    if not base_pr and not no_pr:
         collar_h = z0 * p.COLLAR_HEIGHT_FRAC
         collar = Pos(0, 0, z0 - collar_h) * Solid.make_cone(
             rb * 0.9, rb, collar_h)                   # slight taper, flush with the body at the top
@@ -439,13 +484,15 @@ def build(p, visual_only=False) -> Model:
         if not closed_bottom:
             foot = foot + Pos(0, 0, z0 - 0.5) * Cylinder(
                 r_open_bot - p.FIT_CLEARANCE, p.FOOT_SPIGOT_HEIGHT + 0.5, align=MIN)
-    elif base_vent:
+    elif concept_base:
         # Concept base: slim tapered gold collar, a narrow vent gap under it
         # (reads as a dark shadow line, with a recessed dark mesh behind it), and a
         # small rounded gold foot. The radiator sits inside the body above the
         # bottom opening and breathes out through the collar bore and the gap.
-        vg = p.BASE_VENT_GAP
-        foot_h = p.FOOT_HEIGHT
+        # With PR_POSITION = "none" there's no vent: the cup sits straight on the
+        # foot and the collar is a solid plug that seals the bottom of the body.
+        vg = p.BASE_VENT_GAP if base_vent else 0.0
+        foot_h = p.FOOT_HEIGHT if no_pr else p.FOOT_HEIGHT - p.BASE_VENT_GAP
         g = p.FOOT_GROUND_GAP
         collar_h = z0 - g - foot_h - vg
         if collar_h < 3.0:
@@ -474,7 +521,12 @@ def build(p, visual_only=False) -> Model:
         collar = collar + Pos(0, 0, z0 - 0.5) * Cylinder(spig_o, p.FOOT_SPIGOT_HEIGHT + 0.5, align=MIN)
         bore = Pos(0, 0, z_cb - 0.01) * Solid.make_cone(bore_bot, bore_top, collar_h + 0.02) + \
             Pos(0, 0, z0 - 1) * Cylinder(bore_top, p.FOOT_SPIGOT_HEIGHT + 2, align=MIN)
-        foot = _one_solid(collar - bore)
+        foot = _one_solid(collar - bore) if base_vent else _one_solid(collar)
+        # trims the fins to follow the cup (no step where they meet it)
+        cup_clear = Edge.make_spline([_xz(rb + 0.6, z0 + 0.01), _xz(r_cb + 0.6, z_cb)],
+                                     tangents=[down(p.COLLAR_TOP_SLOPE), down(p.COLLAR_END_SLOPE)])
+        fin_clear = lathe(cup_clear, rb + 0.6, z0 + 0.01, r_cb + 0.6, z_cb) + \
+            Pos(0, 0, -1) * Cylinder(r_cb + 0.6, z_cb + 1.01, align=MIN)
 
         # small gold foot: a short cylinder with a rounded bottom edge (as in the concept)
         foot2 = Pos(0, 0, g) * Cylinder(foot_r, z_ft - g, align=MIN)
@@ -484,6 +536,10 @@ def build(p, visual_only=False) -> Model:
         except Exception:
             pass
         r_ft = foot_r
+        base_extra = {"base_foot": _one_solid(foot2)}
+        I.update(collar_bottom=z_cb, collar_top_dia=2 * rb, collar_bottom_dia=2 * r_cb,
+                 foot_h=foot_h, foot_top=g + foot_h)
+    if base_vent:
         # dark bronze vent insert, set deep: a plate on the foot top and a mesh ring
         r_mo = r_cb - p.BASE_VENT_RECESS                     # mesh outer radius
         r_mi = r_mo - p.BASE_VENT_MESH_THICK
@@ -493,7 +549,7 @@ def build(p, visual_only=False) -> Model:
         vent = vent + Pos(0, 0, z_ft + pl_t - 0.2) * (
             Cylinder(r_mo, vg - pl_t + 0.4, align=MIN) - Cylinder(r_mi, vg + 1, align=MIN))
         vent = _one_solid(vent)
-        base_extra = {"vent_insert": vent, "base_foot": _one_solid(foot2)}
+        base_extra["vent_insert"] = vent
 
         # flow path areas (report): radiator -> body opening -> collar bore -> mesh -> gap
         sd = math.pi * (p.PR_BASE_EFFECTIVE_DIA / 2) ** 2
@@ -507,7 +563,7 @@ def build(p, visual_only=False) -> Model:
                  pr_exit_area=min(math.pi * bore_bot ** 2, mesh_gross * p.BASE_VENT_MESH_OPEN,
                                   2 * math.pi * r_cb * vg),
                  foot_h=foot_h, foot_top=p.FOOT_GROUND_GAP + foot_h)
-    else:
+    elif base_pr:
         # collar = baffle for the down-firing radiator: a ring with a sound hole
         # and a thin locating spigot round the radiator frame
         collar_h = collar_h_ref
@@ -594,7 +650,8 @@ def build(p, visual_only=False) -> Model:
         battery_floor_z = z0 + p.PR_BASE_DEPTH + p.PR_BACK_CLEARANCE
 
     # ---- fins --------------------------------------------------------------
-    fins, tips = _build_fins(p, I, r_out, outer_solid, z0, bh, R, clear_r=rb, hollow=not visual_only)
+    fins, tips = _build_fins(p, I, r_out, outer_solid, z0, bh, R, clear_r=rb, hollow=not visual_only,
+                             clear_solid=fin_clear if concept_base else None)
     I["fin_tips"] = tips
 
     fin_angles = [p.FIN_ANGLE_OFFSET_DEG + k * 360 / p.FIN_COUNT for k in range(p.FIN_COUNT)]
@@ -609,11 +666,15 @@ def build(p, visual_only=False) -> Model:
         bolt_z = I["fin_bolt_z"]
         for ang in fin_angles:
             for zb in bolt_z:
-                body = body - radial_cyl(p.FIN_BOLT_CLEAR / 2, ang, zb, r_in(zb) - 3, r_out(zb) + 1)
+                body = _safe_cut(body, lambda dz, lg: radial_cyl(p.FIN_BOLT_CLEAR / 2, ang, zb + dz,
+                                                             r_in(zb) - 3, r_out(zb) + 1),
+                                 I, "fin bolt hole")
 
     # ---- passive radiator ---------------------------------------------------
     rear_parts = {}
-    if base_vent:
+    if no_pr:
+        pass                                            # sealed enclosure
+    elif base_vent:
         m.envelopes["passive_radiator"] = Pos(0, 0, I["z_pr_seat"]) * Cylinder(
             p.PR_BASE_DIA / 2, p.PR_BASE_DEPTH, align=MIN)
         I.update(z_pr=I["z_pr_seat"] + p.PR_BASE_DEPTH / 2)
@@ -758,7 +819,7 @@ def build(p, visual_only=False) -> Model:
             # cup height, so iterate a couple of times.
             def grams(shape, key):
                 return shape.volume / 1000.0 * rho(key)
-            pr_mass = p.PR_BASE_MASS if base_pr else p.PR_MASS
+            pr_mass = 0.0 if no_pr else p.PR_BASE_MASS if base_pr else p.PR_MASS
             others = (grams(body, "body") + grams(cone, "nose_cone") + grams(foot, "foot")
                       + sum(grams(f, "fins") for f in fins) + grams(grille, "grille")
                       + grams(bezel, "bezel") + grams(knob, "knob")
@@ -790,7 +851,9 @@ def build(p, visual_only=False) -> Model:
 
         # ---- fit checks between the internal items ------------------------------
         items = {"driver": m.envelopes["driver"], "battery": batt,
-                 "passive radiator": m.envelopes["passive_radiator"], "chassis": m.parts["chassis"]}
+                 "chassis": m.parts["chassis"]}
+        if "passive_radiator" in m.envelopes:
+            items["passive radiator"] = m.envelopes["passive_radiator"]
         if "ballast" in m.parts:
             items["ballast"] = m.parts["ballast"]
         names = list(items)
@@ -803,6 +866,8 @@ def build(p, visual_only=False) -> Model:
 
     # ---- shadow line at the cone joint --------------------------------------
     body = _one_solid(body)
+    if body.volume <= 0 or not body.is_valid:
+        raise RuntimeError("Body solid is invalid/inside-out after the boolean steps")
     if p.JOINT_SHADOW_LINE > 0:
         body = _chamfer_rim(body, zt, rt, p.JOINT_SHADOW_LINE)
         cone = _chamfer_rim(cone, zt, rt, p.JOINT_SHADOW_LINE)
@@ -877,7 +942,7 @@ def _bezier(p0, p1, p2, n=40):
     return (1 - t) ** 2 * np.array(p0) + 2 * (1 - t) * t * np.array(p1) + t ** 2 * np.array(p2)
 
 
-def _build_fins(p, I, r_out, outer_solid, z0, bh, R, clear_r=0.0, hollow=True):
+def _build_fins(p, I, r_out, outer_solid, z0, bh, R, clear_r=0.0, hollow=True, clear_solid=None):
     u_tip = p.FIN_TIP_REACH_FRAC * R
     z_rt = z0 + bh * p.FIN_ROOT_TOP_FRAC
     z_rb = z0 + bh * p.FIN_ROOT_BOTTOM_FRAC
@@ -999,7 +1064,8 @@ def _build_fins(p, I, r_out, outer_solid, z0, bh, R, clear_r=0.0, hollow=True):
         blank = blank - pilot
         solid_blank = solid_blank - pilot
     # keep clear of the collar under the body
-    under = Pos(0, 0, -1) * Cylinder(clear_r + 1.0, z0 + 1.0, align=MIN) if clear_r else None
+    under = clear_solid if clear_solid is not None else (
+        Pos(0, 0, -1) * Cylinder(clear_r + 1.0, z0 + 1.0, align=MIN) if clear_r else None)
     blank = _one_solid(blank - outer_solid - under if under else blank - outer_solid)
     solid_blank = _one_solid(solid_blank - outer_solid - under if under else solid_blank - outer_solid)
     I["fin_taper_half_deg"] = math.degrees(math.atan(slope / 2))
