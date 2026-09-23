@@ -56,6 +56,9 @@ def _print_pose(name, shape, info, internal=()):
         how = ("upright, exit rim on the bed (deflector cone on top)",
                "Yes, under the injector plate rim, which overhangs the throat; the cone "
                "and bell need none")
+    elif name == "vent_insert":
+        s = shape
+        how = ("upright, plate on the bed", "No")
     elif name == "base_mesh":
         s = shape
         how = ("upright as fitted (a ring standing on its lower edge)",
@@ -116,8 +119,10 @@ PRINT_MATERIAL = {
     "nose_cone": ("PLA+", "0.12 mm layers for a smooth cone; gold paint or gold PLA"),
     "fin": ("PLA+ or PETG", "Solid in this version. 30-40% infill adds some weight. The 3.3 mm "
             "pilot holes take M4 self-tapping screws from inside, or glue with epoxy"),
-    "foot": ("PLA+", "Friction-fits into the body (0.2 mm clearance); sand to fit"),
+    "foot": ("PLA+", "Glue under the vent insert"),
     "collar": ("PLA+", "Friction-fits into the body (0.2 mm clearance); sand to fit"),
+    "vent_insert": ("PLA+ in black, or resin", "Paint matt black; for a looks-like model the mesh "
+                    "ring can stay solid (it's only a dark shadow line)"),
     "nozzle": ("PLA+ or resin", "0.08-0.12 mm layers to keep the steps crisp; glued to the mesh ring"),
     "base_mesh": ("Resin (SLA/MSLA) recommended", "Same honeycomb as the grille. Glue its solid top "
                   "band to the collar and its bottom band to the nozzle"),
@@ -251,8 +256,9 @@ def write_report(m, poses, build_seconds):
     L(f"* Driver ({p.DRIVER_DIA:g} mm) goes in from the front through the {f(I['sound_opening_dia'])} mm "
       f"sound opening: {ok(I['driver_through_opening'])}")
     if p.SPLIT_MODE == "nose_tail":
-        L(f"* Battery goes in through the {f(2 * I['r_in_bottom'])} mm bottom opening "
-          f"(needs {f(I['battery_min_opening'])} mm): {ok(2 * I['r_in_bottom'] >= I['battery_min_opening'])}")
+        which = "bottom" if I["r_in_bottom"] >= I["r_in_top"] else "top (cone)"
+        L(f"* Battery goes in through the {f(I['insert_opening_dia'])} mm {which} opening "
+          f"(needs {f(I['battery_min_opening'])} mm): {ok(I['insert_opening_dia'] >= I['battery_min_opening'])}")
     elif p.SPLIT_MODE == "nose":
         L(f"* Battery goes in through the {f(2 * I['r_in_top'])} mm top opening "
           f"(needs {f(I['battery_min_opening'])} mm): {ok(2 * I['r_in_top'] >= I['battery_min_opening'])}")
@@ -316,7 +322,40 @@ def write_report(m, poses, build_seconds):
     L("")
     L("## Passive radiator")
     L("")
-    if p.PR_POSITION == "base":
+    if p.PR_POSITION == "base" and p.BASE_STYLE == "vent":
+        sd = I["pr_sd"]
+        L(f"* **Fires down through the base** (the back stays smooth red). It's a round {p.PR_BASE_DIA:g} mm "
+          f"radiator ({p.PR_BASE_EFFECTIVE_DIA:g} mm radiating, **{sd:.0f} mm2**) on a flat seat moulded "
+          f"inside the body, {f(I['z_pr_seat'])} mm up. It's fitted through the cone opening.")
+        L(f"* It breathes out through the body's bottom opening and the collar bore, then sideways through "
+          f"a **{p.BASE_VENT_GAP:g} mm gap under the collar**. The gap reads as a dark shadow line, with "
+          f"a black mesh ring ({p.BASE_VENT_MESH_OPEN:.0%} open) recessed {p.BASE_VENT_RECESS:g} mm behind it.")
+        L("")
+        L("| Air path, in order | Area mm2 | x radiator area |")
+        L("|---|---|---|")
+        for k, v in I["vent_areas"].items():
+            L(f"| {k} | {v:.0f} | {v / sd:.2f} |")
+        L("")
+        ratio = I["pr_exit_area"] / sd
+        mesh_r = (p.BODY_MAX_DIA * p.COLLAR_BOTTOM_DIA_FRAC / 2 - p.BASE_VENT_RECESS
+                  - p.BASE_VENT_MESH_THICK / 2)
+        gap_needed = sd / (p.BASE_VENT_MESH_OPEN * 2 * math.pi * mesh_r)
+        L(f"* **Exit area: {I['pr_exit_area']:.0f} mm2 = {ratio:.2f} x the radiator area** (limited by the "
+          f"{min(I['vent_areas'], key=I['vent_areas'].get)}). The usual rule of thumb is at least 1 x. "
+          "At this size the air moves several times faster than the radiator cone. Expect less bass "
+          "from the radiator and possible 'chuffing' noise at high volume. That needs measuring on a "
+          "prototype.")
+        L(f"* Reaching 1 x through this gap alone would need a ~{gap_needed:.0f} mm tall vent, which "
+          "wouldn't read as a shadow line. Options: (a) a second hidden vent in the shadow line where "
+          "the collar meets the body (at about 39 mm diameter, roughly doubling the mesh area); "
+          "(b) widening the collar bore and dropping the mesh in favour of a plain slot; "
+          "(c) the rear radiator (`PR_POSITION = \"rear\"`); (d) a sealed box without a radiator.")
+        L(f"* The body sits **{f(I['z0'])} mm off the ground**, as in the concept.")
+        if I["ballast_mass"] < need - 1:
+            L(f"* **Mass target not met:** at most {f(I['ballast_max_g'])} g of "
+              f"{p.PART_MATERIALS['ballast']} ballast fits below the driver, leaving the total "
+              f"{f(p.TARGET_MASS_G - total_m)} g short.")
+    elif p.PR_POSITION == "base":
         L(f"* **Fires down through the base** (the back stays smooth red). It's a round {p.PR_BASE_DIA:g} mm "
           f"radiator ({p.PR_BASE_EFFECTIVE_DIA:g} mm radiating, {I['pr_sd']:.0f} mm2) on the collar, "
           f"which acts as its baffle.")
@@ -349,17 +388,18 @@ def write_report(m, poses, build_seconds):
       "through the wall into the fins, with their heads on the fin brackets about 40 mm from the axis, "
       f"at {f(min(I['fin_bolt_z']))} and {f(max(I['fin_bolt_z']))} mm up. A straight driver would come in "
       "along the bolt axis, from the centre of the body, which is where the ballast cup and battery sit. The "
-      "only ways in are the collar opening (about 48 mm, below) and the driver hole (60 mm, well above). "
+      f"only ways in are the end openings ({f(2 * I['r_in_bottom'])} mm at the bottom, {f(2 * I['r_in_top'])} mm "
+      f"at the cone) and the driver hole ({f(I['sound_opening_dia'])} mm, well above). "
       "The brackets also bolt to the ballast cup, so the order of assembly is circular. Options: fit the fins "
       "and brackets before the ballast/battery using an offset or right-angle driver; use captive studs "
       "cast into the fins with nuts inside; or bolt the brackets to the cup with vertical screws reachable "
       "from the collar opening.")
     L("2. **Moulding the body.** A one-piece shell whose belly (95 mm) is much wider than its end "
-      "openings (about 48/54 mm) can't be injection-moulded on a simple core. It needs a collapsible core, "
+      "openings can't be injection-moulded on a simple core. It needs a collapsible core, "
       "or two halves welded together (the seam disappears under the lacquer), and the internal driver and "
       "radiator seats may have to become separate parts. This decision affects the split strategy and "
       "the fitting sequence.")
-    L("3. **Blind assembly and wiring.** The battery, ballast and radiator go in through a ~48 mm opening, "
+    L(f"3. **Blind assembly and wiring.** The battery, ballast and radiator go in through a ~{f(I['insert_opening_dia'], 0)} mm opening, "
       "and the knob encoder's nut sits about 40 mm below the driver hole. Connectors, service loops and "
       "special tools need defining, along with a repair/disassembly sequence.")
     L("4. **Retaining the nose cone and the base module.** Both locate on slip-fit spigots only. They need "
@@ -418,7 +458,7 @@ def main():
             r = OUT / "renders"
             under = render.render_underside(m, p, r / "render_underside.png")
             render.contact_sheet([r / "render_front.png", r / "render_three_quarter_rear.png", under],
-                                 r / "render_base_nozzle_sheet.png", scale=0.6)
+                                 r / "render_base_sheet.png", scale=0.6)
     print("Writing report...")
     s = write_report(m, poses, time.time() - t0)
     print(f"Done in {time.time() - t0:.0f} s -> {OUT}")

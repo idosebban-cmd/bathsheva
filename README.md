@@ -13,6 +13,7 @@ One command regenerates everything in `output/`:
 | `output/report.md` | Dimensions, internal air volume, mass against the target, centre of mass, tip-over angle, fit checks, and the assembly steps that need a professional |
 | `output/print_prototype/` | Ready-to-print looks-like set: visible parts only, solid fins, no internals, plus `PRINT_NOTES.md` (material, orientation, supports per part) |
 | `output/pr_comparison/` | From `python compare_pr.py`: base-firing vs rear passive radiator, renders and a numbers table |
+| `output/concept_compare/` | From `python compare_concept.py`: the model's front view next to and over the concept image, plus a table of remaining differences |
 
 ![overview](output/renders/render_overview.png)
 
@@ -35,7 +36,24 @@ python build.py              # everything (~2 min with the honeycomb grilles)
 python build.py --no-render  # skip the PNGs when you only need the CAD
 python build.py --flat       # honeycomb off for this run (much faster while iterating)
 python compare_pr.py         # compare passive radiator layouts (~4 min)
+python compare_concept.py    # compare the front view with reference/atelier_concept.png (~1 min)
 ```
+
+## Matching the concept image
+
+`reference/atelier_concept.png` is the concept. `reference/fit_concept.py` measures it
+and writes `reference/concept_fit.json`:
+* the red body's edges are found automatically on every row above the fins;
+* everything else (cone outline, fin outline, grille, knob, collar, foot) comes from
+  landmark pixel positions listed at the top of the script, read off zoomed crops;
+* below the fins' tops the body's own outline is hidden, so its radius there
+  comes from the fin/body joint lines.
+
+The results live in `params.py` as `BODY_PROFILE_POINTS` and `CONE_PROFILE_POINTS` (with
+`BODY_PROFILE_MODE` / `CONE_PROFILE_MODE = "points"`), plus the fitted fin, grille, knob
+and base values. Set the modes back to `"fullness"` / `"ogive"` to use the simple curve
+settings instead. `compare_concept.py` renders an orthographic front view at the concept's
+scale and reports how far apart they are.
 
 ## Changing the design
 
@@ -52,7 +70,9 @@ Edit a value, save and run `python build.py`. The most useful ones:
 | Make the nose cone more curved or more straight-sided | `CONE_OGIVE` (0 to 1), `CONE_TIP_HALF_ANGLE_DEG` |
 | Widen the fin stance (more stable) | `FIN_TIP_REACH_FRAC` |
 | Change the fin shape | `FIN_ROOT_TOP_FRAC`, `FIN_OUTER_BULGE`, `FIN_UNDERCUT`, `FIN_ROOT_THICK` |
-| Change the grille size or height | `GRILLE_DIA_FRAC`, `GRILLE_Z_FRAC` |
+| Change the grille size or height | `GRILLE_DIA_FRAC`, `GRILLE_Z_FRAC`, `GRILLE_WRAPPED` (wraps round the body like the concept) |
+| Change the body/cone outline | `BODY_PROFILE_POINTS`, `CONE_PROFILE_POINTS` (or switch to `"fullness"`/`"ogive"` mode) |
+| Change the base | `BASE_STYLE`, `BASE_VENT_GAP`, `COLLAR_BOTTOM_DIA_FRAC`, `FOOT_HEIGHT`, `FOOT_DIA_FRAC` |
 | Turn the honeycomb on | `HEX_PATTERN_ENABLED = True` |
 | Use a different driver or battery | `DRIVER_DIA`, `DRIVER_DEPTH`, `BATTERY_SIZE`, `BATTERY_MASS` |
 | Change the split lines | `SPLIT_MODE` (see below) |
@@ -108,15 +128,13 @@ are measured around the axis from the front.
 * **Knob:** a low 5 mm disc. A hidden 10 mm boss on its back sits in a hole in the body wall, so the
   6 mm blind shaft bore still gets about 6.5 mm of grip on the encoder shaft.
 * **Passive radiator** (`PR_POSITION`):
-  * `"base"` (default): a round 44 mm unit fires down through a hole in the gold collar,
-    so the back stays smooth. Below the collar the base is styled as a rocket engine:
-    * a ring of the front grille's honeycomb sheet, sized so its open area is at least the
-      radiator's area (`PR_EXIT_AREA_RATIO`), with a gold deflector cone inside that hides
-      the see-through view and turns the air outward;
-    * a stepped gold nozzle carried by the ring, 2 mm off the ground. There are no posts;
-      `FOOT_POSTS` can add some, hidden inside the ring.
-    
-    This lifts the body (see `report.md`), and the battery and ballast sit above the radiator.
+  * `"base"` (default): a round 44 mm unit, fitted through the cone opening, sits on a
+    seat inside the body and fires down through the collar. `BASE_STYLE` sets how the base looks:
+    * `"vent"` (default, as in the concept): a slim gold collar, then a 5.5 mm gap that reads
+      as a dark shadow line, with a black mesh ring recessed behind it, then a small rounded
+      foot. The report compares every narrowing of the air path with the radiator area;
+      this vent only reaches about a quarter of it (see `report.md` for the options).
+    * `"nozzle"`: a honeycomb mesh ring and a stepped rocket-engine nozzle (raises the body).
   * `"rear"`: a 60 × 40 mm oval on the rear at driver height, behind a perforated
     gold cover and bezel that match the front grille.
   * `python compare_pr.py` builds both and tabulates air volume, mass, centre of

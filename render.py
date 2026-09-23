@@ -174,7 +174,9 @@ def _plotter(model, p, size, section=False, shadow=True):
         if section:
             mesh = mesh.clip(**clip)
         is_red = name.startswith("body")
-        style = red if is_red else steel if name in internal else gold
+        dark = dict(color=hex_linear(p.VENT_HEX), pbr=True, metallic=0.6, roughness=0.6)
+        style = (red if is_red else steel if name in internal else
+                 dark if name == "vent_insert" else gold)
         actor = pl.add_mesh(mesh, smooth_shading=True, **style)
         if is_red and p.BODY_CLEARCOAT > 0:
             prop = actor.GetProperty()

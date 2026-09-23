@@ -109,7 +109,11 @@ def build(p) -> Model:
     base_pr = p.PR_POSITION == "base"
     if p.PR_POSITION not in ("base", "rear"):
         raise ValueError(f"Unknown PR_POSITION {p.PR_POSITION!r}")
-    if base_pr:
+    base_nozzle = base_pr and p.BASE_STYLE == "nozzle"
+    base_vent = base_pr and p.BASE_STYLE == "vent"
+    if base_pr and p.BASE_STYLE not in ("vent", "nozzle"):
+        raise ValueError(f"Unknown BASE_STYLE {p.BASE_STYLE!r}")
+    if base_nozzle:
         # A down-firing radiator breathes out through a hole in the collar, then
         # sideways through the gap between the collar and the foot stub. That gap
         # must pass at least PR_EXIT_AREA_RATIO x the radiator's area, so the foot
@@ -138,25 +142,42 @@ def build(p) -> Model:
     I.update(H=H, R=R, z0=z0, body_h=bh, cone_h=ch, z_joint=zt)
 
     # ---- body side profile ------------------------------------------------
-    rb = R * p.BODY_BOTTOM_DIA_FRAC
-    rt = R * p.BODY_TOP_DIA_FRAC
-    zm = z0 + bh * p.BODY_MAX_AT_FRAC
-    # Upper and lower body are each r = R - (R - r_end) * s**n, where s runs
-    # from 0 at the widest point to 1 at the end. n is the "fullness".
-    nt, nb = p.BODY_TOP_FULLNESS, p.BODY_BOTTOM_FULLNESS
-    prof = []
-    for s in np.linspace(1, 0, 40, endpoint=False):          # bottom -> widest
-        prof.append((R - (R - rb) * s ** nb, zm - s * (zm - z0)))
-    for s in np.linspace(0, 1, 50):                          # widest -> top
-        prof.append((R - (R - rt) * s ** nt, zm + s * (zt - zm)))
-    # slope at the joint, continued by the nose cone
-    a_top = math.atan((R - rt) * nt / (zt - zm))
-    a_bot = math.atan((R - rb) * nb / (zm - z0))
-    outer_curve = Edge.make_spline(
-        [_xz(r, z) for r, z in prof],
-        tangents=[Vector(math.cos(math.pi / 2 - a_bot), 0, math.sin(math.pi / 2 - a_bot)),
-                  Vector(-math.sin(a_top), 0, math.cos(a_top))],
-    )
+    if p.BODY_PROFILE_MODE == "points":
+        # measured profile (fractions of body height and max radius), joined
+        # with a shape-preserving interpolation so it never overshoots
+        from scipy.interpolate import PchipInterpolator
+        tt = np.array([q[0] for q in p.BODY_PROFILE_POINTS], dtype=float)
+        rr = np.array([q[1] for q in p.BODY_PROFILE_POINTS], dtype=float)
+        f = PchipInterpolator(tt, rr)
+        ts = (1 - np.cos(np.linspace(0, math.pi, 90))) / 2        # denser at both ends
+        prof = [(R * float(f(t)), z0 + t * bh) for t in ts]
+        rb, rt = R * rr[0], R * rr[-1]
+        zm = z0 + bh * tt[int(np.argmax(rr))]
+        a_top = math.atan(-R * float(f(1.0, 1)) / bh)
+        d0 = R * float(f(0.0, 1)) / bh                              # dr/dz at the bottom
+        outer_curve = Edge.make_spline(
+            [_xz(r, z) for r, z in prof],
+            tangents=[Vector(d0, 0, 1).normalized(), Vector(-math.sin(a_top), 0, math.cos(a_top))])
+    else:
+        rb = R * p.BODY_BOTTOM_DIA_FRAC
+        rt = R * p.BODY_TOP_DIA_FRAC
+        zm = z0 + bh * p.BODY_MAX_AT_FRAC
+        # Upper and lower body are each r = R - (R - r_end) * s**n, where s runs
+        # from 0 at the widest point to 1 at the end. n is the "fullness".
+        nt, nb = p.BODY_TOP_FULLNESS, p.BODY_BOTTOM_FULLNESS
+        prof = []
+        for s_ in np.linspace(1, 0, 40, endpoint=False):         # bottom -> widest
+            prof.append((R - (R - rb) * s_ ** nb, zm - s_ * (zm - z0)))
+        for s_ in np.linspace(0, 1, 50):                         # widest -> top
+            prof.append((R - (R - rt) * s_ ** nt, zm + s_ * (zt - zm)))
+        # slope at the joint, continued by the nose cone
+        a_top = math.atan((R - rt) * nt / (zt - zm))
+        a_bot = math.atan((R - rb) * nb / (zm - z0))
+        outer_curve = Edge.make_spline(
+            [_xz(r, z) for r, z in prof],
+            tangents=[Vector(math.cos(math.pi / 2 - a_bot), 0, math.sin(math.pi / 2 - a_bot)),
+                      Vector(-math.sin(a_top), 0, math.cos(a_top))],
+        )
     I.update(body_top_slope_deg=math.degrees(a_top))
 
     # Sample the curve so we can (a) offset it and (b) look up radius vs height.
@@ -180,7 +201,8 @@ def build(p) -> Model:
     def r_in(z):
         return float(np.interp(z, inner[:, 1], inner[:, 0], left=inner[0, 0], right=inner[-1, 0]))
 
-    I.update(r_bottom=rb, r_top=rt, z_max=zm, r_in_top=inner[-1, 0], r_in_bottom=inner[0, 0])
+    r_open_bot = min(inner[0, 0], rb - p.BODY_BOTTOM_LAND)     # bottom opening radius
+    I.update(r_bottom=rb, r_top=rt, z_max=zm, r_in_top=inner[-1, 0], r_in_bottom=r_open_bot)
     m._r_out, m._r_in = r_out, r_in  # handy for analysis
 
     def offset_solid(d, extend=0.0):
@@ -194,7 +216,13 @@ def build(p) -> Model:
             Edge.make_line(_xz(0, zb), _xz(q[0, 0], zb)),
         ]
         if extend > 0:
-            edges.append(Edge.make_line(_xz(q[0, 0], zb), _xz(*q[0])))
+            # bottom opening no wider than r_bottom - BODY_BOTTOM_LAND, leaving a
+            # flat land round it (matters for a flat-bottomed profile)
+            x_open = min(q[0, 0], rb - p.BODY_BOTTOM_LAND)
+            edges[0] = Edge.make_line(_xz(0, zb), _xz(x_open, zb))
+            edges.append(Edge.make_line(_xz(x_open, zb), _xz(x_open, q[0, 1])))
+            if x_open < q[0, 0] - 1e-6:
+                edges.append(Edge.make_line(_xz(x_open, q[0, 1]), _xz(*q[0])))
         edges.append(spline)
         if extend > 0:
             edges.append(Edge.make_line(_xz(*q[-1]), _xz(q[-1, 0], ztop)))
@@ -233,17 +261,29 @@ def build(p) -> Model:
     I.update(z_grille=zg, grille_dia=2 * grille_r, bezel_od=2 * bezel_r,
              sound_opening_dia=2 * open_r, body_dia_at_grille=2 * rg_body)
 
-    recess_cut = band(-p.GRILLE_RECESS, 5.0) & _front_cyl(bezel_r, zg)
+    def front_outline(rad):
+        """Prism along -Y for a grille feature of 'radius' rad. With
+        GRILLE_WRAPPED the circle is wrapped round the curved body (as in the
+        concept): full height, but narrower when seen from the front."""
+        if not p.GRILLE_WRAPPED:
+            return _front_cyl(rad, zg)
+        a = rg_body * math.sin(min(rad / rg_body, math.pi / 2))
+        return Pos(0, 0, zg) * extrude(Plane.XZ * Ellipse(a, rad), amount=400)
+
+    grille_a = rg_body * math.sin(min(grille_r / rg_body, math.pi / 2)) if p.GRILLE_WRAPPED else grille_r
+    open_r = min(open_r, grille_a - p.GRILLE_LEDGE)          # round sound opening fits inside
+    I.update(sound_opening_dia=2 * open_r, grille_front_width=2 * grille_a)
+    recess_cut = band(-p.GRILLE_RECESS, 5.0) & front_outline(bezel_r)
     body = body - recess_cut
     body = body - (_front_cyl(open_r, zg) & offset_solid(1.0))
 
-    grille = band(-p.GRILLE_RECESS, -p.GRILLE_RECESS + p.GRILLE_THICK) & _front_cyl(grille_r - 0.1, zg)
+    grille = band(-p.GRILLE_RECESS, -p.GRILLE_RECESS + p.GRILLE_THICK) & front_outline(grille_r - 0.1)
     grille = _one_solid(grille)
     if p.HEX_PATTERN_ENABLED:
-        grille = _cut_honeycomb(grille, grille_r - 0.1, zg, p)
+        grille = _cut_honeycomb(grille, (grille_a - 0.1, grille_r - 0.1), zg, p)
 
     bezel = band(-p.GRILLE_RECESS, p.BEZEL_PROUD) & (
-        _front_cyl(bezel_r - 0.1, zg) - _front_cyl(grille_r, zg)
+        front_outline(bezel_r - 0.1) - front_outline(grille_r)
     )
     bezel = _one_solid(bezel)
 
@@ -329,11 +369,20 @@ def build(p) -> Model:
     a_base = straight + p.CONE_OGIVE * (a_top - straight)
     a_tip = math.radians(p.CONE_TIP_HALF_ANGLE_DEG)
     ztip = zt + ch
-    cone_curve = Edge.make_spline(
-        [_xz(rt, zt), _xz(0, ztip)],
-        tangents=[Vector(-math.sin(a_base), 0, math.cos(a_base)),
-                  Vector(-math.sin(a_tip), 0, math.cos(a_tip))],
-    )
+    if p.CONE_PROFILE_MODE == "points":
+        # measured cone (fractions of cone height and base radius). The base
+        # continues the body's slope (flush joint); the tip ends horizontal,
+        # which gives the concept's soft, rounded point.
+        cps = [(rt * rf, zt + tf * ch) for tf, rf in p.CONE_PROFILE_POINTS]
+        cone_curve = Edge.make_spline(
+            [_xz(r, z) for r, z in cps],
+            tangents=[Vector(-math.sin(a_top), 0, math.cos(a_top)), Vector(-1, 0, -p.CONE_TIP_SOFTNESS)])
+    else:
+        cone_curve = Edge.make_spline(
+            [_xz(rt, zt), _xz(0, ztip)],
+            tangents=[Vector(-math.sin(a_base), 0, math.cos(a_base)),
+                      Vector(-math.sin(a_tip), 0, math.cos(a_tip))],
+        )
     cone_outer = _revolve_profile([
         Edge.make_line(_xz(0, zt), _xz(rt, zt)),
         cone_curve,
@@ -376,7 +425,63 @@ def build(p) -> Model:
         foot = collar + stub
         if not closed_bottom:
             foot = foot + Pos(0, 0, z0 - 0.5) * Cylinder(
-                r_in(z0) - p.FIT_CLEARANCE, p.FOOT_SPIGOT_HEIGHT + 0.5, align=MIN)
+                r_open_bot - p.FIT_CLEARANCE, p.FOOT_SPIGOT_HEIGHT + 0.5, align=MIN)
+    elif base_vent:
+        # Concept base: slim tapered gold collar, a narrow vent gap under it
+        # (reads as a dark shadow line, with a recessed dark mesh behind it), and a
+        # small rounded gold foot. The radiator sits inside the body above the
+        # bottom opening and breathes out through the collar bore and the gap.
+        vg = p.BASE_VENT_GAP
+        foot_h = p.FOOT_HEIGHT
+        collar_h = z0 - p.FOOT_GROUND_GAP - foot_h - p.BASE_VENT_PLATE - vg
+        if collar_h < 3.0:
+            raise ValueError("Not enough base clearance for foot + vent gap + collar")
+        z_cb = z0 - collar_h
+        r_cb = p.BODY_MAX_DIA * p.COLLAR_BOTTOM_DIA_FRAC / 2
+        collar = Pos(0, 0, z_cb) * Solid.make_cone(r_cb, rb, collar_h)
+        try:                                               # soften the lower edge
+            collar = fillet(collar.edges().filter_by(GeomType.CIRCLE).sort_by(Axis.Z)[0],
+                            min(2.0, collar_h / 3))
+        except Exception:
+            pass
+        spig_o = r_open_bot - p.FIT_CLEARANCE
+        bore_top = spig_o - p.COLLAR_WALL
+        bore_bot = r_cb - p.COLLAR_WALL - 1.0
+        collar = collar + Pos(0, 0, z0 - 0.5) * Cylinder(spig_o, p.FOOT_SPIGOT_HEIGHT + 0.5, align=MIN)
+        bore = Pos(0, 0, z_cb - 0.01) * Solid.make_cone(bore_bot, bore_top, collar_h + 0.02) + \
+            Pos(0, 0, z0 - 1) * Cylinder(bore_top, p.FOOT_SPIGOT_HEIGHT + 2, align=MIN)
+        foot = _one_solid(collar - bore)
+
+        # dark vent insert: base plate + recessed mesh ring, under the collar
+        r_mo = r_cb - p.BASE_VENT_RECESS                     # mesh outer radius
+        r_mi = r_mo - p.BASE_VENT_MESH_THICK
+        z_pl = z_cb - vg - p.BASE_VENT_PLATE
+        vent = Pos(0, 0, z_pl) * Cylinder(r_mo, p.BASE_VENT_PLATE, align=MIN)
+        vent = vent + Pos(0, 0, z_pl + p.BASE_VENT_PLATE - 0.2) * (
+            Cylinder(r_mo, vg + 0.4, align=MIN) - Cylinder(r_mi, vg + 1, align=MIN))
+        vent = _one_solid(vent)
+
+        # small rounded gold foot
+        foot2 = Pos(0, 0, p.FOOT_GROUND_GAP) * Cylinder(foot_r, foot_h + 0.2, align=MIN)
+        try:
+            foot2 = fillet(foot2.edges().filter_by(GeomType.CIRCLE).sort_by(Axis.Z)[0],
+                           min(p.FOOT_ROUND, foot_r - 0.5, foot_h - 0.5))
+        except Exception:
+            pass
+        base_extra = {"vent_insert": vent, "base_foot": _one_solid(foot2)}
+
+        # flow path areas (report): radiator -> body opening -> collar bore -> mesh -> gap
+        sd = math.pi * (p.PR_BASE_EFFECTIVE_DIA / 2) ** 2
+        mesh_gross = 2 * math.pi * (r_mo + r_mi) / 2 * vg
+        I.update(pr_sd=sd, collar_bottom=z_cb, collar_top_dia=2 * rb, collar_bottom_dia=2 * r_cb,
+                 vent_gap=vg, vent_areas={
+                     "body bottom opening": math.pi * bore_top ** 2,
+                     "collar bore (narrowest)": math.pi * bore_bot ** 2,
+                     "vent mesh (open area)": mesh_gross * p.BASE_VENT_MESH_OPEN,
+                     "outer slot under the collar": 2 * math.pi * r_cb * vg},
+                 pr_exit_area=min(math.pi * bore_bot ** 2, mesh_gross * p.BASE_VENT_MESH_OPEN,
+                                  2 * math.pi * r_cb * vg),
+                 foot_h=foot_h, foot_top=p.FOOT_GROUND_GAP + foot_h)
     else:
         # collar = baffle for the down-firing radiator: a ring with a sound hole
         # and a thin locating spigot round the radiator frame
@@ -384,7 +489,7 @@ def build(p) -> Model:
         z_cb = z0 - collar_h                                   # collar bottom
         collar = Pos(0, 0, z_cb) * Solid.make_cone(rb * 0.9, rb, collar_h)
         collar = collar - Pos(0, 0, z_cb - 1) * Cylinder(r_hole, collar_h + 2, align=MIN)
-        spig_o = r_in(z0) - p.FIT_CLEARANCE
+        spig_o = r_open_bot - p.FIT_CLEARANCE
         spig_i = p.PR_BASE_DIA / 2 + 0.2
         if spig_o - spig_i < 1.0:
             raise ValueError("Base radiator too big for the collar opening (spigot wall < 1 mm)")
@@ -444,14 +549,27 @@ def build(p) -> Model:
         base_extra = {"nozzle": nozzle, "base_mesh": mesh}
         I.update(collar_bottom=z_cb, stub_top=z_nt, nozzle_exit_dia=2 * exit_r,
                  nozzle_throat_dia=2 * throat_r)
-    foot = _one_solid(fillet(foot.edges().sort_by(Axis.Z)[0], min(1.0, foot_r / 4)))
+    if not base_vent:
+        foot = _one_solid(fillet(foot.edges().sort_by(Axis.Z)[0], min(1.0, foot_r / 4)))
     I.update(foot_dia=2 * foot_r, collar_h=collar_h, pr_position=p.PR_POSITION)
-    if base_pr:
+    if base_vent:
+        # The radiator sits INSIDE the body on a flat moulded seat just above the
+        # (small) bottom opening, and is fitted through the larger cone opening.
+        r_pr = p.PR_BASE_DIA / 2
+        z_seat = next(zz for zz in np.arange(z0, zt, 0.25) if r_in(zz) >= r_pr + 0.6)
+        seat = (Pos(0, 0, z0) * Cylinder(r_pr + 2.0, z_seat - z0, align=MIN)
+                - Pos(0, 0, z0 - 1) * Cylinder(r_open_bot, z_seat - z0 + 2, align=MIN)) \
+            & offset_solid(-p.WALL + 0.3)
+        if seat.volume > 1:
+            body = body + seat
+        battery_floor_z = z_seat + p.PR_BASE_DEPTH + p.PR_BACK_CLEARANCE
+        I["z_pr_seat"] = z_seat
+    elif base_pr:
         # battery/ballast sit above the radiator, leaving room for its back wave
         battery_floor_z = z0 + p.PR_BASE_DEPTH + p.PR_BACK_CLEARANCE
 
     # ---- fins --------------------------------------------------------------
-    fins, tips = _build_fins(p, I, r_out, outer_solid, z0, bh, R)
+    fins, tips = _build_fins(p, I, r_out, outer_solid, z0, bh, R, clear_r=rb)
     I["fin_tips"] = tips
 
     fin_angles = [p.FIN_ANGLE_OFFSET_DEG + k * 360 / p.FIN_COUNT for k in range(p.FIN_COUNT)]
@@ -469,7 +587,11 @@ def build(p) -> Model:
 
     # ---- passive radiator ---------------------------------------------------
     rear_parts = {}
-    if base_pr:
+    if base_vent:
+        m.envelopes["passive_radiator"] = Pos(0, 0, I["z_pr_seat"]) * Cylinder(
+            p.PR_BASE_DIA / 2, p.PR_BASE_DEPTH, align=MIN)
+        I.update(z_pr=I["z_pr_seat"] + p.PR_BASE_DEPTH / 2)
+    elif base_pr:
         # down-firing, sitting on the collar (which is its baffle), inside the
         # bottom opening. It is part of the base module, fitted from below.
         m.envelopes["passive_radiator"] = Pos(0, 0, z0) * Cylinder(
@@ -522,7 +644,7 @@ def build(p) -> Model:
     # battery go in together from below as one "base module". The ballast is a
     # steel sleeve round the upright battery, so the battery stays as low as it can.
     if p.SPLIT_MODE == "nose_tail":
-        open_r = r_in(z0)
+        open_r = max(r_open_bot, inner[-1, 0])    # whichever end opening is bigger
     elif p.SPLIT_MODE == "nose":
         open_r = inner[-1, 0]
     else:
@@ -615,7 +737,8 @@ def build(p) -> Model:
                   + grams(bezel, "bezel") + grams(knob, "knob")
                   + sum(grams(v, {"rear_grille": "grille", "rear_bezel": "bezel"}[k])
                         for k, v in rear_parts.items())
-                  + sum(grams(v, {"nozzle": "foot", "base_mesh": "grille"}[k])
+                  + sum(grams(v, {"nozzle": "foot", "base_mesh": "grille",
+                                  "vent_insert": "vent_insert", "base_foot": "foot"}[k])
                         for k, v in base_extra.items())
                   + p.BATTERY_MASS + p.DRIVER_MASS + pr_mass + p.PCB_MASS + p.BUTYL_MASS_G)
         ch_mass = 115.0
@@ -682,10 +805,14 @@ def build(p) -> Model:
     m.parts["knob"] = knob
     for k, v in base_extra.items():
         m.parts[k] = v
-        m.part_material_key[k] = {"nozzle": "foot", "base_mesh": "grille"}[k]
+        m.part_material_key[k] = {"nozzle": "foot", "base_mesh": "grille",
+                                  "vent_insert": "vent_insert", "base_foot": "foot"}[k]
     if base_extra:
         m.parts["collar"] = m.parts.pop("foot")
         m.part_material_key["collar"] = "foot"
+    if "base_foot" in m.parts:                   # vent style: the small rounded foot
+        m.parts["foot"] = m.parts.pop("base_foot")
+        m.part_material_key["foot"] = m.part_material_key.pop("base_foot")
     for k, v in rear_parts.items():
         m.parts[k] = v
         m.part_material_key[k] = {"rear_grille": "grille", "rear_bezel": "bezel"}[k]
@@ -720,7 +847,7 @@ def _bezier(p0, p1, p2, n=40):
     return (1 - t) ** 2 * np.array(p0) + 2 * (1 - t) * t * np.array(p1) + t ** 2 * np.array(p2)
 
 
-def _build_fins(p, I, r_out, outer_solid, z0, bh, R):
+def _build_fins(p, I, r_out, outer_solid, z0, bh, R, clear_r=0.0):
     u_tip = p.FIN_TIP_REACH_FRAC * R
     z_rt = z0 + bh * p.FIN_ROOT_TOP_FRAC
     z_rb = z0 + bh * p.FIN_ROOT_BOTTOM_FRAC
@@ -800,7 +927,7 @@ def _build_fins(p, I, r_out, outer_solid, z0, bh, R):
         w = p.FIN_WALL
         core2d = offset(face, amount=-w, kind=Kind.ARC).faces()[0]
         min_core = 1.5                                   # stop where the core gets too thin
-        u_lim = (ta - 2 * w - min_core) / slope
+        u_lim = (ta - 2 * w - min_core) / slope if slope > 1e-9 else u_tip + 1
         cav_pts = [(0, -(ta - 2 * w) / 2), (u_lim, -min_core / 2),
                    (u_lim, min_core / 2), (0, (ta - 2 * w) / 2)]
         cav_wedge = Pos(0, 0, -5) * extrude(
@@ -815,8 +942,10 @@ def _build_fins(p, I, r_out, outer_solid, z0, bh, R):
         pilot = along_x(p.FIN_BOLT_PILOT / 2, ro - 6, ro + p.FIN_BOSS_LENGTH - 4, zb)  # blind
         blank = blank - pilot
         solid_blank = solid_blank - pilot
-    blank = _one_solid(blank - outer_solid)
-    solid_blank = _one_solid(solid_blank - outer_solid)
+    # keep clear of the collar under the body
+    under = Pos(0, 0, -1) * Cylinder(clear_r + 1.0, z0 + 1.0, align=MIN) if clear_r else None
+    blank = _one_solid(blank - outer_solid - under if under else blank - outer_solid)
+    solid_blank = _one_solid(solid_blank - outer_solid - under if under else solid_blank - outer_solid)
     I["fin_taper_half_deg"] = math.degrees(math.atan(slope / 2))
     foot_pad = blank & Box(400, 400, 0.6, align=MIN)
     u_c = foot_pad.center().X  # centre of the ground contact patch
