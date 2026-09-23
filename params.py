@@ -241,10 +241,10 @@ BASE_VENT_MESH_THICK = 0.6   # black woven/perforated mesh ring
 BASE_VENT_MESH_OPEN = 0.60   # its open-area ratio (typical fine black stainless mesh)
 BASE_VENT_PLATE = 1.0        # dark plate that closes the bottom of the vent, sunk into the foot top
 COLLAR_BOTTOM_DIA_FRAC = 0.30   # collar tapers from the body bottom to this (fraction of BODY_MAX_DIA)
-COLLAR_TOP_SLOPE = 0.35      # cup starts nearly vertical under the body (a convex bowl)...
-COLLAR_END_SLOPE = 2.0       # ...and curves in towards the foot (1 = 45 deg; 2 = a shallow bowl)
+COLLAR_TOP_SLOPE = 0.5       # cup starts nearly vertical under the body (a convex bowl)...
+COLLAR_END_SLOPE = 1.2       # ...and curves in towards the foot (1 = 45 deg; 2 = a shallow bowl)
 COLLAR_WALL = 1.5            # collar bore wall
-FOOT_HEIGHT = 7.0            # short rounded knob under the cup (no vent); the "vent" style takes BASE_VENT_GAP off this
+FOOT_HEIGHT = 10.0           # short rounded knob under the cup (no vent); the "vent" style takes BASE_VENT_GAP off this
 FOOT_ROUND = 3.5             # rounding on the foot's lower edge
 FIN_CUP_GAP = 0.2            # gap between the fins and the collar cup (hairline, no light showing through)
 
