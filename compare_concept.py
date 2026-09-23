@@ -76,9 +76,12 @@ def body_widths(mask_red, rows):
 
 
 def main():
+    draft = "--draft" in sys.argv          # visible parts only, honeycomb off, side-by-side only
+    if draft:
+        p.HEX_PATTERN_ENABLED = False
     OUT.mkdir(parents=True, exist_ok=True)
     print("Building model...")
-    m = geometry.build(p)
+    m = geometry.build(p, visual_only=draft)
     print("Rendering orthographic front views...")
     flat = render_front_ortho(m, flat_bg=True)
     pretty = render_front_ortho(m, flat_bg=False)
@@ -94,6 +97,9 @@ def main():
     for y in (fc.Y_TIP, fc.Y_JOINT, fc.Y_BODY_BOTTOM, fc.Y_GROUND):   # shared reference lines
         d.line([(0, y), (sbs.width, y)], fill=(0, 170, 255), width=1)
     sbs.save(OUT / "side_by_side.png")
+    if draft:
+        print(OUT / "side_by_side.png")
+        return
 
     # overlay: model silhouette (cyan) + model's gold feature edges (magenta)
     sil = silhouette(flat)

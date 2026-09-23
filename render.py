@@ -180,8 +180,9 @@ def _plotter(model, p, size, section=False, shadow=True):
             mesh = mesh.clip(**clip)
         is_red = name.startswith("body")
         dark = dict(color=hex_linear(p.VENT_HEX), pbr=True, metallic=0.6, roughness=0.6)
+        cloth = dict(color=hex_linear(p.CLOTH_HEX), pbr=True, metallic=0.0, roughness=0.95)
         style = (red if is_red else steel if name in internal else
-                 dark if name == "vent_insert" else gold)
+                 dark if name == "vent_insert" else cloth if name == "grille_backing" else gold)
         actor = pl.add_mesh(mesh, smooth_shading=True, **style)
         if is_red and p.BODY_CLEARCOAT > 0:
             prop = actor.GetProperty()
@@ -272,6 +273,22 @@ def render_underside(model, p, path):
     pl.camera.focal_point = UNDERSIDE["focal"]
     pl.camera.up = (0, 0, 1)
     pl.camera.view_angle = UNDERSIDE["view_angle"]
+    pl.reset_camera_clipping_range()
+    pl.screenshot(str(path))
+    pl.close()
+    return path
+
+
+def render_closeup(model, p, path, direction=(0.62, 0.78, 0.18), focal=(0.0, 0.0, 35.0),
+                   dist=330.0, view_angle=24):
+    """Close-up from a direction (default: rear three-quarter) at a point on the model."""
+    d = np.array(direction, dtype=float)
+    d /= np.linalg.norm(d)
+    pl = _plotter(model, p, p.RENDER_SIZE)
+    pl.camera.position = tuple(np.array(focal) + d * dist)
+    pl.camera.focal_point = focal
+    pl.camera.up = (0, 0, 1)
+    pl.camera.view_angle = view_angle
     pl.reset_camera_clipping_range()
     pl.screenshot(str(path))
     pl.close()

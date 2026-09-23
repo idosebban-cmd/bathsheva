@@ -37,6 +37,7 @@ from build123d import (
     chamfer,
     Location,
     Plane,
+    Polygon,
     Polyline,
     Pos,
     Rot,
@@ -157,6 +158,7 @@ def build(p, visual_only=False) -> Model:
         zm = z0 + bh * tt[int(np.argmax(rr))]
         a_top = math.atan(-R * float(f(1.0, 1)) / bh)
         d0 = R * float(f(0.0, 1)) / bh                              # dr/dz at the bottom
+        slope_bot = d0
         outer_curve = Edge.make_spline(
             [_xz(r, z) for r, z in prof],
             tangents=[Vector(d0, 0, 1).normalized(), Vector(-math.sin(a_top), 0, math.cos(a_top))])
@@ -175,6 +177,7 @@ def build(p, visual_only=False) -> Model:
         # slope at the joint, continued by the nose cone
         a_top = math.atan((R - rt) * nt / (zt - zm))
         a_bot = math.atan((R - rb) * nb / (zm - z0))
+        slope_bot = math.tan(a_bot)
         outer_curve = Edge.make_spline(
             [_xz(r, z) for r, z in prof],
             tangents=[Vector(math.cos(math.pi / 2 - a_bot), 0, math.sin(math.pi / 2 - a_bot)),
@@ -288,6 +291,13 @@ def build(p, visual_only=False) -> Model:
         front_outline(bezel_r - 0.1) - front_outline(grille_r)
     )
     bezel = _one_solid(bezel)
+    # charcoal acoustic cloth behind the grille, so no red shows through the holes
+    backing = None
+    if p.GRILLE_BACKING_THICK > 0:
+        bt = p.GRILLE_BACKING_THICK
+        body = body - (band(-p.GRILLE_RECESS - bt, -p.GRILLE_RECESS + 0.01) & front_outline(grille_r))
+        backing = _one_solid(band(-p.GRILLE_RECESS - bt, -p.GRILLE_RECESS - 0.02)
+                             & front_outline(grille_r - 0.1))
 
     if not visual_only:   # internals: skipped for quick previews
         # ---- driver mount (moulded into the body, behind the grille) ----------
@@ -436,17 +446,28 @@ def build(p, visual_only=False) -> Model:
         # bottom opening and breathes out through the collar bore and the gap.
         vg = p.BASE_VENT_GAP
         foot_h = p.FOOT_HEIGHT
-        collar_h = z0 - p.FOOT_GROUND_GAP - foot_h - p.BASE_VENT_PLATE - vg
+        g = p.FOOT_GROUND_GAP
+        collar_h = z0 - g - foot_h - vg
         if collar_h < 3.0:
             raise ValueError("Not enough base clearance for foot + vent gap + collar")
         z_cb = z0 - collar_h
+        z_ft = z_cb - vg                                       # top of the foot
         r_cb = p.BODY_MAX_DIA * p.COLLAR_BOTTOM_DIA_FRAC / 2
-        collar = Pos(0, 0, z_cb) * Solid.make_cone(r_cb, rb, collar_h)
-        try:                                               # soften the lower edge
-            collar = fillet(collar.edges().filter_by(GeomType.CIRCLE).sort_by(Axis.Z)[0],
-                            min(2.0, collar_h / 3))
-        except Exception:
-            pass
+
+        def lathe(profile_edge, r_top, z_top, r_bot, z_bot):
+            """Solid of revolution under a profile edge running top -> bottom."""
+            edges = [Edge.make_line(_xz(0, z_top), _xz(r_top, z_top)), profile_edge]
+            if r_bot > 1e-6:
+                edges.append(Edge.make_line(_xz(r_bot, z_bot), _xz(0, z_bot)))
+            edges.append(Edge.make_line(_xz(0, z_bot), _xz(0, z_top)))
+            return _revolve_profile(edges)
+
+        # gold cup: starts at the body's own slope, curves in and down so it
+        # flows (across the vent line) into the foot
+        down = lambda k: Vector(-k, 0, -1).normalized()
+        cup = Edge.make_spline([_xz(rb, z0), _xz(r_cb, z_cb)],
+                               tangents=[down(p.COLLAR_TOP_SLOPE), down(p.COLLAR_END_SLOPE)])
+        collar = lathe(cup, rb, z0, r_cb, z_cb)
         spig_o = r_open_bot - p.FIT_CLEARANCE
         bore_top = spig_o - p.COLLAR_WALL
         bore_bot = r_cb - p.COLLAR_WALL - 1.0
@@ -455,22 +476,25 @@ def build(p, visual_only=False) -> Model:
             Pos(0, 0, z0 - 1) * Cylinder(bore_top, p.FOOT_SPIGOT_HEIGHT + 2, align=MIN)
         foot = _one_solid(collar - bore)
 
-        # dark vent insert: base plate + recessed mesh ring, under the collar
+        # small rounded gold foot: carries on the cup's line, necks in, rounds off
+        # its top is tucked in just outside the dark insert, so no flat gold
+        # ledge faces up into the light under the vent
+        r_ft = r_cb - p.BASE_VENT_RECESS + 0.6
+        fp = Edge.make_spline(
+            [_xz(r_ft, z_ft), _xz(max(foot_r + 0.2, r_ft - 1.5), z_ft - 0.45 * foot_h),
+             _xz(foot_r * 0.8, g + 0.35 * foot_h), _xz(0, g)],
+            tangents=[down(0.4), Vector(-1, 0, 0)])
+        foot2 = lathe(fp, r_ft, z_ft, 0, g)
+
+        # dark bronze vent insert, set deep: a plate on the foot top and a mesh ring
         r_mo = r_cb - p.BASE_VENT_RECESS                     # mesh outer radius
         r_mi = r_mo - p.BASE_VENT_MESH_THICK
-        z_pl = z_cb - vg - p.BASE_VENT_PLATE
-        vent = Pos(0, 0, z_pl) * Cylinder(r_mo, p.BASE_VENT_PLATE, align=MIN)
-        vent = vent + Pos(0, 0, z_pl + p.BASE_VENT_PLATE - 0.2) * (
-            Cylinder(r_mo, vg + 0.4, align=MIN) - Cylinder(r_mi, vg + 1, align=MIN))
+        pl_t = p.BASE_VENT_PLATE
+        # the dark plate covers the whole top of the foot, so every edge in the gap is dark
+        vent = Pos(0, 0, z_ft - 0.01) * Cylinder(r_ft, pl_t, align=MIN)
+        vent = vent + Pos(0, 0, z_ft + pl_t - 0.2) * (
+            Cylinder(r_mo, vg - pl_t + 0.4, align=MIN) - Cylinder(r_mi, vg + 1, align=MIN))
         vent = _one_solid(vent)
-
-        # small rounded gold foot
-        foot2 = Pos(0, 0, p.FOOT_GROUND_GAP) * Cylinder(foot_r, foot_h + 0.2, align=MIN)
-        try:
-            foot2 = fillet(foot2.edges().filter_by(GeomType.CIRCLE).sort_by(Axis.Z)[0],
-                           min(p.FOOT_ROUND, foot_r - 0.5, foot_h - 0.5))
-        except Exception:
-            pass
         base_extra = {"vent_insert": vent, "base_foot": _one_solid(foot2)}
 
         # flow path areas (report): radiator -> body opening -> collar bore -> mesh -> gap
@@ -807,6 +831,9 @@ def build(p, visual_only=False) -> Model:
     m.parts["foot"] = foot
     m.parts["grille"] = grille
     m.parts["bezel"] = bezel
+    if backing is not None:
+        m.parts["grille_backing"] = backing
+        m.part_material_key["grille_backing"] = "grille_backing"
     m.parts["knob"] = knob
     for k, v in base_extra.items():
         m.parts[k] = v
@@ -915,6 +942,30 @@ def _build_fins(p, I, r_out, outer_solid, z0, bh, R, clear_r=0.0, hollow=True):
             break
         except Exception:
             continue
+    if p.FIN_TOP_TAPER > 0:
+        # thin the top end of the fin to a point so it blends into the body. The
+        # taper curve leaves the flat faces tangentially, so there's no crease.
+        zt0 = z_rt - p.FIN_TOP_TAPER
+        h1, h2 = T1 / 2, p.FIN_TOP_THICK / 2
+
+        def side(sg):
+            return Edge.make_spline([Vector(0, sg * h1, zt0), Vector(0, sg * h2, z_rt + 1)],
+                                    tangents=[Vector(0, 0, 1), Vector(0, -sg * 0.35, 1).normalized()])
+        big = ta + 2
+        prof = Wire([
+            Edge.make_line(Vector(0, -big, -30), Vector(0, big, -30)),
+            Edge.make_line(Vector(0, big, -30), Vector(0, big, zt0)),
+            Edge.make_line(Vector(0, big, zt0), Vector(0, h1, zt0)),
+            side(1),
+            Edge.make_line(Vector(0, h2, z_rt + 1), Vector(0, h2, z_rt + 40)),
+            Edge.make_line(Vector(0, h2, z_rt + 40), Vector(0, -h2, z_rt + 40)),
+            Edge.make_line(Vector(0, -h2, z_rt + 40), Vector(0, -h2, z_rt + 1)),
+            side(-1).reversed(),
+            Edge.make_line(Vector(0, -h1, zt0), Vector(0, -big, zt0)),
+            Edge.make_line(Vector(0, -big, zt0), Vector(0, -big, -30)),
+        ])
+        taper = Pos(-150, 0, 0) * extrude(Face(prof), amount=300, dir=(1, 0, 0))
+        blank = _one_solid(blank & taper)
     I["fin_solid_volume"] = _one_solid(blank - outer_solid).volume
 
     # bolt positions along the root
@@ -938,6 +989,8 @@ def _build_fins(p, I, r_out, outer_solid, z0, bh, R, clear_r=0.0, hollow=True):
         cav_wedge = Pos(0, 0, -5) * extrude(
             Face(Wire(Polyline(*cav_pts, close=True).edges())), amount=z_rt + 20)
         cavity = extrude(core2d, amount=ta, both=True) & cav_wedge
+        if p.FIN_TOP_TAPER > 0:                              # no core in the thin tapered top
+            cavity = cavity & Pos(0, 0, -50) * Box(400, 400, z_rt - p.FIN_TOP_TAPER + 50, align=MIN)
         for zb in bolt_z:
             ro = r_out(zb)
             cavity = cavity - along_x(p.FIN_BOSS_DIA / 2, ro - 4, ro + p.FIN_BOSS_LENGTH, zb)

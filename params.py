@@ -44,15 +44,16 @@ BODY_BOTTOM_FULLNESS = 2.4   # same for the lower body (higher = rounder "belly"
 # from the simple "fullness" curves above ("fullness").
 BODY_PROFILE_MODE = "points"
 # (height fraction 0 = bottom .. 1 = cone joint, radius / max radius), measured
-# from reference/atelier_concept.png by reference/fit_concept.py. The first few
-# points are the rounded belly bottom, which the fins hide in the photo.
+# from reference/atelier_concept.png by reference/fit_concept.py. Below knob
+# height (t < 0.34) the body tapers smoothly into the collar:
+# r = r_bottom + (r_knob - r_bottom) * (1 - (1 - t/0.34)**2).
 BODY_PROFILE_POINTS = [
-    (0.0000, 0.4035), (0.0024, 0.5107), (0.0072, 0.5692), (0.0167, 0.6150),
-    (0.0335, 0.6522), (0.0673, 0.7127), (0.1515, 0.8419), (0.2357, 0.9468),
-    (0.3190, 0.9650), (0.3611, 0.9873), (0.4150, 0.9995), (0.4689, 1.0000),
-    (0.5227, 0.9900), (0.5766, 0.9784), (0.6305, 0.9559), (0.6843, 0.9253),
-    (0.7382, 0.8857), (0.7921, 0.8387), (0.8460, 0.7826), (0.8998, 0.7101),
-    (0.9537, 0.6331), (0.9806, 0.5879), (1.0000, 0.5542),
+    (0.0000, 0.4035), (0.0200, 0.4702), (0.0500, 0.5626), (0.1000, 0.6964),
+    (0.1600, 0.8237), (0.2200, 0.9146), (0.2800, 0.9691), (0.3611, 0.9873),
+    (0.4150, 0.9995), (0.4689, 1.0000), (0.5227, 0.9900), (0.5766, 0.9784),
+    (0.6305, 0.9559), (0.6843, 0.9253), (0.7382, 0.8857), (0.7921, 0.8387),
+    (0.8460, 0.7826), (0.8998, 0.7101), (0.9537, 0.6331), (0.9806, 0.5879),
+    (1.0000, 0.5542),
 ]
 BODY_BOTTOM_LAND = 3.0       # flat land round the bottom opening (opening = bottom radius - this)
 WALL = 2.5                   # shell wall thickness
@@ -104,6 +105,8 @@ FIN_UNDERCUT = 0.400         # 0 = straight underside; higher = deeper arch unde
 FIN_ROOT_THICK = 8.0         # thickness where the fin meets the body
 FIN_TIP_THICK = 8.0          # thickness at the tip. Equal to the root = flat, parallel faces (concept)
 FIN_TIP_FLAT = 8.0           # length of the flat pad at the tip that touches the ground
+FIN_TOP_TAPER = 25.0         # the top this-many mm of each fin thins to a point into the body
+FIN_TOP_THICK = 1.0          # thickness at the very top of the fin
 FIN_EDGE_FILLET = 2.8        # rounding on the fin edges. Just under half of FIN_TIP_THICK
                              # gives fully rounded, cast-looking edges
 
@@ -140,6 +143,7 @@ HEX_PATTERN_ENABLED = True   # honeycomb holes (front grille and rear cover). Fa
 HEX_HOLE = 2.2               # hexagon size across the flats
 HEX_WEB = 0.7                # metal left between neighbouring holes
 
+GRILLE_BACKING_THICK = 0.4   # charcoal acoustic cloth behind the grille (0 = none)
 BEZEL_WIDTH = 3.0            # radial width of the raised gold ring
 BEZEL_PROUD = 1.5            # how far the ring stands above the red surface
 
@@ -213,12 +217,14 @@ PR_EXIT_AREA_RATIO = 1.0     # open (hole) area of the base mesh vs the radiatin
 #              dark shadow line (recessed dark mesh behind it), and a small rounded foot
 #   "nozzle" - gold honeycomb mesh ring and stepped rocket-engine nozzle (settings below)
 BASE_STYLE = "vent"
-BASE_VENT_GAP = 5.5          # height of the vent gap under the collar
-BASE_VENT_RECESS = 1.0       # the dark mesh sits this far inside the collar's lower edge
+BASE_VENT_GAP = 3.5          # height of the vent gap under the collar
+BASE_VENT_RECESS = 2.5       # the dark mesh sits this far inside the collar's lower edge
 BASE_VENT_MESH_THICK = 0.6   # black woven/perforated mesh ring
 BASE_VENT_MESH_OPEN = 0.60   # its open-area ratio (typical fine black stainless mesh)
-BASE_VENT_PLATE = 1.0        # dark plate that closes the bottom of the vent, on top of the foot
-COLLAR_BOTTOM_DIA_FRAC = 0.28   # collar tapers from the body bottom to this (fraction of BODY_MAX_DIA)
+BASE_VENT_PLATE = 1.0        # dark plate that closes the bottom of the vent, sunk into the foot top
+COLLAR_BOTTOM_DIA_FRAC = 0.258  # collar tapers from the body bottom to this (fraction of BODY_MAX_DIA)
+COLLAR_TOP_SLOPE = 0.15      # cup starts nearly vertical under the body (a convex bowl)...
+COLLAR_END_SLOPE = 1.0       # ...and curves in towards the foot (1 = 45 deg)
 COLLAR_WALL = 1.5            # collar bore wall
 FOOT_HEIGHT = 7.5            # small rounded foot (vent style)
 FOOT_ROUND = 3.5             # rounding on the foot's lower edge
@@ -282,6 +288,7 @@ MATERIAL_DENSITY = {          # g/cm^3
     "brass": 8.50,            # solid brass, turned
     "tungsten_alloy": 17.6,   # W-Ni-Fe heavy alloy ballast option (dense but costly)
     "pla": 1.24,              # typical FDM prototype
+    "acoustic_cloth": 0.50,   # charcoal speaker cloth
 }
 PART_MATERIALS = {
     "body": "pc_abs",
@@ -292,6 +299,7 @@ PART_MATERIALS = {
     "bezel": "aluminium",
     "knob": "brass",
     "chassis": "steel",       # internal sled
+    "grille_backing": "acoustic_cloth",
     "vent_insert": "stainless_304",  # black PVD mesh + plate in the base vent
     "ballast": "steel",       # internal ballast slug
 }
@@ -314,4 +322,5 @@ BODY_CLEARCOAT_ROUGHNESS = 0.04
 GOLD_METALLIC = 1.0
 GOLD_ROUGHNESS = 0.35        # soft, brushed reflections
 LED_HEX = "#FFE2B0"
-VENT_HEX = "#141312"         # the dark vent insert under the collar          # warm white status LED
+CLOTH_HEX = "#2B2A29"        # charcoal grille backing
+VENT_HEX = "#3A2B1D"         # the vent insert under the collar: dark bronze, reads as shadow          # warm white status LED
