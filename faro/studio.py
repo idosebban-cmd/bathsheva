@@ -1,0 +1,103 @@
+"""
+Faro renders, reusing Atelier's studio (environment map, lights, backdrop,
+exact-normal meshing) from the top-level render.py. Only the materials and the
+contact shadow are Faro's own.
+"""
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+import numpy as np
+import pyvista as pv
+
+sys.path.append(str(Path(__file__).resolve().parent.parent))
+import render as atelier  # noqa: E402  (Atelier's render.py)
+
+VIEWS = {"front": (0.0, -1.0, 0.0), "side": (1.0, 0.0, 0.0), "rear": (0.0, 1.0, 0.0),
+         "three_quarter": (0.62, -0.78, 0.2)}
+
+BRASS = ("nameplate", "knob", "gallery", "lantern_frame", "finial")
+RED = ("band_red", "cap")
+CREAM = ("band_cream", "tower")
+GLOW = ("lantern_glass", "window_diffuser")
+
+
+def _material(name, p):
+    lin = atelier.hex_linear
+    if name.startswith(GLOW):
+        return dict(color=atelier.hex_rgb(p.GLOW_HEX), lighting=False), False
+    if name in BRASS:
+        return dict(color=lin(p.BRASS_HEX), pbr=True, metallic=1.0, roughness=p.BRASS_ROUGHNESS), False
+    if name in RED:
+        return dict(color=lin(p.RED_HEX), pbr=True, metallic=0.0, roughness=p.LACQUER_ROUGHNESS), True
+    if name in CREAM:
+        return dict(color=lin(p.CREAM_HEX), pbr=True, metallic=0.0, roughness=p.LACQUER_ROUGHNESS), True
+    if name == "base":
+        return dict(color=lin(p.WALNUT_HEX), pbr=True, metallic=0.0, roughness=p.WALNUT_ROUGHNESS), False
+    return dict(color=(0.5, 0.5, 0.5)), False
+
+
+def _shadow(pl, m):
+    grid = pv.Plane(center=(0, 0, 0.05), direction=(0, 0, 1), i_size=500, j_size=500,
+                    i_resolution=200, j_resolution=200).triangulate()
+    r = np.linalg.norm(grid.points[:, :2], axis=1)
+    rb = m.info["base_dia"] / 2
+    a = 0.55 * np.exp(-(np.maximum(r - rb * 0.8, 0) / 9.0) ** 2) * (r < rb * 1.6)
+    rgba = np.zeros((len(r), 4))
+    rgba[:, :3] = np.array([0.25, 0.20, 0.16]) * 255
+    rgba[:, 3] = np.clip(a, 0, 1) * 255
+    grid["rgba"] = rgba.astype(np.uint8)
+    pl.add_mesh(grid, scalars="rgba", rgba=True, lighting=False, show_scalar_bar=False)
+
+
+def plotter(m, p, size, shadow=True):
+    pl = pv.Plotter(off_screen=True, window_size=list(size), lighting="none")
+    pl.set_background(atelier.BACKDROP, top=atelier.BACKDROP_TOP)
+    if not atelier.FAST:
+        pl.enable_anti_aliasing("ssaa")
+    if atelier._ENV is None:
+        atelier._ENV = atelier._studio_environment()
+    pl.set_environment_texture(atelier._ENV)
+    pl.renderer.GetEnvMapPrefiltered().SetPrefilterMaxSamples(64 if atelier.FAST else 1024)
+    pl.renderer.SetEnvironmentUp(0, 0, 1)
+    pl.renderer.SetEnvironmentRight(1, 0, 0)
+    for pos, k in (((-500, -700, 700), atelier.LIGHT_KEY), ((700, -350, 250), atelier.LIGHT_FILL),
+                   ((150, 800, 600), atelier.LIGHT_RIM)):
+        pl.add_light(pv.Light(position=pos, focal_point=(0, 0, 150), intensity=k))
+    for name, shape in m.parts.items():
+        style, coat = _material(name, p)
+        actor = pl.add_mesh(atelier._to_mesh(shape), smooth_shading=True, **style)
+        if coat:
+            prop = actor.GetProperty()
+            prop.SetCoatStrength(p.LACQUER_CLEARCOAT)
+            prop.SetCoatRoughness(0.05)
+            prop.SetCoatColor(1.0, 1.0, 1.0)
+            prop.SetCoatIOR(1.5)
+    if "usb_receptacle" in m.envelopes:           # dark metal seen through the port
+        pl.add_mesh(atelier._to_mesh(m.envelopes["usb_receptacle"], 0.05), color=(0.08, 0.08, 0.09),
+                    pbr=True, metallic=0.8, roughness=0.4)
+    if shadow:
+        _shadow(pl, m)
+    return pl
+
+
+def render_views(m, p, out_dir: Path, views=("front", "side"), prefix="faro"):
+    out_dir.mkdir(parents=True, exist_ok=True)
+    H = m.info["H"]
+    files = []
+    for name in views:
+        d = np.array(VIEWS[name], dtype=float)
+        d /= np.linalg.norm(d)
+        pl = plotter(m, p, p.RENDER_SIZE)
+        focal = np.array([0, 0, H * 0.48])
+        pl.camera.position = tuple(focal + d * H * 3.4)
+        pl.camera.focal_point = tuple(focal)
+        pl.camera.up = (0, 0, 1)
+        pl.camera.view_angle = 22
+        pl.reset_camera_clipping_range()
+        f = out_dir / f"{prefix}_{name}.png"
+        pl.screenshot(str(f))
+        pl.close()
+        files.append(f)
+    return files
