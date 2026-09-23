@@ -98,10 +98,10 @@ def build(p) -> Lamp:
     pt = p.PLATE_THICK
     r_reb = rb - p.PLATE_REBATE
     r_cav = rb - p.BASE_WALL
-    z_cav_top = hb - p.BASE_WALL
+    z_cav_top = hb - p.BASE_TOP_WALL
     base = base - Pos(0, 0, -1) * Cylinder(r_reb, pt + 1, align=MIN)
     base = base - Pos(0, 0, pt - 0.01) * Cylinder(r_cav, z_cav_top - pt + 0.01, align=MIN)
-    base = base - Pos(0, 0, z_cav_top - 1) * Cylinder(p.BASE_WIRE_HOLE / 2, p.BASE_WALL + 2, align=MIN)
+    base = base - Pos(0, 0, z_cav_top - 1) * Cylinder(p.BASE_WIRE_HOLE / 2, p.BASE_TOP_WALL + 2, align=MIN)
     # screw bosses hanging from the top of the bay, with holes for M3 inserts
     screw_xy = []
     for k in range(p.SCREWS):
@@ -255,7 +255,10 @@ def build(p) -> Lamp:
     r_lip = rl - 3.0                                   # lip inner radius (the opening under the cap)
     z_tb = z_l1 - tb                                   # bottom of the top band
     ann = lambda ro, ri, za, h: Pos(0, 0, za) * (Cylinder(ro, h, align=MIN) - Cylinder(ri, h + 2, align=MIN))
-    frame = ann(rl, rl - 3.0, z_l0, hr)                               # bottom ring
+    # the glass stands on the gallery and the frame is lowered over it, so the
+    # bottom ring must clear the glass
+    rgl = rl - p.MULLION_DEPTH - 0.1                   # glass outer radius (inside the mullions)
+    frame = ann(rl, rgl + p.FIT_CLEAR, z_l0, hr)                      # bottom ring
     frame = frame + ann(rl, p.GROOVE_R, z_tb, tb)                     # top band: outer skin...
     frame = frame + ann(p.GROOVE_R + 0.01, r_lip, z_l1 - lip, lip)    # ...and the bayonet lip
     # entry slots through the lip, midway between mullions, and a stop under the
@@ -266,7 +269,8 @@ def build(p) -> Lamp:
         a0 = k * 360 / p.LOCK_LUGS
         frame = frame - Rot(0, 0, a0) * Pos(0, -(p.GROOVE_R + r_lip) / 2, z_l1 - lip - 0.5) * Box(
             slot_w, p.GROOVE_R - r_lip + 0.4, lip + 1.0, align=MIN)
-        a_stop = a0 + p.LOCK_TURN_DEG + lug_half + math.degrees(1.0 / r_lip)
+        sgn = 1 if p.LOCK_TURN_DEG >= 0 else -1
+        a_stop = a0 + p.LOCK_TURN_DEG + sgn * (lug_half + math.degrees(1.0 / r_lip))
         frame = frame + Rot(0, 0, a_stop) * Pos(0, -(p.GROOVE_R + r_lip) / 2, z_tb) * Box(
             1.5, p.GROOVE_R - r_lip + 0.2, tb - lip + 0.2, align=MIN)
     for k in range(p.MULLIONS):
@@ -274,12 +278,13 @@ def build(p) -> Lamp:
         frame = frame + Rot(0, 0, ang) * Pos(0, -(rl - p.MULLION_DEPTH / 2), z_l0) * Box(
             p.MULLION_W, p.MULLION_DEPTH, z_tb - z_l0 + 0.5, align=MIN)
     m.parts["lantern_frame"] = _one(frame)
-    rgl = rl - p.MULLION_DEPTH - 0.1
-    glass = Pos(0, 0, z_l0 + hr) * (Cylinder(rgl, z_tb - z_l0 - hr, align=MIN)
+    glass = Pos(0, 0, z_l0) * (Cylinder(rgl, z_tb - z_l0, align=MIN)
                                     - Cylinder(rgl - p.GLASS_THICK, z_l1 - z_l0, align=MIN))
     m.parts["lantern_glass"] = _one(glass)
     m.envelopes["led"] = Pos(0, 0, (z_l0 + z_tb) / 2 - p.LED_H / 2) * Cylinder(p.LED_DIA / 2, p.LED_H, align=MIN)
-    I.update(led_access_dia=2 * r_lip)
+    I.update(led_access_dia=2 * r_lip,
+             glass_frame_clash=(lambda r_: 0.0 if r_ is None else r_.volume)(glass & m.parts["lantern_frame"]),
+             glass_on_gallery=(lambda r_: 0.0 if r_ is None else r_.volume)(glass & m.parts["gallery"]))
 
     # ---- 6. red cap + brass finial -------------------------------------------
     rcr = d_(p.CAP_RIM_DIA) / 2

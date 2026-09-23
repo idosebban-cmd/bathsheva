@@ -19,10 +19,11 @@ REF_HEIGHT = 300.0           # the height the z values below were measured at
 # 1. Walnut base
 # ---------------------------------------------------------------------------
 BASE_DIA = 113.0
-BASE_H = 28.0
-BASE_TOP_ROUND = 2.5         # rounding on the top edge
+BASE_H = 27.0                 # slimmer than the first read (the concept's includes a sliver of the top face)
+BASE_TOP_ROUND = 6.0         # generous rounding on the top edge, as in the concept
 BASE_BOTTOM_ROUND = 1.5
-BASE_WALL = 4.0              # hollow base: side wall / top thickness
+BASE_WALL = 4.0              # hollow base: side wall
+BASE_TOP_WALL = 3.5          # top of the battery bay (keeps >= 2.8 mm of walnut under the rounded edge)
 BASE_WIRE_HOLE = 20.0        # hole through the base top for the wiring up the tower
 # User-replaceable battery: the walnut base is an open ring; a bottom plate sits
 # flush in a rebate and screws into 4 bosses inside the base. A felt pad covers
@@ -109,7 +110,7 @@ GROOVE_R = 26.3              # lug channel radius under the lip
 LOCK_LUGS = 4                # multiple of the mullion spacing, so slots sit mid-panel
 LOCK_LUG_W = 6.0
 LOCK_LUG_H = 2.6
-LOCK_TURN_DEG = 20.0         # quarter-ish turn to lock
+LOCK_TURN_DEG = -20.0        # turn to lock; negative = clockwise seen from above
 SPIGOT_WALL = 1.5
 FIT_CLEAR = 0.2
 GLASS_THICK = 1.2            # frosted panel ring, just inside the mullions
