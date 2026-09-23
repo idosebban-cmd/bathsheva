@@ -26,6 +26,7 @@ def main():
     t0 = time.time()
     m = lamp.build(p)
     files = studio.render_views(m, p, OUT / "draft", views=("front", "side"))
+    files.append(studio.render_underside(m, p, OUT / "draft" / "faro_underside.png"))
     print(f"Draft done in {time.time() - t0:.0f} s:", *files, sep="\n  ")
 
 

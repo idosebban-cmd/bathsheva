@@ -25,6 +25,7 @@ from build123d import (
     Plane,
     Pos,
     RectangleRounded,
+    RegularPolygon,
     Rectangle,
     Rot,
     SlotOverall,
@@ -92,8 +93,59 @@ def build(p) -> Lamp:
     base = Cylinder(rb, hb, align=MIN)
     base = _safe_fillet(base, base.edges().filter_by(GeomType.CIRCLE).sort_by(Axis.Z)[-1:], p.BASE_TOP_ROUND)
     base = _safe_fillet(base, base.edges().filter_by(GeomType.CIRCLE).sort_by(Axis.Z)[:1], p.BASE_BOTTOM_ROUND)
-    cavity = Pos(0, 0, p.BASE_FLOOR) * Cylinder(rb - p.BASE_WALL, hb - p.BASE_FLOOR - p.BASE_WALL, align=MIN)
-    base = base - cavity
+    # open ring: a rebate at the bottom for the plate, the battery bay above it,
+    # and a hole through the top for the wires up the tower
+    pt = p.PLATE_THICK
+    r_reb = rb - p.PLATE_REBATE
+    r_cav = rb - p.BASE_WALL
+    z_cav_top = hb - p.BASE_WALL
+    base = base - Pos(0, 0, -1) * Cylinder(r_reb, pt + 1, align=MIN)
+    base = base - Pos(0, 0, pt - 0.01) * Cylinder(r_cav, z_cav_top - pt + 0.01, align=MIN)
+    base = base - Pos(0, 0, z_cav_top - 1) * Cylinder(p.BASE_WIRE_HOLE / 2, p.BASE_WALL + 2, align=MIN)
+    # screw bosses hanging from the top of the bay, with holes for M3 inserts
+    screw_xy = []
+    for k in range(p.SCREWS):
+        d = _dir(p.SCREW_ANGLE0 + k * 360 / p.SCREWS)
+        x, y = d.X * p.SCREW_R, d.Y * p.SCREW_R
+        screw_xy.append((x, y))
+        base = base + Pos(x, y, pt) * Cylinder(p.BOSS_DIA / 2, z_cav_top - pt + 0.5, align=MIN)
+        base = base - Pos(x, y, pt - 0.01) * Cylinder(p.BOSS_PILOT_DIA / 2, 10.0, align=MIN)
+
+    # bottom plate: flush in the rebate, 4 countersunk screws, 4 magnet pockets,
+    # and a shallow recess underneath for the felt pad
+    rp = r_reb - p.PLATE_CLEAR
+    plate_b = Cylinder(rp, pt, align=MIN)
+    r_felt = rp - p.FELT_INSET
+    plate_b = plate_b - Pos(0, 0, -1) * Cylinder(r_felt + 0.3, p.FELT_RECESS + 1, align=MIN)
+    z_f = p.FELT_RECESS                                   # recess floor
+    screws = None
+    for x, y in screw_xy:
+        plate_b = plate_b - Pos(x, y, -1) * Cylinder(p.SCREW_CLEAR_DIA / 2, pt + 2, align=MIN)
+        cs = (p.SCREW_HEAD_DIA - p.SCREW_CLEAR_DIA) / 2          # 90 deg countersink depth
+        sink = Pos(x, y, z_f - 0.01) * _revolve([(0, 0), (p.SCREW_HEAD_DIA / 2, 0),
+                                                 (p.SCREW_CLEAR_DIA / 2, cs), (0, cs)])
+        plate_b = plate_b - sink
+        head = Pos(x, y, z_f + 0.05) * _revolve([(0, 0), (p.SCREW_HEAD_DIA / 2 - 0.1, 0),
+                                                 (p.SCREW_CLEAR_DIA / 2 - 0.2, cs - 0.1), (0, cs - 0.1)])
+        shank = Pos(x, y, z_f + cs - 0.2) * Cylinder(1.5, 8.0, align=MIN)
+        head = head - Pos(x, y, z_f - 0.5) * extrude(RegularPolygon(1.0 / math.cos(math.pi / 6), 6), amount=1.8)
+        screws = head + shank if screws is None else screws + head + shank
+    mags = None
+    for k in range(p.MAGNETS):
+        d = _dir(p.SCREW_ANGLE0 + (k + 0.5) * 360 / p.MAGNETS)
+        x, y = d.X * p.SCREW_R, d.Y * p.SCREW_R
+        plate_b = plate_b - Pos(x, y, z_f - 0.01) * Cylinder(p.MAGNET_DIA / 2 + 0.1, p.MAGNET_THICK + 0.1, align=MIN)
+        mg = Pos(x, y, z_f) * Cylinder(p.MAGNET_DIA / 2, p.MAGNET_THICK, align=MIN)
+        mags = mg if mags is None else mags + mg
+    m.parts["base_plate"] = _one(plate_b)
+    felt = Pos(0, 0, z_f - p.FELT_THICK) * Cylinder(r_felt, p.FELT_THICK, align=MIN)
+    m.parts["felt_pad"] = felt
+    m.envelopes["screws"] = screws
+    m.envelopes["magnets"] = mags
+    lift = p.FELT_THICK - p.FELT_RECESS                   # the felt stands proud; it's the foot
+    I.update(felt_proud=lift, battery_bay=(2 * r_cav, z_cav_top - pt),
+             plate_dia=2 * rp, felt_dia=2 * r_felt)
+
     # nameplate: a curved brass plate in a shallow recess on the front
     zn = z_(p.NAMEPLATE_Z)
     plate_outline = Pos(0, 0, zn) * _front_prism(RectangleRounded(p.NAMEPLATE_W, p.NAMEPLATE_H, 1.2))
@@ -115,7 +167,13 @@ def build(p) -> Lamp:
     m.envelopes["usb_receptacle"] = Pos(0, rb - p.BASE_WALL - 4.0, p.USBC_Z) * Box(
         9.5, 7.5, 3.6, align=(Align.CENTER, Align.MIN, Align.CENTER))
     bl, bw, bt = p.BATTERY_SIZE
-    m.envelopes["battery"] = Pos(0, -4, p.BASE_FLOOR + 0.5) * Box(bl, bw, bt, align=MIN)
+    m.envelopes["battery"] = Pos(0, -4, pt + 0.5) * Box(bl, bw, bt, align=MIN)
+    # the battery must fit the bay, clear the bosses, and come out past them
+    bat = m.envelopes["battery"]
+    I["battery_clear"] = dict(bay_height_margin=z_cav_top - pt - 0.5 - bt,
+                              boss_clash=sum((bat & (Pos(x, y, 0) * Cylinder(p.BOSS_DIA / 2, hb, align=MIN))).volume
+                                             if (bat & (Pos(x, y, 0) * Cylinder(p.BOSS_DIA / 2, hb, align=MIN))) is not None
+                                             else 0.0 for x, y in screw_xy))
     m.parts["base"] = _one(base)
     m.parts["nameplate"] = plate
     I.update(base_dia=2 * rb, base_h=hb)
@@ -193,18 +251,35 @@ def build(p) -> Lamp:
     # ---- 5. lantern: brass frame + frosted glass ----------------------------
     z_l0, z_l1 = z_g1, z_(p.LANTERN_TOP_Z)
     hr = p.LANTERN_RING_H
-    ring = lambda za: Pos(0, 0, za) * (Cylinder(rl, hr, align=MIN) - Cylinder(rl - 3.0, hr + 1, align=MIN))
-    frame = ring(z_l0) + ring(z_l1 - hr)
+    tb, lip = p.TOP_BAND_H, p.LIP_H
+    r_lip = rl - 3.0                                   # lip inner radius (the opening under the cap)
+    z_tb = z_l1 - tb                                   # bottom of the top band
+    ann = lambda ro, ri, za, h: Pos(0, 0, za) * (Cylinder(ro, h, align=MIN) - Cylinder(ri, h + 2, align=MIN))
+    frame = ann(rl, rl - 3.0, z_l0, hr)                               # bottom ring
+    frame = frame + ann(rl, p.GROOVE_R, z_tb, tb)                     # top band: outer skin...
+    frame = frame + ann(p.GROOVE_R + 0.01, r_lip, z_l1 - lip, lip)    # ...and the bayonet lip
+    # entry slots through the lip, midway between mullions, and a stop under the
+    # lip LOCK_TURN_DEG further round (the lug turns until it hits it)
+    lug_half = math.degrees(p.LOCK_LUG_W / 2 / r_lip)
+    slot_w = p.LOCK_LUG_W + 2 * p.FIT_CLEAR
+    for k in range(p.LOCK_LUGS):
+        a0 = k * 360 / p.LOCK_LUGS
+        frame = frame - Rot(0, 0, a0) * Pos(0, -(p.GROOVE_R + r_lip) / 2, z_l1 - lip - 0.5) * Box(
+            slot_w, p.GROOVE_R - r_lip + 0.4, lip + 1.0, align=MIN)
+        a_stop = a0 + p.LOCK_TURN_DEG + lug_half + math.degrees(1.0 / r_lip)
+        frame = frame + Rot(0, 0, a_stop) * Pos(0, -(p.GROOVE_R + r_lip) / 2, z_tb) * Box(
+            1.5, p.GROOVE_R - r_lip + 0.2, tb - lip + 0.2, align=MIN)
     for k in range(p.MULLIONS):
         ang = (k + 0.5) * 360 / p.MULLIONS            # a panel (not a mullion) faces the front
         frame = frame + Rot(0, 0, ang) * Pos(0, -(rl - p.MULLION_DEPTH / 2), z_l0) * Box(
-            p.MULLION_W, p.MULLION_DEPTH, z_l1 - z_l0, align=MIN)
+            p.MULLION_W, p.MULLION_DEPTH, z_tb - z_l0 + 0.5, align=MIN)
     m.parts["lantern_frame"] = _one(frame)
     rgl = rl - p.MULLION_DEPTH - 0.1
-    glass = Pos(0, 0, z_l0 + hr) * (Cylinder(rgl, z_l1 - z_l0 - 2 * hr, align=MIN)
+    glass = Pos(0, 0, z_l0 + hr) * (Cylinder(rgl, z_tb - z_l0 - hr, align=MIN)
                                     - Cylinder(rgl - p.GLASS_THICK, z_l1 - z_l0, align=MIN))
     m.parts["lantern_glass"] = _one(glass)
-    m.envelopes["led"] = Pos(0, 0, (z_l0 + z_l1) / 2 - p.LED_H / 2) * Cylinder(p.LED_DIA / 2, p.LED_H, align=MIN)
+    m.envelopes["led"] = Pos(0, 0, (z_l0 + z_tb) / 2 - p.LED_H / 2) * Cylinder(p.LED_DIA / 2, p.LED_H, align=MIN)
+    I.update(led_access_dia=2 * r_lip)
 
     # ---- 6. red cap + brass finial -------------------------------------------
     rcr = d_(p.CAP_RIM_DIA) / 2
@@ -221,12 +296,43 @@ def build(p) -> Lamp:
     rbo = p.CAP_BOSS_DIA / 2
     boss = _revolve([(0, z_d1 - 2.0), (rbo, z_d1 - 2.0), (rbo, z_d1 - 0.5),
                      (rbo * 0.6, z_d1 + p.CAP_BOSS_H), (0, z_d1 + p.CAP_BOSS_H)])
-    cap = rim + dome + boss
+    # bayonet spigot under the cap: a tube that fits inside the lip, with lugs at
+    # its foot that pass the slots and lock under the lip
+    r_sp = r_lip - p.FIT_CLEAR
+    z_lug_top = z_l1 - lip - p.FIT_CLEAR
+    z_sp0 = z_lug_top - p.LOCK_LUG_H
+    spigot = ann(r_sp, r_sp - p.SPIGOT_WALL, z_sp0, z_l1 - z_sp0 + 0.5)
+
+    def lugs(turn):
+        out = None
+        for k in range(p.LOCK_LUGS):
+            lg = Rot(0, 0, k * 360 / p.LOCK_LUGS + turn) * Pos(0, -(r_sp - 0.2), z_sp0) * Box(
+                p.LOCK_LUG_W, p.GROOVE_R - p.FIT_CLEAR - (r_sp - 0.2), p.LOCK_LUG_H,
+                align=(Align.CENTER, Align.MAX, Align.MIN))
+            out = lg if out is None else out + lg
+        return out
+    cap = rim + dome + boss + spigot + lugs(p.LOCK_TURN_DEG)          # modelled locked
     m.parts["cap"] = _one(cap)
+    # fit checks: locked (no clash with the frame, lugs under the lip) and at the
+    # entry angle (lugs pass through the slots)
+    clash = lambda a_, b_: 0.0 if (a_ & b_) is None else (a_ & b_).volume
+    I["bayonet"] = dict(
+        locked_clash=clash(m.parts["cap"], m.parts["lantern_frame"]),
+        entry_clash=clash(lugs(0.0), m.parts["lantern_frame"]),
+        lug_overlap_under_lip=(p.GROOVE_R - p.FIT_CLEAR) - r_lip,
+        led_passes=p.LED_DIA < 2 * (r_sp - p.SPIGOT_WALL))
     rf = p.FINIAL_DIA / 2
     z_top = p.OVERALL_HEIGHT
     finial = Pos(0, 0, z_top - rf) * Sphere(rf) + Pos(0, 0, z_d1 + p.CAP_BOSS_H - 1.0) * Cylinder(
         rf * 0.45, z_top - rf - (z_d1 + p.CAP_BOSS_H - 1.0), align=MIN)
     m.parts["finial"] = _one(finial)
-    I.update(z_gallery=(z_g0, z_g1), z_lantern=(z_l0, z_l1), z_cap_top=z_d1, H=z_top)
+    I.update(z_gallery=(z_g0, z_g1), z_lantern=(z_l0, z_l1), z_cap_top=z_d1)
+    # everything was built with the walnut's underside at z = 0; the felt stands
+    # proud of it, so lift the lot to put the felt on the ground
+    lift = I["felt_proud"]
+    for dct in (m.parts, m.envelopes):
+        for k_ in list(dct):
+            if dct[k_] is not None:
+                dct[k_] = Pos(0, 0, lift) * dct[k_]
+    I["H"] = z_top + lift
     return m

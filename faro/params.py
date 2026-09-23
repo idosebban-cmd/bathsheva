@@ -23,7 +23,27 @@ BASE_H = 28.0
 BASE_TOP_ROUND = 2.5         # rounding on the top edge
 BASE_BOTTOM_ROUND = 1.5
 BASE_WALL = 4.0              # hollow base: side wall / top thickness
-BASE_FLOOR = 3.0             # bottom plate (felt pad goes under it)
+BASE_WIRE_HOLE = 20.0        # hole through the base top for the wiring up the tower
+# User-replaceable battery: the walnut base is an open ring; a bottom plate sits
+# flush in a rebate and screws into 4 bosses inside the base. A felt pad covers
+# the screws: felt laminated to a thin steel disc, held by 4 magnets in the plate,
+# so it lifts off and goes back as often as needed.
+PLATE_THICK = 3.0
+PLATE_REBATE = 2.0           # walnut skin left outside the plate's rebate
+PLATE_CLEAR = 0.2
+SCREWS = 4                   # M3 countersunk (M3 brass threaded inserts in the walnut bosses)
+SCREW_R = 40.0               # screw circle radius
+SCREW_ANGLE0 = 45.0          # first screw angle (clears the battery)
+SCREW_CLEAR_DIA = 3.4
+SCREW_HEAD_DIA = 6.4
+BOSS_DIA = 8.0
+BOSS_PILOT_DIA = 4.0         # for an M3 heat-set/threaded insert
+MAGNETS = 4                  # between the screws
+MAGNET_DIA = 6.0
+MAGNET_THICK = 1.5
+FELT_THICK = 1.5             # felt + 0.4 mm steel backing
+FELT_RECESS = 1.0            # recess in the plate's underside; the felt stands proud by the rest
+FELT_INSET = 3.0             # felt edge inside the plate edge
 NAMEPLATE_W = 37.0
 NAMEPLATE_H = 11.5
 NAMEPLATE_Z = 14.0           # centre height on the base front
@@ -79,7 +99,19 @@ LANTERN_TOP_Z = 248.0        # the lantern runs from the gallery top to here
 MULLIONS = 8                 # a panel faces straight to the front
 MULLION_W = 2.2
 MULLION_DEPTH = 2.2
-LANTERN_RING_H = 2.5         # brass rings at the lantern's top and bottom
+LANTERN_RING_H = 2.5         # brass ring at the lantern's bottom
+# Removable cap (bayonet / twist-lock). The lantern's top band has an inner lip
+# with slots; lugs on a spigot under the cap drop through, then turn under the
+# lip until they hit a stop. Take the cap off to reach the LED module.
+TOP_BAND_H = 6.0             # brass band at the lantern's top (holds the bayonet)
+LIP_H = 2.5                  # the lip the lugs lock under
+GROOVE_R = 26.3              # lug channel radius under the lip
+LOCK_LUGS = 4                # multiple of the mullion spacing, so slots sit mid-panel
+LOCK_LUG_W = 6.0
+LOCK_LUG_H = 2.6
+LOCK_TURN_DEG = 20.0         # quarter-ish turn to lock
+SPIGOT_WALL = 1.5
+FIT_CLEAR = 0.2
 GLASS_THICK = 1.2            # frosted panel ring, just inside the mullions
 
 # ---------------------------------------------------------------------------
@@ -108,11 +140,12 @@ LED_H = 12.0
 # ---------------------------------------------------------------------------
 RED_HEX = "#8A1C15"          # same as Atelier
 BRASS_HEX = "#C4A15A"        # same as Atelier
-CREAM_HEX = "#F4ECDC"        # warm cream lacquer
+CREAM_HEX = "#F9F2E1"        # warm cream lacquer (matched to the concept's lit tower)
 WALNUT_HEX = "#4A2F20"       # dark walnut
 GLOW_HEX = "#FFD7A0"         # lit frosted panels
 LACQUER_ROUGHNESS = 0.12
 LACQUER_CLEARCOAT = 0.9
 BRASS_ROUGHNESS = 0.35
 WALNUT_ROUGHNESS = 0.55
+LIGHT_GAIN = 1.27            # Faro's studio is a touch brighter than Atelier's
 RENDER_SIZE = (1200, 1600)

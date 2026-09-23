@@ -33,6 +33,10 @@ def _material(name, p):
         return dict(color=lin(p.RED_HEX), pbr=True, metallic=0.0, roughness=p.LACQUER_ROUGHNESS), True
     if name in CREAM:
         return dict(color=lin(p.CREAM_HEX), pbr=True, metallic=0.0, roughness=p.LACQUER_ROUGHNESS), True
+    if name == "felt_pad":
+        return dict(color=lin("#2F2D2B"), pbr=True, metallic=0.0, roughness=1.0), False
+    if name == "base_plate":
+        return dict(color=lin("#4A4541"), pbr=True, metallic=0.0, roughness=0.6), False
     if name == "base":
         return dict(color=lin(p.WALNUT_HEX), pbr=True, metallic=0.0, roughness=p.WALNUT_ROUGHNESS), False
     return dict(color=(0.5, 0.5, 0.5)), False
@@ -51,7 +55,7 @@ def _shadow(pl, m):
     pl.add_mesh(grid, scalars="rgba", rgba=True, lighting=False, show_scalar_bar=False)
 
 
-def plotter(m, p, size, shadow=True):
+def plotter(m, p, size, shadow=True, hide=(), extra=()):
     pl = pv.Plotter(off_screen=True, window_size=list(size), lighting="none")
     pl.set_background(atelier.BACKDROP, top=atelier.BACKDROP_TOP)
     if not atelier.FAST:
@@ -64,8 +68,10 @@ def plotter(m, p, size, shadow=True):
     pl.renderer.SetEnvironmentRight(1, 0, 0)
     for pos, k in (((-500, -700, 700), atelier.LIGHT_KEY), ((700, -350, 250), atelier.LIGHT_FILL),
                    ((150, 800, 600), atelier.LIGHT_RIM)):
-        pl.add_light(pv.Light(position=pos, focal_point=(0, 0, 150), intensity=k))
+        pl.add_light(pv.Light(position=pos, focal_point=(0, 0, 150), intensity=k * p.LIGHT_GAIN))
     for name, shape in m.parts.items():
+        if name in hide:
+            continue
         style, coat = _material(name, p)
         actor = pl.add_mesh(atelier._to_mesh(shape), smooth_shading=True, **style)
         if coat:
@@ -77,9 +83,43 @@ def plotter(m, p, size, shadow=True):
     if "usb_receptacle" in m.envelopes:           # dark metal seen through the port
         pl.add_mesh(atelier._to_mesh(m.envelopes["usb_receptacle"], 0.05), color=(0.08, 0.08, 0.09),
                     pbr=True, metallic=0.8, roughness=0.4)
+    finish = {"screws": ("#8E9095", 0.35), "magnets": ("#E2E2E4", 0.15)}   # steel / bright nickel
+    for key in extra:                               # e.g. screws and magnets
+        if m.envelopes.get(key) is not None:
+            col, rough = finish.get(key, ("#9A9CA0", 0.35))
+            pl.add_mesh(atelier._to_mesh(m.envelopes[key], 0.02), color=atelier.hex_linear(col),
+                        pbr=True, metallic=1.0, roughness=rough)
     if shadow:
         _shadow(pl, m)
     return pl
+
+
+def render_underside(m, p, path, size=(1100, 900)):
+    """Two views up at the base: as sold (felt on) and with the felt lifted off
+    (the plate, its 4 screws and 4 magnets)."""
+    from PIL import Image, ImageDraw
+    imgs = []
+    for hide, extra in (((), ()), (("felt_pad",), ("screws", "magnets"))):
+        pl = plotter(m, p, size, shadow=False, hide=hide, extra=extra)
+        d = np.array([0.30, -0.45, -1.0])
+        d /= np.linalg.norm(d)
+        focal = np.array([0.0, 0.0, 12.0])
+        pl.camera.position = tuple(focal + d * 330)
+        pl.camera.focal_point = tuple(focal)
+        pl.camera.up = (0, 1, 0)
+        pl.camera.view_angle = 24
+        pl.reset_camera_clipping_range()
+        imgs.append(Image.fromarray(pl.screenshot(return_img=True)))
+        pl.close()
+    sheet = Image.new("RGB", (size[0] * 2 + 20, size[1]), (255, 255, 255))
+    for i, im in enumerate(imgs):
+        sheet.paste(im, (i * (size[0] + 20), 0))
+    dr = ImageDraw.Draw(sheet)
+    dr.text((20, 20), "underside, as sold (felt pad on)", fill=(40, 40, 40))
+    dr.text((size[0] + 40, 20), "felt pad lifted off: 4 screws (hex socket) hold the plate; 4 magnets (bright) hold the felt",
+            fill=(40, 40, 40))
+    sheet.save(path)
+    return path
 
 
 def render_views(m, p, out_dir: Path, views=("front", "side"), prefix="faro"):
