@@ -168,6 +168,18 @@ def _collar_usb_port(p, I, m, collar, cup_edge, z0, z_cb):
         0, min(rlen, 0.999 * path.edges()[0].length))]))
     cable = sweep(Plane(origin=P0, z_dir=a) * Circle(cr), path=path)
     m.envelopes["usb_plug"] = _one_solid(tongue + over)
+    # right-angle plug (as shipped): a short head, then a boot leaving sideways.
+    # Local +Y points up the port face (up and out), +X is horizontal.
+    hl = p.USBC_RA_HEAD_LEN
+    bw, bl = p.USBC_RA_BOOT
+    head = extrude(RectangleRounded(ow, oh, min(2.5, oh / 2 - 0.1)), amount=hl)
+    ra = {}
+    for name, rot in (("up", 0), ("down", 180), ("side A (towards the rear fin)", -90),
+                      ("side B (towards the side fin)", 90)):
+        across = oh if rot in (90, -90) else bw
+        boot = Pos(0, 0, hl - oh) * Rot(0, 0, rot) * Box(across, bl, oh, align=(Align.CENTER, Align.MIN, Align.MIN))
+        ra[name] = loc * (head + boot)
+    m._usb_right_angle = ra
     m.envelopes["usb_cable"] = cable + relief
     # wire channel starts at the back of the pocket
     m._usb_pocket_back = F - a * (wall + dep - 1.0)
@@ -474,10 +486,11 @@ def build(p, visual_only=False) -> Model:
                                     y_from=-r_out(z_led) + 3.2)
     I.update(z_knob=zk, z_led=z_led)
 
-    if p.USBC_POSITION == "collar" and not concept_base:
-        raise ValueError('USBC_POSITION = "collar" needs the concept base (PR_POSITION "none", or "base" with the vent style)')
+    # the collar port needs the solid (sealed) collar; radiator layouts use the body port
+    usb_pos = p.USBC_POSITION if (p.USBC_POSITION != "collar" or no_pr) else "body"
+    I["usbc_position"] = usb_pos
     # ---- USB-C port --------------------------------------------------------
-    if p.USBC_POSITION == "body":
+    if usb_pos == "body":
         zu = z0 + bh * p.USBC_Z_FRAC
         d = _dir(p.USBC_ANGLE_DEG)
         rot_z = p.USBC_ANGLE_DEG  # rotate a feature built facing -Y to face this angle
@@ -702,7 +715,7 @@ def build(p, visual_only=False) -> Model:
                  nozzle_throat_dia=2 * throat_r)
     if not base_vent:
         foot = _one_solid(fillet(foot.edges().sort_by(Axis.Z)[0], min(1.0, foot_r / 4)))
-    if p.USBC_POSITION == "collar":                 # after the fillet, which rebuilds the solid
+    if usb_pos == "collar":                         # after the fillet, which rebuilds the solid
         foot = _collar_usb_port(p, I, m, foot, cup, z0, z_cb)
     I.update(foot_dia=2 * foot_r, collar_h=collar_h, pr_position=p.PR_POSITION)
     if base_vent:
@@ -725,12 +738,21 @@ def build(p, visual_only=False) -> Model:
     fins, tips = _build_fins(p, I, r_out, outer_solid, z0, bh, R, clear_r=rb, hollow=not visual_only,
                              clear_solid=fin_clear if concept_base else None)
     I["fin_tips"] = tips
-    if p.USBC_POSITION == "collar":
+    if usb_pos == "collar":
         # plug + cable fit: clearance to each fin and the foot knob, and the ground
         plug, cable = m.envelopes["usb_plug"], m.envelopes["usb_cable"]
         I.update(usbc_plug_fin_clear=min(plug.distance_to(f) for f in fins),
                  usbc_cable_fin_clear=min(cable.distance_to(f) for f in fins),
                  usbc_plug_knob_clear=plug.distance_to(base_extra["base_foot"]))
+        ra_fit = {}
+        for name, sol in m._usb_right_angle.items():
+            ra_fit[name] = dict(
+                fins=min(sol.distance_to(f) for f in fins),
+                knob=sol.distance_to(base_extra["base_foot"]),
+                ground=min(v.Z for v in sol.vertices()),
+                collar=(lambda r: 0.0 if r is None else r.volume)(sol & foot),
+                body=sol.distance_to(outer_solid))
+        I["usbc_right_angle_fit"] = ra_fit
 
     fin_angles = [p.FIN_ANGLE_OFFSET_DEG + k * 360 / p.FIN_COUNT for k in range(p.FIN_COUNT)]
     rho = lambda key: p.MATERIAL_DENSITY[p.PART_MATERIALS[key]]
@@ -824,7 +846,7 @@ def build(p, visual_only=False) -> Model:
         r_bal = min(open_r, r_in(battery_floor_z)) - p.FIT_CLEARANCE - 0.5
         pocket_w, pocket_d = bb.size.X + 2 * p.BATTERY_CLEARANCE, bb.size.Y + 2 * p.BATTERY_CLEARANCE
         wire_slot = None
-        if p.USBC_POSITION == "collar":
+        if usb_pos == "collar":
             # USB-C wiring: a channel from the back of the port pocket up through the
             # collar spigot into the battery bay, then up a slot in the ballast cup
             # beside the battery to the PCB. The sealed receptacle keeps the air in.

@@ -51,9 +51,14 @@ def mass_properties(model, p):
     for name, mass, c in (("battery (bought-in)", p.BATTERY_MASS, bat),
                           ("driver (bought-in)", p.DRIVER_MASS, drv),
                           ("passive radiator (bought-in)", 0.0 if prad is None else
-                           p.PR_BASE_MASS if p.PR_POSITION == "base" else p.PR_MASS, prad or Vector()),
+                           p.PR_BASE_MASS if p.PR_POSITION == "base" else p.PR_MASS, prad),
                           ("PCB (bought-in)", p.PCB_MASS, pcb),
+                          ("USB-C receptacle, sealed (bought-in)", p.USBC_RECEPTACLE_MASS,
+                           model.envelopes["usb_receptacle"].center(CenterOf.MASS)
+                           if "usb_receptacle" in model.envelopes else None),
                           ("butyl damping pads", p.BUTYL_MASS_G, butyl)):
+        if c is None:                                # item not in this layout
+            continue
         rows.append(dict(name=name, material="-", volume_cm3=None, mass_g=mass, com_z=c.Z))
         total_m += mass
         moment += mass * np.array([c.X, c.Y, c.Z])

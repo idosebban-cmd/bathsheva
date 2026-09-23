@@ -65,9 +65,12 @@ def _print_pose(name, shape, info, internal=()):
         s = shape
         how = ("upright as fitted (a ring standing on its lower edge)",
                "No: vertical wall, and the pointy-top hexagons are self-supporting")
-    elif name in ("foot", "collar"):
+    elif name == "collar":
         s = Rot(180, 0, 0) * shape
-        how = ("upside down, spigot on the bed", "No")
+        how = ("upside down, spigot on the bed", "No: the cup and the port recess lean less than 45 deg")
+    elif name == "foot":
+        s = Rot(180, 0, 0) * shape
+        how = ("upside down, flat top on the bed", "No")
     elif name in ("grille", "bezel", "rear_grille", "rear_bezel"):
         # upright, as fitted: the part curves round the vertical axis, so its
         # walls print vertical and the pointy-top hexagons are self-supporting
@@ -121,8 +124,9 @@ PRINT_MATERIAL = {
     "nose_cone": ("PLA+", "0.12 mm layers for a smooth cone; gold paint or gold PLA"),
     "fin": ("PLA+ or PETG", "Solid in this version. 30-40% infill adds some weight. The 3.3 mm "
             "pilot holes take M4 self-tapping screws from inside, or glue with epoxy"),
-    "foot": ("PLA+", "Glue under the vent insert"),
-    "collar": ("PLA+", "Friction-fits into the body (0.2 mm clearance); sand to fit"),
+    "foot": ("PLA+", "The small rounded knob: glue it centred under the collar cup"),
+    "collar": ("PLA+", "Friction-fits into the body (0.2 mm clearance); sand to fit. Includes the "
+               "USB-C port recess, receptacle pocket and wire channel"),
     "vent_insert": ("PLA+ in black, or resin", "Paint matt black; for a looks-like model the mesh "
                     "ring can stay solid (it's only a dark shadow line)"),
     "nozzle": ("PLA+ or resin", "0.08-0.12 mm layers to keep the steps crisp; glued to the mesh ring"),
@@ -239,18 +243,28 @@ def write_report(m, poses, build_seconds):
     L(f"| Grille diameter / bezel OD / sound opening | {f(I['grille_dia'])} / {f(I['bezel_od'])} / {f(I['sound_opening_dia'])} |")
     L(f"| Grille centre height | {f(I['z_grille'])} |")
     L(f"| Knob centre / LED height | {f(I['z_knob'])} / {f(I['z_led'])} |")
-    L(f"| USB-C centre height, angle | {f(I['z_usbc'])}, {f(p.USBC_ANGLE_DEG, 0)} deg from front |")
+    if I["usbc_position"] == "collar":
+        L(f"| USB-C port (in the collar cup) | face centre {f(I['usbc_face'][2])} mm up, {f(p.USBC_ANGLE_DEG, 0)} deg "
+          f"from front, facing {f(p.USBC_TILT_DEG, 0)} deg down |")
+    else:
+        L(f"| USB-C centre height, angle | {f(I['z_usbc'])}, {f(p.USBC_ANGLE_DEG, 0)} deg from front |")
+    L(f"| Collar cup / foot height | {f(I['z0'] - I['collar_bottom'])} / {f(I['collar_bottom'] - p.FOOT_GROUND_GAP)} "
+      f"({p.FOOT_GROUND_GAP:g} mm ground gap) |")
     L(f"| Fin tip distance from axis | {f(I['fin_tip_reach'])} |")
     L("")
     L("## Internal air volume")
     L("")
+    no_pr = p.PR_POSITION == "none"
     L(f"* **Body: {air_body:.3f} L**. That's the inner cavity minus the driver ({p.DRIVER_DIA:g} x "
-      f"{p.DRIVER_DEPTH:g} mm), passive radiator ({p.PR_W:g} x {p.PR_H:g} x {p.PR_DEPTH:g} mm oval), "
-      f"battery, ballast cup, chassis, driver/radiator seats, spigots, and "
+      f"{p.DRIVER_DEPTH:g} mm), " + ("" if no_pr else "passive radiator, ") +
+      f"battery, ballast cup, chassis, driver seat, spigots, and "
       f"{p.BUTYL_MASS_G / p.BUTYL_DENSITY:.0f} cm3 of butyl pads.")
     L(f"* Nose cone interior: {air_cone:.3f} L more, if the cone is left open to the body "
       f"(total {air_body + air_cone:.3f} L).")
-    L("* For a sealed box, the knob shaft, LED and USB-C openings must be sealed.")
+    L("* It's a **sealed box**" if no_pr else "* For a sealed box,")
+    lines[-1] += (": the knob shaft, LED light pipe, USB-C receptacle, grille seat and the cone and "
+               "collar joints must all be airtight (see below)." if no_pr else
+               " the knob shaft, LED and USB-C openings must be sealed.")
     L("")
     L("## Assembly checks")
     L("")
@@ -322,9 +336,65 @@ def write_report(m, poses, build_seconds):
       "product feel solid and resist being nudged, but it only helps the tip angle as far as it "
       "lowers the CoM.")
     L("")
-    L("## Passive radiator")
-    L("")
-    if p.PR_POSITION == "base" and p.BASE_STYLE == "vent":
+    if no_pr:
+        L("## Sealed enclosure")
+        L("")
+        L(f"* **No passive radiator** (`PR_POSITION = \"none\"`): the body is a sealed box of {air_body:.3f} L. "
+          "The gold collar cup is a solid zinc plug that closes the bottom of the body and sits straight "
+          "on the foot, with no vent or shadow gap.")
+        L("* Every opening has to be airtight: the knob shaft (sealed encoder or O-ring), the LED light "
+          "pipe, the USB-C receptacle (below), the grille seat, and the cone and collar spigots "
+          "(an O-ring or gasket on each).")
+        L("* `PR_POSITION = \"base\"` or `\"rear\"` still builds the radiator layouts for comparison "
+          "(`python compare_pr.py`). Those use a USB-C port in the body instead.")
+        L("")
+    if I["usbc_position"] == "collar":
+        ra = I["usbc_right_angle_fit"]
+        L("## USB-C port")
+        L("")
+        L(f"* **In the gold collar cup**, at {p.USBC_ANGLE_DEG:g} deg (midway between the side fin at "
+          f"{p.FIN_ANGLE_OFFSET_DEG:g} deg and the rear fin at 180 deg), facing {p.USBC_TILT_DEG:g} deg down. It's "
+          "out of sight from normal viewing heights, and the cable drops between those two fins.")
+        L(f"* The port face is sunk {f(I['usbc_face_depth'])} mm into the cup, with its centre "
+          f"{f(I['usbc_face'][2])} mm off the ground. That leaves at least {p.USBC_WALL_AT_PORT:g} mm of "
+          "zinc round the receptacle pocket, and a flat seat for the plug.")
+        L(f"* **Sealed receptacle:** because the enclosure is sealed, it has to be an IP67-type "
+          f"mid-mount receptacle with its own gasket ({p.USBC_RECEPTACLE[0]:g} x {p.USBC_RECEPTACLE[1]:g} mm "
+          "envelope modelled). The pocket behind it opens into the battery bay, so any leak there "
+          "is a leak in the box.")
+        L(f"* **Wiring:** a {p.USBC_WIRE_HOLE:g} mm channel ({f(I['usbc_wire_channel_len'])} mm long) runs from the "
+          f"back of the pocket through the collar spigot into the battery bay. A "
+          f"{p.USBC_WIRE_SLOT[0]:g} x {p.USBC_WIRE_SLOT[1]:g} mm slot then runs up the ballast cup beside the "
+          "battery to the top of the cup, where the battery and USB wires join the harness to the PCB "
+          "on the spine (about 16 cm in total).")
+        L("")
+        L("**Ships with a right-angle USB-C cable.** It should be a **side-angled** (left/right) type. "
+          "A USB-C plug goes in either way up, so the cable has to fit in both orientations:")
+        L("")
+        L("| Plug | Clearance to fins | to foot knob | above ground | to red body | Fits? |")
+        L("|---|---|---|---|---|---|")
+        L(f"| Straight plug (checked for any third-party cable), overmold {p.USBC_PLUG_OVERMOLD[0]:g} x "
+          f"{p.USBC_PLUG_OVERMOLD[1]:g} x {p.USBC_PLUG_OVERMOLD[2]:g} mm | {f(I['usbc_plug_fin_clear'])} | "
+          f"{f(I['usbc_plug_knob_clear'])} | {f(I['usbc_plug_lowest'])} | - | "
+          f"{ok(I['usbc_plug_lowest'] >= p.USBC_PLUG_GROUND_CLEAR and I['usbc_plug_fin_clear'] > 1)} |")
+        for name, v in ra.items():
+            fits = v["ground"] >= 1.0 and v["fins"] > 1 and v["knob"] > 0.5 and v["collar"] < 0.01 and v["body"] > 0.5
+            L(f"| Right-angle, cable leaving {name} | {f(v['fins'])} | {f(v['knob'])} | {f(v['ground'])} | "
+              f"{f(v['body'])} | {ok(fits)} |")
+        L("")
+        L("* A side-angled plug fits both ways up. An up/down-angled plug only fits one way: flipped "
+          "over, its boot points into the ground. So the shipped cable should be side-angled, and "
+          "the quick-start guide should still say which way the cable runs.")
+        L("* With a straight cable the plug's rigid part ends just above the ground, so the cable has to "
+          "bend tighter than ideal right at its strain relief. That's another reason to ship the "
+          "right-angle cable.")
+        L("")
+    else:
+        L("## Passive radiator")
+        L("")
+    if no_pr:
+        pass
+    elif p.PR_POSITION == "base" and p.BASE_STYLE == "vent":
         sd = I["pr_sd"]
         L(f"* **Fires down through the base** (the back stays smooth red). It's a round {p.PR_BASE_DIA:g} mm "
           f"radiator ({p.PR_BASE_EFFECTIVE_DIA:g} mm radiating, **{sd:.0f} mm2**) on a flat seat moulded "
@@ -398,17 +468,22 @@ def write_report(m, poses, build_seconds):
       "from the collar opening.")
     L("2. **Moulding the body.** A one-piece shell whose belly (95 mm) is much wider than its end "
       "openings can't be injection-moulded on a simple core. It needs a collapsible core, "
-      "or two halves welded together (the seam disappears under the lacquer), and the internal driver and "
-      "radiator seats may have to become separate parts. This decision affects the split strategy and "
-      "the fitting sequence.")
-    L(f"3. **Blind assembly and wiring.** The battery, ballast and radiator go in through a ~{f(I['insert_opening_dia'], 0)} mm opening, "
-      "and the knob encoder's nut sits about 40 mm below the driver hole. Connectors, service loops and "
-      "special tools need defining, along with a repair/disassembly sequence.")
+      "or two halves welded together (the seam disappears under the lacquer), and the internal driver "
+      + ("seat" if no_pr else "and radiator seats") + " may have to become separate parts. This decision "
+      "affects the split strategy and the fitting sequence.")
+    L(f"3. **Blind assembly and wiring.** The battery and ballast" + ("" if no_pr else " and radiator")
+      + f" go in through a ~{f(I['insert_opening_dia'], 0)} mm opening, "
+      "and the knob encoder's nut sits about 40 mm below the driver hole."
+      + (" The USB-C wires have to be fed up the ballast slot before the collar is fitted, so "
+         "they need a connector at the top of the cup." if I["usbc_position"] == "collar" else "")
+      + " Connectors, service loops and special tools need defining, along with a repair/disassembly sequence.")
     L("4. **Retaining the nose cone and the base module.** Both locate on slip-fit spigots only. They need "
       "a hidden fastening (bayonet, screws into the chassis, or adhesive). Also check what carries the load "
       "when the product is lifted by the body.")
-    L("5. **Acoustics.** Sealed-box air-tightness (knob shaft, LED, USB-C, seams, grille seats) and "
-      "passive radiator tuning." + (" The base radiator has about 26% less area than the rear oval, "
+    L("5. **Acoustics.** Sealed-box air-tightness (knob shaft, LED, USB-C, seams, grille seats)"
+      + (" and tuning the driver to the sealed volume (a sealed box of this size limits the bass "
+         "extension, so the DSP EQ has to make up the difference within the driver's excursion)."
+         if no_pr else " and passive radiator tuning.") + (" The base radiator has about 26% less area than the rear oval, "
       "and its exit gap can be choked by soft surfaces such as a tablecloth, or collect dust. It needs "
       "measuring, not just calculating." if p.PR_POSITION == "base" else ""))
     L("6. **Matching the gold finish across materials.** Anodised aluminium (cone, bezels), plated zinc "

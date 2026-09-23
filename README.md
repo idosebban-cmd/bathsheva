@@ -89,13 +89,14 @@ Edit a value, save and run `python build.py`. The most useful ones:
 | Change the fin shape | `FIN_ROOT_TOP_FRAC`, `FIN_OUTER_BULGE`, `FIN_UNDERCUT`, `FIN_ROOT_THICK` |
 | Change the grille size or height | `GRILLE_DIA_FRAC`, `GRILLE_Z_FRAC`, `GRILLE_WRAPPED` (wraps round the body like the concept) |
 | Change the body/cone outline | `BODY_PROFILE_POINTS`, `CONE_PROFILE_POINTS` (or switch to `"fullness"`/`"ogive"` mode) |
-| Change the base | `BASE_STYLE`, `BASE_VENT_GAP`, `COLLAR_BOTTOM_DIA_FRAC`, `FOOT_HEIGHT`, `FOOT_DIA_FRAC` |
+| Change the base | `FOOT_HEIGHT` (taller foot = shallower cup), `COLLAR_TOP_SLOPE`, `COLLAR_END_SLOPE` (cup curve), `COLLAR_BOTTOM_DIA_FRAC`, `FOOT_DIA_FRAC`, `FOOT_ROUND` |
 | Turn the honeycomb on | `HEX_PATTERN_ENABLED = True` |
 | Use a different driver or battery | `DRIVER_DIA`, `DRIVER_DEPTH`, `BATTERY_SIZE`, `BATTERY_MASS` |
 | Change the split lines | `SPLIT_MODE` (see below) |
 | Change materials (affects mass, CoM and tipping) | `PART_MATERIALS`, `MATERIAL_DENSITY` |
 | Change the target weight or ballast | `TARGET_MASS_G`, `BALLAST_MASS_G` (`"auto"` sizes it to the target), ballast material in `PART_MATERIALS` |
-| Move the passive radiator | `PR_POSITION` = `"base"` (down-firing, smooth back) or `"rear"` (oval behind a gold cover) |
+| Sealed box or passive radiator | `PR_POSITION` = `"none"` (default: sealed, no radiator), `"base"` (down-firing through a vent under the collar) or `"rear"` (oval behind a gold cover) |
+| Move the USB-C port | `USBC_POSITION` (`"collar"` or `"body"`), `USBC_ANGLE_DEG`, `USBC_TILT_DEG` |
 | Change render colours and finish | `RED_HEX`, `GOLD_HEX`, `BODY_ROUGHNESS`, `BODY_CLEARCOAT`, `GOLD_ROUGHNESS` |
 | Change the joint line | `JOINT_SHADOW_LINE` (0 = no line) |
 
@@ -139,22 +140,30 @@ are measured around the axis from the front.
 * **Battery:** the build tries the battery box in every orientation and keeps
   the one that sits lowest in the body. With the default 2×18650 pack, that's upright,
   standing on the foot spigot.
-* **USB-C:** a stadium opening at 150° (30° off the rear fin), low down near the battery.
-  It has a pocket on the inside that thins the wall to 1 mm, so a standard receptacle gets more
-  plug engagement.
+* **USB-C** (`USBC_POSITION = "collar"`, default): a sealed port in the gold collar cup at 120°,
+  midway between the side and rear fins, facing 45° down. It's hidden in normal viewing and the
+  cable drops between the fins. The build sinks the port face just deep enough to leave 1 mm of
+  zinc round the receptacle pocket, then checks that a standard straight plug and a right-angle plug
+  (in all four directions) clear the fins, the foot and the ground. The product ships with a
+  **side-angled** right-angle cable, the type that fits both ways up. The wires run through a channel
+  in the collar spigot and up a slot in the ballast cup beside the battery. Because the box is
+  sealed, the receptacle must be a gasketed IP67 type. `"body"` puts the port low on the red body
+  instead (the radiator layouts always use that).
 * **Knob:** a low 5 mm disc. A hidden 10 mm boss on its back sits in a hole in the body wall, so the
   6 mm blind shaft bore still gets about 6.5 mm of grip on the encoder shaft.
-* **Passive radiator** (`PR_POSITION`):
-  * `"base"` (default): a round 44 mm unit, fitted through the cone opening, sits on a
+* **Sealed box or passive radiator** (`PR_POSITION`):
+  * `"none"` (default): a sealed enclosure. The gold collar cup is a solid zinc plug that closes
+    the bottom of the body and sits straight on a short rounded foot, as in the concept.
+  * `"base"`: a round 44 mm unit, fitted through the cone opening, sits on a
     seat inside the body and fires down through the collar. `BASE_STYLE` sets how the base looks:
-    * `"vent"` (default, as in the concept): a slim gold collar, then a 5.5 mm gap that reads
+    * `"vent"`: a slim gold collar, then a 5.5 mm gap that reads
       as a dark shadow line, with a black mesh ring recessed behind it, then a small rounded
       foot. The report compares every narrowing of the air path with the radiator area;
       this vent only reaches about a quarter of it (see `report.md` for the options).
     * `"nozzle"`: a honeycomb mesh ring and a stepped rocket-engine nozzle (raises the body).
   * `"rear"`: a 60 × 40 mm oval on the rear at driver height, behind a perforated
     gold cover and bezel that match the front grille.
-  * `python compare_pr.py` builds both and tabulates air volume, mass, centre of
+  * `python compare_pr.py` builds both radiator layouts and tabulates air volume, mass, centre of
     mass, tip angle and ground clearance.
 * **Ballast:** a cup round the upright battery, narrow enough to pass the collar opening.
   With `BALLAST_MASS_G = "auto"` it's sized to hit `TARGET_MASS_G`, but it never grows
@@ -167,7 +176,7 @@ are measured around the axis from the front.
   cast bosses for the bolts.
 * **Fit checks:** the report checks every pair of internal items for overlaps.
 * **Cut-away render** (`render_section.png`): the driver is shown in black, the battery in blue,
-  the passive radiator in purple and the steel parts in grey.
+  the passive radiator (if any) in purple and the steel parts in grey.
 
 ## Renders
 

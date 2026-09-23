@@ -162,7 +162,8 @@ LED_DIA = 3.0                # LED hole; centred between the bezel and the knob
 # ---------------------------------------------------------------------------
 # "collar": sealed port in the gold collar cup, facing down between two fins, so
 #           it's hidden in normal viewing and the cable drops between the fins.
-# "body":   the older port low on the red body (uses USBC_Z_FRAC).
+# "body":   the older port low on the red body (uses USBC_Z_FRAC). The rear and base
+#           radiator layouts have no solid collar, so they always use this.
 USBC_POSITION = "collar"
 USBC_ANGLE_DEG = 120.0       # from the front; 120 is midway between the side fin (60) and rear fin (180)
 USBC_TILT_DEG = 45.0         # "collar": the port faces this far below horizontal
@@ -173,8 +174,13 @@ USBC_PLUG_OVERMOLD = (12.35, 6.5, 16.0)  # plug overmold w x h (USB-IF max) x ri
 USBC_PLUG_RELIEF = (5.0, 6.0)            # flexible strain relief dia x length (bends)
 USBC_CABLE_DIA = 4.0
 USBC_PLUG_GROUND_CLEAR = 2.0
+# The product ships with a right-angle cable; its plug is checked too, with the
+# cable leaving in each of the four directions (USB-C plugs go in either way up)
+USBC_RA_HEAD_LEN = 11.0      # right-angle plug: head length along the port axis
+USBC_RA_BOOT = (8.0, 20.0)   # boot width x length from the port axis, cable leaving sideways
 USBC_RECESS_CLEAR = 0.5      # recess round the overmold, so it seats on the flat port face
 USBC_RECEPTACLE = (10.6, 4.9, 9.5)  # sealed (IP67, gasketed) mid-mount receptacle envelope: w x h x length
+USBC_RECEPTACLE_MASS = 3.0   # g, receptacle + its small board
 USBC_COLLAR_POCKET = (11.6, 6.0, 13.0)  # pocket behind the port face for the receptacle + its small board: w x h x depth
 USBC_WIRE_HOLE = 4.0         # wire channel from the pocket up into the battery bay
 USBC_WIRE_SLOT = (5.0, 4.0)  # slot in the ballast cup's battery pocket that the wires run up
