@@ -45,11 +45,11 @@ BODY_BOTTOM_FULLNESS = 2.4   # same for the lower body (higher = rounder "belly"
 BODY_PROFILE_MODE = "points"
 # (height fraction 0 = bottom .. 1 = cone joint, radius / max radius), measured
 # from reference/atelier_concept.png by reference/fit_concept.py. Below knob
-# height (t < 0.34) the body tapers smoothly into the collar:
-# r = r_bottom + (r_knob - r_bottom) * (1 - (1 - t/0.34)**2).
+# height (t < 0.34) the points are halfway between the fitted concept profile and
+# a smooth taper, ending at a wide bottom that meets a wide, shallow collar.
 BODY_PROFILE_POINTS = [
-    (0.0000, 0.4035), (0.0200, 0.4702), (0.0500, 0.5626), (0.1000, 0.6964),
-    (0.1600, 0.8237), (0.2200, 0.9146), (0.2800, 0.9691), (0.3611, 0.9873),
+    (0.0000, 0.5200), (0.0200, 0.5463), (0.0500, 0.6222), (0.1000, 0.7296),
+    (0.1600, 0.8381), (0.2200, 0.9209), (0.2800, 0.9628), (0.3611, 0.9873),
     (0.4150, 0.9995), (0.4689, 1.0000), (0.5227, 0.9900), (0.5766, 0.9784),
     (0.6305, 0.9559), (0.6843, 0.9253), (0.7382, 0.8857), (0.7921, 0.8387),
     (0.8460, 0.7826), (0.8998, 0.7101), (0.9537, 0.6331), (0.9806, 0.5879),
@@ -112,7 +112,7 @@ FIN_EDGE_FILLET = 2.8        # rounding on the fin edges. Just under half of FIN
 
 FIN_WALL = 3.0               # die-cast wall thickness. The fin is hollow, open on the side facing
                              # the body (like a production casting); 0 = solid
-FIN_BOLTS_Z_FRAC = (0.55, 0.85)  # bolt heights, as fractions along the fin root (bottom to top)
+FIN_BOLTS_Z_FRAC = (0.50, 0.62)  # bolt heights, as fractions along the fin root (bottom to top)
 FIN_BOLT_CLEAR = 4.5         # M4 clearance hole through the body wall and the chassis ring
 FIN_BOLT_PILOT = 3.3         # M4 tapping hole in the fin's internal boss
 FIN_BOSS_DIA = 9.0           # cast boss inside the hollow fin that the bolt screws into
@@ -222,11 +222,11 @@ BASE_VENT_RECESS = 2.5       # the dark mesh sits this far inside the collar's l
 BASE_VENT_MESH_THICK = 0.6   # black woven/perforated mesh ring
 BASE_VENT_MESH_OPEN = 0.60   # its open-area ratio (typical fine black stainless mesh)
 BASE_VENT_PLATE = 1.0        # dark plate that closes the bottom of the vent, sunk into the foot top
-COLLAR_BOTTOM_DIA_FRAC = 0.258  # collar tapers from the body bottom to this (fraction of BODY_MAX_DIA)
-COLLAR_TOP_SLOPE = 0.15      # cup starts nearly vertical under the body (a convex bowl)...
-COLLAR_END_SLOPE = 1.0       # ...and curves in towards the foot (1 = 45 deg)
+COLLAR_BOTTOM_DIA_FRAC = 0.30   # collar tapers from the body bottom to this (fraction of BODY_MAX_DIA)
+COLLAR_TOP_SLOPE = 0.35      # cup starts nearly vertical under the body (a convex bowl)...
+COLLAR_END_SLOPE = 2.0       # ...and curves in towards the foot (1 = 45 deg; 2 = a shallow bowl)
 COLLAR_WALL = 1.5            # collar bore wall
-FOOT_HEIGHT = 7.5            # small rounded foot (vent style)
+FOOT_HEIGHT = 9.5            # small rounded foot (vent style)
 FOOT_ROUND = 3.5             # rounding on the foot's lower edge
 
 # Base "engine" (only with PR_POSITION = "base" and BASE_STYLE = "nozzle"). Under the gold collar, a ring

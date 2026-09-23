@@ -476,22 +476,20 @@ def build(p, visual_only=False) -> Model:
             Pos(0, 0, z0 - 1) * Cylinder(bore_top, p.FOOT_SPIGOT_HEIGHT + 2, align=MIN)
         foot = _one_solid(collar - bore)
 
-        # small rounded gold foot: carries on the cup's line, necks in, rounds off
-        # its top is tucked in just outside the dark insert, so no flat gold
-        # ledge faces up into the light under the vent
-        r_ft = r_cb - p.BASE_VENT_RECESS + 0.6
-        fp = Edge.make_spline(
-            [_xz(r_ft, z_ft), _xz(max(foot_r + 0.2, r_ft - 1.5), z_ft - 0.45 * foot_h),
-             _xz(foot_r * 0.8, g + 0.35 * foot_h), _xz(0, g)],
-            tangents=[down(0.4), Vector(-1, 0, 0)])
-        foot2 = lathe(fp, r_ft, z_ft, 0, g)
-
+        # small gold foot: a short cylinder with a rounded bottom edge (as in the concept)
+        foot2 = Pos(0, 0, g) * Cylinder(foot_r, z_ft - g, align=MIN)
+        try:
+            foot2 = fillet(foot2.edges().filter_by(GeomType.CIRCLE).sort_by(Axis.Z)[0],
+                           min(p.FOOT_ROUND, foot_r - 0.5, (z_ft - g) - 0.5))
+        except Exception:
+            pass
+        r_ft = foot_r
         # dark bronze vent insert, set deep: a plate on the foot top and a mesh ring
         r_mo = r_cb - p.BASE_VENT_RECESS                     # mesh outer radius
         r_mi = r_mo - p.BASE_VENT_MESH_THICK
         pl_t = p.BASE_VENT_PLATE
         # the dark plate covers the whole top of the foot, so every edge in the gap is dark
-        vent = Pos(0, 0, z_ft - 0.01) * Cylinder(r_ft, pl_t, align=MIN)
+        vent = Pos(0, 0, z_ft - 0.01) * Cylinder(max(r_ft, r_mo), pl_t, align=MIN)
         vent = vent + Pos(0, 0, z_ft + pl_t - 0.2) * (
             Cylinder(r_mo, vg - pl_t + 0.4, align=MIN) - Cylinder(r_mi, vg + 1, align=MIN))
         vent = _one_solid(vent)
