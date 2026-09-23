@@ -44,9 +44,11 @@ def hex_linear(h):
 
 
 _MESH_CACHE = {}
+MESH_TOL = 0.03          # triangle tolerance (mm); quick previews use a coarser one
+FAST = False             # quick previews: no supersampling, fewer reflection samples
 
 
-def _to_mesh(shape, tol=0.03, angle_deg=4.0):
+def _to_mesh(shape, tol=None, angle_deg=None):
     """Triangulate a CAD solid for rendering, with exact surface normals.
 
     Normals come from the CAD surface itself (via OpenCascade), not averaged
@@ -58,6 +60,8 @@ def _to_mesh(shape, tol=0.03, angle_deg=4.0):
     from OCP.TopAbs import TopAbs_REVERSED
     from OCP.TopLoc import TopLoc_Location
 
+    tol = MESH_TOL if tol is None else tol
+    angle_deg = (12.0 if FAST else 4.0) if angle_deg is None else angle_deg
     key = (id(shape), tol)
     if key in _MESH_CACHE:
         return _MESH_CACHE[key]
@@ -148,12 +152,13 @@ def _plotter(model, p, size, section=False, shadow=True):
     global _ENV
     pl = pv.Plotter(off_screen=True, window_size=list(size), lighting="none")
     pl.set_background(BACKDROP, top=BACKDROP_TOP)
-    pl.enable_anti_aliasing("ssaa")
+    if not FAST:
+        pl.enable_anti_aliasing("ssaa")
     if _ENV is None:
         _ENV = _studio_environment()
     pl.set_environment_texture(_ENV)
     pre = pl.renderer.GetEnvMapPrefiltered()   # smoother blurred reflections on rough metal
-    pre.SetPrefilterMaxSamples(1024)
+    pre.SetPrefilterMaxSamples(64 if FAST else 1024)
     pl.renderer.SetEnvironmentUp(0, 0, 1)
     pl.renderer.SetEnvironmentRight(1, 0, 0)
     # direct lights for crisp highlights: key, fill, rim
@@ -253,7 +258,8 @@ def render_views(model, p, out_dir: Path, views=None, prefix="render", section=T
         pl.close()
         written.append(path)
 
-    written.append(contact_sheet(written, out_dir / f"{prefix}_overview.png"))
+    if len(written) > 1:
+        written.append(contact_sheet(written, out_dir / f"{prefix}_overview.png"))
     trio = [out_dir / f"{prefix}_{v}.png" for v in ("front", "side", "three_quarter")]
     if all(t in written for t in trio):
         written.append(contact_sheet(trio, out_dir / f"{prefix}_front_side_34.png", scale=0.6))

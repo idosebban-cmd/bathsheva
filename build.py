@@ -5,6 +5,8 @@ Regenerate everything in ./output from params.py:
     python build.py --no-render  # skip the PNGs (faster)
     python build.py --hex        # force the honeycomb grille on for this run
     python build.py --flat       # force the honeycomb off (plain disc grille)
+    python build.py --draft      # fast: visible parts only, honeycomb off, front + side
+                                 # renders to output/draft/ (no STEP/STL/report)
 """
 from __future__ import annotations
 
@@ -436,7 +438,18 @@ def main():
     g = ap.add_mutually_exclusive_group()
     g.add_argument("--hex", action="store_true", help="honeycomb grille on for this run")
     g.add_argument("--flat", action="store_true", help="honeycomb grille off for this run")
+    ap.add_argument("--draft", action="store_true",
+                    help="visible parts only, honeycomb off, front+side renders; nothing else is updated")
     args = ap.parse_args()
+    if args.draft:
+        import render
+        p.HEX_PATTERN_ENABLED = False
+        t0 = time.time()
+        m = geometry.build(p, visual_only=True)
+        files = render.render_views(m, p, OUT / "draft", views=["front", "side"], prefix="draft",
+                                    section=False)
+        print(f"Draft done in {time.time() - t0:.0f} s -> {OUT / 'draft'}")
+        return
     if args.hex:
         p.HEX_PATTERN_ENABLED = True
     if args.flat:

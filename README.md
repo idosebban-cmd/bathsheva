@@ -33,6 +33,8 @@ pip install -r requirements.txt
 ```bash
 source .venv/bin/activate
 python build.py              # everything (~2 min with the honeycomb grilles)
+python quick_preview.py      # front view only, ~8 s -> output/preview_front.png
+python build.py --draft      # visible parts only, front + side renders -> output/draft/ (~30 s)
 python build.py --no-render  # skip the PNGs when you only need the CAD
 python build.py --flat       # honeycomb off for this run (much faster while iterating)
 python compare_pr.py         # compare passive radiator layouts (~4 min)
@@ -56,6 +58,21 @@ settings instead. `compare_concept.py` renders an orthographic front view at the
 scale and reports how far apart they are.
 
 ## Changing the design
+
+### The 10 parameters that most change the look
+
+| Parameter | What it does |
+|---|---|
+| `OVERALL_HEIGHT` | Total height, ground to nose tip; everything scales with it |
+| `BODY_MAX_DIA` | Width of the red body at its widest; slimmer or chunkier rocket |
+| `BODY_PROFILE_POINTS` | The body's side outline (height fraction, radius fraction); edit a pair to push the curve in or out there |
+| `CONE_HEIGHT_FRAC` | Nose cone height relative to the body; taller or stubbier nose |
+| `CONE_PROFILE_POINTS` | Nose cone outline; fuller shoulders or a sharper point |
+| `BASE_CLEARANCE_FRAC` | How high the body sits off the ground (collar + foot space) |
+| `GRILLE_DIA_FRAC` | Grille size relative to the body width at that height |
+| `GRILLE_Z_FRAC` | Grille height on the body (moves the knob and LED with it) |
+| `FIN_TIP_REACH_FRAC` | How far the fin tips reach out; wider, more planted stance |
+| `FIN_OUTER_BULGE` | Curve of the fins' outer edge: 0 = straight, ~0.9 = the concept's rounded sweep |
 
 **All dimensions live in [`params.py`](params.py).** Every value has a comment.
 Edit a value, save and run `python build.py`. The most useful ones:

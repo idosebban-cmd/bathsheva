@@ -97,7 +97,9 @@ class Model:
 # ---------------------------------------------------------------------------
 # main build
 # ---------------------------------------------------------------------------
-def build(p) -> Model:
+def build(p, visual_only=False) -> Model:
+    """visual_only=True skips everything hidden inside (driver mount, fin bolt
+    holes, fin hollowing, ballast, chassis, fit checks) for fast previews."""
     m = Model()
     I = m.info
 
@@ -287,39 +289,40 @@ def build(p) -> Model:
     )
     bezel = _one_solid(bezel)
 
-    # ---- driver mount (moulded into the body, behind the grille) ----------
-    # The driver is too big to pass through the cone or collar openings, so it
-    # is FRONT-loaded: with the grille and bezel off, it drops through the
-    # sound opening into a round "well" and its frame screws onto a flat ring.
-    # The grille then hides the screws.
-    r_well = p.DRIVER_DIA / 2 + p.DRIVER_CLEARANCE
-    ring_out = p.DRIVER_DIA / 2 + p.DRIVER_RING_WIDTH
-    ring_in = p.DRIVER_DIA / 2 - p.DRIVER_FLANGE_WIDTH
-    # The flat seating face sits just behind the innermost point of the curved
-    # inner wall around the driver's rim, so the frame clears the wall.
-    y_wall = []
-    for th in np.linspace(0, 2 * math.pi, 72, endpoint=False):
-        x, z = r_well * math.cos(th), zg + r_well * math.sin(th)
-        ri = r_in(z)
-        if ri > abs(x):
-            y_wall.append(-math.sqrt(ri * ri - x * x))
-    y_seat = max(y_wall) + 0.5
-    y_back = y_seat + p.DRIVER_MOUNT_THICK
-    inside = offset_solid(-p.WALL + 0.3)
-    plate = _front_cyl(ring_out, zg, depth=p.DRIVER_MOUNT_THICK, y_from=y_back) & inside
-    skirt = (_front_cyl(ring_out, zg, depth=200, y_from=y_seat)
-             - _front_cyl(r_well, zg, depth=400, y_from=50)) & inside
-    ring = (plate + skirt) - _front_cyl(ring_in, zg, depth=400, y_from=50)
-    pcd = p.DRIVER_DIA / 2 - p.DRIVER_FLANGE_WIDTH / 2
-    for k in range(p.DRIVER_SCREW_COUNT):
-        th = math.radians(45 + k * 360 / p.DRIVER_SCREW_COUNT)
-        ring = ring - Pos(pcd * math.cos(th), 0, pcd * math.sin(th)) * _front_cyl(
-            p.DRIVER_SCREW_HOLE / 2, zg, depth=30, y_from=y_back + 1)
-    body = body + ring
-    driver_env = Pos(0, y_seat, zg) * Rot(-90, 0, 0) * Cylinder(
-        p.DRIVER_DIA / 2, p.DRIVER_DEPTH, align=MIN)
-    m.envelopes["driver"] = driver_env
-    I.update(y_driver_seat=y_seat, driver_through_opening=(2 * open_r >= p.DRIVER_DIA + 2 * p.DRIVER_CLEARANCE))
+    if not visual_only:   # internals: skipped for quick previews
+        # ---- driver mount (moulded into the body, behind the grille) ----------
+        # The driver is too big to pass through the cone or collar openings, so it
+        # is FRONT-loaded: with the grille and bezel off, it drops through the
+        # sound opening into a round "well" and its frame screws onto a flat ring.
+        # The grille then hides the screws.
+        r_well = p.DRIVER_DIA / 2 + p.DRIVER_CLEARANCE
+        ring_out = p.DRIVER_DIA / 2 + p.DRIVER_RING_WIDTH
+        ring_in = p.DRIVER_DIA / 2 - p.DRIVER_FLANGE_WIDTH
+        # The flat seating face sits just behind the innermost point of the curved
+        # inner wall around the driver's rim, so the frame clears the wall.
+        y_wall = []
+        for th in np.linspace(0, 2 * math.pi, 72, endpoint=False):
+            x, z = r_well * math.cos(th), zg + r_well * math.sin(th)
+            ri = r_in(z)
+            if ri > abs(x):
+                y_wall.append(-math.sqrt(ri * ri - x * x))
+        y_seat = max(y_wall) + 0.5
+        y_back = y_seat + p.DRIVER_MOUNT_THICK
+        inside = offset_solid(-p.WALL + 0.3)
+        plate = _front_cyl(ring_out, zg, depth=p.DRIVER_MOUNT_THICK, y_from=y_back) & inside
+        skirt = (_front_cyl(ring_out, zg, depth=200, y_from=y_seat)
+                 - _front_cyl(r_well, zg, depth=400, y_from=50)) & inside
+        ring = (plate + skirt) - _front_cyl(ring_in, zg, depth=400, y_from=50)
+        pcd = p.DRIVER_DIA / 2 - p.DRIVER_FLANGE_WIDTH / 2
+        for k in range(p.DRIVER_SCREW_COUNT):
+            th = math.radians(45 + k * 360 / p.DRIVER_SCREW_COUNT)
+            ring = ring - Pos(pcd * math.cos(th), 0, pcd * math.sin(th)) * _front_cyl(
+                p.DRIVER_SCREW_HOLE / 2, zg, depth=30, y_from=y_back + 1)
+        body = body + ring
+        driver_env = Pos(0, y_seat, zg) * Rot(-90, 0, 0) * Cylinder(
+            p.DRIVER_DIA / 2, p.DRIVER_DEPTH, align=MIN)
+        m.envelopes["driver"] = driver_env
+        I.update(y_driver_seat=y_seat, driver_through_opening=(2 * open_r >= p.DRIVER_DIA + 2 * p.DRIVER_CLEARANCE))
 
     # ---- knob and LED ------------------------------------------------------
     z_bezel_bottom = zg - bezel_r
@@ -569,7 +572,7 @@ def build(p) -> Model:
         battery_floor_z = z0 + p.PR_BASE_DEPTH + p.PR_BACK_CLEARANCE
 
     # ---- fins --------------------------------------------------------------
-    fins, tips = _build_fins(p, I, r_out, outer_solid, z0, bh, R, clear_r=rb)
+    fins, tips = _build_fins(p, I, r_out, outer_solid, z0, bh, R, clear_r=rb, hollow=not visual_only)
     I["fin_tips"] = tips
 
     fin_angles = [p.FIN_ANGLE_OFFSET_DEG + k * 360 / p.FIN_COUNT for k in range(p.FIN_COUNT)]
@@ -579,11 +582,12 @@ def build(p) -> Model:
         """Cylinder pointing outward from the axis at angle ang, from radius r0 to r1."""
         return Rot(0, 0, ang - 90) * Pos(r0, 0, z) * Rot(0, 90, 0) * Cylinder(radius, r1 - r0, align=MIN)
 
-    # ---- fins bolt through the body wall into the chassis rings ------------
-    bolt_z = I["fin_bolt_z"]
-    for ang in fin_angles:
-        for zb in bolt_z:
-            body = body - radial_cyl(p.FIN_BOLT_CLEAR / 2, ang, zb, r_in(zb) - 3, r_out(zb) + 1)
+    if not visual_only:   # internals: skipped for quick previews
+        # ---- fins bolt through the body wall into the chassis rings ------------
+        bolt_z = I["fin_bolt_z"]
+        for ang in fin_angles:
+            for zb in bolt_z:
+                body = body - radial_cyl(p.FIN_BOLT_CLEAR / 2, ang, zb, r_in(zb) - 3, r_out(zb) + 1)
 
     # ---- passive radiator ---------------------------------------------------
     rear_parts = {}
@@ -638,141 +642,142 @@ def build(p) -> Model:
             rear_parts = {"rear_grille": pr_rot * rg, "rear_bezel": pr_rot * rbz}
             I.update(rear_cover_size=(cov_w, cov_h), rear_bezel_size=(bez_w, bez_h))
 
-    # ---- base module: ballast cup + battery ---------------------------------
-    # Everything inside has to pass through an opening: the collar opening
-    # (nose_tail), or the cone opening (nose). The foot, the ballast cup and the
-    # battery go in together from below as one "base module". The ballast is a
-    # steel sleeve round the upright battery, so the battery stays as low as it can.
-    if p.SPLIT_MODE == "nose_tail":
-        open_r = max(r_open_bot, inner[-1, 0])    # whichever end opening is bigger
-    elif p.SPLIT_MODE == "nose":
-        open_r = inner[-1, 0]
-    else:
-        open_r = R  # clamshell: the body opens fully
-    I["insert_opening_dia"] = 2 * open_r
-    batt, batt_info = _place_battery(p, r_in, battery_floor_z, zt,
-                                     max_footprint=2 * (open_r - p.FIT_CLEARANCE))
-    m.envelopes["battery"] = batt
-    I.update(batt_info)
-    bb = batt.bounding_box()
+    if not visual_only:   # internals: skipped for quick previews
+        # ---- base module: ballast cup + battery ---------------------------------
+        # Everything inside has to pass through an opening: the collar opening
+        # (nose_tail), or the cone opening (nose). The foot, the ballast cup and the
+        # battery go in together from below as one "base module". The ballast is a
+        # steel sleeve round the upright battery, so the battery stays as low as it can.
+        if p.SPLIT_MODE == "nose_tail":
+            open_r = max(r_open_bot, inner[-1, 0])    # whichever end opening is bigger
+        elif p.SPLIT_MODE == "nose":
+            open_r = inner[-1, 0]
+        else:
+            open_r = R  # clamshell: the body opens fully
+        I["insert_opening_dia"] = 2 * open_r
+        batt, batt_info = _place_battery(p, r_in, battery_floor_z, zt,
+                                         max_footprint=2 * (open_r - p.FIT_CLEARANCE))
+        m.envelopes["battery"] = batt
+        I.update(batt_info)
+        bb = batt.bounding_box()
 
-    r_bal = min(open_r, r_in(battery_floor_z)) - p.FIT_CLEARANCE - 0.5
-    pocket_w, pocket_d = bb.size.X + 2 * p.BATTERY_CLEARANCE, bb.size.Y + 2 * p.BATTERY_CLEARANCE
-    t = p.CHASSIS_THICK
-    g = -p.WALL - p.CHASSIS_GAP
-    inside_ch = offset_solid(g)
-    wall_plate = band(g - t, g)
-    z_lo, z_hi = min(bolt_z) - 8, max(bolt_z) + 8
+        r_bal = min(open_r, r_in(battery_floor_z)) - p.FIT_CLEARANCE - 0.5
+        pocket_w, pocket_d = bb.size.X + 2 * p.BATTERY_CLEARANCE, bb.size.Y + 2 * p.BATTERY_CLEARANCE
+        t = p.CHASSIS_THICK
+        g = -p.WALL - p.CHASSIS_GAP
+        inside_ch = offset_solid(g)
+        wall_plate = band(g - t, g)
+        z_lo, z_hi = min(bolt_z) - 8, max(bolt_z) + 8
 
-    # the cup may not rise above the underside of the driver (less a clearance)
-    z_driver_bottom = zg - p.DRIVER_DIA / 2
-    h_bal_max = max(0.0, z_driver_bottom - p.BALLAST_DRIVER_CLEARANCE - battery_floor_z)
-    area_bal = math.pi * r_bal ** 2 - pocket_w * pocket_d
-    I.update(z_driver_bottom=z_driver_bottom,
-             ballast_max_g=h_bal_max * area_bal * rho("ballast") / 1000.0)
+        # the cup may not rise above the underside of the driver (less a clearance)
+        z_driver_bottom = zg - p.DRIVER_DIA / 2
+        h_bal_max = max(0.0, z_driver_bottom - p.BALLAST_DRIVER_CLEARANCE - battery_floor_z)
+        area_bal = math.pi * r_bal ** 2 - pocket_w * pocket_d
+        I.update(z_driver_bottom=z_driver_bottom,
+                 ballast_max_g=h_bal_max * area_bal * rho("ballast") / 1000.0)
 
-    def make_cup_and_chassis(ballast_g):
-        """Ballast cup of the given mass round the battery, then the chassis:
-        * 3 fin brackets: curved plates hugging the wall behind each fin. The fin
-          bolts pass through the body into them, and a web + flange bolts each
-          bracket to the ballast cup, so fin loads go into steel, not plastic.
-        * a spine plate standing on the cup behind the driver, carrying the PCBs,
-          with a tab under the driver magnet."""
-        h_bal = ballast_g / rho("ballast") * 1000.0 / (math.pi * r_bal ** 2 - pocket_w * pocket_d)
-        h_bal = min(h_bal, h_bal_max)       # can't grow into the driver
-        cup, cup_top = None, battery_floor_z
-        if h_bal > 0.1:
-            cup = Pos(0, 0, battery_floor_z) * Cylinder(r_bal, h_bal, align=MIN)
-            cup = _one_solid(cup - Pos(0, 0, battery_floor_z - 1) * Box(
-                pocket_w, pocket_d, h_bal + 2, align=MIN))
-            cup_top = battery_floor_z + h_bal
-        pieces = []
-        for ang in fin_angles:
-            r_mid = r_in((z_lo + z_hi) / 2)
-            half = math.degrees(p.CHASSIS_BRACKET_WIDTH / 2 / r_mid)
-            plate = wall_plate & _sector(ang - half, ang + half, z_lo, z_hi)
-            # web, offset to one side of the bolt line so it clears the bolt heads
-            web = Rot(0, 0, ang - 90) * Pos(r_bal + 0.3, p.CHASSIS_WEB_OFFSET, z_lo + 4) * Box(
-                100, t, z_hi - z_lo - 8, align=(Align.MIN, Align.CENTER, Align.MIN))
-            flange = Rot(0, 0, ang - 90) * Pos(r_bal + 0.3, p.CHASSIS_WEB_OFFSET, z_lo + 4) * Box(
-                t, 14, z_hi - z_lo - 8, align=(Align.MIN, Align.CENTER, Align.MIN))
-            br = (plate + (web & inside_ch) + flange)
-            for zb in bolt_z:
-                br = br - radial_cyl(p.FIN_BOLT_CLEAR / 2, ang, zb, r_in(zb) - 10, r_out(zb) + 1)
-            pieces.append(_one_solid(br))
-        y_sp = I["y_driver_seat"] + p.DRIVER_DEPTH + 1.5         # just behind the driver magnet
-        z_sp0 = max(cup_top, bb.max.Z) + 0.5
-        z_sp1 = zt - p.CONE_SPIGOT_DEPTH - 5
-        w_sp = 2 * r_bal                                          # fits through the opening
-        spine = Pos(0, y_sp, z_sp0) * Box(w_sp, t, z_sp1 - z_sp0,
-                                          align=(Align.CENTER, Align.MIN, Align.MIN))
-        foot_fl = Pos(0, y_sp - 8, z_sp0) * Box(w_sp, 16 + t, t,
-                                                align=(Align.CENTER, Align.MIN, Align.MIN))
-        z_tab = zg - p.DRIVER_DIA / 2 - 0.5
-        y_tab0 = I["y_driver_seat"] + p.DRIVER_DEPTH * 0.4
-        tab = Pos(0, y_tab0, z_tab - t) * Box(24, y_sp - y_tab0 + t, t,
+        def make_cup_and_chassis(ballast_g):
+            """Ballast cup of the given mass round the battery, then the chassis:
+            * 3 fin brackets: curved plates hugging the wall behind each fin. The fin
+              bolts pass through the body into them, and a web + flange bolts each
+              bracket to the ballast cup, so fin loads go into steel, not plastic.
+            * a spine plate standing on the cup behind the driver, carrying the PCBs,
+              with a tab under the driver magnet."""
+            h_bal = ballast_g / rho("ballast") * 1000.0 / (math.pi * r_bal ** 2 - pocket_w * pocket_d)
+            h_bal = min(h_bal, h_bal_max)       # can't grow into the driver
+            cup, cup_top = None, battery_floor_z
+            if h_bal > 0.1:
+                cup = Pos(0, 0, battery_floor_z) * Cylinder(r_bal, h_bal, align=MIN)
+                cup = _one_solid(cup - Pos(0, 0, battery_floor_z - 1) * Box(
+                    pocket_w, pocket_d, h_bal + 2, align=MIN))
+                cup_top = battery_floor_z + h_bal
+            pieces = []
+            for ang in fin_angles:
+                r_mid = r_in((z_lo + z_hi) / 2)
+                half = math.degrees(p.CHASSIS_BRACKET_WIDTH / 2 / r_mid)
+                plate = wall_plate & _sector(ang - half, ang + half, z_lo, z_hi)
+                # web, offset to one side of the bolt line so it clears the bolt heads
+                web = Rot(0, 0, ang - 90) * Pos(r_bal + 0.3, p.CHASSIS_WEB_OFFSET, z_lo + 4) * Box(
+                    100, t, z_hi - z_lo - 8, align=(Align.MIN, Align.CENTER, Align.MIN))
+                flange = Rot(0, 0, ang - 90) * Pos(r_bal + 0.3, p.CHASSIS_WEB_OFFSET, z_lo + 4) * Box(
+                    t, 14, z_hi - z_lo - 8, align=(Align.MIN, Align.CENTER, Align.MIN))
+                br = (plate + (web & inside_ch) + flange)
+                for zb in bolt_z:
+                    br = br - radial_cyl(p.FIN_BOLT_CLEAR / 2, ang, zb, r_in(zb) - 10, r_out(zb) + 1)
+                pieces.append(_one_solid(br))
+            y_sp = I["y_driver_seat"] + p.DRIVER_DEPTH + 1.5         # just behind the driver magnet
+            z_sp0 = max(cup_top, bb.max.Z) + 0.5
+            z_sp1 = zt - p.CONE_SPIGOT_DEPTH - 5
+            w_sp = 2 * r_bal                                          # fits through the opening
+            spine = Pos(0, y_sp, z_sp0) * Box(w_sp, t, z_sp1 - z_sp0,
                                               align=(Align.CENTER, Align.MIN, Align.MIN))
-        pieces.append(_one_solid((spine + foot_fl + tab) & inside_ch))
-        chassis = None
-        for sol in pieces:
-            chassis = sol if chassis is None else chassis + sol
-        info = dict(ballast_dia=2 * r_bal, ballast_h=h_bal, ballast_top=cup_top,
-                    ballast_bottom=battery_floor_z, chassis_spine_y=y_sp, chassis_top=z_sp1,
-                    chassis_pieces=len(pieces),
-                    pcb_pos=(0.0, y_sp + t + 6.0, (z_sp0 + z_sp1) / 2),
-                    # each bracket flange (z_lo+4 .. z_hi-4) must land fully on the cup
-                    bracket_reaches_cup=(cup is not None and battery_floor_z <= z_lo + 4
-                                         and cup_top >= z_hi - 4))
-        return cup, chassis, info
+            foot_fl = Pos(0, y_sp - 8, z_sp0) * Box(w_sp, 16 + t, t,
+                                                    align=(Align.CENTER, Align.MIN, Align.MIN))
+            z_tab = zg - p.DRIVER_DIA / 2 - 0.5
+            y_tab0 = I["y_driver_seat"] + p.DRIVER_DEPTH * 0.4
+            tab = Pos(0, y_tab0, z_tab - t) * Box(24, y_sp - y_tab0 + t, t,
+                                                  align=(Align.CENTER, Align.MIN, Align.MIN))
+            pieces.append(_one_solid((spine + foot_fl + tab) & inside_ch))
+            chassis = None
+            for sol in pieces:
+                chassis = sol if chassis is None else chassis + sol
+            info = dict(ballast_dia=2 * r_bal, ballast_h=h_bal, ballast_top=cup_top,
+                        ballast_bottom=battery_floor_z, chassis_spine_y=y_sp, chassis_top=z_sp1,
+                        chassis_pieces=len(pieces),
+                        pcb_pos=(0.0, y_sp + t + 6.0, (z_sp0 + z_sp1) / 2),
+                        # each bracket flange (z_lo+4 .. z_hi-4) must land fully on the cup
+                        bracket_reaches_cup=(cup is not None and battery_floor_z <= z_lo + 4
+                                             and cup_top >= z_hi - 4))
+            return cup, chassis, info
 
-    if p.BALLAST_MASS_G == "auto":
-        # size the ballast so the total hits TARGET_MASS_G. Everything else is
-        # already built except the chassis, whose spine length depends on the
-        # cup height, so iterate a couple of times.
-        def grams(shape, key):
-            return shape.volume / 1000.0 * rho(key)
-        pr_mass = p.PR_BASE_MASS if base_pr else p.PR_MASS
-        others = (grams(body, "body") + grams(cone, "nose_cone") + grams(foot, "foot")
-                  + sum(grams(f, "fins") for f in fins) + grams(grille, "grille")
-                  + grams(bezel, "bezel") + grams(knob, "knob")
-                  + sum(grams(v, {"rear_grille": "grille", "rear_bezel": "bezel"}[k])
-                        for k, v in rear_parts.items())
-                  + sum(grams(v, {"nozzle": "foot", "base_mesh": "grille",
-                                  "vent_insert": "vent_insert", "base_foot": "foot"}[k])
-                        for k, v in base_extra.items())
-                  + p.BATTERY_MASS + p.DRIVER_MASS + pr_mass + p.PCB_MASS + p.BUTYL_MASS_G)
-        ch_mass = 115.0
-        for _ in range(4):
-            ballast_g = max(0.0, p.TARGET_MASS_G - others - ch_mass)
+        if p.BALLAST_MASS_G == "auto":
+            # size the ballast so the total hits TARGET_MASS_G. Everything else is
+            # already built except the chassis, whose spine length depends on the
+            # cup height, so iterate a couple of times.
+            def grams(shape, key):
+                return shape.volume / 1000.0 * rho(key)
+            pr_mass = p.PR_BASE_MASS if base_pr else p.PR_MASS
+            others = (grams(body, "body") + grams(cone, "nose_cone") + grams(foot, "foot")
+                      + sum(grams(f, "fins") for f in fins) + grams(grille, "grille")
+                      + grams(bezel, "bezel") + grams(knob, "knob")
+                      + sum(grams(v, {"rear_grille": "grille", "rear_bezel": "bezel"}[k])
+                            for k, v in rear_parts.items())
+                      + sum(grams(v, {"nozzle": "foot", "base_mesh": "grille",
+                                      "vent_insert": "vent_insert", "base_foot": "foot"}[k])
+                            for k, v in base_extra.items())
+                      + p.BATTERY_MASS + p.DRIVER_MASS + pr_mass + p.PCB_MASS + p.BUTYL_MASS_G)
+            ch_mass = 115.0
+            for _ in range(4):
+                ballast_g = max(0.0, p.TARGET_MASS_G - others - ch_mass)
+                cup, chassis, cinfo = make_cup_and_chassis(ballast_g)
+                new = grams(chassis, "chassis")
+                if abs(new - ch_mass) < 0.2:
+                    break
+                ch_mass = new
+        else:
+            ballast_g = float(p.BALLAST_MASS_G)
             cup, chassis, cinfo = make_cup_and_chassis(ballast_g)
-            new = grams(chassis, "chassis")
-            if abs(new - ch_mass) < 0.2:
-                break
-            ch_mass = new
-    else:
-        ballast_g = float(p.BALLAST_MASS_G)
-        cup, chassis, cinfo = make_cup_and_chassis(ballast_g)
-    ballast_g = min(ballast_g, I["ballast_max_g"])
-    if cup is not None:
-        m.parts["ballast"] = cup
-        m.part_material_key["ballast"] = "ballast"
-    m.parts["chassis"] = chassis
-    m.part_material_key["chassis"] = "chassis"
-    I.update(cinfo)
-    I["ballast_mass"] = ballast_g
+        ballast_g = min(ballast_g, I["ballast_max_g"])
+        if cup is not None:
+            m.parts["ballast"] = cup
+            m.part_material_key["ballast"] = "ballast"
+        m.parts["chassis"] = chassis
+        m.part_material_key["chassis"] = "chassis"
+        I.update(cinfo)
+        I["ballast_mass"] = ballast_g
 
-    # ---- fit checks between the internal items ------------------------------
-    items = {"driver": m.envelopes["driver"], "battery": batt,
-             "passive radiator": m.envelopes["passive_radiator"], "chassis": m.parts["chassis"]}
-    if "ballast" in m.parts:
-        items["ballast"] = m.parts["ballast"]
-    names = list(items)
-    clashes = []
-    for i in range(len(names)):
-        for j in range(i + 1, len(names)):
-            v = (items[names[i]] & items[names[j]]).volume
-            clashes.append((names[i], names[j], v))
-    I["clashes"] = clashes
+        # ---- fit checks between the internal items ------------------------------
+        items = {"driver": m.envelopes["driver"], "battery": batt,
+                 "passive radiator": m.envelopes["passive_radiator"], "chassis": m.parts["chassis"]}
+        if "ballast" in m.parts:
+            items["ballast"] = m.parts["ballast"]
+        names = list(items)
+        clashes = []
+        for i in range(len(names)):
+            for j in range(i + 1, len(names)):
+                v = (items[names[i]] & items[names[j]]).volume
+                clashes.append((names[i], names[j], v))
+        I["clashes"] = clashes
 
     # ---- shadow line at the cone joint --------------------------------------
     body = _one_solid(body)
@@ -847,7 +852,7 @@ def _bezier(p0, p1, p2, n=40):
     return (1 - t) ** 2 * np.array(p0) + 2 * (1 - t) * t * np.array(p1) + t ** 2 * np.array(p2)
 
 
-def _build_fins(p, I, r_out, outer_solid, z0, bh, R, clear_r=0.0):
+def _build_fins(p, I, r_out, outer_solid, z0, bh, R, clear_r=0.0, hollow=True):
     u_tip = p.FIN_TIP_REACH_FRAC * R
     z_rt = z0 + bh * p.FIN_ROOT_TOP_FRAC
     z_rb = z0 + bh * p.FIN_ROOT_BOTTOM_FRAC
@@ -920,7 +925,7 @@ def _build_fins(p, I, r_out, outer_solid, z0, bh, R, clear_r=0.0):
         return Pos(x0, 0, z) * Rot(0, 90, 0) * Cylinder(radius, x1 - x0, align=MIN)
 
     solid_blank = blank                                   # kept for the 3D-printed prototype
-    if p.FIN_WALL > 0:
+    if hollow and p.FIN_WALL > 0:
         # Hollow it like a die-casting: a core FIN_WALL in from every outside
         # surface, open on the root side against the body. Cast bosses inside
         # take the M4 bolts that come through the body from the chassis.
