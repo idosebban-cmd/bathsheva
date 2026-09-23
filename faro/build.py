@@ -49,8 +49,10 @@ PRINT = {
     "band_red": (1, "PLA+ or PETG", "upright, wide end down", "No", "Paint red lacquer", None),
     "tower": (1, "PLA+ or PETG", "upright, wide end down", "No: the window arches are self-supporting",
               "Paint cream lacquer (mask the window edges)", None),
-    "window_diffuser": (2, "Translucent resin, sanded", "front face up", "Yes, on the inner face only",
-                        "Or cut from 1 mm opal polycarbonate. Glue behind each window", FACE_UP),
+    "window_diffuser": (1, "Translucent resin, sanded", "outer face up", "Yes, on the inner face only",
+                        "One per window, numbered from the lowest (front) up; each follows the tower's "
+                        "taper at its own height, so keep them in order. Or cut from 1 mm opal "
+                        "polycarbonate. Glue behind its window", None),
     "knob": (1, "Resin or PLA+", "front face down", "No", "Brass paint; glue on, or fit on a 6 mm shaft", FACE_DOWN),
     "gallery": (1, "Resin recommended (PLA+ with a 0.2 mm nozzle)", "upright, platform on the bed",
                 "No: posts are vertical; the rails bridge about 17 mm between posts",
@@ -118,13 +120,22 @@ def final(m):
             export_stl(shape, str(d / f"{name}_REFERENCE_ONLY.stl"), tolerance=0.02, angular_tolerance=0.15)
             continue
         key = "window_diffuser" if name.startswith("window_diffuser") else name
-        if key in done:
+        if key != "window_diffuser" and key in done:
             continue
         done.add(key)
+        if key == "window_diffuser":
+            # turn it so its window faces up (each sits at its own angle round the tower)
+            k = int(name.rsplit("_", 1)[1]) - 1
+            _, ang = m.info["windows"][k]
+            shape = Rot(-90, 0, 0) * Rot(0, 0, -ang) * shape
         s, (qty, mat, orient, sup, notes) = _print_pose(name, shape)
-        fname = f"{key}_x{qty}" if qty > 1 else key
+        fname = name if key == "window_diffuser" else (f"{key}_x{qty}" if qty > 1 else key)
         export_stl(s, str(d / f"{fname}.stl"), tolerance=0.02, angular_tolerance=0.15)
         sz = s.bounding_box().size
+        if key == "window_diffuser" and fname != "window_diffuser_1":
+            ang = m.info["windows"][int(fname.rsplit("_", 1)[1]) - 1][1]
+            side = {0: "front", 90: "right side", 180: "rear", 270: "left side"}.get(round(ang) % 360, f"{ang:g} deg")
+            notes = f"As window_diffuser_1; goes behind the {side} window"
         rows.append((fname, qty, mat, orient, sup, sz, notes))
 
     I = m.info
@@ -149,7 +160,8 @@ def final(m):
     L += ["", "## Assembly order", "",
           "1. Base: melt the 4 M3 inserts into the bosses; glue on the nameplate.",
           "2. Glue the cream band onto the base top, then the red band, then the tower, all centred "
-          "(they stack on flat joints). Glue the knob and the window diffusers.",
+          "(they stack on flat joints). Glue the knob, and each window diffuser behind its own window "
+          "(1 = lowest, on the front, up to 5 = highest, back on the front).",
           "3. Glue the gallery onto the tower top. Stand the lantern glass on the gallery platform, then "
           "lower the frame over it and glue the frame to the gallery.",
           "4. Glue the finial into the cap. Twist the cap on: lugs down through the 4 slots, turn "

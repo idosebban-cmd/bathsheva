@@ -75,7 +75,14 @@ TOWER_TOP_Z = 197.0
 SHELL_WALL = 2.5
 WINDOW_W = 11.7
 WINDOW_H = 21.0              # overall, including the round top
-WINDOW_Z = (113.0, 165.0)    # window centres (two on the front, as in the concept)
+# Windows spiral up the tower like a lighthouse staircase: each one a quarter
+# turn round and a step higher than the last. With 5 windows at 90 deg the first
+# and last are both on the front, so the front view shows two stacked windows
+# (as in the concept); the rest are on the right side, rear and left side.
+WINDOWS = 5
+WINDOW_TURN_DEG = 90.0       # positive = the spiral climbs towards the right (+X) side
+WINDOW_Z_FIRST = 113.0       # lowest window centre (front)
+WINDOW_Z_LAST = 165.0        # highest window centre (front, after a full turn)
 DIFFUSER_THICK = 1.0         # frosted insert behind each window
 DIFFUSER_MARGIN = 2.0        # how far it overlaps the window edge
 

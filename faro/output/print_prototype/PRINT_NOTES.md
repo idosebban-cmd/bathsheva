@@ -12,7 +12,11 @@ Faro lighthouse lamp, Rosso. 300.5 mm tall on its felt pad. The STLs here are tu
 | band_cream.stl | 1 | PLA+ or PETG | upright | No | 97 x 97 x 6 | Paint cream lacquer; glue onto the base top |
 | band_red.stl | 1 | PLA+ or PETG | upright, wide end down | No | 92 x 92 x 36 | Paint red lacquer |
 | tower.stl | 1 | PLA+ or PETG | upright, wide end down | No: the window arches are self-supporting | 86 x 86 x 128 | Paint cream lacquer (mask the window edges) |
-| window_diffuser_x2.stl | 2 | Translucent resin, sanded | front face up | Yes, on the inner face only | 16 x 25 x 2 | Or cut from 1 mm opal polycarbonate. Glue behind each window |
+| window_diffuser_1.stl | 1 | Translucent resin, sanded | outer face up | Yes, on the inner face only | 16 x 25 x 3 | One per window, numbered from the lowest (front) up; each follows the tower's taper at its own height, so keep them in order. Or cut from 1 mm opal polycarbonate. Glue behind its window |
+| window_diffuser_2.stl | 1 | Translucent resin, sanded | outer face up | Yes, on the inner face only | 16 x 25 x 3 | As window_diffuser_1; goes behind the right side window |
+| window_diffuser_3.stl | 1 | Translucent resin, sanded | outer face up | Yes, on the inner face only | 16 x 25 x 3 | As window_diffuser_1; goes behind the rear window |
+| window_diffuser_4.stl | 1 | Translucent resin, sanded | outer face up | Yes, on the inner face only | 16 x 25 x 3 | As window_diffuser_1; goes behind the left side window |
+| window_diffuser_5.stl | 1 | Translucent resin, sanded | outer face up | Yes, on the inner face only | 16 x 25 x 4 | As window_diffuser_1; goes behind the front window |
 | knob.stl | 1 | Resin or PLA+ | front face down | No | 20 x 20 x 7 | Brass paint; glue on, or fit on a 6 mm shaft |
 | gallery.stl | 1 | Resin recommended (PLA+ with a 0.2 mm nozzle) | upright, platform on the bed | No: posts are vertical; the rails bridge about 17 mm between posts | 90 x 90 x 24 | 1.6 mm posts and rails. Brass paint or brass-fill filament |
 | lantern_frame.stl | 1 | Resin recommended | upright, bottom ring on the bed | No: the bayonet lip overhangs only 1.8 mm | 55 x 55 x 41 | Check the cap twists on before painting |
@@ -40,7 +44,7 @@ Faro lighthouse lamp, Rosso. 300.5 mm tall on its felt pad. The STLs here are tu
 ## Assembly order
 
 1. Base: melt the 4 M3 inserts into the bosses; glue on the nameplate.
-2. Glue the cream band onto the base top, then the red band, then the tower, all centred (they stack on flat joints). Glue the knob and the window diffusers.
+2. Glue the cream band onto the base top, then the red band, then the tower, all centred (they stack on flat joints). Glue the knob, and each window diffuser behind its own window (1 = lowest, on the front, up to 5 = highest, back on the front).
 3. Glue the gallery onto the tower top. Stand the lantern glass on the gallery platform, then lower the frame over it and glue the frame to the gallery.
 4. Glue the finial into the cap. Twist the cap on: lugs down through the 4 slots, turn 20 deg clockwise (seen from above) to the stop.
 5. Underneath: battery in the bay, plate on with the 4 screws, felt pad on (the magnets hold it).

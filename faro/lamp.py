@@ -197,7 +197,7 @@ def build(p) -> Lamp:
     red = cone_shell(z_t0, z_red)
     tower = cone_shell(z_red, z_t1)
 
-    # arched windows on the front, each with a frosted diffuser behind it
+    # arched windows spiralling up the tower, each with a frosted diffuser behind it
     ww, wh = p.WINDOW_W, p.WINDOW_H
 
     def arch(wd, ht):
@@ -208,15 +208,24 @@ def build(p) -> Lamp:
         return (rect + top).faces()[0] if len((rect + top).faces()) == 1 else rect + top
 
     diffusers = []
-    for i, zw in enumerate(p.WINDOW_Z):
+    n_w = p.WINDOWS
+    win = []
+    for i in range(n_w):
+        f = i / (n_w - 1) if n_w > 1 else 0.0
+        win.append((p.WINDOW_Z_FIRST + f * (p.WINDOW_Z_LAST - p.WINDOW_Z_FIRST), i * p.WINDOW_TURN_DEG))
+    I["windows"] = [(round(z_(z), 1), a % 360) for z, a in win]
+    for i, (zw, ang) in enumerate(win):
         zw = z_(zw)
-        opening = Pos(0, 0, zw) * _front_prism(arch(ww, wh), depth=200)
+        turn = Rot(0, 0, ang)                         # the front (-Y) prism turned to this window
+        opening = turn * Pos(0, 0, zw) * _front_prism(arch(ww, wh), depth=200)
         tower = tower - opening
-        ri = r_out(zw) - w
-        band = _revolve([(ri - p.DIFFUSER_THICK, zw - 30), (ri - 0.02, zw - 30),
-                         (ri - 0.02, zw + 30), (ri - p.DIFFUSER_THICK, zw + 30)])
+        # a thin conical skin that follows the tower's inner wall
+        ri = lambda z: r_out(z) - w
+        za, zb = zw - 30, zw + 30
+        band = _revolve([(ri(za) - p.DIFFUSER_THICK, za), (ri(za) - 0.02, za),
+                         (ri(zb) - 0.02, zb), (ri(zb) - p.DIFFUSER_THICK, zb)])
         m_ = p.DIFFUSER_MARGIN
-        diff = band & Pos(0, 0, zw) * _front_prism(arch(ww + 2 * m_, wh + 2 * m_), depth=200)
+        diff = band & turn * Pos(0, 0, zw) * _front_prism(arch(ww + 2 * m_, wh + 2 * m_), depth=200)
         diffusers.append(_one(diff))
     m.parts["band_red"] = _one(red)
     m.parts["tower"] = _one(tower)
