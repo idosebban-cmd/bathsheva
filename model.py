@@ -27,6 +27,7 @@ from build123d import (
     Align,
     Axis,
     Box,
+    Circle,
     Cylinder,
     Edge,
     Ellipse,
@@ -40,6 +41,7 @@ from build123d import (
     Polygon,
     Polyline,
     Pos,
+    RectangleRounded,
     Rot,
     Solid,
     SlotOverall,
@@ -48,6 +50,7 @@ from build123d import (
     extrude,
     fillet,
     revolve,
+    sweep,
 )
 
 MIN = (Align.CENTER, Align.CENTER, Align.MIN)
@@ -84,36 +87,104 @@ def _dir(angle_deg):
     return Vector(math.sin(a), -math.cos(a), 0)
 
 
-def _safe_cut(body, make_tool, info=None, label=""):
-    """body - tool, where make_tool(dz, long) builds the cutter shifted up by dz
-    (long=True: a longer cutter reaching further inside).
-    OpenCascade occasionally returns an invalid (empty or inside-out) solid for
-    a small hole at an unlucky spot on the curved spline surface. If that
-    happens, retry with a tiny vertical nudge (up to 1 mm) and note it."""
-    from OCP.BRepAlgoAPI import BRepAlgoAPI_Cut
+def _port_frame(p, F):
+    """Location of the collar USB-C port: origin at the port face centre F, local
+    Z pointing out of the port (outward and down), local X horizontal."""
+    u = _dir(p.USBC_ANGLE_DEG)
+    t = math.radians(p.USBC_TILT_DEG)
+    a = u * math.cos(t) - Vector(0, 0, 1) * math.sin(t)
+    return Location(Plane(origin=F, x_dir=Vector(-u.Y, u.X, 0), z_dir=a)), u, a
 
-    def fuzzy_cut(a, b, fuzz):
-        op = BRepAlgoAPI_Cut()
-        op.SetFuzzyValue(fuzz)
-        return _one_solid(a._bool_op((a,), (b,), op))
 
+def _collar_usb_port(p, I, m, collar, cup_edge, z0, z_cb):
+    """Sealed USB-C port in the gold collar cup, facing down between two fins.
+    Cuts a flat-bottomed recess (so a standard plug's overmold seats square on
+    the port face), the receptacle opening and a pocket behind it for the
+    receptacle and its small board. The face is put as low as possible (best
+    hidden) while the plug's rigid overmold still clears the ground. Also makes
+    the plug + cable envelopes used for the fit checks and the render."""
+    ow, oh, ol = p.USBC_PLUG_OVERMOLD
+    t = math.radians(p.USBC_TILT_DEG)
+    c = p.USBC_RECESS_CLEAR
+    # cup radius vs height
+    samples = sorted((q.Z, q.X) for q in (cup_edge.position_at(k / 200) for k in range(201)))
+    zs_, rs_ = np.array([q[0] for q in samples]), np.array([q[1] for q in samples])
+    wall = p.USBC_WALL_AT_PORT
+    pw, ph, dep = p.USBC_COLLAR_POCKET
+    u = _dir(p.USBC_ANGLE_DEG)
+
+    def walled(F):
+        """True if the pocket and the port face have at least `wall` of zinc
+        round them (the face must not run out of the steep cup at its top)."""
+        loc_, _, _ = _port_frame(p, F)
+        env = loc_ * Pos(0, 0, -2 * wall - dep) * Box(
+            max(pw, ow + 2 * c) + 2 * wall, max(ph, oh + 2 * c) + 2 * wall, 2 * wall + dep,
+            align=(Align.CENTER, Align.CENTER, Align.MIN))
+        r = env - collar
+        return r is None or r.volume < 0.01
+
+    face_z = None
+    for z_s in np.arange(z_cb + oh / 2, z0 - oh / 2, 0.5):
+        r_s = float(np.interp(z_s, zs_, rs_))
+        for depth in np.arange(c, 6.0, 0.25):          # sink the face until it's fully walled
+            rF, zF = r_s - depth * math.cos(t), z_s + depth * math.sin(t)
+            lowest = zF - ol * math.sin(t) - oh / 2 * math.cos(t)
+            if lowest < p.USBC_PLUG_GROUND_CLEAR:
+                continue                               # a deeper face sits higher
+            F = Vector(u.X * rF, u.Y * rF, zF)
+            if walled(F):
+                face_z = (rF, zF, lowest, depth)
+                break
+        if face_z is not None:
+            break
+    if face_z is None:
+        raise ValueError("No spot on the collar cup where the USB-C port is walled and the plug clears the ground")
+    rF, zF, lowest, depth = face_z
+    F = Vector(u.X * rF, u.Y * rF, zF)
+    loc, u, a = _port_frame(p, F)
+    recess = loc * extrude(RectangleRounded(ow + 2 * c, oh + 2 * c, min(2.5, oh / 2 - 0.1) + c), amount=40)
+    opening = loc * Pos(0, 0, -wall - 0.5) * extrude(SlotOverall(p.USBC_W, p.USBC_H), amount=wall + 1.0)
+    pocket = loc * Pos(0, 0, -wall - dep) * Box(pw, ph, dep, align=(Align.CENTER, Align.CENTER, Align.MIN))
+    breakout = (pocket - collar).volume                  # pocket must stay inside the collar
+    out = _one_solid(collar - recess - opening - pocket)
+    rw, rh, rl = p.USBC_RECEPTACLE
+    m.envelopes["usb_receptacle"] = loc * Pos(0, 0, -wall - rl + 1.0) * Box(
+        rw, rh, rl - 1.0, align=(Align.CENTER, Align.CENTER, Align.MIN))
+    # plug: tongue in the receptacle and the rigid overmold, then the flexible
+    # strain relief + cable, which bends down onto the ground and runs out
+    # between the fins
+    tongue = loc * Pos(0, 0, -6.65) * Box(8.25, 2.4, 6.65, align=(Align.CENTER, Align.CENTER, Align.MIN))
+    over = loc * extrude(RectangleRounded(ow, oh, min(2.5, oh / 2 - 0.1)), amount=ol)
+    rd, rlen = p.USBC_PLUG_RELIEF
+    cr = p.USBC_CABLE_DIA / 2
+    P0 = F + a * ol
+    s_ = (P0.Z - rd / 2) / math.sin(t)                 # straight on to where it meets the ground
+    C = P0 + a * s_
+    C = Vector(C.X, C.Y, rd / 2)
+    P2 = C + u * s_
+    P3 = P2 + u * 60
+    path = Wire([Edge.make_bezier(P0, C, P2), Edge.make_line(P2, P3)])
+    relief = sweep(Plane(origin=P0, z_dir=a) * Circle(rd / 2), path=Wire([path.edges()[0].trim_to_length(
+        0, min(rlen, 0.999 * path.edges()[0].length))]))
+    cable = sweep(Plane(origin=P0, z_dir=a) * Circle(cr), path=path)
+    m.envelopes["usb_plug"] = _one_solid(tongue + over)
+    m.envelopes["usb_cable"] = cable + relief
+    # wire channel starts at the back of the pocket
+    m._usb_pocket_back = F - a * (wall + dep - 1.0)
+    I.update(usbc_face=(F.X, F.Y, F.Z), usbc_face_r=rF, usbc_plug_lowest=lowest, usbc_face_depth=depth,
+             usbc_pocket_breakout=breakout)
+    return out
+
+
+def _safe_cut(body, tool, label=""):
+    """body - tool, checked: raises if OpenCascade returns an empty, invalid or
+    inside-out solid (volume integration on spline faces is only good to
+    ~0.5 %, so small volume differences are allowed)."""
     v0 = body.volume
-    attempts = [(0.0, False, 0.0), (0.0, False, 1e-5), (0.0, False, 1e-4), (0.0, False, 1e-3)]
-    attempts += [(dz, lg, fz) for dz in (0.05, -0.05, 0.1, -0.1, 0.2, -0.2, 0.4, -0.4, 0.7, -0.7)
-                 for lg in (False, True) for fz in (0.0, 1e-4)]
-    for dz, long_, fz in attempts:
-        try:
-            tool = make_tool(dz, long_)
-            out = fuzzy_cut(body, tool, fz) if fz else body - tool
-        except Exception:
-            continue
-        # (volume integration on spline faces is only good to ~0.5 %, so this
-        # catches empty or inside-out results, not tiny differences)
-        if out.is_valid and 0.9 * v0 < out.volume < 1.01 * v0:
-            if (dz or long_ or fz) and info is not None:
-                info.setdefault("nudged_cuts", []).append((label, dz, "long" if long_ else "short", fz))
-            return out
-    raise RuntimeError(f"Boolean cut failed: {label}")
+    out = body - tool
+    if not (out.is_valid and 0.9 * v0 < out.volume < 1.01 * v0):
+        raise RuntimeError(f"Boolean cut failed: {label}")
+    return out
 
 
 def _one_solid(shape):
@@ -394,33 +465,32 @@ def build(p, visual_only=False) -> Model:
     knob = knob - Pos(0, y_back + boss_len, zk) * Rot(90, 0, 0) * Cylinder(
         p.KNOB_SHAFT_DIA / 2, bore, align=MIN)                      # blind shaft bore
     knob = _one_solid(knob)
-    body = _safe_cut(body, lambda dz, lg: _front_cyl(
-        p.KNOB_BOSS_DIA / 2 + p.FIT_CLEARANCE * 2, zk + dz, depth=30 if lg else p.WALL + 2.4,
-        y_from=-r_out(zk) + (15 if lg else p.WALL + 1.2)), I, "knob hole")
-    # short cutter spanning just the wall: a long one intermittently makes
-    # OpenCascade return an invalid (inside-out) body here
-    body = _safe_cut(body, lambda dz, lg: _front_cyl(
-        p.LED_DIA / 2, z_led + dz, depth=30 if lg else p.WALL + 2.4,
-        y_from=-r_out(z_led) + (15 if lg else p.WALL + 1.2)), I, "LED hole")
+    body = _safe_cut(body, _front_cyl(p.KNOB_BOSS_DIA / 2 + p.FIT_CLEARANCE * 2, zk,
+                                      depth=p.WALL + 2.4, y_from=-r_out(zk) + p.WALL + 1.2), "knob hole")
+    body = _safe_cut(body, _front_cyl(p.LED_DIA / 2, z_led, depth=p.WALL + 2.4,
+                                      y_from=-r_out(z_led) + p.WALL + 1.2), "LED hole")
     # light pipe in the LED hole (render only, not a separate part)
     m.envelopes["led"] = _front_cyl(p.LED_DIA / 2 - 0.05, z_led, depth=3,
                                     y_from=-r_out(z_led) + 3.2)
     I.update(z_knob=zk, z_led=z_led)
 
+    if p.USBC_POSITION == "collar" and not concept_base:
+        raise ValueError('USBC_POSITION = "collar" needs the concept base (PR_POSITION "none", or "base" with the vent style)')
     # ---- USB-C port --------------------------------------------------------
-    zu = z0 + bh * p.USBC_Z_FRAC
-    d = _dir(p.USBC_ANGLE_DEG)
-    rot_z = p.USBC_ANGLE_DEG  # rotate a feature built facing -Y to face this angle
-    port = extrude(
-        Plane.XZ * SlotOverall(p.USBC_W, p.USBC_H), amount=30)  # along -Y
-    port = Rot(0, 0, rot_z) * Pos(0, -r_out(zu) + 10, zu) * port
-    pocket_depth = r_out(zu) - p.USBC_WALL_AT_PORT
-    pocket = Pos(0, 0, zu) * Box(p.USBC_POCKET_W, pocket_depth, p.USBC_POCKET_H,
-                                 align=(Align.CENTER, Align.MAX, Align.CENTER))
-    pocket = Rot(0, 0, rot_z) * pocket
-    pocket = pocket & offset_solid(-0.2)  # never break through the outside
-    body = _safe_cut(body, lambda dz, lg: Pos(0, 0, dz) * (port + pocket), I, "USB-C port")
-    I.update(z_usbc=zu)
+    if p.USBC_POSITION == "body":
+        zu = z0 + bh * p.USBC_Z_FRAC
+        d = _dir(p.USBC_ANGLE_DEG)
+        rot_z = p.USBC_ANGLE_DEG  # rotate a feature built facing -Y to face this angle
+        port = extrude(
+            Plane.XZ * SlotOverall(p.USBC_W, p.USBC_H), amount=30)  # along -Y
+        port = Rot(0, 0, rot_z) * Pos(0, -r_out(zu) + 10, zu) * port
+        pocket_depth = r_out(zu) - p.USBC_WALL_AT_PORT
+        pocket = Pos(0, 0, zu) * Box(p.USBC_POCKET_W, pocket_depth, p.USBC_POCKET_H,
+                                     align=(Align.CENTER, Align.MAX, Align.CENTER))
+        pocket = Rot(0, 0, rot_z) * pocket
+        pocket = pocket & offset_solid(-0.2)  # never break through the outside
+        body = _safe_cut(body, port + pocket, "USB-C port")
+        I.update(z_usbc=zu)
 
     # ---- nose cone ---------------------------------------------------------
     straight = math.atan2(rt, ch)
@@ -523,10 +593,10 @@ def build(p, visual_only=False) -> Model:
             Pos(0, 0, z0 - 1) * Cylinder(bore_top, p.FOOT_SPIGOT_HEIGHT + 2, align=MIN)
         foot = _one_solid(collar - bore) if base_vent else _one_solid(collar)
         # trims the fins to follow the cup (no step where they meet it)
-        cup_clear = Edge.make_spline([_xz(rb + 0.6, z0 + 0.01), _xz(r_cb + 0.6, z_cb)],
+        cup_clear = Edge.make_spline([_xz(rb + p.FIN_CUP_GAP, z0 + 0.01), _xz(r_cb + p.FIN_CUP_GAP, z_cb)],
                                      tangents=[down(p.COLLAR_TOP_SLOPE), down(p.COLLAR_END_SLOPE)])
-        fin_clear = lathe(cup_clear, rb + 0.6, z0 + 0.01, r_cb + 0.6, z_cb) + \
-            Pos(0, 0, -1) * Cylinder(r_cb + 0.6, z_cb + 1.01, align=MIN)
+        fin_clear = lathe(cup_clear, rb + p.FIN_CUP_GAP, z0 + 0.01, r_cb + p.FIN_CUP_GAP, z_cb) + \
+            Pos(0, 0, -1) * Cylinder(r_cb + p.FIN_CUP_GAP, z_cb + 1.01, align=MIN)
 
         # small gold foot: a short cylinder with a rounded bottom edge (as in the concept)
         foot2 = Pos(0, 0, g) * Cylinder(foot_r, z_ft - g, align=MIN)
@@ -632,6 +702,8 @@ def build(p, visual_only=False) -> Model:
                  nozzle_throat_dia=2 * throat_r)
     if not base_vent:
         foot = _one_solid(fillet(foot.edges().sort_by(Axis.Z)[0], min(1.0, foot_r / 4)))
+    if p.USBC_POSITION == "collar":                 # after the fillet, which rebuilds the solid
+        foot = _collar_usb_port(p, I, m, foot, cup, z0, z_cb)
     I.update(foot_dia=2 * foot_r, collar_h=collar_h, pr_position=p.PR_POSITION)
     if base_vent:
         # The radiator sits INSIDE the body on a flat moulded seat just above the
@@ -653,6 +725,12 @@ def build(p, visual_only=False) -> Model:
     fins, tips = _build_fins(p, I, r_out, outer_solid, z0, bh, R, clear_r=rb, hollow=not visual_only,
                              clear_solid=fin_clear if concept_base else None)
     I["fin_tips"] = tips
+    if p.USBC_POSITION == "collar":
+        # plug + cable fit: clearance to each fin and the foot knob, and the ground
+        plug, cable = m.envelopes["usb_plug"], m.envelopes["usb_cable"]
+        I.update(usbc_plug_fin_clear=min(plug.distance_to(f) for f in fins),
+                 usbc_cable_fin_clear=min(cable.distance_to(f) for f in fins),
+                 usbc_plug_knob_clear=plug.distance_to(base_extra["base_foot"]))
 
     fin_angles = [p.FIN_ANGLE_OFFSET_DEG + k * 360 / p.FIN_COUNT for k in range(p.FIN_COUNT)]
     rho = lambda key: p.MATERIAL_DENSITY[p.PART_MATERIALS[key]]
@@ -666,9 +744,8 @@ def build(p, visual_only=False) -> Model:
         bolt_z = I["fin_bolt_z"]
         for ang in fin_angles:
             for zb in bolt_z:
-                body = _safe_cut(body, lambda dz, lg: radial_cyl(p.FIN_BOLT_CLEAR / 2, ang, zb + dz,
-                                                             r_in(zb) - 3, r_out(zb) + 1),
-                                 I, "fin bolt hole")
+                body = _safe_cut(body, radial_cyl(p.FIN_BOLT_CLEAR / 2, ang, zb, r_in(zb) - 3,
+                                                  r_out(zb) + 1), "fin bolt hole")
 
     # ---- passive radiator ---------------------------------------------------
     rear_parts = {}
@@ -746,6 +823,29 @@ def build(p, visual_only=False) -> Model:
 
         r_bal = min(open_r, r_in(battery_floor_z)) - p.FIT_CLEARANCE - 0.5
         pocket_w, pocket_d = bb.size.X + 2 * p.BATTERY_CLEARANCE, bb.size.Y + 2 * p.BATTERY_CLEARANCE
+        wire_slot = None
+        if p.USBC_POSITION == "collar":
+            # USB-C wiring: a channel from the back of the port pocket up through the
+            # collar spigot into the battery bay, then up a slot in the ballast cup
+            # beside the battery to the PCB. The sealed receptacle keeps the air in.
+            ud = _dir(p.USBC_ANGLE_DEG)
+            sx, sy = (1 if ud.X >= 0 else -1), (1 if ud.Y >= 0 else -1)
+            sw, sd = p.USBC_WIRE_SLOT
+            if pocket_w >= pocket_d:        # slot in the long wall of the battery pocket
+                xg, yg = sx * pocket_w / 4, sy * (pocket_d / 2 + sd / 2)
+                slot_xy = (sw, sd + 0.02)
+            else:
+                xg, yg = sx * (pocket_w / 2 + sd / 2), sy * pocket_d / 4
+                slot_xy = (sd + 0.02, sw)
+            wire_slot = Pos(xg - sx * 0.01 * (pocket_w >= pocket_d), yg - sy * 0.01, 0) * Box(
+                slot_xy[0], slot_xy[1], 1000, align=MIN)
+            B = m._usb_pocket_back
+            G = Vector(xg, yg, battery_floor_z + 0.5)
+            L = (G - B).length
+            chan = Location(Plane(origin=B - (G - B).normalized() * 1.0, z_dir=(G - B).normalized())) * \
+                Cylinder(p.USBC_WIRE_HOLE / 2, L + 2.0, align=MIN)
+            foot = _safe_cut(foot, chan, "USB-C wire channel")
+            I.update(usbc_wire_channel_len=L, usbc_wire_slot_xy=(xg, yg))
         t = p.CHASSIS_THICK
         g = -p.WALL - p.CHASSIS_GAP
         inside_ch = offset_solid(g)
@@ -756,6 +856,8 @@ def build(p, visual_only=False) -> Model:
         z_driver_bottom = zg - p.DRIVER_DIA / 2
         h_bal_max = max(0.0, z_driver_bottom - p.BALLAST_DRIVER_CLEARANCE - battery_floor_z)
         area_bal = math.pi * r_bal ** 2 - pocket_w * pocket_d
+        if wire_slot is not None:
+            area_bal -= p.USBC_WIRE_SLOT[0] * p.USBC_WIRE_SLOT[1]
         I.update(z_driver_bottom=z_driver_bottom,
                  ballast_max_g=h_bal_max * area_bal * rho("ballast") / 1000.0)
 
@@ -766,13 +868,15 @@ def build(p, visual_only=False) -> Model:
               bracket to the ballast cup, so fin loads go into steel, not plastic.
             * a spine plate standing on the cup behind the driver, carrying the PCBs,
               with a tab under the driver magnet."""
-            h_bal = ballast_g / rho("ballast") * 1000.0 / (math.pi * r_bal ** 2 - pocket_w * pocket_d)
+            h_bal = ballast_g / rho("ballast") * 1000.0 / area_bal
             h_bal = min(h_bal, h_bal_max)       # can't grow into the driver
             cup, cup_top = None, battery_floor_z
             if h_bal > 0.1:
                 cup = Pos(0, 0, battery_floor_z) * Cylinder(r_bal, h_bal, align=MIN)
                 cup = _one_solid(cup - Pos(0, 0, battery_floor_z - 1) * Box(
                     pocket_w, pocket_d, h_bal + 2, align=MIN))
+                if wire_slot is not None:
+                    cup = _one_solid(cup - Pos(0, 0, battery_floor_z - 1) * wire_slot)
                 cup_top = battery_floor_z + h_bal
             pieces = []
             for ang in fin_angles:

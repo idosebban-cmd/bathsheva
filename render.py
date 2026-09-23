@@ -194,6 +194,14 @@ def _plotter(model, p, size, section=False, shadow=True):
 
     if not section:
         _add_led(pl, model, p)
+        # USB-C receptacle seen through the port; plug + cable only when asked for
+        black = dict(color=hex_linear("#141414"), pbr=True, metallic=0.0, roughness=0.55)
+        if "usb_receptacle" in model.envelopes:
+            pl.add_mesh(_to_mesh(model.envelopes["usb_receptacle"], 0.05), color=hex_linear("#2A2A2C"),
+                        pbr=True, metallic=0.8, roughness=0.4)
+        if getattr(model, "show_usb_plug", False):
+            for key in ("usb_plug", "usb_cable"):
+                pl.add_mesh(_to_mesh(model.envelopes[key], 0.05), smooth_shading=True, **black)
         # passive radiator diaphragm, seen through its opening
         if "passive_radiator" in model.envelopes:
             pl.add_mesh(_to_mesh(model.envelopes["passive_radiator"], 0.2), color=(0.06, 0.06, 0.07),

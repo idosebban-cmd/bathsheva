@@ -158,10 +158,26 @@ KNOB_FACE_SKIN = 1.2         # material left in front of the blind shaft bore
 LED_DIA = 3.0                # LED hole; centred between the bezel and the knob
 
 # ---------------------------------------------------------------------------
-# 9. USB-C port (rear, offset to one side and low, near the battery and USB board)
+# 9. USB-C port
 # ---------------------------------------------------------------------------
-USBC_ANGLE_DEG = 150.0       # 180 is dead rear; 150 is 30 deg to one side of the rear fin
-USBC_Z_FRAC = 0.14           # height of the port centre (fraction of body height)
+# "collar": sealed port in the gold collar cup, facing down between two fins, so
+#           it's hidden in normal viewing and the cable drops between the fins.
+# "body":   the older port low on the red body (uses USBC_Z_FRAC).
+USBC_POSITION = "collar"
+USBC_ANGLE_DEG = 120.0       # from the front; 120 is midway between the side fin (60) and rear fin (180)
+USBC_TILT_DEG = 45.0         # "collar": the port faces this far below horizontal
+USBC_Z_FRAC = 0.14           # "body": height of the port centre (fraction of body height)
+# "collar" port: the face centre is put as low as possible while a standard plug's
+# rigid overmold still clears the ground by USBC_PLUG_GROUND_CLEAR
+USBC_PLUG_OVERMOLD = (12.35, 6.5, 16.0)  # plug overmold w x h (USB-IF max) x rigid length
+USBC_PLUG_RELIEF = (5.0, 6.0)            # flexible strain relief dia x length (bends)
+USBC_CABLE_DIA = 4.0
+USBC_PLUG_GROUND_CLEAR = 2.0
+USBC_RECESS_CLEAR = 0.5      # recess round the overmold, so it seats on the flat port face
+USBC_RECEPTACLE = (10.6, 4.9, 9.5)  # sealed (IP67, gasketed) mid-mount receptacle envelope: w x h x length
+USBC_COLLAR_POCKET = (11.6, 6.0, 13.0)  # pocket behind the port face for the receptacle + its small board: w x h x depth
+USBC_WIRE_HOLE = 4.0         # wire channel from the pocket up into the battery bay
+USBC_WIRE_SLOT = (5.0, 4.0)  # slot in the ballast cup's battery pocket that the wires run up
 USBC_W = 8.94 + 2 * 0.35     # USB-C receptacle opening (8.94 x 3.26 per spec) + clearance
 USBC_H = 3.26 + 2 * 0.35
 USBC_POCKET_W = 14.0         # pocket cut on the INSIDE so the receptacle sits closer to the
@@ -228,8 +244,9 @@ COLLAR_BOTTOM_DIA_FRAC = 0.30   # collar tapers from the body bottom to this (fr
 COLLAR_TOP_SLOPE = 0.35      # cup starts nearly vertical under the body (a convex bowl)...
 COLLAR_END_SLOPE = 2.0       # ...and curves in towards the foot (1 = 45 deg; 2 = a shallow bowl)
 COLLAR_WALL = 1.5            # collar bore wall
-FOOT_HEIGHT = 13.0           # small foot height with no vent; the "vent" style takes BASE_VENT_GAP off this
+FOOT_HEIGHT = 7.0            # short rounded knob under the cup (no vent); the "vent" style takes BASE_VENT_GAP off this
 FOOT_ROUND = 3.5             # rounding on the foot's lower edge
+FIN_CUP_GAP = 0.2            # gap between the fins and the collar cup (hairline, no light showing through)
 
 # Base "engine" (only with PR_POSITION = "base" and BASE_STYLE = "nozzle"). Under the gold collar, a ring
 # of the same perforated honeycomb sheet as the front grille lets the radiator
