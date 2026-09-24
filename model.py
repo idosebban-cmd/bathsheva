@@ -416,7 +416,11 @@ def build(p, visual_only=False) -> Model:
     bezel = _one_solid(bezel)
     # charcoal acoustic cloth behind the grille, so no red shows through the holes
     backing = None
-    if p.GRILLE_BACKING_THICK > 0:
+    if p.GRILLE_BACKING == "paint":
+        # matt black paint on the recess floor round the sound opening (render only)
+        m.envelopes["grille_paint"] = band(-p.GRILLE_RECESS + 0.005, -p.GRILLE_RECESS + 0.03) & (
+            front_outline(grille_r - 0.1) - _front_cyl(open_r, zg))
+    elif p.GRILLE_BACKING == "cloth" and p.GRILLE_BACKING_THICK > 0:
         bt = p.GRILLE_BACKING_THICK
         body = body - (band(-p.GRILLE_RECESS - bt, -p.GRILLE_RECESS + 0.01) & front_outline(grille_r))
         backing = _one_solid(band(-p.GRILLE_RECESS - bt, -p.GRILLE_RECESS - 0.02)

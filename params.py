@@ -134,7 +134,11 @@ FOOT_SPIGOT_HEIGHT = 6.0     # in "nose_tail" mode: solid spigot that plugs into
 GRILLE_Z_FRAC = 0.652        # grille centre height (fraction of body height)
 GRILLE_DIA_FRAC = 0.809      # grille diameter as a fraction of the body width at that height
 GRILLE_THICK = 1.2           # perforated sheet thickness
-GRILLE_RECESS = 1.5          # depth of the pocket the grille and bezel sit in
+GRILLE_RECESS = 1.0          # depth of the pocket the grille and bezel sit in. With WALL 2.5 this
+                             # leaves a 1.5 mm ledge under the grille at the top and bottom of the ring;
+                             # at the left/right sides the ledge is still a thin wedge (0.4-1.1 mm)
+                             # where the straight front-to-back sound opening meets the tilted wall.
+                             # The 1.2 mm grille stands 0.2 mm proud, inside the 1.5 mm bezel
 GRILLE_WRAPPED = True        # grille/bezel outline wraps round the body (full height, narrower seen
                              # from the front), as in the concept. False = true circle seen from the front
 GRILLE_LEDGE = 2.5           # width of the ledge the grille rests on (the sound opening is smaller by this)
@@ -143,7 +147,10 @@ HEX_PATTERN_ENABLED = True   # honeycomb holes (front grille and rear cover). Fa
 HEX_HOLE = 2.2               # hexagon size across the flats
 HEX_WEB = 0.7                # metal left between neighbouring holes
 
-GRILLE_BACKING_THICK = 0.4   # charcoal acoustic cloth behind the grille (0 = none)
+GRILLE_BACKING = "paint"      # what's behind the grille so no red shows through the holes:
+                             # "paint" = the recess floor is painted matt black (no extra depth);
+                             # "cloth" = a GRILLE_BACKING_THICK layer of acoustic cloth in a deeper cut
+GRILLE_BACKING_THICK = 0.4   # only for "cloth"
 BEZEL_WIDTH = 3.0            # radial width of the raised gold ring
 BEZEL_PROUD = 1.5            # how far the ring stands above the red surface
 

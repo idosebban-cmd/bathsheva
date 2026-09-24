@@ -194,6 +194,9 @@ def _plotter(model, p, size, section=False, shadow=True):
 
     if not section:
         _add_led(pl, model, p)
+        if "grille_paint" in model.envelopes:        # matt black recess floor behind the grille
+            pl.add_mesh(_to_mesh(model.envelopes["grille_paint"], 0.05), color=hex_linear(p.CLOTH_HEX),
+                        pbr=True, metallic=0.0, roughness=0.9)
         # USB-C receptacle seen through the port; plug + cable only when asked for
         black = dict(color=hex_linear("#141414"), pbr=True, metallic=0.0, roughness=0.55)
         if "usb_receptacle" in model.envelopes:
