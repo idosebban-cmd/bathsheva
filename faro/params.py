@@ -32,18 +32,20 @@ BASE_WIRE_HOLE = 20.0        # hole through the base top for the wiring up the t
 PLATE_THICK = 3.0
 PLATE_REBATE = 2.0           # walnut skin left outside the plate's rebate
 PLATE_CLEAR = 0.2
-SCREWS = 4                   # M3 countersunk (M3 brass threaded inserts in the walnut bosses)
+SCREWS = 4                   # M2.5 countersunk (brass threaded inserts in the walnut bosses); M2.5's
+                             # shallower countersink leaves >= 1.2 mm of plate above it
 SCREW_R = 40.0               # screw circle radius
 SCREW_ANGLE0 = 45.0          # first screw angle (clears the battery)
-SCREW_CLEAR_DIA = 3.4
-SCREW_HEAD_DIA = 6.4
+SCREW_SIZE = "M2.5"
+SCREW_CLEAR_DIA = 2.9
+SCREW_HEAD_DIA = 5.0
 BOSS_DIA = 8.0
-BOSS_PILOT_DIA = 4.0         # for an M3 heat-set/threaded insert
+BOSS_PILOT_DIA = 3.5         # for an M2.5 heat-set/threaded insert
 MAGNETS = 4                  # between the screws
 MAGNET_DIA = 6.0
-MAGNET_THICK = 1.5
+MAGNET_THICK = 1.0           # 1 mm discs keep >= 1.2 mm of plate over each pocket
 FELT_THICK = 1.5             # felt + 0.4 mm steel backing
-FELT_RECESS = 1.0            # recess in the plate's underside; the felt stands proud by the rest
+FELT_RECESS = 0.7            # recess in the plate's underside; the felt stands proud by the rest
 FELT_INSET = 3.0             # felt edge inside the plate edge
 NAMEPLATE_W = 37.0
 NAMEPLATE_H = 11.5
@@ -51,8 +53,8 @@ NAMEPLATE_Z = 14.0           # centre height on the base front
 NAMEPLATE_THICK = 1.2        # brass plate, sits in a recess and stands 0.6 proud
 NAMEPLATE_RECESS = 0.6
 NAMEPLATE_TEXT = "FARO"
-NAMEPLATE_TEXT_H = 5.5       # letter height
-NAMEPLATE_TEXT_RAISE = 0.4
+NAMEPLATE_TEXT_H = 6.5       # letter height (bold, so every stroke is >= 1 mm)
+NAMEPLATE_TEXT_RAISE = 0.8   # raised lettering (resin: fine details under ~0.5 mm may not print)
 
 # ---------------------------------------------------------------------------
 # 2. Cream band + red band
@@ -83,7 +85,7 @@ WINDOWS = 5
 WINDOW_TURN_DEG = 90.0       # positive = the spiral climbs towards the right (+X) side
 WINDOW_Z_FIRST = 113.0       # lowest window centre (front)
 WINDOW_Z_LAST = 165.0        # highest window centre (front, after a full turn)
-DIFFUSER_THICK = 1.0         # frosted insert behind each window
+DIFFUSER_THICK = 1.2         # frosted insert behind each window
 DIFFUSER_MARGIN = 2.0        # how far it overlaps the window edge
 
 # ---------------------------------------------------------------------------

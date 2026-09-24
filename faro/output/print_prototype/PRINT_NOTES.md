@@ -1,21 +1,21 @@
 # Faro looks-like prototype: print notes
 
-Faro lighthouse lamp, Rosso. 300.5 mm tall on its felt pad. The STLs here are turned to their print orientation and sit on the bed at z = 0 (mm). `faro/output/stl/` has the same parts as assembled.
+Faro lighthouse lamp, Rosso. 300.8 mm tall on its felt pad. The STLs here are turned to their print orientation and sit on the bed at z = 0 (mm). `faro/output/stl/` has the same parts as assembled.
 
 ## Parts to print
 
 | File | Qty | Material | Orientation | Supports? | Size X x Y x Z | Notes |
 |---|---|---|---|---|---|---|
 | base_plate.stl | 1 | PLA+ or PETG, black | felt recess up (flat top face on the bed) | No | 109 x 109 x 3 | Glue the 4 magnets into their pockets, flush with the recess floor |
-| base.stl | 1 | PLA+ (wood-fill PLA, or paint walnut) | upright, open underside on the bed | Yes: tree supports inside the battery bay only (hidden), under the bay ceiling and bosses | 113 x 113 x 27 | Production: CNC-turned walnut with M3 threaded inserts in the bosses. For the prototype, melt M3 heat-set inserts into the bosses |
+| base.stl | 1 | PLA+ (wood-fill PLA, or paint walnut) | upright, open underside on the bed | Yes: tree supports inside the battery bay only (hidden), under the bay ceiling and bosses | 113 x 113 x 27 | Production: CNC-turned walnut with M2.5 threaded inserts in the bosses. For the prototype, melt M2.5 heat-set inserts into the bosses |
 | nameplate.stl | 1 | Resin, or PLA+ painted brass | outer face (lettering) up | Yes: supports under the curved back (the plate arches about 3 mm) | 37 x 11 x 5 | Glue into the recess on the base front. Production: etched or engraved brass |
 | band_cream.stl | 1 | PLA+ or PETG | upright | No | 97 x 97 x 6 | Paint cream lacquer; glue onto the base top |
 | band_red.stl | 1 | PLA+ or PETG | upright, wide end down | No | 92 x 92 x 36 | Paint red lacquer |
 | tower.stl | 1 | PLA+ or PETG | upright, wide end down | No: the window arches are self-supporting | 86 x 86 x 128 | Paint cream lacquer (mask the window edges) |
-| window_diffuser_1.stl | 1 | Translucent resin, sanded | outer face up | Yes, on the inner face only | 16 x 25 x 3 | One per window, numbered from the lowest (front) up; each follows the tower's taper at its own height, so keep them in order. Or cut from 1 mm opal polycarbonate. Glue behind its window |
-| window_diffuser_2.stl | 1 | Translucent resin, sanded | outer face up | Yes, on the inner face only | 16 x 25 x 3 | As window_diffuser_1; goes behind the right side window |
-| window_diffuser_3.stl | 1 | Translucent resin, sanded | outer face up | Yes, on the inner face only | 16 x 25 x 3 | As window_diffuser_1; goes behind the rear window |
-| window_diffuser_4.stl | 1 | Translucent resin, sanded | outer face up | Yes, on the inner face only | 16 x 25 x 3 | As window_diffuser_1; goes behind the left side window |
+| window_diffuser_1.stl | 1 | Translucent resin, sanded | outer face up | Yes, on the inner face only | 16 x 25 x 4 | One per window, numbered from the lowest (front) up; each follows the tower's taper at its own height, so keep them in order. Or cut from 1 mm opal polycarbonate. Glue behind its window |
+| window_diffuser_2.stl | 1 | Translucent resin, sanded | outer face up | Yes, on the inner face only | 16 x 25 x 4 | As window_diffuser_1; goes behind the right side window |
+| window_diffuser_3.stl | 1 | Translucent resin, sanded | outer face up | Yes, on the inner face only | 16 x 25 x 4 | As window_diffuser_1; goes behind the rear window |
+| window_diffuser_4.stl | 1 | Translucent resin, sanded | outer face up | Yes, on the inner face only | 16 x 25 x 4 | As window_diffuser_1; goes behind the left side window |
 | window_diffuser_5.stl | 1 | Translucent resin, sanded | outer face up | Yes, on the inner face only | 16 x 25 x 4 | As window_diffuser_1; goes behind the front window |
 | knob.stl | 1 | Resin or PLA+ | front face down | No | 20 x 20 x 7 | Brass paint; glue on, or fit on a 6 mm shaft |
 | gallery.stl | 1 | Resin recommended (PLA+ with a 0.2 mm nozzle) | upright, platform on the bed | No: posts are vertical; the rails bridge about 17 mm between posts | 90 x 90 x 24 | 1.6 mm posts and rails. Brass paint or brass-fill filament |
@@ -37,13 +37,13 @@ Faro lighthouse lamp, Rosso. 300.5 mm tall on its felt pad. The STLs here are tu
 | Battery | 65 x 37 x 19 mm 2 x 18650 pack (placeholder) |
 | LED module | Ø20 x 12 mm (placeholder) |
 | USB-C receptacle | board-mounted, behind the rear port (placeholder) |
-| Screws | 4 x M3 x 8 countersunk, hex socket |
-| Threaded inserts | 4 x M3 heat-set inserts for the base bosses |
-| Magnets | 4 x Ø6 x 1.5 mm N52 discs |
+| Screws | 4 x M2.5 x 8 countersunk, hex socket |
+| Threaded inserts | 4 x M2.5 heat-set inserts for the base bosses |
+| Magnets | 4 x Ø6 x 1 mm N52 discs |
 
 ## Assembly order
 
-1. Base: melt the 4 M3 inserts into the bosses; glue on the nameplate.
+1. Base: melt the 4 M2.5 inserts into the bosses; glue on the nameplate.
 2. Glue the cream band onto the base top, then the red band, then the tower, all centred (they stack on flat joints). Glue the knob, and each window diffuser behind its own window (1 = lowest, on the front, up to 5 = highest, back on the front).
 3. Glue the gallery onto the tower top. Stand the lantern glass on the gallery platform, then lower the frame over it and glue the frame to the gallery.
 4. Glue the finial into the cap. Twist the cap on: lugs down through the 4 slots, turn 20 deg clockwise (seen from above) to the stop.

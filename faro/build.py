@@ -39,8 +39,8 @@ FACE_DOWN = lambda s: Rot(90, 0, 0) * s        # front (-Y) face on the bed
 PRINT = {
     "base": (1, "PLA+ (wood-fill PLA, or paint walnut)", "upright, open underside on the bed",
              "Yes: tree supports inside the battery bay only (hidden), under the bay ceiling and bosses",
-             "Production: CNC-turned walnut with M3 threaded inserts in the bosses. For the prototype, "
-             "melt M3 heat-set inserts into the bosses", None),
+             f"Production: CNC-turned walnut with {p.SCREW_SIZE} threaded inserts in the bosses. For the prototype, "
+             f"melt {p.SCREW_SIZE} heat-set inserts into the bosses", None),
     "base_plate": (1, "PLA+ or PETG, black", "felt recess up (flat top face on the bed)", "No",
                    "Glue the 4 magnets into their pockets, flush with the recess floor", FLIP),
     "nameplate": (1, "Resin, or PLA+ painted brass", "outer face (lettering) up", "Yes: supports under the curved back (the plate arches about 3 mm)",
@@ -76,8 +76,8 @@ RENDER_ONLY = [
      "(placeholder)"),
     ("LED module", f"Ø{p.LED_DIA:g} x {p.LED_H:g} mm (placeholder)"),
     ("USB-C receptacle", "board-mounted, behind the rear port (placeholder)"),
-    ("Screws", f"{p.SCREWS} x M3 x 8 countersunk, hex socket"),
-    ("Threaded inserts", f"{p.SCREWS} x M3 heat-set inserts for the base bosses"),
+    ("Screws", f"{p.SCREWS} x {p.SCREW_SIZE} x 8 countersunk, hex socket"),
+    ("Threaded inserts", f"{p.SCREWS} x {p.SCREW_SIZE} heat-set inserts for the base bosses"),
     ("Magnets", f"{p.MAGNETS} x Ø{p.MAGNET_DIA:g} x {p.MAGNET_THICK:g} mm N52 discs"),
 ]
 
@@ -158,7 +158,7 @@ def final(m):
     for n, what in RENDER_ONLY:
         L.append(f"| {n} | {what} |")
     L += ["", "## Assembly order", "",
-          "1. Base: melt the 4 M3 inserts into the bosses; glue on the nameplate.",
+          f"1. Base: melt the {p.SCREWS} {p.SCREW_SIZE} inserts into the bosses; glue on the nameplate.",
           "2. Glue the cream band onto the base top, then the red band, then the tower, all centred "
           "(they stack on flat joints). Glue the knob, and each window diffuser behind its own window "
           "(1 = lowest, on the front, up to 5 = highest, back on the front).",

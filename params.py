@@ -145,7 +145,8 @@ GRILLE_LEDGE = 2.5           # width of the ledge the grille rests on (the sound
 HEX_PATTERN_ENABLED = True   # honeycomb holes (front grille and rear cover). False = plain disc,
                              # which builds much faster while you iterate on the shape
 HEX_HOLE = 2.2               # hexagon size across the flats
-HEX_WEB = 0.7                # metal left between neighbouring holes
+HEX_WEB = 0.7                # metal left between neighbouring holes (production: photo-etched stainless)
+PRINT_HEX_WEB = 1.0          # web used only for the 3D-printed prototype grille (SLA resin min 0.8)
 
 GRILLE_BACKING = "paint"      # what's behind the grille so no red shows through the holes:
                              # "paint" = the recess floor is painted matt black (no extra depth);
@@ -195,7 +196,7 @@ USBC_W = 8.94 + 2 * 0.35     # USB-C receptacle opening (8.94 x 3.26 per spec) +
 USBC_H = 3.26 + 2 * 0.35
 USBC_POCKET_W = 14.0         # pocket cut on the INSIDE so the receptacle sits closer to the
 USBC_POCKET_H = 8.0          # surface; the plug needs about 6.5 mm of engagement
-USBC_WALL_AT_PORT = 1.0      # wall thickness left at the port after the inside pocket
+USBC_WALL_AT_PORT = 1.2      # wall left at the port face and round its pocket (SLA resin: >= 1.2)
 
 # ---------------------------------------------------------------------------
 # 10. Internals

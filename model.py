@@ -44,6 +44,7 @@ from build123d import (
     RectangleRounded,
     Rot,
     Solid,
+    Sphere,
     SlotOverall,
     Vector,
     Wire,
@@ -182,7 +183,8 @@ def _collar_usb_port(p, I, m, collar, cup_edge, z0, z_cb):
     m._usb_right_angle = ra
     m.envelopes["usb_cable"] = cable + relief
     # wire channel starts at the back of the pocket
-    m._usb_pocket_back = F - a * (wall + dep - 1.0)
+    m._usb_pocket_back = F - a * (wall + dep - 0.5)
+    m._usb_axis = a
     I.update(usbc_face=(F.X, F.Y, F.Z), usbc_face_r=rF, usbc_plug_lowest=lowest, usbc_face_depth=depth,
              usbc_pocket_breakout=breakout)
     return out
@@ -213,6 +215,7 @@ class Model:
     part_material_key: dict = field(default_factory=dict)  # name -> PART_MATERIALS key
     info: dict = field(default_factory=dict)       # derived dimensions and positions
     envelopes: dict = field(default_factory=dict)  # driver / battery envelopes (not parts)
+    print_parts: dict = field(default_factory=dict)  # print-only variants (e.g. thicker grille webs)
 
 
 # ---------------------------------------------------------------------------
@@ -408,7 +411,14 @@ def build(p, visual_only=False) -> Model:
     grille = band(-p.GRILLE_RECESS, -p.GRILLE_RECESS + p.GRILLE_THICK) & front_outline(grille_r - 0.1)
     grille = _one_solid(grille)
     if p.HEX_PATTERN_ENABLED:
-        grille = _cut_honeycomb(grille, (grille_a - 0.1, grille_r - 0.1), zg, p)
+        blank = grille
+        grille = _cut_honeycomb(blank, (grille_a - 0.1, grille_r - 0.1), zg, p)
+        if getattr(p, "PRINT_HEX_WEB", p.HEX_WEB) != p.HEX_WEB:
+            # the printed prototype grille: same holes, thicker webs (resin minimum)
+            import types
+            pp = types.SimpleNamespace(**{k: getattr(p, k) for k in dir(p) if k.isupper()})
+            pp.HEX_WEB = p.PRINT_HEX_WEB
+            m.print_parts["grille"] = _cut_honeycomb(blank, (grille_a - 0.1, grille_r - 0.1), zg, pp)
 
     bezel = band(-p.GRILLE_RECESS, p.BEZEL_PROUD) & (
         front_outline(bezel_r - 0.1) - front_outline(grille_r)
@@ -865,11 +875,21 @@ def build(p, visual_only=False) -> Model:
                 slot_xy = (sd + 0.02, sw)
             wire_slot = Pos(xg - sx * 0.01 * (pocket_w >= pocket_d), yg - sy * 0.01, 0) * Box(
                 slot_xy[0], slot_xy[1], 1000, align=MIN)
-            B = m._usb_pocket_back
+            # leave the pocket straight out through its back face (square, no
+            # grazing sliver), then turn up to the battery bay
+            B0 = m._usb_pocket_back
+            ax = m._usb_axis * -1.0                       # into the collar, along the port axis
+            B1 = B0 + ax * 3.0
             G = Vector(xg, yg, battery_floor_z + 0.5)
-            L = (G - B).length
-            chan = Location(Plane(origin=B - (G - B).normalized() * 1.0, z_dir=(G - B).normalized())) * \
-                Cylinder(p.USBC_WIRE_HOLE / 2, L + 2.0, align=MIN)
+            rw = p.USBC_WIRE_HOLE / 2
+            chan = Location(Plane(origin=B0, z_dir=ax)) * Cylinder(rw, 3.0, align=MIN)
+            chan = chan + Pos(B1.X, B1.Y, B1.Z) * Sphere(rw)
+            C = Vector(G.X, G.Y, G.Z - 5.0)                # then up the last 5 mm vertically,
+            chan = chan + Location(Plane(origin=B1, z_dir=(C - B1).normalized())) * \
+                Cylinder(rw, (C - B1).length, align=MIN)   # so it exits the spigot top square
+            chan = chan + Pos(C.X, C.Y, C.Z) * Sphere(rw)
+            chan = chan + Pos(C.X, C.Y, C.Z) * Cylinder(rw, 6.0, align=MIN)
+            L = 3.0 + (C - B1).length + 5.0
             foot = _safe_cut(foot, chan, "USB-C wire channel")
             I.update(usbc_wire_channel_len=L, usbc_wire_slot_xy=(xg, yg))
         t = p.CHASSIS_THICK

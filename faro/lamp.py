@@ -21,6 +21,7 @@ from build123d import (
     Cylinder,
     Edge,
     Face,
+    FontStyle,
     GeomType,
     Plane,
     Pos,
@@ -72,6 +73,14 @@ def _dir(angle_deg):
     """Unit vector in XY at an angle from the front (-Y), as in Atelier."""
     a = math.radians(angle_deg)
     return Vector(math.sin(a), -math.cos(a), 0)
+
+
+def _sector_box(half_deg, r, z0, h):
+    """A wedge from the axis spanning +-half_deg about the front (-Y), z0..z0+h."""
+    a = math.radians(half_deg)
+    pts = [(0, 0), (r * math.sin(-a), -r * math.cos(a)), (0, -r * 1.05), (r * math.sin(a), -r * math.cos(a))]
+    from build123d import Polygon
+    return Pos(0, 0, z0) * extrude(Polygon(*pts, align=None), amount=h)
 
 
 def _safe_fillet(shape, edges, r):
@@ -127,8 +136,8 @@ def build(p) -> Lamp:
         plate_b = plate_b - sink
         head = Pos(x, y, z_f + 0.05) * _revolve([(0, 0), (p.SCREW_HEAD_DIA / 2 - 0.1, 0),
                                                  (p.SCREW_CLEAR_DIA / 2 - 0.2, cs - 0.1), (0, cs - 0.1)])
-        shank = Pos(x, y, z_f + cs - 0.2) * Cylinder(1.5, 8.0, align=MIN)
-        head = head - Pos(x, y, z_f - 0.5) * extrude(RegularPolygon(1.0 / math.cos(math.pi / 6), 6), amount=1.8)
+        shank = Pos(x, y, z_f + cs - 0.2) * Cylinder(p.SCREW_CLEAR_DIA / 2 - 0.2, 8.0, align=MIN)
+        head = head - Pos(x, y, z_f - 0.5) * extrude(RegularPolygon(0.8 / math.cos(math.pi / 6), 6), amount=1.8)
         screws = head + shank if screws is None else screws + head + shank
     mags = None
     for k in range(p.MAGNETS):
@@ -156,7 +165,7 @@ def build(p) -> Lamp:
     plate = shell(rb - p.NAMEPLATE_RECESS + 0.01, r_plate_out) & Pos(0, 0, zn) * _front_prism(
         RectangleRounded(p.NAMEPLATE_W - 0.2, p.NAMEPLATE_H - 0.2, 1.1))
     try:
-        letters = Pos(0, 0, zn) * _front_prism(Text(p.NAMEPLATE_TEXT, p.NAMEPLATE_TEXT_H))
+        letters = Pos(0, 0, zn) * _front_prism(Text(p.NAMEPLATE_TEXT, p.NAMEPLATE_TEXT_H, font_style=FontStyle.BOLD))
         plate = plate + (shell(r_plate_out - 0.05, r_plate_out + p.NAMEPLATE_TEXT_RAISE) & letters)
         I["nameplate_text"] = True
     except Exception as e:                         # no font available: plain plate
@@ -276,8 +285,12 @@ def build(p) -> Lamp:
     slot_w = p.LOCK_LUG_W + 2 * p.FIT_CLEAR
     for k in range(p.LOCK_LUGS):
         a0 = k * 360 / p.LOCK_LUGS
-        frame = frame - Rot(0, 0, a0) * Pos(0, -(p.GROOVE_R + r_lip) / 2, z_l1 - lip - 0.5) * Box(
-            slot_w, p.GROOVE_R - r_lip + 0.4, lip + 1.0, align=MIN)
+        # the slot is a true ring segment through the lip only (a box overran the curved
+        # lip and nicked the outer band, leaving knife-edge slivers)
+        half = math.degrees(slot_w / 2 / r_lip)
+        seg = Pos(0, 0, z_l1 - lip - 0.5) * (Cylinder(p.GROOVE_R, lip + 1.0, align=MIN)
+                                             - Cylinder(r_lip - 0.5, lip + 1.0, align=MIN))
+        frame = frame - (seg & Rot(0, 0, a0) * _sector_box(half, p.GROOVE_R + 5, z_l1 - lip - 1, lip + 2))
         sgn = 1 if p.LOCK_TURN_DEG >= 0 else -1
         a_stop = a0 + p.LOCK_TURN_DEG + sgn * (lug_half + math.degrees(1.0 / r_lip))
         frame = frame + Rot(0, 0, a_stop) * Pos(0, -(p.GROOVE_R + r_lip) / 2, z_tb) * Box(

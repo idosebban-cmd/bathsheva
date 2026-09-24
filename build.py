@@ -135,8 +135,9 @@ PRINT_MATERIAL = {
     "nozzle": ("PLA+ or resin", "0.08-0.12 mm layers to keep the steps crisp; glued to the mesh ring"),
     "base_mesh": ("Resin (SLA/MSLA) recommended", "Same honeycomb as the grille. Glue its solid top "
                   "band to the collar and its bottom band to the nozzle"),
-    "grille": ("Resin (SLA/MSLA) recommended", "The 2.2 mm honeycomb with 0.7 mm webs is at the limit of "
-               "FDM (needs a 0.2 mm nozzle). Glue into the recess"),
+    "grille": ("Resin (SLA/MSLA) recommended", f"Print version: {p.HEX_HOLE:g} mm honeycomb with "
+               f"{p.PRINT_HEX_WEB:g} mm webs (production is {p.HEX_WEB:g} mm, photo-etched stainless). "
+               "Glue into the recess; paint the recess floor matt black first"),
     "bezel": ("Resin or PLA+", "Glue into the recess over the grille edge"),
     "grille_backing": ("Black speaker cloth (or matt black PLA)", "Cut the cloth to the STL outline "
                        "and glue it behind the grille; if printing, 0.4 mm single-wall black"),
@@ -161,6 +162,7 @@ def export_print_prototype(m):
             fname, qty = "fin_x3", p.FIN_COUNT
         else:
             fname, qty = name, 1
+        shape = getattr(m, "print_parts", {}).get(name, shape)    # print-only variants
         s, (orient, supports) = _print_pose(name, shape, m.info)
         export_stl(s, str(d / f"{fname}.stl"),
                    tolerance=p.STL_TOLERANCE, angular_tolerance=p.STL_ANGULAR_TOLERANCE)
