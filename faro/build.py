@@ -46,19 +46,23 @@ PRINT = {
               "Sponged burnt umber for the walnut effect. The fairy lights come in through the rear port"), None),
     "base_plate": (1, "PLA+ or PETG, black", "felt recess up (flat top face on the bed)", "No",
                    ("Glue the 4 magnets into their pockets, flush with the recess floor" if SCREWED else
-                    "A plain plate: glue it into the rebate under the base; the felt sticks into its shallow "
-                    "recess"), FLIP),
+                    "A plain plate: glue it into the rebate (the shallow step round the opening under the base); "
+                    "the felt sticks into its shallow recess"), FLIP),
     "nameplate": (1, "Resin, or PLA+ painted brass", "outer face (lettering) up", "Yes: supports under the curved back (the plate arches about 3 mm)",
                   "Glue into the recess on the base front. Production: etched or engraved brass", FACE_UP),
     "band_cream": (1, "PLA+ or PETG", "upright", "No", "Paint cream lacquer; glue onto the base top", None),
     "band_red": (1, "PLA+ or PETG", "upright, wide end down", "No", "Paint red lacquer", None),
     "tower": (1, "PLA+ or PETG", "upright, wide end down", "No: the window arches are self-supporting",
               "Paint cream lacquer (mask the window edges)", None),
-    "window_diffuser": (1, "Translucent resin, sanded", "outer face up", "Yes, on the inner face only",
-                        "One per window, numbered from the lowest (front) up; each follows the tower's "
-                        "taper at its own height, so keep them in order. Or cut from 1 mm opal "
-                        "polycarbonate. Glue behind its window", None),
-    "knob": (1, "Resin or PLA+", "front face down", "No", "Brass paint; glue on, or fit on a 6 mm shaft", FACE_DOWN),
+    "window_diffuser": (1, "Translucent resin, sanded", "outer face up",
+                        "Yes, on the inner face only (the raised marks are on that face: trim gently)",
+                        f"One per window. Each carries its number (1 = lowest) and an up arrow, raised "
+                        f"{p.DIFFUSER_MARK_RAISE:g} mm on the inner face of a tab below the window, hidden behind the "
+                        "tower wall. Glue it behind its window with the arrow pointing up and the curved outer face "
+                        "against the window. Each follows the tower's taper at its own height, so keep them in order",
+                        None),
+    "knob": (1, "Resin or PLA+", "front face down", "No",
+             "Brass paint. Decorative on the prototype (it doesn't turn): glue it on", FACE_DOWN),
     "gallery": (1, "Resin recommended (PLA+ with a 0.2 mm nozzle)", "upright, platform on the bed",
                 "No: posts are vertical; the rails bridge about 17 mm between posts",
                 "1.6 mm posts and rails. Brass paint or brass-fill filament", None),
@@ -95,6 +99,7 @@ else:   # the looks-like prototype, as in the build manual
          "brightness test (it rests on the ledge inside the gallery)"),
         ("Coins", "A few coins, taped low inside the base, for weight"),
         ("Epoxy", "Araldite Rapid, with cocktail sticks"),
+        ("Blu-tack or tape", "Holds the light coils near each window"),
     ]
 
 
@@ -187,23 +192,31 @@ def final(m):
             "5. Underneath: battery in the bay, plate on with the 4 screws, felt pad on (the magnets hold it)."]
     else:   # as in the build manual (step 6)
         order = [
-            "1. Diffusers into the tower. Through the open top, glue each behind its window with tiny dabs at the "
-            "edges only (1 = lowest, on the front, up to 5 = highest, back on the front).",
+            "1. Diffusers into the tower, while it is still open at both ends. Each has its number and an up arrow "
+            "on its inner face: arrow pointing up, curved outer face against the window. Glue 1, 2 and 3 from the "
+            "bottom of the tower and 4 and 5 from the top, with tiny dabs at the edges only (1 = lowest, on the "
+            "front, up to 5 = highest, back on the front).",
             "2. Nameplate into its recess on the front of the base.",
-            "3. Knob onto the front of the red band, centred.",
+            "3. Knob onto the front of the red band, centred. It is decorative on the prototype and doesn't turn.",
             "4. Thread the lights in through the USB-C port at the back of the base and up through the hole in its "
             "top. The battery box stays outside, behind the lamp.",
             "5. Stack and glue the cream band onto the base, then the red band, then the tower, with knob and "
             "nameplate aligned. Pull the lights up as you go.",
-            "6. Coil the lights loosely inside the tower so some sit near each window. Keep them all in the tower.",
-            "7. Gallery onto the tower top.",
-            "8. Lantern. Stand the empty glass on the gallery, lower the frame over it and glue the frame to the "
+            "6. Coil the lights loosely inside the tower so some sit near each window, and hold each coil in place "
+            "with a small dab of blu-tack or tape near its window. Keep them all in the tower.",
+            "7. Glow test, before the gallery goes on. Switch the lights on and check all five windows glow "
+            "evenly; adjust the coils first if one is dark or patchy.",
+            "8. Gallery onto the tower top.",
+            "9. Lantern. Stand the empty glass on the gallery, lower the frame over it and glue the frame to the "
             "gallery. The lantern stays empty for the brightness test.",
-            f"9. Finial into the cap, then twist the cap on: lugs down through the 4 slots, turn {turn}. "
-            "Do not glue it.",
-            "10. Weight. Tape a few coins low inside the base.",
-            "11. Underneath. Glue the base plate into its rebate, then apply the felt, trimmed to size. "
-            "No inserts, screws or magnets in the prototype."]
+            f"10. Finial into the cap, then twist the cap on: lugs (the 4 small tabs under the cap) down through "
+            f"the 4 slots, turn {turn}. Do not glue it.",
+            "11. Weight. Tape a few coins low inside the base.",
+            "12. Underneath. Glue the base plate into the shallow recess under the base, then apply the felt, "
+            "trimmed to size. No inserts, screws or magnets in the prototype.",
+            "",
+            "Araldite Rapid: wait about 20 to 30 minutes before handling a joint or starting the next; it reaches "
+            "full strength the next day."]
     L += ["", "## Assembly order", "", "See the build manual (faro/output/manual/Faro_Build_Manual.pdf) for "
           "painting and finishing." if not SCREWED else "", *order, "",
           "## Fit checks (from the model)", "",

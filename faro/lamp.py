@@ -69,6 +69,38 @@ def _front_prism(face_on_xz, depth=400.0):
     return extrude(Plane.XZ * face_on_xz, amount=depth)
 
 
+SEGMENTS = {1: "bc", 2: "abged", 3: "abgcd", 4: "fgbc", 5: "afgcd"}
+
+
+def _stroke(p0, p1, t):
+    """A bar of width t from p0 to p1 with round ends (so no sharp tips)."""
+    (x0, y0), (x1, y1) = p0, p1
+    L = math.hypot(x1 - x0, y1 - y0)
+    return (Pos((x0 + x1) / 2, (y0 + y1) / 2) * Rot(0, 0, math.degrees(math.atan2(y1 - y0, x1 - x0)))
+            * SlotOverall(L + t, t))
+
+
+def _diffuser_marks(n, h, width, t=1.0):
+    """A diffuser's number (seven-segment style) and an up arrow, side by side, in
+    strokes of constant width t. Drawn in the XZ plane and mirrored so they read
+    correctly from inside the tower."""
+    x, y = h * 0.3 - t / 2, h / 2 - t / 2          # digit half-width / half-height (stroke centres)
+    pts = {"a": ((-x, y), (x, y)), "b": ((x, y), (x, 0)), "c": ((x, 0), (x, -y)), "d": ((-x, -y), (x, -y)),
+           "e": ((-x, 0), (-x, -y)), "f": ((-x, y), (-x, 0)), "g": ((-x, 0), (x, 0))}
+    if n == 1:                                       # a lone upright, centred
+        pts["b"], pts["c"] = ((0, y), (0, 0)), ((0, 0), (0, -y))
+    off = width * 0.22
+    strokes = [Pos(-off, 0) * _stroke(*pts[k], t) for k in SEGMENTS[n]]
+    head = h * 0.32
+    strokes += [Pos(off, 0) * _stroke((0, -y), (0, y), t),
+                Pos(off, 0) * _stroke((0, y), (-head, y - head), t),
+                Pos(off, 0) * _stroke((0, y), (head, y - head), t)]
+    marks = strokes[0]
+    for s_ in strokes[1:]:
+        marks = marks + s_
+    return marks.mirror(Plane.YZ)
+
+
 def _dir(angle_deg):
     """Unit vector in XY at an angle from the front (-Y), as in Atelier."""
     a = math.radians(angle_deg)
@@ -238,7 +270,16 @@ def build(p) -> Lamp:
         band = _revolve([(ri(za) - p.DIFFUSER_THICK, za), (ri(za) - 0.02, za),
                          (ri(zb) - 0.02, zb), (ri(zb) - p.DIFFUSER_THICK, zb)])
         m_ = p.DIFFUSER_MARGIN
-        diff = band & turn * Pos(0, 0, zw) * _front_prism(arch(ww + 2 * m_, wh + 2 * m_), depth=200)
+        wd, hd = ww + 2 * m_, wh + 2 * m_
+        tab = Pos(0, -hd / 2 - p.DIFFUSER_TAB / 2 + 0.5) * Rectangle(wd, p.DIFFUSER_TAB + 1.0)
+        diff = band & turn * Pos(0, 0, zw) * _front_prism(arch(wd, hd) + tab, depth=200)
+        # number + up arrow on the inner face, on the tab (mirrored: read from inside)
+        zm = -wh / 2 - p.DIFFUSER_MARK_GAP - p.DIFFUSER_MARK_H / 2
+        marks = Pos(0, zm) * _diffuser_marks(i + 1, p.DIFFUSER_MARK_H, wd)
+        skin = _revolve([(ri(za) - p.DIFFUSER_THICK - p.DIFFUSER_MARK_RAISE, za),
+                         (ri(za) - p.DIFFUSER_THICK + 0.4, za), (ri(zb) - p.DIFFUSER_THICK + 0.4, zb),
+                         (ri(zb) - p.DIFFUSER_THICK - p.DIFFUSER_MARK_RAISE, zb)])
+        diff = diff + (skin & turn * Pos(0, 0, zw) * _front_prism(marks, depth=200))
         diffusers.append(_one(diff))
     m.parts["band_red"] = _one(red)
     m.parts["tower"] = _one(tower)

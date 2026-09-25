@@ -8,8 +8,9 @@ One style throughout: clean studio renders on the manual's warm off-white
 paper colour (so they sit on the page without a box), fine dark outlines, serif
 labels with thin gold leader lines. Parts show the stage they're at: matt white
 resin (inspection, preparation), grey primer (priming), painted colours (from
-painting on). In the assembly steps the parts already in place are softened and
-the new part is drawn in full colour with a deep red outline.
+painting on). In the assembly steps the parts already in place keep their real
+colours, a little lighter, and the new part is drawn in full colour with a deep
+red outline.
 """
 from __future__ import annotations
 
@@ -125,18 +126,9 @@ def fairy_lights(coil=True, feed=True):
         pts += [(0, rb + 70, 1.0), (0, rb + 30, 1.0), (0, rb + 6, zc - 3), (0, rb - 1, zc),
                 (0, rb - 12, zc + 2), (0, 6, zc + 6), (0, 0, z_top_base - 4), (0, 0, z_top_base + 8)]
     if coil:
-        r0 = p.TOWER_BOTTOM_DIA / 2 - 12
-        r1 = p.TOWER_TOP_DIA / 2 - 9
-        start = z_top_base + 12
-        turns = 3.2
-        for k in range(1, 161):
-            f = k / 160
-            z = start + f * (z_t1 - 14 - start)
-            r = r0 + (r1 - r0) * (z - z_t0) / (z_t1 - z_t0)
-            a = 2 * math.pi * turns * f
-            pts.append((r * math.sin(a), -r * math.cos(a), z))
-            if k % 10 == 5:
-                beads.append((r * math.sin(a), -r * math.cos(a), z))
+        cp = coil_points()
+        pts += cp
+        beads += [q for k, q in enumerate(cp, 1) if k % 10 == 5]
     wire = tube(pts, 0.45)
     if feed:
         for t in np.linspace(0.08, 0.3, 3):                       # a few beads outside, near the box
@@ -146,6 +138,47 @@ def fairy_lights(coil=True, feed=True):
         s = pv.Sphere(radius=1.5, center=b)
         bead_mesh = s if bead_mesh is None else bead_mesh.merge(s)
     return wire, bead_mesh
+
+
+def coil_points():
+    """The loose coil of lights up inside the tower."""
+    z_top_base = I["base_h"] + LIFT
+    z_t0, z_t1 = I["z_red_top"], I["z_tower_top"]
+    r0 = p.TOWER_BOTTOM_DIA / 2 - 12
+    r1 = p.TOWER_TOP_DIA / 2 - 9
+    start = z_top_base + 12
+    turns = 3.2
+    out = []
+    for k in range(1, 161):
+        f = k / 160
+        z = start + f * (z_t1 - 14 - start)
+        r = r0 + (r1 - r0) * (z - z_t0) / (z_t1 - z_t0)
+        a = 2 * math.pi * turns * f
+        out.append((r * math.sin(a), -r * math.cos(a), z))
+    return out
+
+
+BLU_TACK = "#6E9BD1"
+
+
+def blu_tack(keep=lambda q: True):
+    """A small dab of blu-tack where the coil passes closest to each window,
+    holding the wire towards the tower wall."""
+    cp = np.array(coil_points())
+    out = None
+    for zw, ang in I["windows"]:
+        a = math.radians(ang)
+        w = np.array([math.sin(a), -math.cos(a)])
+        z = zw + LIFT
+        d = np.linalg.norm(cp[:, :2] / np.linalg.norm(cp[:, :2], axis=1)[:, None] - w, axis=1) + np.abs(cp[:, 2] - z) / 25
+        q = cp[int(np.argmin(d))]
+        r = np.linalg.norm(q[:2])
+        c = np.array([*(q[:2] / r * (r + 2.0)), q[2]])
+        if not keep(c):
+            continue
+        blob = pv.Sphere(radius=3.0).scale((1.0, 1.0, 0.8), inplace=False).translate(c, inplace=False)
+        out = blob if out is None else out.merge(blob)
+    return out
 
 
 def fairy_lights_path():
@@ -248,6 +281,8 @@ class Scene:
                 st, coat = studio._material("nameplate", p)
             elif name == "base":
                 st, coat = dict(color=lin(BURNT_UMBER), pbr=True, metallic=0.0, roughness=0.6), False
+            elif name == "felt_pad":                             # charcoal felt, a shade off the black plate
+                st, coat = dict(color=lin("#6A6560"), pbr=True, metallic=0.0, roughness=1.0), False
             elif name == "base_plate":
                 st, coat = dict(color=lin(BLACK_PAINT), pbr=True, metallic=0.0, roughness=0.55), False
             else:
@@ -255,12 +290,11 @@ class Scene:
             if name in studio.BRASS or name in ("nameplate_plate", "nameplate_letters"):
                 st = dict(st, roughness=0.45)          # satin, so flat faces don't mirror a dark studio
         st = dict(st)
-        if soft:                                         # parts already in place: softened
+        if soft:                                         # parts already in place: real colour, a little lighter
             if "color" in st and st.get("lighting", True) is not False:
-                c = np.array(st["color"])
-                st["color"] = tuple(c * 0.45 + np.array(lin(PAPER)) * 0.55)
-                if st.get("metallic", 0) > 0.5:
-                    st["metallic"] = 0.6
+                c = np.array(st["color"]) ** (1 / 2.2)            # mix in sRGB, or reds go pink
+                paper = np.array(lin(PAPER)) ** (1 / 2.2)
+                st["color"] = tuple((c * 0.85 + paper * 0.15) ** 2.2)
             coat = False
         return st, coat
 
@@ -389,26 +423,30 @@ def badge(d, center, n, size=15, fill=(248, 244, 236), ring=GOLD_RULE, ink=INK):
     d.text((x - tw / 2, y - f.size * 0.62), t, font=f, fill=ink)
 
 
-ARROW_INK = "#2B2420"
+ARROW_INK = "#15110F"
 
 
-def arrow(d, a, b, color=ARROW_INK, width=2.2, head=11, halo=True):
+def arrow(d, a, b, color=ARROW_INK, width=4.4, head=21, halo=True):
     col = tuple(int(c * 255) for c in hexrgb(color)) if isinstance(color, str) else color
     if halo:                                     # a thin paper-coloured halo so it reads on any colour
         paper = tuple(int(c * 255) for c in hexrgb(PAPER))
-        d.line([a, b], fill=paper, width=int((width + 3) * S))
-    d.line([a, b], fill=col, width=int(width * S))
+        d.line([a, b], fill=paper, width=int((width + 4) * S))
     ang = math.atan2(b[1] - a[1], b[0] - a[0])
     h = head * S
     p1 = (b[0] - h * math.cos(ang - 0.42), b[1] - h * math.sin(ang - 0.42))
     p2 = (b[0] - h * math.cos(ang + 0.42), b[1] - h * math.sin(ang + 0.42))
+    if halo:
+        paper = tuple(int(c * 255) for c in hexrgb(PAPER))
+        d.polygon([b, p1, p2], outline=paper, width=int(2 * S))
+    stem = (b[0] - h * 0.8 * math.cos(ang), b[1] - h * 0.8 * math.sin(ang))   # stop the line inside the head
+    d.line([a, stem], fill=col, width=int(width * S))
     d.polygon([b, p1, p2], fill=col)
 
 
-def polyline_arrow(d, pts, color=ARROW_INK, width=2.4, head=13):
+def polyline_arrow(d, pts, color=ARROW_INK, width=4.6, head=24):
     col = tuple(int(c * 255) for c in hexrgb(color))
     paper = tuple(int(c * 255) for c in hexrgb(PAPER))
-    d.line(pts, fill=paper, width=int((width + 3) * S), joint="curve")
+    d.line(pts, fill=paper, width=int((width + 4) * S), joint="curve")
     d.line(pts, fill=col, width=int(width * S), joint="curve")
     arrow(d, pts[-2], pts[-1], color=color, width=width, head=head, halo=False)
 
@@ -737,13 +775,16 @@ def img_diffuser_map():
 # =============================================================================
 # 6. assembly steps (painted; parts in place softened, the new part highlighted)
 # =============================================================================
-def img_step(name, done, new, view=(0.62, -1.0, 0.35), hover=None, extras=(), size=(900, 800),
-             lights_on=False, flip=False, see_through=(), radial=None, fit_to=None, margin=1.15):
-    """done: parts already in place (softened); new: parts added in this step (full
-    colour, red outline). hover: the new parts float by this offset, with arrows
+def img_step(name, done, new, view=(0.62, -1.0, 0.35), hover=None, extras=(), size=(1000, 700),
+             lights_on=False, flip=False, see_through=(), radial=None, fit_to=None, margin=1.04):
+    """done: parts already in place (real colours, a little lighter); new: parts
+    added in this step (full colour, red outline). hover: the new parts float by
+    this offset (or a dict of per-part offsets, for an exploded stack), with arrows
     back to their place. radial: per-part offsets for parts that go in sideways.
     see_through: parts drawn translucent so what's inside shows."""
     sc = Scene(size)
+    if flip:                                              # seen from below: light the underside too
+        sc.pl.add_light(pv.Light(position=(-300, -500, -700), focal_point=(0, 0, 0), intensity=0.9))
     for n in done:
         for sub in PAINTED_NAMES.get(n, (n,)):
             m = mesh(sub)
@@ -751,13 +792,19 @@ def img_step(name, done, new, view=(0.62, -1.0, 0.35), hover=None, extras=(), si
             if n in see_through:
                 st = dict(st, opacity=0.28)
             sc.add(m, st, coat)
-    off = np.array(hover or (0, 0, 0), float)
-    new_bounds = []
+    offs = {}
     for n in new:
-        o = np.array(radial[n]) if radial and n in radial else off
+        if radial and n in radial:
+            offs[n] = np.array(radial[n], float)
+        elif isinstance(hover, dict):
+            offs[n] = np.array(hover.get(n, (0, 0, 0)), float)
+        else:
+            offs[n] = np.array(hover or (0, 0, 0), float)
+    groups = {}                                           # parts that move together share their arrows
+    for n in new:
         for sub in PAINTED_NAMES.get(n, (n,)):
-            m = sc.part(sub, "paint", offset=tuple(o), highlight=True, lit=lights_on)
-            new_bounds.append((m.bounds, o))
+            m = sc.part(sub, "paint", offset=tuple(offs[n]), highlight=True, lit=lights_on)
+            groups.setdefault((tuple(offs[n]), bool(radial and n in radial)), []).append(m.bounds)
     for kind, obj, hl in extras:
         if kind == "wire":
             sc.add(obj, dict(color=lin(COPPER), pbr=True, metallic=0.8, roughness=0.35), highlight=hl, outline=False)
@@ -773,29 +820,27 @@ def img_step(name, done, new, view=(0.62, -1.0, 0.35), hover=None, extras=(), si
             sc.add(obj, dict(color=lin("#E8DCC0"), opacity=0.7, pbr=True, roughness=0.5), outline=False)
     # arrows: from each lifted part back towards where it goes
     arrows = []
-    if hover is not None or radial:
-        b_all = [b for b, _ in new_bounds]
-        lo = np.min([[b[0], b[2], b[4]] for b in b_all], axis=0)
-        hi = np.max([[b[1], b[3], b[5]] for b in b_all], axis=0)
-        o = new_bounds[0][1]
-        if np.linalg.norm(o) > 1e-6 and not radial:
-            u = o / np.linalg.norm(o)
-            ctr = (lo + hi) / 2
-            if abs(u[2]) > 0.9:                           # vertical: two arrows beside the part
-                for sx in (-1, 1):
-                    pnt = np.array([ctr[0] + sx * ((hi[0] - lo[0]) / 2 + 10), ctr[1] - (hi[1] - lo[1]) / 2 * 0.7,
-                                    ctr[2]])
-                    arrows.append((pnt + u * 6, pnt - o * 0.85))
-            else:
-                pnt = ctr + u * ((hi - lo) @ np.abs(u) / 2 + 12)
-                arrows.append((pnt + u * 18, pnt - u * 4))
-        for n, o2 in (radial or {}).items():
-            b = [bb for bb, oo in new_bounds if np.allclose(oo, o2)]
-            if not b:
-                continue
-            b = b[0]
-            c = np.array([(b[0] + b[1]) / 2, (b[2] + b[3]) / 2, (b[4] + b[5]) / 2])
-            arrows.append((c, c - np.array(o2) * 0.9))
+    zs = sorted({k[0][2] for k in groups if abs(k[0][2]) > 1e-6 and not k[1]}, key=abs)
+    for (o, is_radial), bl in groups.items():
+        o = np.array(o)
+        if np.linalg.norm(o) < 1e-6:
+            continue
+        lo = np.min([[b[0], b[2], b[4]] for b in bl], axis=0)
+        hi = np.max([[b[1], b[3], b[5]] for b in bl], axis=0)
+        ctr = (lo + hi) / 2
+        u = o / np.linalg.norm(o)
+        if is_radial:                                     # from the part to its place
+            arrows.append((ctr, ctr - o * 0.9))
+        elif abs(u[2]) > 0.9:                             # vertical: two short arrows beside the part,
+            k = zs.index(o[2])                             # spanning only its own drop in a stack
+            step = abs(o[2]) - (abs(zs[k - 1]) if k else 0.0)
+            for sx in (-1, 1):
+                pnt = np.array([ctr[0] + sx * ((hi[0] - lo[0]) / 2 + 8), ctr[1] - (hi[1] - lo[1]) / 2 * 0.7,
+                                lo[2] + 3 if u[2] > 0 else hi[2] - 3])
+                arrows.append((pnt, pnt - u * step * 0.75))
+        else:
+            pnt = ctr + u * ((hi - lo) @ np.abs(u) / 2 + 10)
+            arrows.append((pnt + u * 18, pnt - u * 3))
     if not flip:
         lo_all = np.min([[b[0], b[2], b[4]] for b in sc.bounds], axis=0)
         hi_all = np.max([[b[1], b[3], b[5]] for b in sc.bounds], axis=0)
@@ -812,6 +857,7 @@ def img_step(name, done, new, view=(0.62, -1.0, 0.35), hover=None, extras=(), si
 
 
 def assembly_steps():
+    """One image per assembly step (in the manual's order), named 06_NN_..."""
     rb = I["base_dia"] / 2
     base_grp = ["base", "nameplate"]
     body = base_grp + ["band_cream", "band_red", "knob"]
@@ -819,47 +865,42 @@ def assembly_steps():
     tower_grp = body + ["tower"] + diffs
     wire_feed, beads_feed = fairy_lights(coil=False, feed=True)
     box, cells = battery_box()
+    feed = [("wire", wire_feed, False), ("beads", beads_feed, False)]
     radial = {}
     for k, (zw, ang) in enumerate(I["windows"]):
         a = math.radians(ang)
         radial[f"window_diffuser_{k + 1}"] = (-12 * math.sin(a), 12 * math.cos(a), 0)   # lifted inwards
-    top_region = lambda z0: [(-60, 60, -60, 60, z0, I["H"] + 45)]
     files = []
-    # --- part 1: the main body ---
-    files.append(img_step("06_p1_1_diffusers", ["tower"], diffs, view=(0.35, -1.0, 0.3), radial=radial,
-                          see_through=("tower",)))
-    files.append(img_step("06_p1_2_nameplate", ["base"], ["nameplate"], view=(0.35, -1.0, 0.5), hover=(0, -24, 0)))
-    files.append(img_step("06_p1_3_knob", ["band_red"], ["knob"], view=(0.45, -1.0, 0.4), hover=(0, -24, 0)))
-    files.append(img_step("06_p1_4_fairy_lights", base_grp, [], view=(0.8, 1.0, 0.8),
+    files.append(img_step("06_01_diffusers", ["tower"], diffs, view=(0.35, -1.0, 0.3), radial=radial,
+                          see_through=("tower",), size=(800, 800)))
+    files.append(img_step("06_02_nameplate", ["base"], ["nameplate"], view=(0.35, -1.0, 0.5), hover=(0, -24, 0)))
+    files.append(img_step("06_03_knob", ["band_red"], ["knob"], view=(0.45, -1.0, 0.4), hover=(0, -24, 0)))
+    files.append(img_step("06_04_fairy_lights", base_grp, [], view=(0.8, 1.0, 0.8),
                           extras=[("wire", tube(fairy_lights_path(), 0.9), True), ("beads", beads_feed, False),
                                   ("box", box, False), ("cells", cells, False)]))
-    files.append(img_step("06_p1_5_band_cream", base_grp, ["band_cream"], hover=(0, 0, 24),
-                          extras=[("wire", wire_feed, False), ("beads", beads_feed, False)],
-                          fit_to=[(-rb - 5, rb + 5, -rb - 5, rb + 30, 0, 75)]))
-    files.append(img_step("06_p1_6_band_red", base_grp + ["band_cream"], ["band_red", "knob"], hover=(0, 0, 28),
-                          extras=[("wire", wire_feed, False), ("beads", beads_feed, False)],
-                          fit_to=[(-rb - 5, rb + 5, -rb - 25, rb + 30, 0, 110)]))
-    files.append(img_step("06_p1_7_tower", body, ["tower"] + diffs, hover=(0, 0, 36),
-                          extras=[("wire", wire_feed, False), ("beads", beads_feed, False)]))
-    files.append(img_cutaway("06_p1_8_coil_lights", tower_grp, focus="lights"))
-    # --- part 2: the lantern and the base ---
-    files.append(img_step("06_p2_1_gallery", tower_grp, ["gallery"], hover=(0, 0, 32),
-                          fit_to=[(-50, 50, -50, 50, 120, 262)]))
-    files.append(img_step("06_p2_2_glass", tower_grp + ["gallery"], ["lantern_glass"], hover=(0, 0, 34),
-                          fit_to=[(-48, 48, -48, 48, 170, 290)]))
-    files.append(img_step("06_p2_3_frame", tower_grp + ["gallery", "lantern_glass"], ["lantern_frame"],
-                          hover=(0, 0, 40), fit_to=[(-48, 48, -48, 48, 170, 300)]))
-    files.append(img_step("06_p2_4_finial", ["cap"], ["finial"], hover=(0, 0, 20), view=(0.5, -1.0, 0.35)))
-    files.append(img_cap_twist("06_p2_5_twist_cap", assembled=True))
-    under = (0.35, -0.55, -1.0)
-    base_region = [(-rb - 4, rb + 4, -rb - 4, rb + 4, -30, 40)]
-    files.append(img_step("06_p2_6_weight", [n for n in ORDER if n != "base_plate"], [], view=under, flip=True,
+    files.append(img_step("06_05_stack", base_grp, ["band_cream", "band_red", "knob", "tower"] + diffs,
+                          hover={"band_cream": (0, 0, 18), "band_red": (0, 0, 40), "knob": (0, 0, 40),
+                                 "tower": (0, 0, 64), **{d_: (0, 0, 64) for d_ in diffs}},
+                          view=(0.55, -1.0, 0.22), extras=feed, size=(800, 1000)))
+    files.append(img_cutaway("06_06_coil_lights", tower_grp, focus="lights"))
+    files.append(img_step("06_07_glow_test", tower_grp, [], lights_on=True, view=(0.3, -1.0, 0.18),
+                          extras=[("wire", wire_feed, False), ("box", box, False), ("cells", cells, False)],
+                          fit_to=[(-rb, rb, -rb, rb, 0, I["z_tower_top"] + 2)], size=(800, 1000)))
+    files.append(img_step("06_08_gallery", tower_grp, ["gallery"], hover=(0, 0, 30),
+                          fit_to=[(-50, 50, -50, 50, 130, 256)]))
+    files.append(img_step("06_09_lantern", tower_grp + ["gallery"], ["lantern_glass", "lantern_frame"],
+                          hover={"lantern_glass": (0, 0, 24), "lantern_frame": (0, 0, 80)},
+                          fit_to=[(-48, 48, -48, 48, 170, 336)], size=(800, 1000)))
+    files.append(img_step("06_10_finial", ["cap"], ["finial"], hover=(0, 0, 20), view=(0.5, -1.0, 0.35)))
+    files.append(img_cap_twist("06_10_twist_cap", assembled=True))
+    under = (0.3, -0.45, -1.0)
+    base_region = [(-rb - 4, rb + 4, -rb - 4, rb + 4, -60, 30)]
+    files.append(img_step("06_11_weight", [n for n in ORDER if n != "base_plate"], [], view=under, flip=True,
                           extras=[("coins", coins(), True), ("tape", tape(), False), ("wire", wire_feed, False)],
-                          fit_to=base_region, margin=1.05))
-    files.append(img_step("06_p2_7_base_plate", [n for n in ORDER if n != "base_plate"], ["base_plate"],
-                          view=under, hover=(0, 0, -28), flip=True, fit_to=base_region, margin=1.05))
-    files.append(img_step("06_p2_8_felt", ORDER, ["felt_pad"], view=under, hover=(0, 0, -22), flip=True,
-                          fit_to=base_region, margin=1.05))
+                          fit_to=[(-rb - 4, rb + 4, -rb - 4, rb + 4, 0, 30)], margin=1.03))
+    files.append(img_step("06_12_underneath", [n for n in ORDER if n != "base_plate"], ["base_plate", "felt_pad"],
+                          view=(0.3, -0.9, -0.55), hover={"base_plate": (0, 0, -24), "felt_pad": (0, 0, -50)}, flip=True,
+                          fit_to=base_region, margin=1.03))
     return files
 
 
@@ -883,6 +924,10 @@ def img_cutaway(name="07_cutaway", parts=None, focus="all"):
     sc.add(wire, dict(color=lin(COPPER), pbr=True, metallic=0.8, roughness=0.35), outline=False,
            highlight=(focus == "lights"))
     sc.add(beads, dict(color=hexrgb(BEAD), lighting=False), outline=False)
+    tack = blu_tack(keep=lambda q: q[0] < 1.0)                  # only the dabs in the half we keep
+    if tack is not None:
+        sc.add(tack, dict(color=lin(BLU_TACK), pbr=True, metallic=0.0, roughness=0.7),
+               highlight=(focus == "lights"), outline=focus != "lights")
     if focus == "all":
         body, lens = led_puck()
         sc.add(body, dict(color=lin("#F2F0EA"), pbr=True, roughness=0.4))
@@ -896,76 +941,53 @@ def img_cutaway(name="07_cutaway", parts=None, focus="all"):
     else:
         sc.fit((1.0, -0.35, 0.22), margin=1.05, bounds=[(-50, 50, -50, 50, 20, I["z_tower_top"] + 5)])
         call = []
-    img = sc.image()
-    if False:
-        pass
-    return finish(img, name)
+    return finish(sc.image(), name)
 
 
 # =============================================================================
 # 8. the cap twist: lugs, slots and a clockwise arrow
 # =============================================================================
 def img_cap_twist(name="08_cap_twist", assembled=False, stage="paint"):
-    """Three panels: the cap from below (lugs), the lantern top from above
-    (slots), and the cap on with a clockwise arrow."""
+    """One view: the cap lifted above the lantern with its lugs lined up over the
+    slots, a drop-in arrow (1) and a clockwise turn arrow (2)."""
     z_l1 = I["z_lantern"][1]
     r_lip = p.LANTERN_DIA / 2 - 3.0
+    lift = 34.0
     low = ["tower", "gallery", "lantern_glass", "lantern_frame"]
-    panels = []
-    # 1. the cap from below
-    sc = Scene((620, 620))
-    sc.part("cap", stage, highlight=False)
-    sc.part("finial", stage)
-    sc.camera((0, 0, z_l1 + 8), (0.45, -0.65, -1.0), dist=3000, view_angle=1.75, up=(0, 0, 1))
-    lugs = [(r_lip * math.sin(math.radians(k * 90 + p.LOCK_TURN_DEG)) * 1.02,
-             -r_lip * math.cos(math.radians(k * 90 + p.LOCK_TURN_DEG)) * 1.02, z_l1 - p.LIP_H - 3.0)
-            for k in range(4)]
-    pts = sc.project(lugs)
-    img = sc.image()
-    d = ImageDraw.Draw(img)
-    for q in pts:
-        r = 24 * S
-        d.ellipse([q[0] - r, q[1] - r, q[0] + r, q[1] + r], outline=GOLD_RULE, width=int(4 * S))
-    panels.append(("the cap from below: four lugs", img))
-    # 2. the lantern top from above
-    sc = Scene((620, 620))
+    sc = Scene((900, 900))
     for n in low:
-        add_painted(sc, n, soft=assembled) if stage == "paint" else sc.part(n, stage)
-    sc.camera((0, 0, z_l1 - 6), (0.3, -0.45, 1.0), dist=3000, view_angle=1.75)
-    slots = [(r_lip * 1.04 * math.sin(math.radians(k * 90)), -r_lip * 1.04 * math.cos(math.radians(k * 90)), z_l1)
-             for k in range(4)]
-    pts = sc.project(slots)
+        if stage == "paint":
+            add_painted(sc, n, soft=assembled, lit=True)
+        else:
+            sc.part(n, stage)
+    to_entry = lambda m: m.rotate_z(-p.LOCK_TURN_DEG, inplace=False)   # lugs over the slots
+    sc.part("cap", stage, offset=(0, 0, lift), transform=to_entry, highlight=True)
+    sc.part("finial", stage, offset=(0, 0, lift))
+    view = (0.45, -1.0, 0.3)
+    sc.fit(view, margin=1.06, bounds=[(-46, 46, -46, 46, z_l1 - 34, I["H"] + lift + 1)])
+    rcr = p.CAP_RIM_DIA / 2
+    z_sp0 = z_l1 - p.LIP_H - p.FIT_CLEAR - p.LOCK_LUG_H
+    anchors = [(0, -(r_lip + 1.0), z_sp0 + 1.0 + lift),                       # front lug
+               (0, r_lip + 0.8, z_l1 - 0.6)]                                    # rear slot, seen across the top
+    drop = [((sx * (rcr + 6), -6, z_l1 + lift + 4), (sx * (rcr + 6), -6, z_l1 + 10)) for sx in (-1, 1)]
+    r_arc = rcr + 5
+    arc = [(r_arc * math.sin(math.radians(a_)), -r_arc * math.cos(math.radians(a_)), z_l1 + 1)
+           for a_ in np.linspace(58, -58, 48)]                                 # decreasing angle = clockwise from above
+    pts = sc.project(anchors + [q for pr in drop for q in pr] + arc)
+    lug, slot = pts[0], pts[1]
+    dr = pts[2:6]
+    arc_px = pts[6:]
     img = sc.image()
     d = ImageDraw.Draw(img)
-    for q in pts:
-        r = 24 * S
-        d.ellipse([q[0] - r, q[1] - r, q[0] + r, q[1] + r], outline=GOLD_RULE, width=int(4 * S))
-    panels.append(("the lantern top: four slots in the lip", img))
-    # 3. cap on, turn clockwise (seen from above) to the stop
-    sc = Scene((620, 620))
-    for n in low:
-        add_painted(sc, n, soft=assembled, lit=True) if stage == "paint" else sc.part(n, stage)
-    sc.part("cap", stage, highlight=True)
-    sc.part("finial", stage)
-    sc.camera((0, 0, z_l1 + 4), (0.55, -1.0, 0.7), dist=3000, view_angle=1.9)
-    r_arc = p.CAP_RIM_DIA / 2 + 14
-    zarc = z_l1 + 3
-    arc = [(r_arc * math.sin(math.radians(a)), -r_arc * math.cos(math.radians(a)), zarc)
-           for a in np.linspace(60, -60, 40)]                  # decreasing angle = clockwise from above
-    pts = sc.project(arc)
-    img = sc.image()
-    d = ImageDraw.Draw(img)
-    polyline_arrow(d, pts)
-    panels.append(("drop the lugs in, turn clockwise to the stop", img))
-    w = sum(im.size[0] for _, im in panels)
-    h = panels[0][1].size[1]
-    sheet = Image.new("RGB", (w, h), tuple(int(c * 255) for c in hexrgb(PAPER)))
-    d = ImageDraw.Draw(sheet)
-    x = 0
-    for cap, im in panels:
-        sheet.paste(im, (x, 0))
-        x += im.size[0]
-    return finish(sheet, name)
+    for k in range(2):
+        arrow(d, dr[2 * k], dr[2 * k + 1])
+    polyline_arrow(d, arc_px)
+    badge(d, (dr[2][0] + 30 * S, (dr[2][1] + dr[3][1]) / 2), 1, size=17)
+    badge(d, (arc_px[len(arc_px) // 2][0], arc_px[len(arc_px) // 2][1] + 34 * S), 2, size=17)
+    w = img.size[0]
+    draw_label(d, "lug", (70 * S, lug[1] - 10 * S), lug, align="left", size=26)
+    draw_label(d, "slot", (w - 70 * S, slot[1] - 60 * S), slot, align="right", size=26)
+    return finish(img, name)
 
 
 # =============================================================================
@@ -1041,28 +1063,97 @@ def img_nameplate():
 
 
 def img_underside():
-    """The finished underside: felt stuck on; and with the felt lifted, showing
-    the plate glued into its rebate (no screws or magnets in the prototype)."""
+    """The finished underside: felt stuck on; and with the felt peeled back,
+    showing the plain plate glued into its recess (no screws or magnets in the
+    prototype). Brighter than the studio default so black on black reads."""
     panels = []
+    rb = I["base_dia"] / 2
     for felt_on in (True, False):
-        sc = Scene((700, 620))
+        sc = Scene((800, 700), lights=1.7)
         for n in ("base", "nameplate", "band_cream", "band_red", "knob", "base_plate"):
             add_painted(sc, n)
+        fm = mesh("felt_pad")
+        lo, hi = bbox(fm)
+        if not felt_on:                                   # peeled back from its rear edge
+            fm.rotate_x(40, point=(0, hi[1], lo[2]), inplace=True)
+        st, coat = sc.style("felt_pad", "paint")
+        sc.add(fm, dict(st, color=lin("#6A6560")), coat)          # charcoal felt, a shade off the black plate
+        view = (0.2, -0.35, -1.0)
+        sc.fit(view, up=(0, 1, 0), margin=1.08, bounds=[(-rb, rb, -rb, rb, -48 if not felt_on else -2, 10)])
+        plo, phi = bbox(mesh("base_plate"))
+        a_felt = (rb * 0.35, 0, lo[2]) if felt_on else (rb * 0.3, -rb * 0.1, lo[2] - 30)
+        a_plate = (rb * 0.1, -rb * 0.5, plo[2])
+        pts = sc.project([a_felt, a_plate])
+        img = sc.image()
+        d = ImageDraw.Draw(img)
+        w = img.size[0]
         if felt_on:
-            sc.part("felt_pad", "paint")
+            draw_label(d, "felt, stuck on", (w - 30 * S, 60 * S), pts[0], align="right", size=30)
         else:
-            m = mesh("felt_pad")
-            m.rotate_x(-38, point=(0, bbox(m)[1][1], bbox(m)[0][2]), inplace=True)   # peeled back from one edge
-            m.translate((0, 8, -14), inplace=True)
-            st, coat = sc.style("felt_pad", "paint")
-            sc.add(m, st, coat)
-        sc.fit((0.35, -0.55, -1.0), up=(0, 1, 0), margin=1.03, bounds=[(-60, 60, -60, 90, -40, 12)])
-        panels.append(sc.image())
-    w = sum(i.size[0] for i in panels) + 30 * S
+            draw_label(d, "felt, peeled back", (w - 30 * S, 60 * S), pts[1], align="right", size=30)
+            draw_label(d, "base plate, glued in", (w - 30 * S, img.size[1] - 60 * S), pts[0], align="right", size=30)
+        panels.append(img)
+    gap = 30 * S
+    w = sum(i.size[0] for i in panels) + gap
     sheet = Image.new("RGB", (w, panels[0].size[1]), tuple(int(c * 255) for c in hexrgb(PAPER)))
     sheet.paste(panels[0], (0, 0))
-    sheet.paste(panels[1], (panels[0].size[0] + 30 * S, 0))
+    sheet.paste(panels[1], (panels[0].size[0] + gap, 0))
     return finish(sheet, "13_underside")
+
+
+def img_diffuser_marks():
+    """The five diffusers seen from inside the tower (number and up arrow on the
+    tab below the window), and one seen from above: the curved outer face goes
+    against the window."""
+    from build123d import Rot
+    sc = Scene((1500, 720))
+    placed = []
+    x = 0.0
+    for k in range(5):
+        n = f"window_diffuser_{k + 1}"
+        shape = Rot(0, 0, -I["windows"][k][1]) * M.parts[n]            # turn its window to the front
+        m = atelier._to_mesh(shape, 0.01)
+        lo, hi = bbox(m)
+        m.translate((x - (lo[0] + hi[0]) / 2, -(lo[1] + hi[1]) / 2, -lo[2]), inplace=True)
+        st, coat = sc.style(n, "resin")
+        sc.add(m, st, coat)
+        edges = pv.PolyData(m.points, m.faces).clean(tolerance=1e-4).extract_feature_edges(35)
+        sc.pl.add_mesh(edges, color=OUTLINE, line_width=1.6 * S)
+        placed.append(m)
+        x -= 26
+    sc.fit((0, 1, 0.12), margin=1.25)                                   # from inside, looking out
+    lo, hi = bbox(placed[0])
+    mark_z = lo[2] + (hi[2] - lo[2]) * 0.14
+    pts = sc.project([((lo[0] + hi[0]) / 2 + 3.5, lo[1], mark_z), ((lo[0] + hi[0]) / 2 - 3.5, lo[1], mark_z)])
+    img = sc.image()
+    d = ImageDraw.Draw(img)
+    hgt = img.size[1]
+    draw_label(d, "number", (pts[0][0] - 40 * S, hgt - 50 * S), pts[0], align="right", size=46)
+    draw_label(d, "up arrow", (pts[1][0] + 40 * S, hgt - 50 * S), pts[1], align="left", size=46)
+    # one diffuser from above: convex outer face towards the window
+    sc2 = Scene((700, 720))
+    shape = Rot(0, 0, -I["windows"][0][1]) * M.parts["window_diffuser_1"]
+    m = atelier._to_mesh(shape, 0.01)
+    st, coat = sc2.style("window_diffuser_1", "resin")
+    sc2.add(m, st, coat)
+    lo, hi = bbox(m)
+    wall = pv.Box(bounds=(lo[0] - 8, hi[0] + 8, lo[1] - 3.2, lo[1] - 0.2, lo[2], hi[2])).triangulate()
+    sc2.add(wall, dict(color=lin(p.CREAM_HEX), pbr=True, metallic=0.0, roughness=0.5, opacity=0.35))
+    sc2.fit((0, 0.001, 1), up=(0, 1, 0), margin=1.3, bounds=[(lo[0] - 8, hi[0] + 8, lo[1] - 3.5, hi[1] + 1, lo[2], hi[2])])
+    c = (lo + hi) / 2
+    pp = sc2.project([(c[0], lo[1] - 3.2, hi[2]), (c[0], hi[1], hi[2])])
+    img2 = sc2.image()
+    d2 = ImageDraw.Draw(img2)
+    w2 = img2.size[0]
+    draw_label(d2, "window side:", (w2 / 2, pp[0][1] + 80 * S), None, align="center", size=42)
+    draw_label(d2, "curved outer face", (w2 / 2, pp[0][1] + 140 * S), None, align="center", size=42)
+    draw_label(d2, "inside the tower:", (w2 / 2, pp[1][1] - 110 * S), None, align="center", size=42)
+    draw_label(d2, "marks on this face", (w2 / 2, pp[1][1] - 50 * S), None, align="center", size=42)
+    gap = 20 * S
+    sheet = Image.new("RGB", (img.size[0] + gap + w2, hgt), tuple(int(c_ * 255) for c_ in hexrgb(PAPER)))
+    sheet.paste(img, (0, 0))
+    sheet.paste(img2, (img.size[0] + gap, 0))
+    return finish(sheet, "05_diffuser_marks")
 
 
 def img_rear():
@@ -1087,9 +1178,9 @@ JOBS = {
     "priming": img_priming,
     "paint_groups": img_paint_groups,
     "diffuser_map": img_diffuser_map,
+    "diffuser_marks": img_diffuser_marks,
     "assembly": assembly_steps,
     "cutaway": img_cutaway,
-    "cap_twist": img_cap_twist,
     "views": img_views,
     "puck": img_puck_insert,
 }

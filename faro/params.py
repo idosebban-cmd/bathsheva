@@ -91,6 +91,13 @@ WINDOW_Z_FIRST = 113.0       # lowest window centre (front)
 WINDOW_Z_LAST = 165.0        # highest window centre (front, after a full turn)
 DIFFUSER_THICK = 1.2         # frosted insert behind each window
 DIFFUSER_MARGIN = 2.0        # how far it overlaps the window edge
+# Each diffuser carries its number (1 = lowest) and an "up" arrow, raised on its
+# hidden inner face. They sit on a short tab below the window, behind solid tower
+# wall, so they never shadow the glow.
+DIFFUSER_MARK_H = 5.0        # height of the number and the arrow
+DIFFUSER_MARK_RAISE = 0.8    # how far they stand off the inner face
+DIFFUSER_MARK_GAP = 3.0      # clear space between the window's bottom edge and the marks
+DIFFUSER_TAB = 7.5           # how far the diffuser extends below its usual margin
 
 # ---------------------------------------------------------------------------
 # 4. Brass gallery

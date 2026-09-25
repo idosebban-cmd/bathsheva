@@ -47,6 +47,8 @@ BODY = ParagraphStyle("body", fontName="Garamond", fontSize=10.8, leading=15, te
 BODY_S = ParagraphStyle("bodys", parent=BODY, fontSize=9.8, leading=13.4)
 STAND = ParagraphStyle("stand", fontName="Garamond-Italic", fontSize=14.5, leading=19.5, textColor=GREY)
 CAP = ParagraphStyle("cap", fontName="Garamond-Italic", fontSize=9, leading=11.5, textColor=GREY)
+CHECK = ParagraphStyle("check", fontName="Garamond-Italic", fontSize=10.6, leading=14.2, textColor=INK)
+NOTE = ParagraphStyle("note", fontName="Garamond", fontSize=9.4, leading=12.6, textColor=GREY)
 
 
 # ---- drawing helpers ------------------------------------------------------------
@@ -137,6 +139,12 @@ class Page:
             p.drawOn(self.c, x + num_w, y - h)
             y -= h + gap
         return y
+
+    def checkpoint(self, y_top, text, x=L, width=R - L):
+        """The line that ends each step: when it's safe to move on."""
+        self.rule(x, y_top, 28)
+        self.spaced(x, y_top - 14, "READY TO MOVE ON WHEN", size=7.2, color=RED, space=2.2)
+        return self.para(x, y_top - 20, width, text, CHECK)
 
     def bullets(self, x, y_top, width, items, style=BODY_S, gap=3):
         y = y_top
@@ -244,7 +252,8 @@ def before_you_begin(c):
     pg.rule(L, y - 12)
     y = pg.para(L, y - 26, R - L, "Faro is built from seventeen printed pieces, finished by hand in four colours and "
                 "glued together in a set order. Nothing here is difficult, but each stage needs patience: thin coats "
-                "of paint, time to dry, and a dry fit before any glue.")
+                "of paint, time to dry, and a dry fit before any glue. Each step ends with a checkpoint; don't move on "
+                "until it is met.")
     pg.heading(L, y - 22, "Timing")
     y -= 30
     cols = [("Weekend one", "Inspect and dry-fit, prepare the surfaces, prime, and paint the colours."),
@@ -265,7 +274,9 @@ def before_you_begin(c):
     # safety box
     box_top = y
     items = ["Spray outdoors or somewhere very well ventilated, and wear the respirator whenever you spray.",
-             "Wear nitrile gloves when sanding resin and when mixing or applying epoxy.",
+             "Wear a dust mask or the respirator, and nitrile gloves, when sanding resin: its dust shouldn't be "
+             "breathed in or left on skin.",
+             "Wear nitrile gloves when mixing or applying epoxy.",
              "Keep sprays and epoxy away from children and pets, and let fumes clear before bringing parts indoors."]
     pg.heading(L + 14, y - 18, "Safety", color=RED)
     yb = pg.bullets(L + 14, y - 28, R - L - 28, items)
@@ -291,7 +302,7 @@ def parts_and_supplies(c):
     rows = [("base", "1", "Sponged wood effect", "umber"), ("base_plate", "1", "Black acrylic, or leave primed", "black"),
             ("nameplate", "1", "Gold, black round the letters", "gold"),
             ("band_cream", "1", "Cream gloss, clear coat", "cream"), ("band_red", "1", "Red gloss, clear coat", "red"),
-            ("tower", "1", "Cream gloss, clear coat", "cream"), ("knob", "1", "Gold", "gold"),
+            ("tower", "1", "Cream gloss, clear coat", "cream"), ("knob", "1", "Gold; decorative, it doesn't turn", "gold"),
             ("gallery", "1", "Gold, light coats only", "gold"), ("lantern_frame", "1", "Gold, light coats only", "gold"),
             ("cap", "1", "Red gloss, clear coat", "red"), ("finial", "1", "Gold", "gold"),
             ("lantern_glass", "1", "Leave unpainted", "frost"),
@@ -303,7 +314,8 @@ def parts_and_supplies(c):
             "Clear lacquer", "Black and burnt umber acrylic, small brush and sponge", "Wet-and-dry paper, P240 to P1200"]
     right = ["Tamiya masking tape, 10 mm", "Araldite Rapid epoxy, cocktail sticks", "Black self-adhesive felt",
              "Warm white copper fairy lights, 3 AA batteries", "Rechargeable warm white LED puck, under 45 mm",
-             "A few coins for weight", "Respirator, nitrile gloves, craft knife, blu-tack"]
+             "A few coins for weight", "Respirator, dust mask, nitrile gloves",
+             "Craft knife, blu-tack"]
     y1 = pg.bullets(L, y - 38, (R - L) / 2 - 10, left)
     y2 = pg.bullets(L + (R - L) / 2 + 6, y - 38, (R - L) / 2 - 10, right)
 
@@ -316,19 +328,25 @@ def step1(c):
                 "tight fits only get tighter.", STAND)
     pg.rule(L, y - 12)
     top = y - 30
-    pg.image("02_exploded_resin", L - 16, top + 8, height=top - 70)
+    pg.image("02_exploded_resin", L - 16, top + 8, width=240)
     x = L + 232
     yy = pg.steps(x, top, R - x, [
         "Tick off every part against the inventory. Look for cracks, warping or broken railing posts.",
         "Stack without glue: base, cream band, red band, tower, gallery. Each joint should sit flat and centred.",
         "Stand the lantern glass on the gallery and lower the frame over it. It should sit without forcing.",
-        "Twist the cap on: lugs down through the slots, then clockwise to the stop.",
-        "Hold each numbered diffuser behind its window. They are not interchangeable.",
-        "Press the base plate into the rebate under the base.",
+        "Twist the cap on. Under it are four lugs, small tabs that drop through four slots in the lantern top; "
+        "then turn it clockwise to the stop.",
+        "Hold each diffuser behind its window: its number and arrow face inwards, arrow up. They are not "
+        "interchangeable.",
+        "Press the base plate into the rebate: the shallow step cut round the opening under the base.",
         "Stand it where it would live and judge size and proportions."], style=BODY_S, gap=4)
-    yy = pg.image("11_drystack_resin", x, yy - 14, width=R - x,
-                  caption="Dry-stacked: knob and nameplate aligned on the front.")
-    pg.image("08_cap_twist_resin", x, yy - 14, width=R - x, caption="The cap drops in and turns clockwise to lock.")
+    hw = (R - x - 10) / 2
+    y1 = pg.image("11_drystack_resin", x, yy - 12, width=hw, height=150, caption="Dry-stacked: knob and nameplate "
+                  "aligned on the front.")
+    y2 = pg.image("08_cap_twist_resin", x + hw + 10, yy - 12, width=hw,
+                  caption="Lugs over the slots: drop the cap in (1), turn clockwise to the stop (2).")
+    pg.checkpoint(min(y1, y2, 190) - 22, "every part is present and undamaged, the stack stands straight, and the "
+                  "cap twists on and off without forcing.")
 
 
 def step2(c):
@@ -340,19 +358,23 @@ def step2(c):
     y = pg.steps(L, y - 30, R - L, [
         "Wash all parts in warm soapy water, rinse, and leave to dry fully.",
         "Trim any support nubs with a craft knife, cutting away from yourself.",
-        "Sand visible surfaces with P240 to flatten marks, then P400 to smooth.",
+        "Put on a dust mask or the respirator, and gloves. Sand visible surfaces with P240 to flatten marks, then "
+        "P400 to smooth.",
         "Wipe the dust off with a barely damp cloth and let dry."])
-    y = pg.image("01_printed_parts", L, y - 16, width=R - L,
+    y = pg.image("01_printed_parts", L + 45, y - 10, width=R - L - 90,
                  caption="Every printed part, as it arrives in plain white resin.")
-    box_top = y - 22
+    box_top = y - 18
     pg.heading(L + 14, box_top - 18, "Handle with care", color=RED)
     yb = pg.bullets(L + 14, box_top - 28, R - L - 28, [
         "<b>Gallery and lantern frame:</b> only remove support marks; the posts are delicate.",
         "<b>Nameplate:</b> sand the flat face only, never across the raised letters.",
-        "<b>Lantern glass and diffusers:</b> never sand; they arrive frosted. Set them aside, clean."])
+        "<b>Lantern glass and diffusers:</b> never sand; they arrive frosted. Keep the small raised number and "
+        "arrow on each diffuser. Set them aside, clean."])
     c.setStrokeColor(GOLD)
     c.setLineWidth(0.6)
     c.rect(L, yb - 8, R - L, box_top - (yb - 8), stroke=1, fill=0)
+    pg.checkpoint(yb - 30, "every part is clean, dry and dust-free, with no support marks left on the surfaces "
+                  "that show.")
 
 
 def step3(c):
@@ -367,11 +389,17 @@ def step3(c):
         "touching.",
         "Choose a dry, still day, around 15 to 25°C. Shake the primer for two to three minutes.",
         "Spray light coats from 25 to 30 cm, starting and finishing each pass off the part.",
-        "Let it dry, then sand with P400. Repeat until the surfaces look smooth under a bright light.",
+        "Let it dry, then sand with P400, wearing the dust mask. Repeat until the surfaces look smooth under a "
+        "bright light.",
         "Prime every part except the lantern glass and diffusers. On the gallery and frame, one or two mist coats "
         "only."])
-    pg.image("03_priming", L, y - 18, width=R - L,
-             caption="Every part mounted for priming, except the glass and diffusers.")
+    y = pg.para(L, y - 8, R - L, "<b>Drying times.</b> Typically touch-dry in 15 to 30 minutes, ready for the next "
+                "coat after about 30 minutes, and ready to sand after at least an hour. Brands vary, so check the "
+                "can.", NOTE)
+    y = pg.image("03_priming", L, y - 16, width=R - L,
+                 caption="Every part mounted for priming, except the glass and diffusers.")
+    pg.checkpoint(y - 26, "every part is an even grey, with no layer lines, pits or bare spots under a bright "
+                  "light.")
 
 
 def step4(c):
@@ -387,18 +415,30 @@ def step4(c):
     y = pg.table(L, y - 24, ["Colour", "Parts"], rows, [150, R - L - 150],
                  swatch=[SW[k] for k in ("red", "cream", "gold", "umber", "black")])
     y = pg.image("04_paint_groups", L, y - 12, width=R - L)
-    pg.heading(L, y - 20, "Spraying")
-    y = pg.steps(L, y - 30, R - L, [
-        "Three or four light coats, 25 to 30 cm away, waiting between coats as the can directs.",
+    col = (R - L) / 2 - 10
+    pg.heading(L, y - 20, "Mask before painting")
+    ym = pg.bullets(L, y - 32, col, [
+        "The band rims: the top and bottom faces of the cream and red bands",
+        "The tower's bottom rim",
+        "The gallery's underside",
+        "The back of the knob",
+        "The nameplate recess on the base",
+        "The lantern frame's bottom ring"], gap=2)
+    ym = pg.para(L, ym - 4, col, "Glue holds to bare plastic far better than to paint. Peel the tape once the last "
+                 "coat is touch-dry.", NOTE)
+    x2 = L + (R - L) / 2 + 10
+    pg.heading(x2, y - 20, "Spraying")
+    ys = pg.steps(x2, y - 32, R - x2, [
+        "Three or four light coats, 25 to 30 cm away.",
         "On the tower, spray at an angle into each window so the edges are covered.",
         "On the gallery and frame, use short bursts from several directions.",
         "If dust or a run appears, let it dry, sand with P1200 and respray lightly.",
-        "For richer brass, spray gloss black first and gold over it."], style=BODY_S, gap=2)
-    pg.heading(L, y - 18, "Colour reference")
-    cw = (R - L) / 4
-    for k, (nm, cap) in enumerate((("09_view_front", "Front"), ("09_view_side", "Side"), ("09_view_rear", "Rear"),
-                                   ("09_view_three_quarter", "Three-quarter"))):
-        pg.image(nm, L + k * cw, y - 26, width=cw - 8, caption=cap)
+        "For richer brass, spray gloss black first and gold over it."], style=BODY_S, gap=2, num_w=20)
+    ys = pg.para(x2, ys - 4, R - x2, "<b>Drying times.</b> Typically touch-dry in 15 to 30 minutes, with the next "
+                 "coat after 15 to 30 minutes. Some enamel sprays must be recoated within an hour or not until 48 "
+                 "hours later, so check the can.", NOTE)
+    pg.para(L, min(ym, ys) - 16, R - L, "The wood effect and the lettering are overleaf; this step's checkpoint "
+            "comes after them.", CAP)
 
 
 def step4b(c):
@@ -411,15 +451,23 @@ def step4b(c):
         "Brush a thin coat of burnt umber over the primed base and let it dry.",
         "Dab a barely loaded sponge on kitchen paper, then drag it round the base in one direction. The streaks "
         "read as grain.",
-        "Build two or three passes until it reads as dark walnut. Unevenness looks natural."])
-    pg.heading(L, y - 34, "Nameplate letters")
-    y = pg.para(L, y - 46, R - L, "Once the gold is dry, brush thinned black acrylic over the letters, then wipe the "
+        "Build two or three passes until it reads as dark walnut. Unevenness looks natural."], style=BODY_S, gap=3)
+    pg.heading(L, y - 22, "Nameplate letters")
+    y = pg.para(L, y - 34, R - L, "Once the gold is dry, brush thinned black acrylic over the letters, then wipe the "
                 "raised surfaces with a damp cloth before it dries. The black stays round the letters and makes FARO "
-                "easy to read.")
+                "easy to read.", BODY_S)
     cw = (R - L) / 2
-    pg.image("12_nameplate_brushed", L, y - 18, width=cw - 10, caption="Brush black over the letters.")
-    pg.image("12_nameplate_wiped", L + cw + 10, y - 18, width=cw - 10,
-             caption="Wipe the raised surface: FARO stands out in gold.")
+    pg.image("12_nameplate_brushed", L, y - 12, width=cw - 10, caption="Brush black over the letters.")
+    y = pg.image("12_nameplate_wiped", L + cw + 10, y - 12, width=cw - 10,
+                 caption="Wipe the raised surface: FARO stands out in gold.")
+    pg.heading(L, y - 22, "Colour reference")
+    cw = (R - L) / 4
+    low = y
+    for k, (nm, cap) in enumerate((("09_view_front", "Front"), ("09_view_side", "Side"), ("09_view_rear", "Rear"),
+                                   ("09_view_three_quarter", "Three-quarter"))):
+        low = min(low, pg.image(nm, L + k * cw, y - 30, width=cw - 8, caption=cap))
+    pg.checkpoint(low - 22, "every part is evenly coloured with no bare patches or runs, the base reads as dark "
+                  "walnut, FARO stands out in gold, and the masking tape is off.")
 
 
 def step5_6(c):
@@ -427,21 +475,47 @@ def step5_6(c):
     pg.kicker(H - 110, "Step 05")
     pg.title(H - 145, "Clear coat and cure")
     pg.rule(L, H - 160)
-    y = pg.steps(L, H - 176, 360, [
+    y = pg.steps(L, H - 176, R - L, [
         "Wait at least 24 hours after the last colour coat.",
+        "Test first. Spray a little clear lacquer on a hidden inside surface, such as the inside of the cap rim, "
+        "and leave it an hour. Some paints wrinkle or cloud under some clears; if it stays smooth, carry on.",
         "Spray two light coats of clear lacquer on the red and cream parts only: band_red, cap, band_cream and "
         "tower.",
         "Leave the gold and the wood-effect base uncoated; clear can dull metallic paint.",
         "Leave everything warm, dry and dust-free for two to three days. Paint feels dry long before it is hard.",
         "Optional: once hard, polish the red and cream parts with car polishing compound."], style=BODY_S, gap=3)
-    pg.kicker(y - 22, "Step 06")
-    pg.title(y - 56, "Assemble")
-    y = pg.para(L, y - 70, 380, "Araldite Rapid sets in about five minutes. Mix small amounts, one joint at a time, "
-                "and hold or tape each joint as it sets.", STAND)
+    y = pg.para(L, y - 6, R - L, "<b>Drying times.</b> Clear lacquer is typically touch-dry in about 30 minutes, "
+                "with the second coat after 15 to 30 minutes. Check the can.", NOTE)
+    y = pg.checkpoint(y - 16, "the gloss is even and hard: a fingernail pressed on a hidden spot leaves no mark.")
+    pg.kicker(y - 34, "Step 06")
+    pg.title(y - 68, "Assemble")
+    y = pg.para(L, y - 82, 400, "Araldite Rapid gives about five minutes to position a joint. Mix small amounts, one "
+                "joint at a time, and hold or tape each joint as it sets.", STAND)
     pg.rule(L, y - 10)
-    y -= 30
+    y = pg.bullets(L, y - 26, R - L, [
+        "Wait about 20 to 30 minutes before handling a glued joint or starting the next one.",
+        "Epoxy reaches full strength the next day: leave the finished lamp overnight before lifting it by the "
+        "top or testing the cap hard.",
+        "Dry-fit each joint just before you glue it, and wipe off any squeeze-out with a cocktail stick before "
+        "it sets."], style=BODY_S)
+    pg.heading(L, y - 22, "The diffusers")
+    y = pg.para(L, y - 34, R - L, "Each diffuser carries its number and an up arrow, raised on its inner face on a "
+                "small tab below the window. The tab sits behind the tower wall, so the marks never show. Fit each "
+                "one with the arrow pointing up and the smooth, curved outer face against the window. Glue them "
+                "first, while the tower is still open at both ends: 1, 2 and 3 from the bottom, 4 and 5 from the "
+                "top.", BODY_S)
+    pg.image("05_diffuser_marks", L, y - 12, width=R - L,
+             caption="The five diffusers from inside the tower (left), and one from above (right): the curved "
+                     "outer face goes against the window.")
+
+
+def diffuser_map(c):
+    pg = Page(c, "Step 6, continued", 10)
+    pg.kicker(H - 110, "Step 06, continued")
+    pg.title(H - 145, "Which window is which")
+    pg.rule(L, H - 160)
+    y = H - 186
     pg.heading(L, y, "Diffuser map, seen from above")
-    # top-view diagram
     import math
     cx, cy, r = L + 95, y - 105, 68
     c.setStrokeColor(INK)
@@ -464,69 +538,83 @@ def step5_6(c):
         c.setFont("Garamond-Italic", 9)
         dx, dy = 22 * math.sin(a), -20 * math.cos(a)
         c.drawCentredString(x + dx, yy + dy - 3, sub)
-    rows = [("1", "Front, lowest", "113 mm"), ("2", "Right side (seen from the front)", "126 mm"), ("3", "Rear", "139 mm"),
-            ("4", "Left side", "152 mm"), ("5", "Front, highest", "165 mm")]
-    pg.table(L + 225, y - 12, ["No.", "Window", "Height"], rows, [45, R - L - 225 - 110, 65])
-    pg.image("05_diffuser_map", L + 225, cy - 70, width=R - L - 225,
-             caption="Each diffuser is numbered; hold it to its window first.")
+    rows = [("1", "Front, lowest", "113 mm", "Bottom"), ("2", "Right side (seen from the front)", "126 mm", "Bottom"),
+            ("3", "Rear", "139 mm", "Bottom"), ("4", "Left side", "152 mm", "Top"), ("5", "Front, highest", "165 mm", "Top")]
+    pg.table(L + 225, y - 12, ["No.", "Window", "Height", "Glue from"], rows, [36, R - L - 225 - 146, 55, 55])
+    pg.image("05_diffuser_map", L + 60, cy - 100, width=R - L - 120,
+             caption="The numbered windows, lit. Hold each diffuser to its window before gluing.")
 
 
-def assembly_order(c):
-    pg = Page(c, "Step 6, continued", 10)
-    pg.kicker(H - 110, "Step 06, continued")
-    pg.title(H - 145, "Assembly order")
-    pg.rule(L, H - 160)
-    y = pg.steps(L, H - 176, R - L, [
-        "<b>Diffusers into the tower.</b> Through the open top, glue each behind its window with tiny dabs at the "
-        "edges only.",
-        "<b>Nameplate</b> into its recess on the front of the base.",
-        "<b>Knob</b> onto the front of the red band, centred.",
-        "<b>Thread the lights</b> in through the USB-C port at the back of the base and up through the hole in its "
-        "top. The battery box stays outside, behind the lamp.",
-        "<b>Stack and glue</b> the cream band onto the base, then the red band, then the tower, with knob and "
-        "nameplate aligned. Pull the lights up as you go.",
-        "<b>Coil the lights</b> loosely inside the tower so some sit near each window. Keep them all in the tower.",
-        "<b>Gallery</b> onto the tower top.",
-        "<b>Lantern.</b> Stand the empty glass on the gallery, lower the frame over it and glue the frame to the "
-        "gallery. The lantern stays empty for the brightness test.",
-        "<b>Finial</b> into the cap, then twist the cap on, clockwise to the stop. Do not glue it.",
-        "<b>Weight.</b> Tape a few coins low inside the base.",
-        "<b>Underneath.</b> Glue the base plate into its rebate, then apply the felt, trimmed to size."],
-        style=BODY_S, gap=4)
-    pg.heading(L, y - 24, "Underneath: felt on, and lifted")
-    pg.image("13_underside", L, y - 34, width=R - L,
-             caption="The finished underside. In the prototype the plate is glued and the felt simply stuck on.")
+ASSEMBLY = [
+    ("Diffusers into the tower", "With the tower still open at both ends, glue each diffuser behind its window: "
+     "arrow up, curved face against the window. Reach 1, 2 and 3 from the bottom and 4 and 5 from the top. Use tiny "
+     "dabs at the edges only.", ["06_01_diffusers"]),
+    ("Nameplate", "Into its recess on the front of the base.", ["06_02_nameplate"]),
+    ("Knob", "Onto the front of the red band, centred. On the prototype it is decorative and doesn't turn.",
+     ["06_03_knob"]),
+    ("Thread the lights", "In through the USB-C port at the back of the base and up through the hole in its top. "
+     "The battery box stays outside, behind the lamp.", ["06_04_fairy_lights"]),
+    ("Stack and glue", "The cream band onto the base, then the red band, then the tower, with knob and nameplate "
+     "aligned. Pull the lights up as you go, and let each joint set before the next.", ["06_05_stack"]),
+    ("Coil the lights", "Loosely inside the tower so some sit near each window. Hold each coil in place with a "
+     "small dab of blu-tack or tape near its window. Keep them all in the tower.", ["06_06_coil_lights"]),
+    ("Glow test", "Before the gallery goes on, switch the lights on and check all five windows glow evenly. If one "
+     "is dark or patchy, move its coil through the open top, fix it again, and test once more.",
+     ["06_07_glow_test"]),
+    ("Gallery", "Onto the tower top, centred.", ["06_08_gallery"]),
+    ("Lantern", "Stand the empty glass on the gallery, lower the frame over it and glue the frame to the gallery. "
+     "The lantern stays empty for the brightness test.", ["06_09_lantern"]),
+    ("Finial and cap", "Glue the finial into the cap. Then twist the cap on: lugs over the slots, drop it in (1) and "
+     "turn clockwise to the stop (2). Do not glue it.", ["06_10_finial", "06_10_twist_cap"]),
+    ("Weight", "Tape a few coins low inside the base, clear of the wire.", ["06_11_weight"]),
+    ("Underneath", "Glue the base plate into the rebate under the base, then stick on the felt, trimmed to size.",
+     ["06_12_underneath"]),
+]
+IMG_W, IMG_H = 200, 118
 
 
-GRID = [("06_p1_1_diffusers", "1  Diffusers in"), ("06_p1_2_nameplate", "2  Nameplate"), ("06_p1_3_knob", "3  Knob"),
-        ("06_p1_4_fairy_lights", "4  Thread the lights"), ("06_p1_5_band_cream", "5  Cream band"),
-        ("06_p1_6_band_red", "5  Red band"), ("06_p1_7_tower", "5  Tower"), ("06_p1_8_coil_lights", "6  Coil the lights"),
-        ("06_p2_1_gallery", "7  Gallery"),
-        ("06_p2_2_glass", "8  Lantern glass"), ("06_p2_3_frame", "8  Lantern frame"), ("06_p2_4_finial", "9  Finial"),
-        ("06_p2_5_twist_cap", "9  Cap on, clockwise"), ("06_p2_6_weight", "10  Weight"),
-        ("06_p2_7_base_plate", "11  Base plate"), ("06_p2_8_felt", "11  Felt"), ("07_cutaway", "Inside, finished"),
-        ("00_hero", "Finished")]
-
-
-def pictures(c, part, number):
-    pg = Page(c, "Step 6, in pictures", number)
-    pg.kicker(H - 110, "Step 06, in pictures" + (", continued" if part else ""))
-    pg.title(H - 145, "Assembly, step by step")
-    pg.rule(L, H - 160)
-    cells = GRID[part * 9:(part + 1) * 9]
-    cw = (R - L - 20) / 3
-    ch = (H - 190 - 70) / 3
-    for k, (nm, cap) in enumerate(cells):
-        col, row = k % 3, k // 3
-        x = L + col * (cw + 10)
-        y_top = H - 180 - row * ch
+def assembly_rows(pg, y, rows, first):
+    c = pg.c
+    for k, (title, text, imgs) in enumerate(rows):
+        n = first + k
+        share = [1.0] if len(imgs) == 1 else [0.38, 0.62]      # images on the left (the cap twist gets more room)...
+        low, xi = y, L
+        for nm, f in zip(imgs, share):
+            wi = (IMG_W - 6 * (len(imgs) - 1)) * f
+            low = min(low, pg.image(nm, xi, y, width=wi, height=IMG_H if len(imgs) == 1 else IMG_H + 20,
+                                    align="center"))
+            xi += wi + 6
+        x = L + IMG_W + 22                                    # ...the step on the right
+        c.setFont("Garamond", 20)
+        c.setFillColor(RED)
+        c.drawString(x, y - 17, f"{n:02d}")
+        c.setFont("Garamond-Medium", 11.5)
+        c.setFillColor(INK)
+        c.drawString(x + 32, y - 15, title)
+        ty = pg.para(x + 32, y - 22, R - x - 32, text, BODY_S)
+        y = min(low, ty) - 9
         c.setStrokeColor(HAIR)
         c.setLineWidth(0.4)
-        c.rect(x, y_top - ch + 22, cw, ch - 24, stroke=1, fill=0)
-        pg.image(nm, x + 4, y_top - 4, width=cw - 8, height=ch - 32, align="center")
-        c.setFont("Garamond-Italic", 9.5)
-        c.setFillColor(GREY)
-        c.drawString(x, y_top - ch + 10, cap)
+        c.line(L, y, R, y)
+        y -= 10
+    return y
+
+
+def assembly_pages(c, number):
+    """Step 6 in three pages of four, each step beside its picture."""
+    chunks = [ASSEMBLY[0:4], ASSEMBLY[4:8], ASSEMBLY[8:12]]
+    first = 1
+    for i, rows in enumerate(chunks):
+        pg = Page(c, "Step 6, assembly", number + i)
+        pg.kicker(H - 110, f"Step 06, assembly, {i + 1} of 3")
+        pg.title(H - 145, "Assembly order" if i == 0 else "Assembly, continued", size=26)
+        pg.rule(L, H - 158)
+        y = assembly_rows(pg, H - 176, rows, first)
+        first += len(rows)
+        if i == len(chunks) - 1:
+            pg.checkpoint(y - 4, "the glue has set overnight, all five windows glow evenly, the cap twists on "
+                          "and off, and the lamp stands level on its felt.")
+        c.showPage()
 
 
 def step7(c, number):
@@ -558,8 +646,10 @@ def step7(c, number):
     x2 = L + colw + 24
     y2 = pg.image("07_cutaway", x2, y - 20, width=R - x2,
                   caption="Inside: the lights coiled in the tower, the puck in the empty lantern, coins in the base.")
-    pg.image("10_puck_insert", L, yy - 14, width=150, caption="The puck rests on the ledge inside the gallery.")
-    pg.image("00_hero", L + 170, yy - 14, width=90, caption="The goal: a soft, warm glow.")
+    yi = pg.image("10_puck_insert", L, yy - 14, width=130, caption="The puck rests on the ledge inside the gallery.")
+    pg.image("00_hero", L + 150, yy - 14, width=80, caption="The goal: a soft, warm glow.")
+    pg.checkpoint(min(yi, y2) - 20, "the windows and lantern glow softly, the test record is filled in, and both "
+                  "photo sets are taken.")
 
 
 def troubleshooting(c, number):
@@ -569,21 +659,30 @@ def troubleshooting(c, number):
     y = pg.para(L, H - 160, 380, "Almost every problem is recoverable. Let paint harden fully before sanding or "
                 "recoating.", STAND)
     pg.rule(L, y - 12)
-    rows = [("Cap won't twist on, or sticks", "Sand the lugs and the underside of the slots lightly with P400, and "
-             "test before adding more paint."),
+    rows = [("Cap won't twist on, or sticks", "Sand the lugs (the small tabs under the cap) and the underside of the "
+             "slots lightly with P400, and test before adding more paint."),
             ("Paint run or sag", "Let it harden, sand flat with P1200 and spray a light coat over it."),
             ("Rough, bumpy gloss (orange peel)", "Sand gently with P1200 and polish, or add another light clear coat. "
              "Next time, lighter coats."),
             ("Dust specks", "Once hard, sand the speck with P1200 and respray lightly on a still day."),
+            ("Clear coat wrinkles or clouds", "Let it harden, sand back and respray the colour. Next time, test the "
+             "clear on a hidden surface first."),
             ("Paint clogged in the railing", "Clear the gaps with a cocktail stick while still wet. Once dry, don't "
              "force the posts."),
             ("Bright LED dots in a window", "Stick a small piece of baking paper behind that diffuser, or move the "
              "lights slightly away."),
-            ("A window stays dark", "Move a coil of lights closer to it through the cap opening."),
+            ("A window is dark or patchy", "At the glow test, before the gallery goes on: move a coil closer to that "
+             "window through the open top and fix it with blu-tack or tape. Later, nudge it with a long cocktail "
+             "stick through the cap opening and the hole in the gallery."),
+            ("A diffuser is upside down or swapped", "Before the glue sets, lift it out and check its number and "
+             "arrow. Once set, work it free from inside with a craft knife."),
             ("Lantern too dim, or glaring", "Try a brighter or dimmer puck, or move it lower in the glass. Note the "
              "change for the ODM."),
             ("Lamp wobbles", "Check the felt is flat and fully stuck, and add more coins low in the base.")]
-    pg.table(L, y - 30, ["Problem", "Fix"], rows, [175, R - L - 175], style=BODY_S)
+    y = pg.table(L, y - 30, ["Problem", "Fix"], rows, [175, R - L - 175], style=BODY_S)
+    pg.image("13_underside", L + 70, y - 14, width=R - L - 140,
+             caption="The finished underside: the felt stuck on (left), and peeled back to show the base plate glued "
+                     "into its rebate (right).")
 
 
 def record(c, number):
@@ -643,10 +742,12 @@ def main():
     c.setTitle("Faro, prototype build manual")
     c.setAuthor("Bathsheva London")
     c.setSubject("Rosso, looks-like prototype")
-    pages = [cover, before_you_begin, parts_and_supplies, step1, step2, step3, step4, step4b, step5_6,
-             assembly_order, lambda c: pictures(c, 0, 11), lambda c: pictures(c, 1, 12), lambda c: step7(c, 13),
-             lambda c: troubleshooting(c, 14), lambda c: record(c, 15)]
-    for fn in pages:
+    for fn in (cover, before_you_begin, parts_and_supplies, step1, step2, step3, step4, step4b, step5_6,
+               diffuser_map):
+        fn(c)
+        c.showPage()
+    assembly_pages(c, 11)                               # three pages; each ends its own
+    for fn in (lambda c: step7(c, 14), lambda c: troubleshooting(c, 15), lambda c: record(c, 16)):
         fn(c)
         c.showPage()
     c.save()
