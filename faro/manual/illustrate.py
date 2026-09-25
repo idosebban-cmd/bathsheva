@@ -71,24 +71,32 @@ LIFT = I["felt_proud"]
 
 
 def _split_nameplate():
-    """The nameplate as two solids: the brass plate and the raised letters."""
-    from build123d import Align, Cylinder
+    """The nameplate as three solids: the brass plate, the raised letters, and a
+    thin black wash on the plate face round the letters (render only)."""
+    from build123d import Align, Cylinder, FontStyle, Plane, Pos, RectangleRounded, Text, extrude
     rb = p.BASE_DIA / 2 * p.OVERALL_HEIGHT / p.REF_HEIGHT
     r_face = rb - p.NAMEPLATE_RECESS + p.NAMEPLATE_THICK
     ring = Cylinder(r_face + 5, 400, align=(Align.CENTER, Align.CENTER, Align.MIN)) - \
         Cylinder(r_face + 0.01, 400, align=(Align.CENTER, Align.CENTER, Align.MIN))
     np_ = M.parts["nameplate"]
-    return np_ - ring, np_ & ring
+    zn = p.NAMEPLATE_Z * p.OVERALL_HEIGHT / p.REF_HEIGHT + LIFT
+    prism = lambda face: Pos(0, 0, zn) * extrude(Plane.XZ * face, amount=400)
+    shell = Cylinder(r_face + 0.05, 400, align=(Align.CENTER, Align.CENTER, Align.MIN)) - \
+        Cylinder(r_face - 0.02, 400, align=(Align.CENTER, Align.CENTER, Align.MIN))
+    wash = shell & prism(RectangleRounded(p.NAMEPLATE_W - 1.8, p.NAMEPLATE_H - 1.8, 0.6))
+    wash = wash - prism(Text(p.NAMEPLATE_TEXT, p.NAMEPLATE_TEXT_H, font_style=FontStyle.BOLD))
+    return np_ - ring, np_ & ring, wash
 
 
-PLATE, LETTERS = _split_nameplate()
+PLATE, LETTERS, WASH = _split_nameplate()
 MESH = {}
 
 
 def mesh(name):
     """Triangulated part (cached). Extra names: nameplate_plate, nameplate_letters."""
     if name not in MESH:
-        shape = {"nameplate_plate": PLATE, "nameplate_letters": LETTERS}.get(name) or M.parts[name]
+        shape = {"nameplate_plate": PLATE, "nameplate_letters": LETTERS, "nameplate_wash": WASH}.get(name) \
+            or M.parts[name]
         MESH[name] = atelier._to_mesh(shape, 0.03)
     return MESH[name].copy()
 
@@ -159,30 +167,33 @@ def battery_box():
     return box, cells
 
 
+COIN_ANGLES = (0, 90, 270)      # between the bosses, and clear of the wire from the rear port
+
+
 def coins():
     """Three short stacks of coins taped to the ceiling of the base bay, clear of
     the screw bosses and the wire hole."""
-    z_ceiling = I["base_h"] + LIFT - p.BASE_TOP_WALL
+    z_floor = p.PLATE_THICK + LIFT                  # on the plate, low in the base
     out = None
-    for ang in (0, 120, 240):
-        a = math.radians(ang + 20)
-        x, y = 30 * math.sin(a), -30 * math.cos(a)
+    for ang in COIN_ANGLES:
+        a = math.radians(ang)
+        x, y = 36 * math.sin(a), -36 * math.cos(a)
         for k in range(4):
-            c = pv.Cylinder(center=(x, y, z_ceiling - 1.3 - 2.6 * k), direction=(0, 0, 1),
+            c = pv.Cylinder(center=(x, y, z_floor + 1.3 + 2.6 * k), direction=(0, 0, 1),
                             radius=11.7, height=2.4, resolution=64)
             out = c if out is None else out.merge(c)
     return out
 
 
 def tape():
-    z_ceiling = I["base_h"] + LIFT - p.BASE_TOP_WALL
+    z_top = p.PLATE_THICK + LIFT + 10.5
     out = None
-    for ang in (0, 120, 240):
-        a = math.radians(ang + 20)
-        x, y = 30 * math.sin(a), -30 * math.cos(a)
-        strip = pv.Box(bounds=(-4, 4, -16, 16, -0.2, 0.2)).triangulate()
-        strip.rotate_z(ang + 20, inplace=True)
-        strip.translate((x, y, z_ceiling - 11.8), inplace=True)
+    for ang in COIN_ANGLES:
+        a = math.radians(ang)
+        x, y = 36 * math.sin(a), -36 * math.cos(a)
+        strip = pv.Box(bounds=(-4, 4, -17, 17, -0.2, 0.2)).triangulate()
+        strip.rotate_z(ang, inplace=True)
+        strip.translate((x, y, z_top), inplace=True)
         out = strip if out is None else out.merge(strip)
     return out
 
@@ -231,9 +242,9 @@ class Scene:
                 st = (dict(color=hexrgb(p.GLOW_HEX), lighting=False) if lit else
                       dict(color=lin(FROST), opacity=0.55, pbr=True, metallic=0.0, roughness=0.3))
                 coat = False
-            elif name == "nameplate_letters":
-                st, coat = dict(color=lin(BLACK_PAINT), pbr=True, metallic=0.0, roughness=0.5), False
-            elif name == "nameplate_plate":
+            elif name == "nameplate_wash":
+                st, coat = dict(color=lin(BLACK_PAINT), pbr=True, metallic=0.0, roughness=0.6), False
+            elif name in ("nameplate_plate", "nameplate_letters"):
                 st, coat = studio._material("nameplate", p)
             elif name == "base":
                 st, coat = dict(color=lin(BURNT_UMBER), pbr=True, metallic=0.0, roughness=0.6), False
@@ -241,7 +252,7 @@ class Scene:
                 st, coat = dict(color=lin(BLACK_PAINT), pbr=True, metallic=0.0, roughness=0.55), False
             else:
                 st, coat = studio._material(name, p)
-            if name in studio.BRASS or name == "nameplate_plate":
+            if name in studio.BRASS or name in ("nameplate_plate", "nameplate_letters"):
                 st = dict(st, roughness=0.45)          # satin, so flat faces don't mirror a dark studio
         st = dict(st)
         if soft:                                         # parts already in place: softened
@@ -417,7 +428,7 @@ def finish(img, name):
 ORDER = ["base_plate", "base", "nameplate", "band_cream", "band_red", "knob", "tower",
          "window_diffuser_1", "window_diffuser_2", "window_diffuser_3", "window_diffuser_4",
          "window_diffuser_5", "gallery", "lantern_glass", "lantern_frame", "cap", "finial"]
-PAINTED_NAMES = {"nameplate": ("nameplate_plate", "nameplate_letters")}
+PAINTED_NAMES = {"nameplate": ("nameplate_plate", "nameplate_letters", "nameplate_wash")}
 
 
 def add_painted(sc, name, **kw):
@@ -482,7 +493,7 @@ def img_parts_as_arrived():
         text = names_.get(n, n)
         if n.startswith("window_diffuser"):
             text = f"diffuser {text}"
-        draw_label(d, text, (x, y + 16 * S), None, align="center", size=15)
+        draw_label(d, text, (x, y + 24 * S), None, align="center", size=25)
     return finish(img, "01_printed_parts")
 
 
@@ -520,11 +531,13 @@ def img_exploded(stage):
     offs = exploded_offsets(with_felt=painted)
     sc = Scene((1100, 1500))
     anchors = {}
+    if not painted:                                  # step 1: glass inside its frame, knob/plate on their bands
+        offs["lantern_glass"] = offs["lantern_frame"]
     for n, dz in offs.items():
         off = [0, 0, dz]
-        if n == "nameplate":
+        if painted and n == "nameplate":
             off = [0, -18, dz]
-        if n == "knob":
+        if painted and n == "knob":
             off = [0, -22, dz]
         if painted:
             add_painted(sc, n, offset=off) if n != "felt_pad" else sc.part(n, "paint", offset=off)
@@ -555,25 +568,29 @@ def img_exploded(stage):
     subs = {"base": "wood effect, burnt umber", "base_plate": "black", "band_cream": "cream gloss",
             "band_red": "red gloss", "tower": "cream gloss", "gallery": "gold", "lantern_glass": "translucent",
             "lantern_frame": "gold", "cap": "red gloss", "finial": "gold", "felt_pad": "black self-adhesive felt",
-            "nameplate": "gold, black in letters", "knob": "gold, front of the red band"}
+            "nameplate": "gold, black round the letters", "knob": "gold, front of the red band"}
+    ref = {"finial": "Finial", "cap": "Cap (twist-lock)", "lantern_frame": "Lantern frame over glass",
+           "gallery": "Gallery", "tower": "Tower (5 windows)", "band_red": "Red band + knob",
+           "band_cream": "Cream band", "base": "Base + nameplate", "base_plate": "Base plate"}
     for k in keys:
-        if k in ("nameplate", "knob"):
+        if k in ("nameplate", "knob") or (not painted and k == "lantern_glass"):
             continue
         x, y = pts[k]
         lx = 250 * S
-        draw_label(d, k if k != "felt_pad" else "felt", (lx, y), (x, y), align="right", size=17,
+        text = (k if k != "felt_pad" else "felt") if painted else ref[k]
+        draw_label(d, text, (lx, y), (x, y), align="right", size=17 if painted else 25,
                    sub=subs[k] if painted else None)
         if painted:
             badge(d, (lx - 175 * S, y + 4 * S), number[k], size=13)
     # nameplate and knob: labels on the right
-    for k in ("nameplate", "knob"):
+    for k in (("nameplate", "knob") if painted else ()):
         x, y = pts[k]
         draw_label(d, k, (W - 260 * S, y + 30 * S), (x + 30 * S, y), size=17, sub=subs[k] if painted else None)
         if painted and k == "nameplate":
             badge(d, (W - 285 * S, y + 34 * S), 12, size=13)
     x, y = pts["diffusers"]
-    draw_label(d, "window diffusers 1-5", (W - 260 * S, y - 120 * S), (x + 60 * S, y - 40 * S), size=17,
-               sub="translucent" if painted else None)
+    draw_label(d, "window diffusers 1-5" if painted else "Diffusers 1 to 5", (W - 290 * S, y - 120 * S),
+               (x + 60 * S, y - 40 * S), size=17 if painted else 25, sub="translucent" if painted else None)
     return finish(img, "02_exploded_painted" if painted else "02_exploded_resin")
 
 
@@ -610,7 +627,7 @@ def img_priming():
     img = sc.image()
     d = ImageDraw.Draw(img)
     for (n, _), (px, py) in zip(tops, pts):
-        draw_label(d, n, (px, py - 34 * S), (px, py - 6 * S), align="center", size=15)
+        draw_label(d, n, (px, py - 44 * S), (px, py - 6 * S), align="center", size=27)
     return finish(img, "03_priming")
 
 
@@ -620,7 +637,7 @@ def img_priming():
 GROUPS = [
     ("Red gloss", ["band_red", "cap"]),
     ("Cream gloss", ["band_cream", "tower"]),
-    ("Metallic gold", ["gallery", "lantern_frame", "knob", "finial", "nameplate_plate"]),
+    ("Metallic gold", ["gallery", "lantern_frame", "knob", "finial", "nameplate_gold"]),
     ("Burnt umber acrylic", ["base"]),
     ("Black acrylic", ["base_plate", "nameplate"]),
 ]
@@ -629,7 +646,7 @@ GROUPS = [
 def img_paint_groups():
     panels = []
     for title, names in GROUPS:
-        sc = Scene((560, 470))
+        sc = Scene((400, 430))
         rows = [names[:2], names[2:]] if len(names) > 2 else [names]
         placed = []
         y0 = 0.0
@@ -637,7 +654,8 @@ def img_paint_groups():
             x = 0.0
             row_h = 0.0
             for n in row:
-                subs = ("nameplate_plate", "nameplate_letters") if n == "nameplate" else (n,)
+                subs = {"nameplate": ("nameplate_plate", "nameplate_letters", "nameplate_wash"),
+                        "nameplate_gold": ("nameplate_plate", "nameplate_letters")}.get(n, (n,))
                 ms = [mesh(q) for q in subs]
                 lo = np.min([bbox(q)[0] for q in ms], axis=0)
                 hi = np.max([bbox(q)[1] for q in ms], axis=0)
@@ -653,22 +671,23 @@ def img_paint_groups():
         lab = sc.project([q for _, q in placed])
         img = sc.image()
         d = ImageDraw.Draw(img)
-        nice = {"nameplate_plate": "nameplate", "nameplate": "nameplate letters"}
+        nice = {"nameplate_gold": "nameplate", "nameplate": "round letters", "lantern_frame": "frame",
+                "band_cream": "band", "band_red": "band", "base_plate": "plate"}
         for (n, _), (lx, ly) in zip(placed, lab):
-            draw_label(d, nice.get(n, n), (lx, ly + 20 * S), None, align="center", size=14)
+            draw_label(d, nice.get(n, n), (lx, ly + 30 * S), None, align="center", size=27)
         panels.append((title, img))
     gap = 16 * S
     w = sum(im.size[0] for _, im in panels) + gap * (len(panels) - 1)
-    h = panels[0][1].size[1] + 80 * S
+    h = panels[0][1].size[1] + 110 * S
     sheet = Image.new("RGB", (w, h), tuple(int(c * 255) for c in hexrgb(PAPER)))
     d = ImageDraw.Draw(sheet)
     x = 0
     for title, im in panels:
-        sheet.paste(im, (x, 80 * S))
-        f = font(22, "display")
+        sheet.paste(im, (x, 110 * S))
+        f = font(40, "display")
         tw = d.textlength(title, font=f)
-        d.text((x + (im.size[0] - tw) / 2, 18 * S), title, font=f, fill=INK)
-        d.line([(x + 50 * S, 64 * S), (x + im.size[0] - 50 * S, 64 * S)], fill=GOLD_RULE, width=int(1 * S))
+        d.text((x + (im.size[0] - tw) / 2, 16 * S), title, font=f, fill=INK)
+        d.line([(x + 40 * S, 92 * S), (x + im.size[0] - 40 * S, 92 * S)], fill=GOLD_RULE, width=int(2 * S))
         x += im.size[0] + gap
     return finish(sheet, "04_paint_groups")
 
@@ -703,11 +722,8 @@ def img_diffuser_map():
         d = ImageDraw.Draw(img)
         for (n, _, facing), (x, y) in zip(wins, pts):
             if facing > 0.15:
-                badge(d, (x + 26 * S, y - 26 * S), n, size=14, fill=tuple(int(c * 255) for c in hexrgb(ACCENT)),
+                badge(d, (x + 44 * S, y - 40 * S), n, size=30, fill=tuple(int(c * 255) for c in hexrgb(ACCENT)),
                       ring=(255, 255, 255), ink=(255, 255, 255))
-        f = font(15, "italic")
-        tw = d.textlength(title, font=f)
-        d.text(((img.size[0] - tw) / 2, img.size[1] - 40 * S), title, font=f, fill=(110, 95, 82))
         panels.append(img)
     w = sum(i.size[0] for i in panels)
     sheet = Image.new("RGB", (w, panels[0].size[1]), tuple(int(c * 255) for c in hexrgb(PAPER)))
@@ -881,19 +897,15 @@ def img_cutaway(name="07_cutaway", parts=None, focus="all"):
         sc.fit((1.0, -0.35, 0.22), margin=1.05, bounds=[(-50, 50, -50, 50, 20, I["z_tower_top"] + 5)])
         call = []
     img = sc.image()
-    if focus == "all":
-        d = ImageDraw.Draw(img)
-        W = img.size[0]
-        draw_label(d, "LED puck", (W - 250 * S, call[0][1] - 40 * S), call[0], sub="in the empty lantern glass")
-        draw_label(d, "fairy lights", (W - 250 * S, call[1][1]), call[1], sub="coiled loosely in the tower")
-        draw_label(d, "coins", (W - 250 * S, call[2][1] + 40 * S), call[2], sub="taped inside the base")
+    if False:
+        pass
     return finish(img, name)
 
 
 # =============================================================================
 # 8. the cap twist: lugs, slots and a clockwise arrow
 # =============================================================================
-def img_cap_twist(name="08_cap_twist", assembled=False):
+def img_cap_twist(name="08_cap_twist", assembled=False, stage="paint"):
     """Three panels: the cap from below (lugs), the lantern top from above
     (slots), and the cap on with a clockwise arrow."""
     z_l1 = I["z_lantern"][1]
@@ -902,8 +914,8 @@ def img_cap_twist(name="08_cap_twist", assembled=False):
     panels = []
     # 1. the cap from below
     sc = Scene((620, 620))
-    sc.part("cap", "paint", highlight=False)
-    sc.part("finial", "paint")
+    sc.part("cap", stage, highlight=False)
+    sc.part("finial", stage)
     sc.camera((0, 0, z_l1 + 8), (0.45, -0.65, -1.0), dist=3000, view_angle=1.75, up=(0, 0, 1))
     lugs = [(r_lip * math.sin(math.radians(k * 90 + p.LOCK_TURN_DEG)) * 1.02,
              -r_lip * math.cos(math.radians(k * 90 + p.LOCK_TURN_DEG)) * 1.02, z_l1 - p.LIP_H - 3.0)
@@ -912,13 +924,13 @@ def img_cap_twist(name="08_cap_twist", assembled=False):
     img = sc.image()
     d = ImageDraw.Draw(img)
     for q in pts:
-        r = 16 * S
-        d.ellipse([q[0] - r, q[1] - r, q[0] + r, q[1] + r], outline=GOLD_RULE, width=int(1.6 * S))
+        r = 24 * S
+        d.ellipse([q[0] - r, q[1] - r, q[0] + r, q[1] + r], outline=GOLD_RULE, width=int(4 * S))
     panels.append(("the cap from below: four lugs", img))
     # 2. the lantern top from above
     sc = Scene((620, 620))
     for n in low:
-        add_painted(sc, n, soft=assembled)
+        add_painted(sc, n, soft=assembled) if stage == "paint" else sc.part(n, stage)
     sc.camera((0, 0, z_l1 - 6), (0.3, -0.45, 1.0), dist=3000, view_angle=1.75)
     slots = [(r_lip * 1.04 * math.sin(math.radians(k * 90)), -r_lip * 1.04 * math.cos(math.radians(k * 90)), z_l1)
              for k in range(4)]
@@ -926,15 +938,15 @@ def img_cap_twist(name="08_cap_twist", assembled=False):
     img = sc.image()
     d = ImageDraw.Draw(img)
     for q in pts:
-        r = 16 * S
-        d.ellipse([q[0] - r, q[1] - r, q[0] + r, q[1] + r], outline=GOLD_RULE, width=int(1.6 * S))
+        r = 24 * S
+        d.ellipse([q[0] - r, q[1] - r, q[0] + r, q[1] + r], outline=GOLD_RULE, width=int(4 * S))
     panels.append(("the lantern top: four slots in the lip", img))
     # 3. cap on, turn clockwise (seen from above) to the stop
     sc = Scene((620, 620))
     for n in low:
-        add_painted(sc, n, soft=assembled, lit=True)
-    sc.part("cap", "paint", highlight=True)
-    sc.part("finial", "paint")
+        add_painted(sc, n, soft=assembled, lit=True) if stage == "paint" else sc.part(n, stage)
+    sc.part("cap", stage, highlight=True)
+    sc.part("finial", stage)
     sc.camera((0, 0, z_l1 + 4), (0.55, -1.0, 0.7), dist=3000, view_angle=1.9)
     r_arc = p.CAP_RIM_DIA / 2 + 14
     zarc = z_l1 + 3
@@ -946,15 +958,12 @@ def img_cap_twist(name="08_cap_twist", assembled=False):
     polyline_arrow(d, pts)
     panels.append(("drop the lugs in, turn clockwise to the stop", img))
     w = sum(im.size[0] for _, im in panels)
-    h = panels[0][1].size[1] + 60 * S
+    h = panels[0][1].size[1]
     sheet = Image.new("RGB", (w, h), tuple(int(c * 255) for c in hexrgb(PAPER)))
     d = ImageDraw.Draw(sheet)
     x = 0
     for cap, im in panels:
         sheet.paste(im, (x, 0))
-        f = font(15, "italic")
-        tw = d.textlength(cap, font=f)
-        d.text((x + (im.size[0] - tw) / 2, im.size[1] + 8 * S), cap, font=f, fill=(110, 95, 82))
         x += im.size[0]
     return finish(sheet, name)
 
@@ -1000,7 +1009,77 @@ def img_puck_insert():
     return finish(img, "10_puck_insert")
 
 
+def img_drystack():
+    """Step 1: dry-stacked in white resin, knob and nameplate aligned on the front."""
+    sc = Scene((1100, 700))
+    for n in ("base", "nameplate", "band_cream", "band_red", "knob", "tower"):
+        sc.part(n, "resin")
+    sc.shadow(0, 0, I["base_dia"] / 2, 0.35)
+    sc.fit((0.25, -1.0, 0.28), margin=1.04, bounds=[(-58, 58, -58, 58, 0, 105)])
+    return finish(sc.image(), "11_drystack_resin")
+
+
+def img_nameplate():
+    """Step 4: the black wash brushed over the letters, then wiped off the raised
+    surfaces so it stays round the letters and FARO reads in gold."""
+    out = []
+    for nm, parts in (("12_nameplate_brushed", ("nameplate_plate", "nameplate_letters", "nameplate_brush")),
+                      ("12_nameplate_wiped", ("nameplate_plate", "nameplate_letters", "nameplate_wash"))):
+        sc = Scene((900, 420))
+        for sub in parts:
+            if sub == "nameplate_brush":                  # thinned black over the whole face, letters included
+                for q in ("nameplate_letters", "nameplate_wash"):
+                    m = mesh(q)
+                    m.translate((0, -0.03, 0), inplace=True)
+                    sc.add(m, dict(color=lin("#26211E"), pbr=True, metallic=0.0, roughness=0.45, opacity=0.88))
+            else:
+                sc.part(sub, "paint")
+        lo, hi = bbox(mesh("nameplate_plate"))
+        sc.fit((0.18, -1.0, 0.22), margin=1.12, bounds=[(lo[0], hi[0], lo[1], hi[1], lo[2], hi[2])])
+        out.append(finish(sc.image(), nm))
+    return out
+
+
+def img_underside():
+    """The finished underside: felt stuck on; and with the felt lifted, showing
+    the plate glued into its rebate (no screws or magnets in the prototype)."""
+    panels = []
+    for felt_on in (True, False):
+        sc = Scene((700, 620))
+        for n in ("base", "nameplate", "band_cream", "band_red", "knob", "base_plate"):
+            add_painted(sc, n)
+        if felt_on:
+            sc.part("felt_pad", "paint")
+        else:
+            m = mesh("felt_pad")
+            m.rotate_x(-38, point=(0, bbox(m)[1][1], bbox(m)[0][2]), inplace=True)   # peeled back from one edge
+            m.translate((0, 8, -14), inplace=True)
+            st, coat = sc.style("felt_pad", "paint")
+            sc.add(m, st, coat)
+        sc.fit((0.35, -0.55, -1.0), up=(0, 1, 0), margin=1.03, bounds=[(-60, 60, -60, 90, -40, 12)])
+        panels.append(sc.image())
+    w = sum(i.size[0] for i in panels) + 30 * S
+    sheet = Image.new("RGB", (w, panels[0].size[1]), tuple(int(c * 255) for c in hexrgb(PAPER)))
+    sheet.paste(panels[0], (0, 0))
+    sheet.paste(panels[1], (panels[0].size[0] + 30 * S, 0))
+    return finish(sheet, "13_underside")
+
+
+def img_rear():
+    sc = Scene((600, 800))
+    for n in ORDER:
+        add_painted(sc, n, lit=True)
+    sc.shadow(0, 0, I["base_dia"] / 2, 0.45)
+    sc.camera((0, 0, I["H"] * 0.5), (0, 1, 0.08), dist=3000, view_angle=6.6)
+    return finish(sc.image(), "09_view_rear")
+
+
 JOBS = {
+    "drystack": img_drystack,
+    "nameplate": img_nameplate,
+    "underside": img_underside,
+    "rear": img_rear,
+    "cap_resin": lambda: img_cap_twist("08_cap_twist_resin", stage="resin"),
     "hero": img_hero,
     "printed_parts": img_parts_as_arrived,
     "exploded_resin": lambda: img_exploded("resin"),

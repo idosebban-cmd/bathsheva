@@ -94,6 +94,11 @@ DIFFUSER_MARGIN = 2.0        # how far it overlaps the window edge
 GALLERY_DIA = 90.0
 GALLERY_THICK = 9.7          # platform ring height
 GALLERY_ROUND = 1.0
+# A thin ledge round the top of the gallery bore, so an LED puck (up to
+# LED_PUCK_MAX_DIA) rests at lantern level instead of dropping into the tower.
+LED_PUCK_MAX_DIA = 45.0
+GALLERY_LEDGE_BORE = 34.0    # the hole left in the middle (a USB LED module's cable still passes)
+GALLERY_LEDGE_THICK = 1.6    # >= 1.2 mm (SLA resin)
 RAIL_DIA = 88.0              # railing circle (post centres)
 RAIL_H = 14.0
 RAIL_POSTS = 16

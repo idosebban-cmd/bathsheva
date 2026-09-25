@@ -34,7 +34,7 @@ def _material(name, p):
     if name in CREAM:
         return dict(color=lin(p.CREAM_HEX), pbr=True, metallic=0.0, roughness=p.LACQUER_ROUGHNESS), True
     if name == "felt_pad":
-        return dict(color=lin("#2F2D2B"), pbr=True, metallic=0.0, roughness=1.0), False
+        return dict(color=lin("#4A4642"), pbr=True, metallic=0.0, roughness=1.0), False
     if name == "base_plate":
         return dict(color=lin("#4A4541"), pbr=True, metallic=0.0, roughness=0.6), False
     if name == "base":

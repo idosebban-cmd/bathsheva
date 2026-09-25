@@ -257,6 +257,12 @@ def build(p) -> Lamp:
     gal = Pos(0, 0, z_g0) * Cylinder(rg, z_g1 - z_g0, align=MIN)
     gal = _safe_fillet(gal, gal.edges().filter_by(GeomType.CIRCLE), p.GALLERY_ROUND)
     gal = gal - Pos(0, 0, z_g0 - 1) * Cylinder(rl - 4.0, z_g1 - z_g0 + 2, align=MIN)
+    # ledge flush with the gallery top, for the LED puck to rest on
+    gal = gal + Pos(0, 0, z_g1 - p.GALLERY_LEDGE_THICK) * (
+        Cylinder(rl - 4.0 + 0.5, p.GALLERY_LEDGE_THICK, align=MIN)
+        - Cylinder(p.GALLERY_LEDGE_BORE / 2, p.GALLERY_LEDGE_THICK + 1, align=MIN))
+    I.update(gallery_bore=2 * (rl - 4.0), gallery_ledge_bore=p.GALLERY_LEDGE_BORE,
+             puck_rest_width=(p.LED_PUCK_MAX_DIA - p.GALLERY_LEDGE_BORE) / 2)
     rr_ = d_(p.RAIL_DIA) / 2 - p.RAIL_POST_DIA / 2
     rh = z_(p.RAIL_H)
     for k in range(p.RAIL_POSTS):
