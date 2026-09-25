@@ -36,13 +36,18 @@ COLOURS = {"base": p.WALNUT_HEX, "band_cream": p.CREAM_HEX, "tower": p.CREAM_HEX
 FLIP = lambda s: Rot(180, 0, 0) * s
 FACE_UP = lambda s: Rot(-90, 0, 0) * s         # front (-Y) face up
 FACE_DOWN = lambda s: Rot(90, 0, 0) * s        # front (-Y) face on the bed
+SCREWED = p.BASE_FIXING == "screwed"
 PRINT = {
     "base": (1, "PLA+ (wood-fill PLA, or paint walnut)", "upright, open underside on the bed",
-             "Yes: tree supports inside the battery bay only (hidden), under the bay ceiling and bosses",
-             f"Production: CNC-turned walnut with {p.SCREW_SIZE} threaded inserts in the bosses. For the prototype, "
-             f"melt {p.SCREW_SIZE} heat-set inserts into the bosses", None),
+             "Yes: tree supports inside the hollow base only (hidden), under its ceiling"
+             + (" and bosses" if SCREWED else ""),
+             (f"Production: CNC-turned walnut with {p.SCREW_SIZE} threaded inserts in the bosses. Melt "
+              f"{p.SCREW_SIZE} heat-set inserts into the bosses" if SCREWED else
+              "Sponged burnt umber for the walnut effect. The fairy lights come in through the rear port"), None),
     "base_plate": (1, "PLA+ or PETG, black", "felt recess up (flat top face on the bed)", "No",
-                   "Glue the 4 magnets into their pockets, flush with the recess floor", FLIP),
+                   ("Glue the 4 magnets into their pockets, flush with the recess floor" if SCREWED else
+                    "A plain plate: glue it into the rebate under the base; the felt sticks into its shallow "
+                    "recess"), FLIP),
     "nameplate": (1, "Resin, or PLA+ painted brass", "outer face (lettering) up", "Yes: supports under the curved back (the plate arches about 3 mm)",
                   "Glue into the recess on the base front. Production: etched or engraved brass", FACE_UP),
     "band_cream": (1, "PLA+ or PETG", "upright", "No", "Paint cream lacquer; glue onto the base top", None),
@@ -68,18 +73,29 @@ PRINT = {
                "Glue into the cap's collar", None),
 }
 NOT_PRINTED = [
-    ("felt_pad", "Cut from 1.5 mm felt laminated to a 0.4 mm steel disc (self-adhesive felt on steel "
-     "shim works). The STL is only a size reference"),
+    ("felt_pad", ("Cut from 1.5 mm felt laminated to a 0.4 mm steel disc (self-adhesive felt on steel "
+                  "shim works). The STL is only a size reference") if SCREWED else
+     "Cut from black self-adhesive felt, trimmed to size, and stuck on. The STL is only a size reference"),
 ]
-RENDER_ONLY = [
-    ("Battery", f"{p.BATTERY_SIZE[0]:g} x {p.BATTERY_SIZE[1]:g} x {p.BATTERY_SIZE[2]:g} mm 2 x 18650 pack "
-     "(placeholder)"),
-    ("LED module", f"Ø{p.LED_DIA:g} x {p.LED_H:g} mm (placeholder)"),
-    ("USB-C receptacle", "board-mounted, behind the rear port (placeholder)"),
-    ("Screws", f"{p.SCREWS} x {p.SCREW_SIZE} x 8 countersunk, hex socket"),
-    ("Threaded inserts", f"{p.SCREWS} x {p.SCREW_SIZE} heat-set inserts for the base bosses"),
-    ("Magnets", f"{p.MAGNETS} x Ø{p.MAGNET_DIA:g} x {p.MAGNET_THICK:g} mm N52 discs"),
-]
+if SCREWED:
+    RENDER_ONLY = [
+        ("Battery", f"{p.BATTERY_SIZE[0]:g} x {p.BATTERY_SIZE[1]:g} x {p.BATTERY_SIZE[2]:g} mm 2 x 18650 pack "
+         "(placeholder)"),
+        ("LED module", f"Ø{p.LED_DIA:g} x {p.LED_H:g} mm (placeholder)"),
+        ("USB-C receptacle", "board-mounted, behind the rear port (placeholder)"),
+        ("Screws", f"{p.SCREWS} x {p.SCREW_SIZE} x 8 countersunk, hex socket"),
+        ("Threaded inserts", f"{p.SCREWS} x {p.SCREW_SIZE} heat-set inserts for the base bosses"),
+        ("Magnets", f"{p.MAGNETS} x Ø{p.MAGNET_DIA:g} x {p.MAGNET_THICK:g} mm N52 discs"),
+    ]
+else:   # the looks-like prototype, as in the build manual
+    RENDER_ONLY = [
+        ("Fairy lights", "Warm white copper fairy lights with a 3 x AA battery box (the box stays outside, "
+         "behind the lamp)"),
+        ("LED puck", f"Rechargeable warm white LED puck, under {p.LED_PUCK_MAX_DIA:g} mm across, for the "
+         "brightness test (it rests on the ledge inside the gallery)"),
+        ("Coins", "A few coins, taped low inside the base, for weight"),
+        ("Epoxy", "Araldite Rapid, with cocktail sticks"),
+    ]
 
 
 def _print_pose(name, shape):
@@ -157,20 +173,47 @@ def final(m):
     L += ["", "## Render-only / bought-in (not in the print set)", "", "| Item | What to use |", "|---|---|"]
     for n, what in RENDER_ONLY:
         L.append(f"| {n} | {what} |")
-    L += ["", "## Assembly order", "",
-          f"1. Base: melt the {p.SCREWS} {p.SCREW_SIZE} inserts into the bosses; glue on the nameplate.",
-          "2. Glue the cream band onto the base top, then the red band, then the tower, all centred "
-          "(they stack on flat joints). Glue the knob, and each window diffuser behind its own window "
-          "(1 = lowest, on the front, up to 5 = highest, back on the front).",
-          "3. Glue the gallery onto the tower top. Stand the lantern glass on the gallery platform, then "
-          "lower the frame over it and glue the frame to the gallery.",
-          "4. Glue the finial into the cap. Twist the cap on: lugs down through the 4 slots, turn "
-          f"{abs(p.LOCK_TURN_DEG):g} deg {'clockwise' if p.LOCK_TURN_DEG < 0 else 'anticlockwise'} (seen from above) to the stop.",
-          "5. Underneath: battery in the bay, plate on with the 4 screws, felt pad on (the magnets hold it).",
-          "",
+    turn = (f"{abs(p.LOCK_TURN_DEG):g} deg {'clockwise' if p.LOCK_TURN_DEG < 0 else 'anticlockwise'} "
+            "(seen from above) to the stop")
+    if SCREWED:
+        order = [
+            f"1. Base: melt the {p.SCREWS} {p.SCREW_SIZE} inserts into the bosses; glue on the nameplate.",
+            "2. Glue the cream band onto the base top, then the red band, then the tower, all centred "
+            "(they stack on flat joints). Glue the knob, and each window diffuser behind its own window "
+            "(1 = lowest, on the front, up to 5 = highest, back on the front).",
+            "3. Glue the gallery onto the tower top. Stand the lantern glass on the gallery platform, then "
+            "lower the frame over it and glue the frame to the gallery.",
+            f"4. Glue the finial into the cap. Twist the cap on: lugs down through the 4 slots, turn {turn}.",
+            "5. Underneath: battery in the bay, plate on with the 4 screws, felt pad on (the magnets hold it)."]
+    else:   # as in the build manual (step 6)
+        order = [
+            "1. Diffusers into the tower. Through the open top, glue each behind its window with tiny dabs at the "
+            "edges only (1 = lowest, on the front, up to 5 = highest, back on the front).",
+            "2. Nameplate into its recess on the front of the base.",
+            "3. Knob onto the front of the red band, centred.",
+            "4. Thread the lights in through the USB-C port at the back of the base and up through the hole in its "
+            "top. The battery box stays outside, behind the lamp.",
+            "5. Stack and glue the cream band onto the base, then the red band, then the tower, with knob and "
+            "nameplate aligned. Pull the lights up as you go.",
+            "6. Coil the lights loosely inside the tower so some sit near each window. Keep them all in the tower.",
+            "7. Gallery onto the tower top.",
+            "8. Lantern. Stand the empty glass on the gallery, lower the frame over it and glue the frame to the "
+            "gallery. The lantern stays empty for the brightness test.",
+            f"9. Finial into the cap, then twist the cap on: lugs down through the 4 slots, turn {turn}. "
+            "Do not glue it.",
+            "10. Weight. Tape a few coins low inside the base.",
+            "11. Underneath. Glue the base plate into its rebate, then apply the felt, trimmed to size. "
+            "No inserts, screws or magnets in the prototype."]
+    L += ["", "## Assembly order", "", "See the build manual (faro/output/manual/Faro_Build_Manual.pdf) for "
+          "painting and finishing." if not SCREWED else "", *order, "",
           "## Fit checks (from the model)", "",
-          f"* Battery bay {I['battery_bay'][0]:.0f} mm across x {I['battery_bay'][1]:.1f} mm tall: the "
-          f"battery has {I['battery_clear']['bay_height_margin']:.1f} mm headroom and clears the screw bosses.",
+          (f"* Battery bay {I['battery_bay'][0]:.0f} mm across x {I['battery_bay'][1]:.1f} mm tall: the "
+           f"battery has {I['battery_clear']['bay_height_margin']:.1f} mm headroom and clears the screw bosses."
+           if SCREWED else
+           f"* Hollow base {I['battery_bay'][0]:.0f} mm across x {I['battery_bay'][1]:.1f} mm tall: room for "
+           "the coins, and for the fairy-light wire from the rear port to the hole in the top."),
+          f"* LED puck: a ledge inside the gallery leaves a Ø{I['gallery_ledge_bore']:.0f} mm hole, so a puck up "
+          f"to {p.LED_PUCK_MAX_DIA:g} mm rests at lantern height on {I['puck_rest_width']:.1f} mm of ledge.",
           f"* Walnut under the rounded top edge: at least {p.BASE_TOP_ROUND - __import__('math').hypot(p.BASE_TOP_ROUND - p.BASE_WALL, p.BASE_TOP_ROUND - p.BASE_TOP_WALL):.1f} mm.",
           f"* Cap bayonet: no clash when locked ({bay['locked_clash']:.2f} mm3), lugs pass the slots at entry "
           f"({bay['entry_clash']:.2f} mm3), {bay['lug_overlap_under_lip']:.1f} mm of lug under the lip. "
@@ -178,7 +221,8 @@ def final(m):
           "module lifts out.",
           f"* Fit clearance {p.FIT_CLEAR:g} mm per side on the bayonet and {p.PLATE_CLEAR:g} mm round the "
           "bottom plate: PLA may need light sanding.",
-          "* The felt stands 0.5 mm proud of the walnut, so the lamp sits on the felt, not the wood.",
+          f"* The felt stands {I['felt_proud']:.1f} mm proud of the walnut, so the lamp sits on the felt, "
+          "not the wood.",
           "",
           "## General", "",
           f"* Widest part: {widest[0]}.stl at {widest[5].X:.0f} mm; tallest: {tallest[0]}.stl at "

@@ -25,10 +25,14 @@ BASE_BOTTOM_ROUND = 1.5
 BASE_WALL = 4.0              # hollow base: side wall
 BASE_TOP_WALL = 3.5          # top of the battery bay (keeps >= 2.8 mm of walnut under the rounded edge)
 BASE_WIRE_HOLE = 20.0        # hole through the base top for the wiring up the tower
-# User-replaceable battery: the walnut base is an open ring; a bottom plate sits
-# flush in a rebate and screws into 4 bosses inside the base. A felt pad covers
-# the screws: felt laminated to a thin steel disc, held by 4 magnets in the plate,
-# so it lifts off and goes back as often as needed.
+# The walnut base is an open ring with a bottom plate flush in a rebate.
+# BASE_FIXING:
+#   "glued"   (looks-like prototype, default): a plain plate glued into the rebate,
+#             with self-adhesive felt stuck on. No bosses, inserts, screws or magnets.
+#   "screwed" (production, user-replaceable battery): the plate screws into 4 bosses
+#             inside the base (threaded inserts); a felt pad laminated to a thin steel
+#             disc covers the screws and is held by 4 magnets in the plate.
+BASE_FIXING = "glued"
 PLATE_THICK = 3.0
 PLATE_REBATE = 2.0           # walnut skin left outside the plate's rebate
 PLATE_CLEAR = 0.2
@@ -44,7 +48,7 @@ BOSS_PILOT_DIA = 3.5         # for an M2.5 heat-set/threaded insert
 MAGNETS = 4                  # between the screws
 MAGNET_DIA = 6.0
 MAGNET_THICK = 1.0           # 1 mm discs keep >= 1.2 mm of plate over each pocket
-FELT_THICK = 1.5             # felt + 0.4 mm steel backing
+FELT_THICK = 1.5             # self-adhesive felt ("screwed": felt + 0.4 mm steel backing)
 FELT_RECESS = 0.7            # recess in the plate's underside; the felt stands proud by the rest
 FELT_INSET = 3.0             # felt edge inside the plate edge
 NAMEPLATE_W = 37.0

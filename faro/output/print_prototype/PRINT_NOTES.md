@@ -6,8 +6,8 @@ Faro lighthouse lamp, Rosso. 300.8 mm tall on its felt pad. The STLs here are tu
 
 | File | Qty | Material | Orientation | Supports? | Size X x Y x Z | Notes |
 |---|---|---|---|---|---|---|
-| base_plate.stl | 1 | PLA+ or PETG, black | felt recess up (flat top face on the bed) | No | 109 x 109 x 3 | Glue the 4 magnets into their pockets, flush with the recess floor |
-| base.stl | 1 | PLA+ (wood-fill PLA, or paint walnut) | upright, open underside on the bed | Yes: tree supports inside the battery bay only (hidden), under the bay ceiling and bosses | 113 x 113 x 27 | Production: CNC-turned walnut with M2.5 threaded inserts in the bosses. For the prototype, melt M2.5 heat-set inserts into the bosses |
+| base_plate.stl | 1 | PLA+ or PETG, black | felt recess up (flat top face on the bed) | No | 109 x 109 x 3 | A plain plate: glue it into the rebate under the base; the felt sticks into its shallow recess |
+| base.stl | 1 | PLA+ (wood-fill PLA, or paint walnut) | upright, open underside on the bed | Yes: tree supports inside the hollow base only (hidden), under its ceiling | 113 x 113 x 27 | Sponged burnt umber for the walnut effect. The fairy lights come in through the rear port |
 | nameplate.stl | 1 | Resin, or PLA+ painted brass | outer face (lettering) up | Yes: supports under the curved back (the plate arches about 3 mm) | 37 x 11 x 5 | Glue into the recess on the base front. Production: etched or engraved brass |
 | band_cream.stl | 1 | PLA+ or PETG | upright | No | 97 x 97 x 6 | Paint cream lacquer; glue onto the base top |
 | band_red.stl | 1 | PLA+ or PETG | upright, wide end down | No | 92 x 92 x 36 | Paint red lacquer |
@@ -28,34 +28,40 @@ Faro lighthouse lamp, Rosso. 300.8 mm tall on its felt pad. The STLs here are tu
 
 | Part | How it's made |
 |---|---|
-| felt_pad (felt_pad_REFERENCE_ONLY.stl) | Cut from 1.5 mm felt laminated to a 0.4 mm steel disc (self-adhesive felt on steel shim works). The STL is only a size reference |
+| felt_pad (felt_pad_REFERENCE_ONLY.stl) | Cut from black self-adhesive felt, trimmed to size, and stuck on. The STL is only a size reference |
 
 ## Render-only / bought-in (not in the print set)
 
 | Item | What to use |
 |---|---|
-| Battery | 65 x 37 x 19 mm 2 x 18650 pack (placeholder) |
-| LED module | Ø20 x 12 mm (placeholder) |
-| USB-C receptacle | board-mounted, behind the rear port (placeholder) |
-| Screws | 4 x M2.5 x 8 countersunk, hex socket |
-| Threaded inserts | 4 x M2.5 heat-set inserts for the base bosses |
-| Magnets | 4 x Ø6 x 1 mm N52 discs |
+| Fairy lights | Warm white copper fairy lights with a 3 x AA battery box (the box stays outside, behind the lamp) |
+| LED puck | Rechargeable warm white LED puck, under 45 mm across, for the brightness test (it rests on the ledge inside the gallery) |
+| Coins | A few coins, taped low inside the base, for weight |
+| Epoxy | Araldite Rapid, with cocktail sticks |
 
 ## Assembly order
 
-1. Base: melt the 4 M2.5 inserts into the bosses; glue on the nameplate.
-2. Glue the cream band onto the base top, then the red band, then the tower, all centred (they stack on flat joints). Glue the knob, and each window diffuser behind its own window (1 = lowest, on the front, up to 5 = highest, back on the front).
-3. Glue the gallery onto the tower top. Stand the lantern glass on the gallery platform, then lower the frame over it and glue the frame to the gallery.
-4. Glue the finial into the cap. Twist the cap on: lugs down through the 4 slots, turn 20 deg clockwise (seen from above) to the stop.
-5. Underneath: battery in the bay, plate on with the 4 screws, felt pad on (the magnets hold it).
+See the build manual (faro/output/manual/Faro_Build_Manual.pdf) for painting and finishing.
+1. Diffusers into the tower. Through the open top, glue each behind its window with tiny dabs at the edges only (1 = lowest, on the front, up to 5 = highest, back on the front).
+2. Nameplate into its recess on the front of the base.
+3. Knob onto the front of the red band, centred.
+4. Thread the lights in through the USB-C port at the back of the base and up through the hole in its top. The battery box stays outside, behind the lamp.
+5. Stack and glue the cream band onto the base, then the red band, then the tower, with knob and nameplate aligned. Pull the lights up as you go.
+6. Coil the lights loosely inside the tower so some sit near each window. Keep them all in the tower.
+7. Gallery onto the tower top.
+8. Lantern. Stand the empty glass on the gallery, lower the frame over it and glue the frame to the gallery. The lantern stays empty for the brightness test.
+9. Finial into the cap, then twist the cap on: lugs down through the 4 slots, turn 20 deg clockwise (seen from above) to the stop. Do not glue it.
+10. Weight. Tape a few coins low inside the base.
+11. Underneath. Glue the base plate into its rebate, then apply the felt, trimmed to size. No inserts, screws or magnets in the prototype.
 
 ## Fit checks (from the model)
 
-* Battery bay 105 mm across x 20.5 mm tall: the battery has 1.0 mm headroom and clears the screw bosses.
+* Hollow base 105 mm across x 20.5 mm tall: room for the coins, and for the fairy-light wire from the rear port to the hole in the top.
+* LED puck: a ledge inside the gallery leaves a Ø34 mm hole, so a puck up to 45 mm rests at lantern height on 5.5 mm of ledge.
 * Walnut under the rounded top edge: at least 2.8 mm.
 * Cap bayonet: no clash when locked (0.00 mm3), lugs pass the slots at entry (0.00 mm3), 1.6 mm of lug under the lip. With the cap off the opening is Ø49 mm, so the Ø20 mm LED module lifts out.
 * Fit clearance 0.2 mm per side on the bayonet and 0.2 mm round the bottom plate: PLA may need light sanding.
-* The felt stands 0.5 mm proud of the walnut, so the lamp sits on the felt, not the wood.
+* The felt stands 0.8 mm proud of the walnut, so the lamp sits on the felt, not the wood.
 
 ## General
 

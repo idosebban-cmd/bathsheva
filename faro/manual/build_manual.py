@@ -242,7 +242,7 @@ def before_you_begin(c):
     y = pg.para(L, H - 160, 330, "From the box of printed parts to a finished, glowing prototype ready to "
                 "photograph.", STAND)
     pg.rule(L, y - 12)
-    y = pg.para(L, y - 26, R - L, "Faro is built from fourteen printed pieces, finished by hand in four colours and "
+    y = pg.para(L, y - 26, R - L, "Faro is built from seventeen printed pieces, finished by hand in four colours and "
                 "glued together in a set order. Nothing here is difficult, but each stage needs patience: thin coats "
                 "of paint, time to dry, and a dry fit before any glue.")
     pg.heading(L, y - 22, "Timing")

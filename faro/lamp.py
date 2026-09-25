@@ -111,17 +111,21 @@ def build(p) -> Lamp:
     base = base - Pos(0, 0, -1) * Cylinder(r_reb, pt + 1, align=MIN)
     base = base - Pos(0, 0, pt - 0.01) * Cylinder(r_cav, z_cav_top - pt + 0.01, align=MIN)
     base = base - Pos(0, 0, z_cav_top - 1) * Cylinder(p.BASE_WIRE_HOLE / 2, p.BASE_TOP_WALL + 2, align=MIN)
-    # screw bosses hanging from the top of the bay, with holes for M3 inserts
+    # "screwed" (production): bosses hanging from the top of the bay, with holes for
+    # threaded inserts. "glued" (prototype): none.
+    screwed = p.BASE_FIXING == "screwed"
+    if p.BASE_FIXING not in ("glued", "screwed"):
+        raise ValueError(f"BASE_FIXING must be 'glued' or 'screwed', not {p.BASE_FIXING!r}")
     screw_xy = []
-    for k in range(p.SCREWS):
+    for k in range(p.SCREWS if screwed else 0):
         d = _dir(p.SCREW_ANGLE0 + k * 360 / p.SCREWS)
         x, y = d.X * p.SCREW_R, d.Y * p.SCREW_R
         screw_xy.append((x, y))
         base = base + Pos(x, y, pt) * Cylinder(p.BOSS_DIA / 2, z_cav_top - pt + 0.5, align=MIN)
         base = base - Pos(x, y, pt - 0.01) * Cylinder(p.BOSS_PILOT_DIA / 2, 10.0, align=MIN)
 
-    # bottom plate: flush in the rebate, 4 countersunk screws, 4 magnet pockets,
-    # and a shallow recess underneath for the felt pad
+    # bottom plate: flush in the rebate, with a shallow recess underneath for the
+    # felt. "screwed" adds 4 countersunk screw holes and 4 magnet pockets.
     rp = r_reb - p.PLATE_CLEAR
     plate_b = Cylinder(rp, pt, align=MIN)
     r_felt = rp - p.FELT_INSET
@@ -140,7 +144,7 @@ def build(p) -> Lamp:
         head = head - Pos(x, y, z_f - 0.5) * extrude(RegularPolygon(0.8 / math.cos(math.pi / 6), 6), amount=1.8)
         screws = head + shank if screws is None else screws + head + shank
     mags = None
-    for k in range(p.MAGNETS):
+    for k in range(p.MAGNETS if screwed else 0):
         d = _dir(p.SCREW_ANGLE0 + (k + 0.5) * 360 / p.MAGNETS)
         x, y = d.X * p.SCREW_R, d.Y * p.SCREW_R
         plate_b = plate_b - Pos(x, y, z_f - 0.01) * Cylinder(p.MAGNET_DIA / 2 + 0.1, p.MAGNET_THICK + 0.1, align=MIN)
@@ -152,7 +156,7 @@ def build(p) -> Lamp:
     m.envelopes["screws"] = screws
     m.envelopes["magnets"] = mags
     lift = p.FELT_THICK - p.FELT_RECESS                   # the felt stands proud; it's the foot
-    I.update(felt_proud=lift, battery_bay=(2 * r_cav, z_cav_top - pt),
+    I.update(felt_proud=lift, battery_bay=(2 * r_cav, z_cav_top - pt), base_fixing=p.BASE_FIXING,
              plate_dia=2 * rp, felt_dia=2 * r_felt)
 
     # nameplate: a curved brass plate in a shallow recess on the front

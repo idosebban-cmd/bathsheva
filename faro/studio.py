@@ -116,7 +116,9 @@ def render_underside(m, p, path, size=(1100, 900)):
         sheet.paste(im, (i * (size[0] + 20), 0))
     dr = ImageDraw.Draw(sheet)
     dr.text((20, 20), "underside, as sold (felt pad on)", fill=(40, 40, 40))
-    dr.text((size[0] + 40, 20), "felt pad lifted off: 4 screws (hex socket) hold the plate; 4 magnets (bright) hold the felt",
+    dr.text((size[0] + 40, 20), ("felt pad lifted off: 4 screws (hex socket) hold the plate; 4 magnets (bright) "
+                                 "hold the felt") if p.BASE_FIXING == "screwed" else
+            "felt lifted off: the plain plate, glued into its rebate",
             fill=(40, 40, 40))
     sheet.save(path)
     return path

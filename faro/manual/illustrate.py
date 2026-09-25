@@ -167,12 +167,12 @@ def battery_box():
     return box, cells
 
 
-COIN_ANGLES = (0, 90, 270)      # between the bosses, and clear of the wire from the rear port
+COIN_ANGLES = (0, 90, 270)      # spread round the bay, clear of the wire from the rear port
 
 
 def coins():
     """Three short stacks of coins taped to the ceiling of the base bay, clear of
-    the screw bosses and the wire hole."""
+    the battery and the wire hole."""
     z_floor = p.PLATE_THICK + LIFT                  # on the plate, low in the base
     out = None
     for ang in COIN_ANGLES:
