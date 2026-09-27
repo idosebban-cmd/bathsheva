@@ -1,0 +1,103 @@
+# Atelier -- hardware & product facts for the printed manual
+#
+# manual/content.md (Phase 2) pulls every hardware fact from this file, so the
+# manual can be rebuilt the moment real numbers arrive from the ODM.
+#
+# Rules for editing this file:
+#   - TBD_FROM_ODM means "not yet confirmed". Never replace it with a guess,
+#     an invented number, a certification mark, or legal wording.
+#   - status: confirmed   -> value is safe to print as-is.
+#   - status: proposed    -> a working assumption (e.g. knob behaviour) that
+#                             the manual can describe, but that Ido could
+#                             still change before production; content.md
+#                             should phrase these as "how Atelier works" but
+#                             the value itself may still move.
+#   - status: from_model  -> measured directly from the STL/CAD geometry
+#                             supplied for this manual. Reliable for a
+#                             printed illustration; re-measure if the model
+#                             is revised before tooling is finalised.
+#   - status: tbd         -> value is TBD_FROM_ODM, blocking print.
+
+product:
+  name: Atelier
+  brand: Bathsheva London
+  category: Bluetooth speaker
+  status: confirmed
+
+materials_and_finish:
+  body: Oxblood red lacquered body
+  trim: Brushed brass (nose cone, fins, bezel, knob, foot)
+  grille: Photo-etched stainless steel, honeycomb pattern
+  status: confirmed
+
+dimensions_mm:
+  overall_height: 288.1
+  body_max_diameter: 96.8
+  footprint_diameter: TBD_FROM_ODM
+  note: >
+    Height and body diameter measured from the supplied CAD (body + nose_cone
+    + collar + foot stack). Footprint diameter (the tripod spread across the
+    three fins) is TBD until the fins' true mounting angle is confirmed --
+    see the open decisions list.
+  status: from_model
+
+weight_kg:
+  value: 1.8
+  note: Production weight, approximate, as given by Ido.
+  status: confirmed
+
+controls:
+  knob:
+    turn: Volume
+    press: Play / pause
+    double_press: Next track
+    hold_2s: Power on / off
+    hold_5s: Enter pairing mode
+  status: proposed
+  note: >
+    This behaviour is a proposal from Ido, not yet confirmed against firmware.
+    Treat every action above as changeable until sign-off.
+
+indicators:
+  led:
+    location: Small white status LED above the knob, on the front face
+    count: 1
+    colours_and_patterns: TBD_FROM_ODM
+    note: >
+      Physical presence, position and colour (white) are confirmed. The
+      pattern language (solid / pulsing / flashing / colour per state -- for
+      power, pairing, charging, low battery, error, factory reset, etc.) is
+      TBD_FROM_ODM and needed before the LED guide page can be written.
+  status: mixed
+
+connectivity:
+  bluetooth_version: TBD_FROM_ODM
+  range_m: TBD_FROM_ODM
+  codecs: TBD_FROM_ODM
+  stereo_pairing_support: TBD_FROM_ODM
+  status: tbd
+
+power:
+  battery_capacity_mah: TBD_FROM_ODM
+  playtime_hours: TBD_FROM_ODM
+  charge_time_hours: TBD_FROM_ODM
+  charge_port: USB-C, located in the collar on the underside
+  input_rating: TBD_FROM_ODM
+  output_power_w: TBD_FROM_ODM
+  status: mixed
+
+environmental:
+  operating_temperature_c: TBD_FROM_ODM
+  status: tbd
+
+compliance:
+  marks: TBD_FROM_ODM
+  regulatory_identifiers: TBD_FROM_ODM
+  note: Never print a compliance mark or ID until legal/regulatory confirms it in writing.
+  status: tbd
+
+warranty_and_support:
+  warranty_length: TBD_FROM_ODM
+  support_email: TBD_FROM_ODM
+  support_url: TBD_FROM_ODM
+  status: tbd

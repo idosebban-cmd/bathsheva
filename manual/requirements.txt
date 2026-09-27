@@ -1,0 +1,7 @@
+numpy
+scipy
+trimesh
+numpy-stl
+svgwrite
+rtree
+pyyaml

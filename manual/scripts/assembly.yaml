@@ -1,0 +1,124 @@
+# Atelier assembly transforms
+#
+# The source STLs (manual/models/*.stl) are each oriented for 3D printing,
+# per PRINT_NOTES.md, not for the assembled product. This file records how
+# each part is rotated and translated to rebuild the real, right-way-up
+# assembly for illustration purposes.
+#
+# Confidence per part:
+#   body, nose_cone, collar, foot   -> derived from the mesh geometry itself
+#                                       (joint rim radii, taper direction,
+#                                       print-note orientation). High confidence.
+#   grille, bezel, knob, fin_x3     -> positioned by matching bounding-box
+#                                       proportions against the recess found
+#                                       in the body mesh and against the
+#                                       reference photo. First-pass estimate,
+#                                       flagged for visual check in Phase 2.
+#
+# Transform order per part: rotate (about local origin) THEN translate.
+# Rotations are 90-degree-multiple axis rotations only, so no precision is
+# lost. All units mm, all angles degrees.
+#
+# World frame: Z up (assembled product height), Y = "front" (the direction
+# the grille faces, matching the reference photo), X = left/right.
+
+parts:
+  body:
+    file: body.stl
+    rotate: {axis: Y, deg: 180}
+    translate: [0, 0, 209.1]
+    note: >
+      Printed upside down (cone-joint rim on the bed). Flipping 180 deg about
+      Y puts the nose joint back on top and the collar joint back on the
+      bottom, and keeps the grille recess (found centred on +Y in the raw
+      mesh) facing +Y.
+
+  nose_cone:
+    file: nose_cone.stl
+    rotate: {axis: NONE, deg: 0}
+    translate: [0, 0, 206.1]
+    note: >
+      Printed upright already (spigot on the bed = spigot down = correct for
+      assembly, spigot inserts down into the body). Stacked on the body's top
+      joint (world Z 209.1) with a 3 mm estimated insertion overlap.
+
+  collar:
+    file: collar.stl
+    rotate: {axis: Y, deg: 180}
+    translate: [0, 0, 0]
+    note: >
+      Printed upside down (spigot on the bed). Flipped 180 deg about Y so the
+      spigot (mates to the body's underside) sits at world Z 0, cup and port
+      recess hang below.
+
+  foot:
+    file: foot.stl
+    rotate: {axis: Y, deg: 180}
+    translate: [0, 0, -19.8]
+    note: >
+      Printed upside down (flat top on the bed). Flipped so the flat top
+      glues to the underside of the collar cup (world Z -19.8), rounded tip
+      down.
+
+  grille:
+    file: grille.stl
+    rotate: {axis: NONE, deg: 0}
+    translate: [0, 32.4, 97.2]
+    note: >
+      ESTIMATE. Print note says "upright as fitted", so the local frame is
+      assumed to already match world axes (Y = depth). Positioned at the
+      recess band detected in the body mesh (world Z approx 99-169) and set
+      slightly recessed behind the bezel face. Verify against photo in Phase 2.
+
+  bezel:
+    file: bezel.stl
+    rotate: {axis: NONE, deg: 0}
+    translate: [0, 33.5, 94.2]
+    note: >
+      ESTIMATE, same basis as grille. Positioned flush with the body's outer
+      surface at the recess band, surrounding the grille.
+
+  knob:
+    file: knob.stl
+    rotate: {axis: X, deg: 90}
+    translate: [0, 42, 75]
+    note: >
+      ESTIMATE. Printed front-face-down, shaft bore up, so a 90 deg rotation
+      about X brings the decorative face back to face +Y (outward). Height
+      (world Z 75, below the grille) and standoff (Y 42, flush with body
+      surface) are eyeballed against the reference photo. Verify in Phase 2.
+
+  fin_1:
+    file: fin_x3.stl
+    rotate: {axis: Z, deg: 180}
+    tilt: {axis: X, deg: 28}
+    translate: [0, 0, 8]
+    note: >
+      ESTIMATE - placeholder splay. Azimuth 180 deg (directly behind the
+      body, away from camera in the front view). Root approx at the body's
+      lower taper, 28 deg outward tilt eyeballed from the reference photo.
+      Needs real mounting-hole alignment in Phase 2.
+
+  fin_2:
+    file: fin_x3.stl
+    rotate: {axis: Z, deg: 60}
+    tilt: {axis: X, deg: 28}
+    translate: [0, 0, 8]
+    note: "ESTIMATE - see fin_1. Azimuth +60 deg, visible at right in front view."
+
+  fin_3:
+    file: fin_x3.stl
+    rotate: {axis: Z, deg: -60}
+    tilt: {axis: X, deg: 28}
+    translate: [0, 0, 8]
+    note: "ESTIMATE - see fin_1. Azimuth -60 deg, visible at left in front view."
+
+camera:
+  front:
+    view_dir: [0, -1, 0]
+    up: [0, 0, 1]
+    note: Looking in -Y at the +Y-facing grille, matches the reference photo.
+  underside:
+    view_dir: [0, 0, 1]
+    up: [0, 1, 0]
+    note: Looking up (+Z) from below at the collar/USB-C port.
