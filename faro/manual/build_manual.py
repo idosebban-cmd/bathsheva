@@ -291,7 +291,7 @@ def before_you_begin(c):
     pg.image("09_view_lantern", L + 250, y + 6, width=R - L - 250, caption="The lantern, finished.")
 
 
-SW = {"red": "#8A1C15", "cream": "#F6EAD2", "gold": "#C4A15A", "umber": "#4E3222", "black": "#1F1D1C",
+SW = {"red": "#8A1C15", "cream": "#F6EAD2", "gold": "#C4A15A", "gloss": "#121212", "black": "#1F1D1C",
       "frost": "#EEEBE3"}
 
 
@@ -299,7 +299,7 @@ def parts_and_supplies(c):
     pg = Page(c, "Parts and supplies", 3)
     pg.kicker(H - 110, "Inventory")
     pg.title(H - 145, "Parts and supplies")
-    rows = [("base", "1", "Sponged wood effect", "umber"), ("base_plate", "1", "Black acrylic, or leave primed", "black"),
+    rows = [("base", "1", "Black gloss, clear coat", "gloss"), ("base_plate", "1", "Black acrylic, or leave primed", "black"),
             ("nameplate", "1", "Gold, black round the letters", "gold"),
             ("band_cream", "1", "Cream gloss, clear coat", "cream"), ("band_red", "1", "Red gloss, clear coat", "red"),
             ("tower", "1", "Cream gloss, clear coat", "cream"), ("knob", "1", "Gold; decorative, it doesn't turn", "gold"),
@@ -311,7 +311,7 @@ def parts_and_supplies(c):
                  swatch=[SW[r[3]] for r in rows], style=BODY_S)
     pg.heading(L, y - 26, "Supplies")
     left = ["Grey filler primer", "Red gloss spray", "Cream gloss spray (Ivory Bisque)", "Metallic gold spray",
-            "Clear lacquer", "Black and burnt umber acrylic, small brush and sponge", "Wet-and-dry paper, P240 to P1200"]
+            "Gloss black spray", "Clear lacquer", "Black acrylic and a small brush", "Wet-and-dry paper, P240 to P1200"]
     right = ["Tamiya masking tape, 10 mm", "Araldite Rapid epoxy, cocktail sticks", "Black self-adhesive felt",
              "Warm white copper fairy lights, 3 AA batteries", "Rechargeable warm white LED puck, under 45 mm",
              "A few coins for weight", "Respirator, dust mask, nitrile gloves",
@@ -411,9 +411,9 @@ def step4(c):
     pg.rule(L, y - 12)
     rows = [("Red gloss", "band_red, cap"), ("Cream gloss", "band_cream, tower"),
             ("Metallic gold", "gallery, lantern_frame, knob, finial, nameplate"),
-            ("Burnt umber", "base, sponged wood effect"), ("Black", "base_plate, and the recesses round the letters")]
+            ("Black gloss", "base"), ("Black", "base_plate, and the recesses round the letters")]
     y = pg.table(L, y - 24, ["Colour", "Parts"], rows, [150, R - L - 150],
-                 swatch=[SW[k] for k in ("red", "cream", "gold", "umber", "black")])
+                 swatch=[SW[k] for k in ("red", "cream", "gold", "gloss", "black")])
     y = pg.image("04_paint_groups", L, y - 12, width=R - L)
     col = (R - L) / 2 - 10
     pg.heading(L, y - 20, "Mask before painting")
@@ -437,21 +437,23 @@ def step4(c):
     ys = pg.para(x2, ys - 4, R - x2, "<b>Drying times.</b> Typically touch-dry in 15 to 30 minutes, with the next "
                  "coat after 15 to 30 minutes. Some enamel sprays must be recoated within an hour or not until 48 "
                  "hours later, so check the can.", NOTE)
-    pg.para(L, min(ym, ys) - 16, R - L, "The wood effect and the lettering are overleaf; this step's checkpoint "
+    pg.para(L, min(ym, ys) - 16, R - L, "The black base and the lettering are overleaf; this step's checkpoint "
             "comes after them.", CAP)
 
 
 def step4b(c):
     pg = Page(c, "Step 4, continued", 8)
     pg.kicker(H - 110, "Step 04, continued")
-    pg.title(H - 145, "Wood and lettering")
+    pg.title(H - 145, "Black base and lettering")
     pg.rule(L, H - 160)
-    pg.heading(L, H - 186, "Walnut base")
+    pg.heading(L, H - 186, "Black gloss base")
     y = pg.steps(L, H - 198, R - L, [
-        "Brush a thin coat of burnt umber over the primed base and let it dry.",
-        "Dab a barely loaded sponge on kitchen paper, then drag it round the base in one direction. The streaks "
-        "read as grain.",
-        "Build two or three passes until it reads as dark walnut. Unevenness looks natural."], style=BODY_S, gap=3)
+        "Gloss black shows every flaw, so give the primed base a final sand with P600 and wipe it with a barely "
+        "damp cloth.",
+        "Spray a light mist coat first, then two or three light coats of gloss black, turning the base between "
+        "passes.",
+        "Check it under a bright light. Sand any dust or run with P1200 once hard and respray lightly. It is clear-"
+        "coated in Step 5, with the red and cream parts."], style=BODY_S, gap=3)
     pg.heading(L, y - 22, "Nameplate letters")
     y = pg.para(L, y - 34, R - L, "Once the gold is dry, brush thinned black acrylic over the letters, then wipe the "
                 "raised surfaces with a damp cloth before it dries. The black stays round the letters and makes FARO "
@@ -466,8 +468,8 @@ def step4b(c):
     for k, (nm, cap) in enumerate((("09_view_front", "Front"), ("09_view_side", "Side"), ("09_view_rear", "Rear"),
                                    ("09_view_three_quarter", "Three-quarter"))):
         low = min(low, pg.image(nm, L + k * cw, y - 30, width=cw - 8, caption=cap))
-    pg.checkpoint(low - 22, "every part is evenly coloured with no bare patches or runs, the base reads as dark "
-                  "walnut, FARO stands out in gold, and the masking tape is off.")
+    pg.checkpoint(low - 22, "every part is evenly coloured with no bare patches or runs, the base is a deep, even "
+                  "black, FARO stands out in gold, and the masking tape is off.")
 
 
 def step5_6(c):
@@ -479,11 +481,11 @@ def step5_6(c):
         "Wait at least 24 hours after the last colour coat.",
         "Test first. Spray a little clear lacquer on a hidden inside surface, such as the inside of the cap rim, "
         "and leave it an hour. Some paints wrinkle or cloud under some clears; if it stays smooth, carry on.",
-        "Spray two light coats of clear lacquer on the red and cream parts only: band_red, cap, band_cream and "
-        "tower.",
-        "Leave the gold and the wood-effect base uncoated; clear can dull metallic paint.",
+        "Spray two light coats of clear lacquer on the red, cream and black gloss parts: band_red, cap, "
+        "band_cream, tower and base.",
+        "Leave the gold uncoated; clear can dull metallic paint.",
         "Leave everything warm, dry and dust-free for two to three days. Paint feels dry long before it is hard.",
-        "Optional: once hard, polish the red and cream parts with car polishing compound."], style=BODY_S, gap=3)
+        "Optional: once hard, polish the lacquered parts with car polishing compound."], style=BODY_S, gap=3)
     y = pg.para(L, y - 6, R - L, "<b>Drying times.</b> Clear lacquer is typically touch-dry in about 30 minutes, "
                 "with the second coat after 15 to 30 minutes. Check the can.", NOTE)
     y = pg.checkpoint(y - 16, "the gloss is even and hard: a fingernail pressed on a hidden spot leaves no mark.")

@@ -28,7 +28,7 @@ def _hex(h):
     return tuple(int(h[i:i + 2], 16) / 255 for i in (0, 2, 4))
 
 
-COLOURS = {"base": p.WALNUT_HEX, "band_cream": p.CREAM_HEX, "tower": p.CREAM_HEX, "band_red": p.RED_HEX,
+COLOURS = {"base": p.BASE_HEX, "band_cream": p.CREAM_HEX, "tower": p.CREAM_HEX, "band_red": p.RED_HEX,
            "cap": p.RED_HEX, "felt_pad": "#2F2D2B", "base_plate": "#4A4541", "lantern_glass": p.GLOW_HEX}
 
 # How each printed part is made. name: (qty, material, orientation, supports, notes, turn-to-print)
@@ -38,12 +38,12 @@ FACE_UP = lambda s: Rot(-90, 0, 0) * s         # front (-Y) face up
 FACE_DOWN = lambda s: Rot(90, 0, 0) * s        # front (-Y) face on the bed
 SCREWED = p.BASE_FIXING == "screwed"
 PRINT = {
-    "base": (1, "PLA+ (wood-fill PLA, or paint walnut)", "upright, open underside on the bed",
+    "base": (1, "PLA+ or PETG", "upright, open underside on the bed",
              "Yes: tree supports inside the hollow base only (hidden), under its ceiling"
              + (" and bosses" if SCREWED else ""),
-             (f"Production: CNC-turned walnut with {p.SCREW_SIZE} threaded inserts in the bosses. Melt "
+             (f"Gloss black lacquer, clear-coated. Production: {p.SCREW_SIZE} threaded inserts in the bosses. Melt "
               f"{p.SCREW_SIZE} heat-set inserts into the bosses" if SCREWED else
-              "Sponged burnt umber for the walnut effect. The fairy lights come in through the rear port"), None),
+              "Gloss black lacquer, clear-coated. The fairy lights come in through the rear port"), None),
     "base_plate": (1, "PLA+ or PETG, black", "felt recess up (flat top face on the bed)", "No",
                    ("Glue the 4 magnets into their pockets, flush with the recess floor" if SCREWED else
                     "A plain plate: glue it into the rebate (the shallow step round the opening under the base); "
@@ -227,20 +227,20 @@ def final(m):
            "the coins, and for the fairy-light wire from the rear port to the hole in the top."),
           f"* LED puck: a ledge inside the gallery leaves a Ø{I['gallery_ledge_bore']:.0f} mm hole, so a puck up "
           f"to {p.LED_PUCK_MAX_DIA:g} mm rests at lantern height on {I['puck_rest_width']:.1f} mm of ledge.",
-          f"* Walnut under the rounded top edge: at least {p.BASE_TOP_ROUND - __import__('math').hypot(p.BASE_TOP_ROUND - p.BASE_WALL, p.BASE_TOP_ROUND - p.BASE_TOP_WALL):.1f} mm.",
+          f"* Base wall under the rounded top edge: at least {p.BASE_TOP_ROUND - __import__('math').hypot(p.BASE_TOP_ROUND - p.BASE_WALL, p.BASE_TOP_ROUND - p.BASE_TOP_WALL):.1f} mm.",
           f"* Cap bayonet: no clash when locked ({bay['locked_clash']:.2f} mm3), lugs pass the slots at entry "
           f"({bay['entry_clash']:.2f} mm3), {bay['lug_overlap_under_lip']:.1f} mm of lug under the lip. "
           f"With the cap off the opening is Ø{I['led_access_dia']:.0f} mm, so the Ø{p.LED_DIA:g} mm LED "
           "module lifts out.",
           f"* Fit clearance {p.FIT_CLEAR:g} mm per side on the bayonet and {p.PLATE_CLEAR:g} mm round the "
           "bottom plate: PLA may need light sanding.",
-          f"* The felt stands {I['felt_proud']:.1f} mm proud of the walnut, so the lamp sits on the felt, "
-          "not the wood.",
+          f"* The felt stands {I['felt_proud']:.1f} mm proud of the base, so the lamp sits on the felt, "
+          "not the lacquer.",
           "",
           "## General", "",
           f"* Widest part: {widest[0]}.stl at {widest[5].X:.0f} mm; tallest: {tallest[0]}.stl at "
           f"{tallest[5].Z:.0f} mm. Any common printer (180 x 180 x 180 mm or more) fits every part.",
-          "* Paint the lacquer parts with filler-primer, sanding, then gloss cream / red and a clear coat. "
+          "* Paint the lacquer parts with filler-primer, sanding, then gloss cream / red / black and a clear coat. "
           "Brass parts: metallic gold over gloss black, or brass-fill filament polished.",
           "* The railing and lantern frame are the most delicate parts; resin gives the crispest result.",
           ""]

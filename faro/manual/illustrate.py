@@ -43,7 +43,6 @@ OUTLINE = "#4A3E34"                # fine outlines
 RESIN = "#EEEBE3"
 PRIMER = "#A6A5A0"
 FROST = "#F3F1EC"
-BURNT_UMBER = "#4E3222"
 BLACK_PAINT = "#1F1D1C"
 COPPER = "#B8733A"
 BEAD = "#FFD27A"
@@ -279,8 +278,6 @@ class Scene:
                 st, coat = dict(color=lin(BLACK_PAINT), pbr=True, metallic=0.0, roughness=0.6), False
             elif name in ("nameplate_plate", "nameplate_letters"):
                 st, coat = studio._material("nameplate", p)
-            elif name == "base":
-                st, coat = dict(color=lin(BURNT_UMBER), pbr=True, metallic=0.0, roughness=0.6), False
             elif name == "felt_pad":                             # charcoal felt, a shade off the black plate
                 st, coat = dict(color=lin("#6A6560"), pbr=True, metallic=0.0, roughness=1.0), False
             elif name == "base_plate":
@@ -603,7 +600,7 @@ def img_exploded(stage):
     W = img.size[0]
     number = {"base_plate": 1, "base": 2, "band_cream": 3, "band_red": 4, "tower": 5, "gallery": 6,
               "lantern_glass": 7, "lantern_frame": 8, "cap": 9, "finial": 10, "felt_pad": 11, "nameplate": 12}
-    subs = {"base": "wood effect, burnt umber", "base_plate": "black", "band_cream": "cream gloss",
+    subs = {"base": "black gloss, clear coat", "base_plate": "black", "band_cream": "cream gloss",
             "band_red": "red gloss", "tower": "cream gloss", "gallery": "gold", "lantern_glass": "translucent",
             "lantern_frame": "gold", "cap": "red gloss", "finial": "gold", "felt_pad": "black self-adhesive felt",
             "nameplate": "gold, black round the letters", "knob": "gold, front of the red band"}
@@ -676,7 +673,7 @@ GROUPS = [
     ("Red gloss", ["band_red", "cap"]),
     ("Cream gloss", ["band_cream", "tower"]),
     ("Metallic gold", ["gallery", "lantern_frame", "knob", "finial", "nameplate_gold"]),
-    ("Burnt umber acrylic", ["base"]),
+    ("Black gloss", ["base"]),
     ("Black acrylic", ["base_plate", "nameplate"]),
 ]
 

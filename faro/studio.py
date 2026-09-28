@@ -18,6 +18,7 @@ VIEWS = {"front": (0.0, -1.0, 0.0), "side": (1.0, 0.0, 0.0), "rear": (0.0, 1.0, 
          "three_quarter": (0.62, -0.78, 0.2)}
 
 BRASS = ("nameplate", "knob", "gallery", "lantern_frame", "finial")
+BLACK = ("base",)
 RED = ("band_red", "cap")
 CREAM = ("band_cream", "tower")
 GLOW = ("lantern_glass", "window_diffuser")
@@ -37,8 +38,8 @@ def _material(name, p):
         return dict(color=lin("#4A4642"), pbr=True, metallic=0.0, roughness=1.0), False
     if name == "base_plate":
         return dict(color=lin("#4A4541"), pbr=True, metallic=0.0, roughness=0.6), False
-    if name == "base":
-        return dict(color=lin(p.WALNUT_HEX), pbr=True, metallic=0.0, roughness=p.WALNUT_ROUGHNESS), False
+    if name in BLACK:
+        return dict(color=lin(p.BASE_HEX), pbr=True, metallic=0.0, roughness=p.LACQUER_ROUGHNESS), True
     return dict(color=(0.5, 0.5, 0.5)), False
 
 

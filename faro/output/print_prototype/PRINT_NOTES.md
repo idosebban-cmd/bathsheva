@@ -7,7 +7,7 @@ Faro lighthouse lamp, Rosso. 300.8 mm tall on its felt pad. The STLs here are tu
 | File | Qty | Material | Orientation | Supports? | Size X x Y x Z | Notes |
 |---|---|---|---|---|---|---|
 | base_plate.stl | 1 | PLA+ or PETG, black | felt recess up (flat top face on the bed) | No | 109 x 109 x 3 | A plain plate: glue it into the rebate (the shallow step round the opening under the base); the felt sticks into its shallow recess |
-| base.stl | 1 | PLA+ (wood-fill PLA, or paint walnut) | upright, open underside on the bed | Yes: tree supports inside the hollow base only (hidden), under its ceiling | 113 x 113 x 27 | Sponged burnt umber for the walnut effect. The fairy lights come in through the rear port |
+| base.stl | 1 | PLA+ or PETG | upright, open underside on the bed | Yes: tree supports inside the hollow base only (hidden), under its ceiling | 113 x 113 x 27 | Gloss black lacquer, clear-coated. The fairy lights come in through the rear port |
 | nameplate.stl | 1 | Resin, or PLA+ painted brass | outer face (lettering) up | Yes: supports under the curved back (the plate arches about 3 mm) | 37 x 11 x 5 | Glue into the recess on the base front. Production: etched or engraved brass |
 | band_cream.stl | 1 | PLA+ or PETG | upright | No | 97 x 97 x 6 | Paint cream lacquer; glue onto the base top |
 | band_red.stl | 1 | PLA+ or PETG | upright, wide end down | No | 92 x 92 x 36 | Paint red lacquer |
@@ -62,14 +62,14 @@ Araldite Rapid: wait about 20 to 30 minutes before handling a joint or starting 
 
 * Hollow base 105 mm across x 20.5 mm tall: room for the coins, and for the fairy-light wire from the rear port to the hole in the top.
 * LED puck: a ledge inside the gallery leaves a Ø34 mm hole, so a puck up to 45 mm rests at lantern height on 5.5 mm of ledge.
-* Walnut under the rounded top edge: at least 2.8 mm.
+* Base wall under the rounded top edge: at least 2.8 mm.
 * Cap bayonet: no clash when locked (0.00 mm3), lugs pass the slots at entry (0.00 mm3), 1.6 mm of lug under the lip. With the cap off the opening is Ø49 mm, so the Ø20 mm LED module lifts out.
 * Fit clearance 0.2 mm per side on the bayonet and 0.2 mm round the bottom plate: PLA may need light sanding.
-* The felt stands 0.8 mm proud of the walnut, so the lamp sits on the felt, not the wood.
+* The felt stands 0.8 mm proud of the base, so the lamp sits on the felt, not the lacquer.
 
 ## General
 
 * Widest part: base.stl at 113 mm; tallest: tower.stl at 128 mm. Any common printer (180 x 180 x 180 mm or more) fits every part.
-* Paint the lacquer parts with filler-primer, sanding, then gloss cream / red and a clear coat. Brass parts: metallic gold over gloss black, or brass-fill filament polished.
+* Paint the lacquer parts with filler-primer, sanding, then gloss cream / red / black and a clear coat. Brass parts: metallic gold over gloss black, or brass-fill filament polished.
 * The railing and lantern frame are the most delicate parts; resin gives the crispest result.
 

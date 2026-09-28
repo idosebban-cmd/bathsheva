@@ -16,16 +16,16 @@ OVERALL_HEIGHT = 300.0       # ground to the top of the finial ball
 REF_HEIGHT = 300.0           # the height the z values below were measured at
 
 # ---------------------------------------------------------------------------
-# 1. Walnut base
+# 1. Base (gloss black lacquer, clear-coated)
 # ---------------------------------------------------------------------------
 BASE_DIA = 113.0
 BASE_H = 27.0                 # slimmer than the first read (the concept's includes a sliver of the top face)
 BASE_TOP_ROUND = 6.0         # generous rounding on the top edge, as in the concept
 BASE_BOTTOM_ROUND = 1.5
 BASE_WALL = 4.0              # hollow base: side wall
-BASE_TOP_WALL = 3.5          # top of the battery bay (keeps >= 2.8 mm of walnut under the rounded edge)
+BASE_TOP_WALL = 3.5          # top of the battery bay (keeps >= 2.8 mm of wall under the rounded edge)
 BASE_WIRE_HOLE = 20.0        # hole through the base top for the wiring up the tower
-# The walnut base is an open ring with a bottom plate flush in a rebate.
+# The base is an open ring with a bottom plate flush in a rebate.
 # BASE_FIXING:
 #   "glued"   (looks-like prototype, default): a plain plate glued into the rebate,
 #             with self-adhesive felt stuck on. No bosses, inserts, screws or magnets.
@@ -34,9 +34,9 @@ BASE_WIRE_HOLE = 20.0        # hole through the base top for the wiring up the t
 #             disc covers the screws and is held by 4 magnets in the plate.
 BASE_FIXING = "glued"
 PLATE_THICK = 3.0
-PLATE_REBATE = 2.0           # walnut skin left outside the plate's rebate
+PLATE_REBATE = 2.0           # base skin left outside the plate's rebate
 PLATE_CLEAR = 0.2
-SCREWS = 4                   # M2.5 countersunk (brass threaded inserts in the walnut bosses); M2.5's
+SCREWS = 4                   # M2.5 countersunk (brass threaded inserts in the base bosses); M2.5's
                              # shallower countersink leaves >= 1.2 mm of plate above it
 SCREW_R = 40.0               # screw circle radius
 SCREW_ANGLE0 = 45.0          # first screw angle (clears the battery)
@@ -156,7 +156,7 @@ FINIAL_DIA = 14.0
 # ---------------------------------------------------------------------------
 USBC_W = 8.94 + 2 * 0.35     # receptacle opening + clearance
 USBC_H = 3.26 + 2 * 0.35
-USBC_Z = 11.0                # low on the rear (+Y) of the walnut base
+USBC_Z = 11.0                # low on the rear (+Y) of the base
 BATTERY_SIZE = (65.0, 37.0, 19.0)   # 2 x 18650 pack, lying flat in the base
 LED_DIA = 20.0               # LED module placeholder in the lantern
 LED_H = 12.0
@@ -167,11 +167,10 @@ LED_H = 12.0
 RED_HEX = "#8A1C15"          # same as Atelier
 BRASS_HEX = "#C4A15A"        # same as Atelier
 CREAM_HEX = "#F9F2E1"        # warm cream lacquer (matched to the concept's lit tower)
-WALNUT_HEX = "#4A2F20"       # dark walnut
+BASE_HEX = "#121212"         # gloss black lacquer, clear-coated
 GLOW_HEX = "#FFD7A0"         # lit frosted panels
 LACQUER_ROUGHNESS = 0.12
 LACQUER_CLEARCOAT = 0.9
 BRASS_ROUGHNESS = 0.35
-WALNUT_ROUGHNESS = 0.55
 LIGHT_GAIN = 1.27            # Faro's studio is a touch brighter than Atelier's
 RENDER_SIZE = (1200, 1600)

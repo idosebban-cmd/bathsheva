@@ -6,7 +6,7 @@ Faro lighthouse lamp geometry (build123d).
 
 Every round form is a solid of revolution about Z (like Atelier's body). The
 front (-Y) carries the windows, knob and nameplate; the USB-C port is on the
-rear (+Y) of the walnut base.
+rear (+Y) of the base.
 """
 from __future__ import annotations
 
@@ -129,7 +129,7 @@ def build(p) -> Lamp:
     z_ = lambda v: v * S
     d_ = lambda v: v * S
 
-    # ---- 1. walnut base --------------------------------------------------
+    # ---- 1. base --------------------------------------------------------
     rb, hb = d_(p.BASE_DIA) / 2, z_(p.BASE_H)
     base = Cylinder(rb, hb, align=MIN)
     base = _safe_fillet(base, base.edges().filter_by(GeomType.CIRCLE).sort_by(Axis.Z)[-1:], p.BASE_TOP_ROUND)
@@ -405,7 +405,7 @@ def build(p) -> Lamp:
         rf * 0.45, z_top - rf - (z_d1 + p.CAP_BOSS_H - 1.0), align=MIN)
     m.parts["finial"] = _one(finial)
     I.update(z_gallery=(z_g0, z_g1), z_lantern=(z_l0, z_l1), z_cap_top=z_d1)
-    # everything was built with the walnut's underside at z = 0; the felt stands
+    # everything was built with the base's underside at z = 0; the felt stands
     # proud of it, so lift the lot to put the felt on the ground
     lift = I["felt_proud"]
     for dct in (m.parts, m.envelopes):
