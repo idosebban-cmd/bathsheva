@@ -1,6 +1,6 @@
 # Atelier manual
 
-Printed instruction booklet for Atelier (Bathsheva London), A6, saddle-stitched, 16 pages.
+Printed instruction booklet for Atelier (Bathsheva London), A6, saddle-stitched, 12 pages.
 
 ## Status: Phase 2 draft built
 
@@ -17,7 +17,7 @@ ODM/compliance review` in `content.md` -- see below). `manual/out/` is
 gitignored -- it's a build artifact, regenerate it rather than expecting it
 to be checked in.
 
-- [x] Page outline -- `outline.md` (16 pages, revised per review)
+- [x] Page outline -- `outline.md` (12 pages, consolidated from an earlier 16-page draft)
 - [x] Hardware spec decisions -- `specs.yaml`
 - [x] Illustrations -- `scripts/lineart.py` + `scripts/assembly.yaml`, see below
 - [x] `content.md` -- the manual's copy, pulls every hardware fact from `specs.yaml`
@@ -64,7 +64,7 @@ manual/
     test/           Phase 1 proof-of-concept renders (kept for reference)
     final/          The actual figures embedded in the manual
   specs.yaml       Every hardware fact the manual text depends on
-  outline.md       Page-by-page structure (16 pages)
+  outline.md       Page-by-page structure (12 pages)
   content.md       Manual copy, in a light custom markup (see below)
   build.py         Orchestrator: content.md + specs.yaml -> HTML -> PDF/PNGs
   out/             Build output (gitignored)
@@ -162,7 +162,7 @@ composition and Ido's own estimate of "about 20mm".
 
 ## content.md syntax
 
-- `<!-- page: id -->` starts a new page (16 of these = 16 pages).
+- `<!-- page: id -->` starts a new page (12 of these = 12 pages).
 - `<!-- subtitle -->` on its own line, next line is the subtitle text.
 - `<!-- figure: name [mod ...] -->` inlines `figures/final/name.svg`;
   modifiers (`small`, `centered`) add a CSS class.

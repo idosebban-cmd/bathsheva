@@ -84,9 +84,23 @@ def parse_pages(text):
 
 
 def extract_directives(page):
+    subtitle_count = 0
+
     def take_subtitle(m):
-        page.subtitle = m.group(1).strip()
-        return ""
+        # The first "<!-- subtitle -->" on a page becomes page.subtitle,
+        # rendered above the h1 (see build_page_html). Any further one
+        # (e.g. the "Bathsheva London" wordmark closing the regulatory
+        # back cover) is left in place as its own <p class="subtitle">,
+        # so it flows through markdown normally and picks up the
+        # ".subtitle:last-of-type" bottom-anchored styling -- rather than
+        # silently vanishing, which is what a second directive used to do.
+        nonlocal subtitle_count
+        subtitle_count += 1
+        text = m.group(1).strip()
+        if subtitle_count == 1:
+            page.subtitle = text
+            return ""
+        return f'<p class="subtitle">{text}</p>\n'
 
     def take_footer(m):
         if m.group(1).strip() == "provisional":
@@ -94,7 +108,7 @@ def extract_directives(page):
         return ""
 
     body = page.raw
-    body = re.sub(r"<!--\s*subtitle\s*-->\s*\n(.+)\n", take_subtitle, body, count=1)
+    body = re.sub(r"<!--\s*subtitle\s*-->\s*\n(.+)\n", take_subtitle, body)
     body = re.sub(r"<!--\s*footer:\s*(\w+)\s*-->", take_footer, body)
     return body
 
@@ -158,7 +172,7 @@ def build_page_html(page, specs, tbd_log, page_numbers, legal_log):
 
     subtitle_html = f'<p class="subtitle">{page.subtitle}</p>' if page.subtitle else ""
     footer_html = (
-        '<div class="footer-note">Provisional illustration &mdash; pending production CAD confirmation.</div>'
+        '<div class="footer-note">Provisional illustration. Pending production CAD confirmation.</div>'
         if page.footer_provisional else ""
     )
     page_num_html = f'<div class="page-number">{page.number}</div>' if page.id not in ("cover",) else ""
@@ -174,10 +188,33 @@ def build_page_html(page, specs, tbd_log, page_numbers, legal_log):
 
 
 CSS = f'''
+/* Cormorant Garamond (headings) and Inter (body/UI text) -- open-licence
+   (SIL OFL) Google Fonts, font files committed in manual/fonts/ and
+   embedded here by relative path so the PDF render doesn't fall back to
+   whatever serif/sans happen to be installed on the machine that builds it. */
+@font-face {{
+  font-family: "Cormorant Garamond";
+  font-style: normal;
+  font-weight: 400;
+  src: url("../fonts/CormorantGaramond-Regular.woff2") format("woff2");
+}}
+@font-face {{
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 400;
+  src: url("../fonts/Inter-Regular.woff2") format("woff2");
+}}
+@font-face {{
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 700;
+  src: url("../fonts/Inter-Bold.woff2") format("woff2");
+}}
+
 @page {{ size: {PAGE_W_MM}mm {PAGE_H_MM}mm; margin: 0; }}
 * {{ box-sizing: border-box; }}
 html, body {{ margin: 0; padding: 0; background: #ccc; }}
-body {{ font-family: Georgia, "Times New Roman", serif; color: {INK}; }}
+body {{ font-family: "Cormorant Garamond", Georgia, "Times New Roman", serif; color: {INK}; }}
 
 .page {{
   width: {PAGE_W_MM}mm;
@@ -196,7 +233,7 @@ body {{ font-family: Georgia, "Times New Roman", serif; color: {INK}; }}
 }}
 
 h1 {{
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: "Cormorant Garamond", Georgia, "Times New Roman", serif;
   font-weight: 400;
   font-size: 17pt;
   color: {OXBLOOD};
@@ -204,7 +241,7 @@ h1 {{
   letter-spacing: 0.02em;
 }}
 h2 {{
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: "Cormorant Garamond", Georgia, "Times New Roman", serif;
   font-weight: 400;
   font-size: 10.5pt;
   color: {OXBLOOD};
@@ -213,7 +250,7 @@ h2 {{
   padding-top: 1.5mm;
 }}
 p.subtitle {{
-  font-family: Helvetica, Arial, sans-serif;
+  font-family: "Inter", Helvetica, Arial, sans-serif;
   font-size: 8.5pt;
   color: #6b6b6b;
   text-transform: uppercase;
@@ -221,7 +258,7 @@ p.subtitle {{
   margin: -1.5mm 0 3mm 0;
 }}
 p, li {{
-  font-family: Helvetica, Arial, sans-serif;
+  font-family: "Inter", Helvetica, Arial, sans-serif;
   font-size: 8.5pt;
   line-height: 1.45;
   margin: 0 0 2.2mm 0;
@@ -232,13 +269,13 @@ strong {{ color: {OXBLOOD}; }}
 table {{
   width: 100%;
   border-collapse: collapse;
-  font-family: Helvetica, Arial, sans-serif;
-  font-size: 7.6pt;
-  margin: 1mm 0 2mm 0;
+  font-family: "Inter", Helvetica, Arial, sans-serif;
+  font-size: 7.2pt;
+  margin: 1mm 0 1.5mm 0;
 }}
 th, td {{
   text-align: left;
-  padding: 0.9mm 1.5mm;
+  padding: 0.6mm 1.5mm;
   border-bottom: 0.35pt solid #d8d0c2;
   vertical-align: top;
 }}
@@ -251,7 +288,7 @@ th {{
 .tbd {{
   color: {MAGENTA};
   font-weight: 700;
-  font-family: Helvetica, Arial, sans-serif;
+  font-family: "Inter", Helvetica, Arial, sans-serif;
 }}
 
 /* Safety / battery / disposal / warranty / regulatory wording -- flagged in
@@ -274,6 +311,7 @@ th {{
 }}
 .figure svg {{ width: 100%; height: auto; max-height: 78mm; }}
 .figure--small svg {{ max-height: 42mm; }}
+.figure--tiny svg {{ max-height: 26mm; }}
 .figure--centered {{ justify-content: center; }}
 
 #page-cover .page-inner {{
@@ -306,7 +344,7 @@ th {{
   left: 9mm;
   right: 9mm;
   bottom: 5.5mm;
-  font-family: Helvetica, Arial, sans-serif;
+  font-family: "Inter", Helvetica, Arial, sans-serif;
   font-style: italic;
   font-size: 6.2pt;
   color: #8a8378;
@@ -315,7 +353,7 @@ th {{
   position: absolute;
   right: 9mm;
   bottom: 5.5mm;
-  font-family: Helvetica, Arial, sans-serif;
+  font-family: "Inter", Helvetica, Arial, sans-serif;
   font-size: 7pt;
   color: #8a8378;
 }}

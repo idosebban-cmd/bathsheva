@@ -33,6 +33,17 @@ parts:
     file: body.stl
     rotate: {axis: Y, deg: 180}
     translate: [0, 0, 209.1]
+    exclude_regions:
+      # A stray diagonal crease on the body's right side only (world X 20-45,
+      # Y -8 to 15, Z 130-210, i.e. running from just above the grille recess
+      # up to near the nose joint) -- traced by connectivity, confirmed as a
+      # single ~12-segment chain, not present on the mirror-symmetric left
+      # side or in the reference photo. Reads as a genuine mesh artefact
+      # (e.g. a leftover boolean/seam line from how body.stl was built), not
+      # a real design feature -- flagged by Ido, hidden here rather than
+      # left in the drawing. See scripts/find_front_holes.py's sibling
+      # investigation notes in the session for how it was traced.
+      - [20, 45, -8, 15, 130, 210]
     note: >
       Printed upside down (cone-joint rim on the bed). Flipping 180 deg about
       Y puts the nose joint back on top and the collar joint back on the
@@ -101,6 +112,9 @@ parts:
     file: grille.stl
     rotate: {axis: NONE, deg: 0}
     translate: [0, 40.4, 99.2]
+    ignore_occluders: [body]
+    exclude_regions:
+      - [-25, 25, -1000, 39.5, 99, 120.5]
     note: >
       Z from the real recess opening in body.stl (world_z 136.1, see above)
       -- was 99.4 (world 136.3) from the old, less precise mounting-hole-
@@ -111,15 +125,64 @@ parts:
       "true" Y for a flat front face to sit at -- Y 50 simply clears the
       body's max surface radius (48.4mm) everywhere, avoiding the
       hidden-line test wrongly hiding the part behind the taper.
+      ignore_occluders (2026-09-28): the "grille not concentric with bezel,
+      bezel ring broken on the lower left" report traced to real
+      self-occlusion, not a placement error -- ray-cast body.stl's recess
+      rim and found its front-most surface is ~47.2mm (world Y) at the
+      bottom of the grille opening vs ~39.0mm at the top: the body's own
+      skin curves further forward at the bottom than the top there. Since
+      grille sits recessed (front face at world Y 50, but its true rim
+      silhouette only reaches ~38.8-46.9mm -- confirmed by walking its own
+      outline edges), the bottom of the recess rim (47.2) sits in FRONT of
+      the grille's rim silhouette there and hid it in the hidden-line test,
+      while at the top (39.0) it does not -- an asymmetric break, exactly
+      what was reported. This is not something to fix by moving grille: the
+      real object doesn't show this break (checked against
+      reference/atelier_reference_photo.png, rim is continuous all the way
+      round), because the mounted grille+bezel assembly's own opaque face
+      is what actually sits in that gap, not empty space -- our hidden-line
+      test just has no solid backing disc to stand in for it. Excluding
+      body specifically (not bezel, not other parts) from grille's own
+      occlusion test reproduces that: confirmed all 111 previously-occluded
+      bottom-rim sample points become visible, and re-rendering
+      figures/check/body_grille_bezel_fixed.png shows one continuous ring,
+      matching the photo.
+      exclude_regions (2026-09-28): grille.stl is dished, not flat, so its
+      rim silhouette has a front arc (the visible edge) and, further back
+      along Y, a second arc where the fold curves under towards the flange.
+      With body no longer occluding grille (see ignore_occluders above),
+      that back arc became visible too. Walking grille's own outline edges
+      for newly-visible (grille+bezel-only occluder, no body) points with
+      world Y < 40 found it's visible at low intensity (a thin doubled
+      line, close to the front arc) most of the way round, same as
+      bezel's, but diverges sharply at the bottom (world Z 99-120, y down
+      to 30.9) into an obvious stray diagonal line cutting across the
+      honeycomb -- not present in the reference photo either way, so the
+      whole back arc (not just the bottom) is excluded, matching bezel's
+      fix below.
 
   bezel:
     file: bezel.stl
     rotate: {axis: NONE, deg: 0}
     translate: [0, 40.5, 96.2]
+    ignore_occluders: [body]
+    exclude_regions:
+      - [-30, 30, -1000, 40.5, 96, 176]
     note: >
       Z from the same real recess opening as grille (world_z 136.1). Y
       (front face at 52) clear of the body's max surface radius, same basis
       as grille.
+      ignore_occluders (2026-09-28): same cause and same fix as grille's --
+      see the note there. bezel's own outer rim showed the same
+      body-recess-rim self-occlusion at the bottom.
+      exclude_regions (2026-09-28): same reason as grille's -- bezel is
+      also dished, and its own folded-under back rim became visible (as a
+      faint doubled outer line, all the way round, not just the bottom)
+      once body was excluded as an occluder. y_max 40.5 covers the whole
+      back-arc Y range (29.0-40.0); the full x/z span (not just the
+      bottom, unlike grille) reflects that bezel's fold sits close enough
+      to its front loop everywhere to be a doubled line rather than a
+      localized diverging arc, but it's still not in the reference photo.
 
   knob:
     file: knob.stl
@@ -132,44 +195,77 @@ parts:
       here (47.9mm). Printed front-face-down/shaft-bore-up, so the 90 deg
       rotation about X brings the decorative face back to +Y.
 
+  # --- fins: re-derived (2026-09-28) using the fin's OWN pilot holes -------
+  # Ido flagged the previous fin orientation as wrong: sticking out sideways
+  # from a point, flat top, vertical outer edge, instead of sweeping down
+  # and out to the floor. Root cause: the old transform used only a rough
+  # root point and an outward tilt guessed from the photo. Re-derived
+  # properly against the mesh (verified per Ido's request), using
+  # scripts/find_fin_transform.py:
+  #
+  # 1. fin_x3.stl's planform (all vertices projected to XY, print-orientation
+  #    coords) was traced via convex hull: a sharp point at (-4.70,-43.87),
+  #    a long convex OUTER edge running from there to a rounded far corner
+  #    around (23-27, 40-44), and a straighter closing edge back to
+  #    (-27.22, 19.94) -- matches Ido's reading (pointed root tip, outer
+  #    edge, inner edge, floor-tip corner) closely.
+  # 2. The fin has its own 2 pilot holes (radius ~1.1-1.8mm, clean low-std
+  #    circular features, found the same way as body.stl's holes) at
+  #    (-8.66,-22.10,4.00) and (-11.45,-14.27,4.00) in its local frame, on
+  #    the root-edge side.
+  # 3. body.stl has 2 real pilot holes per fin position (6 total, one pair
+  #    per azimuth: 180/60/-60), found independently for each side with the
+  #    same clean-cluster method used for the grille/knob/LED (std < 0.5,
+  #    versus 4.6-5.0 for the earlier misidentified knob cluster -- these
+  #    are real holes). All three azimuths agree closely on radius (lower
+  #    hole r~38.8mm at world Z 32.4, upper hole r~41.6mm at world Z 40.2).
+  # 4. The fin's local pilot holes are rigidly aligned to body's real pilot
+  #    holes (2-point correspondence fixes 5 of 6 degrees of freedom), and
+  #    the one remaining freedom -- rotation/twist around the root-hole
+  #    axis, i.e. how far the fin swings open from the body -- is solved by
+  #    finding the twist that brings the fin's own far corner (the floor
+  #    tip) as low as it can go. That reaches world Z -25.8, about 4mm short
+  #    of the foot's floor level (Z -29.8) -- the mesh-constrained best fit,
+  #    not an exact floor touch. This ~4mm is the one part still not fully
+  #    pinned by the mesh; everything else above (root position, twist axis,
+  #    hole alignment) is exact. Still tagged fitted_by_eye for that reason.
+  #    Sanity checks: the root point lands at world radius ~45.5-45.6,
+  #    matching the body's own real surface radius there (44.3-46.8mm) --
+  #    sits flush, not floating or buried. The resulting blade normal is
+  #    within a few degrees of pure-tangential, matching the physical
+  #    expectation for a fin blade. Fin pilot holes are hidden in rendered
+  #    drawings (GRILLE_MIN_EDGE_LEN-style filtering) since they're not a
+  #    feature anyone needs to see in the manual.
+
   fin_1:
     file: fin_x3.stl
     fitted_by_eye: true
     matrix4:
-      - [0.000035, 0.000128, 1.000000, -3.995536]
-      - [0.982060, 0.188571, -0.000058, -70.043501]
-      - [-0.188571, 0.982060, -0.000119, 0.288473]
+      - [-0.000353, -0.000126, 1.000000, -4.005842]
+      - [-0.999992, 0.003896, -0.000353, -50.172416]
+      - [-0.003896, -0.999992, -0.000127, 18.086936]
       - [0.0, 0.0, 0.0, 1.0]
-    note: >
-      Root mesh-derived, tip photo-derived. Azimuth 180 deg (directly behind
-      the body, hidden from the front view). body.stl has its own fin
-      mounting pilot holes (2 per side, ~1.6mm radius, matching the 3.3mm
-      pilot holes in PRINT_NOTES.md) at world radius 40.3mm, Z 36.6 -- this
-      replaces the original photo estimate (r 47.9, Z 80) with the real
-      attachment point. No corresponding hole exists for the OUTER tip (it's
-      off the body entirely), so the tip stays photo-derived: Z -22, r 68.9
-      (measured fin-tip footprint, 137.8mm tip-to-tip / 2). The rotation
-      itself is computed (scripts/refit_from_mesh.py), not hand-tilted.
+    note: "Azimuth 180 deg (directly behind the body). See the fins note above for method. Pilot holes at world (0,-41.6,40.2) and (0,-38.79,32.43)."
 
   fin_2:
     file: fin_x3.stl
     fitted_by_eye: true
     matrix4:
-      - [-0.850506, -0.163371, -0.499950, 62.657219]
-      - [-0.491000, -0.094174, 0.866055, 31.561514]
-      - [-0.188571, 0.982060, -0.000119, 0.288473]
+      - [0.863763, -0.000627, -0.503898, 45.481934]
+      - [0.503897, -0.000353, 0.863763, 21.700902]
+      - [-0.000719, -1.000000, 0.000011, 18.093736]
       - [0.0, 0.0, 0.0, 1.0]
-    note: "Root mesh-derived, tip photo-derived. Azimuth 60 deg. See fin_1 for method. Visible at right in front view."
+    note: "Azimuth 60 deg, visible at right in front view. See the fins note above for method. Pilot holes at world (36.0,20.8,40.2) and (33.6,19.4,32.42)."
 
   fin_3:
     file: fin_x3.stl
     fitted_by_eye: true
     matrix4:
-      - [0.850471, 0.163243, -0.500050, -58.661683]
-      - [-0.491060, -0.094396, -0.865996, 38.481986]
-      - [-0.188571, 0.982060, -0.000119, 0.288473]
+      - [-0.863972, 0.000552, -0.503539, -41.455641]
+      - [0.503539, -0.000480, -0.863972, 28.605919]
+      - [-0.000719, -1.000000, 0.000137, 18.093232]
       - [0.0, 0.0, 0.0, 1.0]
-    note: "Root mesh-derived, tip photo-derived. Azimuth -60 deg. See fin_1 for method. Visible at left in front view."
+    note: "Azimuth -60 deg, visible at left in front view. See the fins note above for method. Pilot holes at world (-36.0,20.8,40.2) and (-33.6,19.4,32.42)."
 
 markers:
   # Not a mesh -- the LED is a small surface feature drawn as a simple

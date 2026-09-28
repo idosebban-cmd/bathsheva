@@ -26,6 +26,14 @@ SAMPLE_SPACING = 1.5  # mm between visibility test points along an edge
 OCCLUSION_EPS = 0.15  # mm, ignore self-hits closer than this
 GRILLE_MIN_EDGE_LEN = 6.0  # mm, drop shorter grille edges (honeycomb texture) for a clean look
 
+# fin_x3.stl's own mounting pilot holes (print-orientation local coords, see
+# find_fin_transform.py) -- not a feature anyone needs to see in the manual,
+# hidden in every rendered drawing via feature_edges' exclude_points.
+FIN_PILOT_HOLES_LOCAL = [
+    (np.array([-8.66, -22.10, 4.00]), 3.0),
+    (np.array([-11.45, -14.27, 4.00]), 3.0),
+]
+
 # Line weights are specified in mm at print size. The SVG is written 1 unit = 1 mm,
 # so these values are used as literal stroke-width. "outline" = the part's visible
 # profile (silhouette + open boundaries); "detail" = internal feature lines (creases
@@ -69,7 +77,7 @@ def load_part(name, cfg):
     return mesh
 
 
-def feature_edges(mesh, view_vector, min_len=0.0):
+def feature_edges(mesh, view_vector, min_len=0.0, exclude_points=None):
     """Return [(p0, p1, kind), ...] for crease + silhouette + boundary edges.
 
     kind is "outline" (silhouette or open boundary -- the part's visible profile)
@@ -81,6 +89,13 @@ def feature_edges(mesh, view_vector, min_len=0.0):
     silhouette or boundary curve (e.g. the grille's ~66mm outer rim) is tessellated
     into many short segments, and filtering by per-segment length would wrongly
     delete the whole outline along with the texture it's meant to simplify.
+
+    exclude_points: optional [(world_xyz, radius), ...]. Drops any edge (either
+    kind, including outline -- unlike min_len) whose midpoint falls within radius
+    of one of these points. Used to hide small functional holes that aren't a
+    feature anyone needs to see in the manual (e.g. the fins' mounting pilot
+    holes) without risking a length-based filter nibbling at real outline detail
+    elsewhere on the part.
     """
     edges_out = []
 
@@ -96,12 +111,20 @@ def feature_edges(mesh, view_vector, min_len=0.0):
     sign_b = facing[fa[:, 1]] > 0
     silhouette_mask = sign_a != sign_b
 
+    def excluded(p0, p1):
+        if not exclude_points:
+            return False
+        mid = (p0 + p1) / 2
+        return any(np.linalg.norm(mid - c) <= r for c, r in exclude_points)
+
     keep = crease_mask | silhouette_mask
     adj_edges = mesh.face_adjacency_edges[keep]
     adj_kind = np.where(silhouette_mask[keep], "outline", "detail")
     for e, kind in zip(adj_edges, adj_kind):
         p0, p1 = mesh.vertices[e[0]], mesh.vertices[e[1]]
         kind = str(kind)
+        if excluded(p0, p1):
+            continue
         if kind == "outline" or np.linalg.norm(p1 - p0) >= min_len:
             edges_out.append((p0, p1, kind))
 
@@ -110,6 +133,8 @@ def feature_edges(mesh, view_vector, min_len=0.0):
     boundary = mesh.edges[trimesh.grouping.group_rows(mesh.edges_sorted, require_count=1)]
     for e in boundary:
         p0, p1 = mesh.vertices[e[0]], mesh.vertices[e[1]]
+        if excluded(p0, p1):
+            continue
         edges_out.append((p0, p1, "outline"))
 
     return edges_out
@@ -187,13 +212,28 @@ def render_view(
     n_candidates = 0
     for name, mesh in meshes.items():
         min_len = GRILLE_MIN_EDGE_LEN if name == "grille" else 0.0
-        edges = feature_edges(mesh, -view_vector, min_len=min_len)
+        exclude_points = None
+        if name.startswith("fin_") and "matrix4" in parts_cfg[name]:
+            M = np.array(parts_cfg[name]["matrix4"], dtype=float)
+            exclude_points = [(M[:3, :3] @ c + M[:3, 3], r) for c, r in FIN_PILOT_HOLES_LOCAL]
+        edges = feature_edges(mesh, -view_vector, min_len=min_len, exclude_points=exclude_points)
         n_candidates += len(edges)
+        exclude_boxes = parts_cfg[name].get("exclude_regions", [])
+        ignore_occluders = parts_cfg[name].get("ignore_occluders", [])
+        part_occluder = occluder
+        if ignore_occluders:
+            kept = [m for n, m in meshes.items() if n not in ignore_occluders]
+            part_occluder = trimesh.util.concatenate(kept) if kept else None
         for p0, p1, kind in edges:
             if crop and not _segment_in_crop(p0, p1, crop):
                 continue
+            if _segment_in_any_box(p0, p1, exclude_boxes):
+                continue
             pts, _ = sample_edge(p0, p1, SAMPLE_SPACING)
-            vis = visible_mask(pts, view_vector, occluder)
+            if part_occluder is None:
+                vis = np.ones(len(pts), dtype=bool)
+            else:
+                vis = visible_mask(pts, view_vector, part_occluder)
             start = None
             for i, v in enumerate(vis):
                 if v and start is None:
@@ -228,6 +268,88 @@ def _segment_in_crop(p0, p1, crop):
         if xmin <= p[0] <= xmax and ymin <= p[2] <= ymax:
             return True
     return False
+
+
+def _segment_in_any_box(p0, p1, boxes):
+    """boxes: list of [xmin,xmax,ymin,ymax,zmin,zmax] in world mm (assembly.yaml's
+    exclude_regions). True if the segment's midpoint falls inside any of them --
+    used to drop a specific known mesh artefact (e.g. a stray asymmetric crease)
+    by precise 3D region rather than a length or angle heuristic."""
+    if not boxes:
+        return False
+    mid = (np.asarray(p0) + np.asarray(p1)) / 2
+    for xmin, xmax, ymin, ymax, zmin, zmax in boxes:
+        if xmin <= mid[0] <= xmax and ymin <= mid[1] <= ymax and zmin <= mid[2] <= zmax:
+            return True
+    return False
+
+
+def _segments_intersect(a1, a2, b1, b2):
+    """True if open segments a1-a2 and b1-b2 cross (standard orientation test)."""
+    def cross(o, p, q):
+        return (p[0] - o[0]) * (q[1] - o[1]) - (p[1] - o[1]) * (q[0] - o[0])
+
+    d1 = cross(b1, b2, a1)
+    d2 = cross(b1, b2, a2)
+    d3 = cross(a1, a2, b1)
+    d4 = cross(a1, a2, b2)
+    return ((d1 > 0) != (d2 > 0)) and ((d3 > 0) != (d4 > 0))
+
+
+def _draw_callouts(lines, callouts, right, up, page_scale, flip, w, h):
+    """Numbered leader lines pointing into the right-hand callout margin.
+
+    Circles are r=3mm (6mm diameter, above the "at least 4mm" spec) and
+    numbers are font-size 3.4mm (~9.6pt, above the "7pt" spec).
+
+    Label slots are assigned top-to-bottom by target Y first (the natural
+    order), but targets aren't collinear -- e.g. a fin tip sits far to the
+    side -- so a plain Y-sort can still cross (verified: it did, for the
+    fin/foot pair). After the initial sort, adjacent label slots are
+    swapped whenever doing so removes a crossing between their leader
+    lines, repeated to a fixed point -- an explicit, checked fix rather
+    than a hopeful heuristic.
+    """
+    callout_margin = 22 * page_scale
+    right_edge = w - callout_margin * 0.35
+
+    targets = []
+    for world_xyz, number, text in callouts:
+        p2d = project(np.array([world_xyz]), right, up)[0] * page_scale
+        px, py = flip(p2d)
+        targets.append((px, py, number))
+
+    order = sorted(range(len(targets)), key=lambda i: targets[i][1])
+    step = h / (len(callouts) + 1)
+    label_y = {idx: step * (rank + 1) for rank, idx in enumerate(order)}
+
+    def crosses(i, j):
+        pi = (targets[i][0], targets[i][1])
+        pj = (targets[j][0], targets[j][1])
+        li = (right_edge, label_y[i])
+        lj = (right_edge, label_y[j])
+        return _segments_intersect(pi, li, pj, lj)
+
+    for _ in range(len(order) * 2):
+        changed = False
+        for a in range(len(order) - 1):
+            i, j = order[a], order[a + 1]
+            if crosses(i, j):
+                label_y[i], label_y[j] = label_y[j], label_y[i]
+                order[a], order[a + 1] = j, i
+                changed = True
+        if not changed:
+            break
+
+    callout_svg_points = {}
+    for idx, (px, py, number) in enumerate(targets):
+        ly = label_y[idx]
+        lines.append(f'<line x1="{px:.2f}" y1="{py:.2f}" x2="{right_edge:.2f}" y2="{ly:.2f}" stroke="#0A0A0A" stroke-width="{DETAIL_WEIGHT_MM}" fill="none"/>')
+        lines.append(f'<circle cx="{px:.2f}" cy="{py:.2f}" r="0.9" fill="#0A0A0A"/>')
+        lines.append(f'<circle cx="{right_edge+3:.1f}" cy="{ly:.1f}" r="3" fill="none" stroke="#0A0A0A" stroke-width="0.3"/>')
+        lines.append(f'<text x="{right_edge+3:.1f}" y="{ly+1.3:.1f}" font-family="Georgia, serif" font-size="3.4" text-anchor="middle" fill="#0A0A0A">{number}</text>')
+        callout_svg_points[number] = (px, py, right_edge + 3, ly)
+    return callout_svg_points
 
 
 def write_svg(segments, right, up, out_path, label="", page_scale=1.0, markers=None, callouts=None):
@@ -276,18 +398,7 @@ def write_svg(segments, right, up, out_path, label="", page_scale=1.0, markers=N
 
     callout_svg_points = {}
     if callouts:
-        # place numbered leader lines pointing right, into the callout margin
-        right_edge = w - callout_margin * 0.35
-        step = h / (len(callouts) + 1)
-        for i, (world_xyz, number, text) in enumerate(callouts):
-            p2d = project(np.array([world_xyz]), right, up)[0] * page_scale
-            px, py = flip(p2d)
-            label_y = step * (i + 1)
-            lines.append(f'<line x1="{px:.2f}" y1="{py:.2f}" x2="{right_edge:.2f}" y2="{label_y:.2f}" stroke="#0A0A0A" stroke-width="{DETAIL_WEIGHT_MM}" fill="none"/>')
-            lines.append(f'<circle cx="{px:.2f}" cy="{py:.2f}" r="0.9" fill="#0A0A0A"/>')
-            lines.append(f'<circle cx="{right_edge+3:.1f}" cy="{label_y:.1f}" r="3" fill="none" stroke="#0A0A0A" stroke-width="0.3"/>')
-            lines.append(f'<text x="{right_edge+3:.1f}" y="{label_y+1.3:.1f}" font-family="Georgia, serif" font-size="3.4" text-anchor="middle" fill="#0A0A0A">{number}</text>')
-            callout_svg_points[number] = (px, py, right_edge + 3, label_y)
+        callout_svg_points = _draw_callouts(lines, callouts, right, up, page_scale, flip, w, h)
 
     if label:
         lines.append(f'<text x="8" y="{h-6:.1f}" font-family="monospace" font-size="4" fill="#999">{label}</text>')

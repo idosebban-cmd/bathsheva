@@ -11,15 +11,13 @@ Bathsheva London
 
 Thank you for choosing Atelier.
 
-Every Atelier is lacquered, polished and finished by hand. Small marks in the lacquer or brass are part of that process, not a fault. Give it a few minutes to warm up and settle in before your first listen.
+Every Atelier is finished by hand, in lacquer and brass.
 
 ## In the box
 
 - Atelier
 - USB-C to USB-C cable
 - This booklet
-
-<!-- figure: hero_front small -->
 
 <!-- page: know-front -->
 # Getting to know Atelier
@@ -39,27 +37,27 @@ Every Atelier is lacquered, polished and finished by hand. Small marks in the la
 <!-- subtitle -->
 Underside
 
-<!-- figure: underside_callouts -->
+<!-- figure: underside_callouts tiny -->
 
 1. USB-C port
 2. Foot
 
-<span class="legal" title="needs ODM/compliance review">Set Atelier down gently. The fins and foot take the weight, so lower it straight down rather than tipping it into place.</span>
+<span class="legal" title="needs ODM/compliance review">Set Atelier down gently, straight down onto the fins and foot rather than tipping it into place.</span>
 
-<!-- page: charging -->
-# Charging
+## Charging
 
-1. Turn Atelier onto its side, or lift it, so you can see the underside.
-2. <span class="legal" title="needs ODM/compliance review">Plug the USB-C cable into the port in the collar.</span>
-3. <span class="legal" title="needs ODM/compliance review">Plug the other end into a USB-C power source.</span>
+The USB-C port sits on the underside of the collar, angled clear of the table, so Atelier charges standing upright.
+
+1. <span class="legal" title="needs ODM/compliance review">Plug the USB-C cable into the port in the collar.</span>
+2. <span class="legal" title="needs ODM/compliance review">Plug the other end into a USB-C power source.</span>
 
 <span class="legal" title="needs ODM/compliance review">While charging and switched off, the LED pulses slowly.</span> <span class="legal" title="needs ODM/compliance review">Once full, it stays solid until you unplug the cable.</span> See the LED guide on page {{page:led-guide}} for every pattern.
 
-<span class="legal" title="needs ODM/compliance review">Charge time: {{spec:power.charge_time_hours}} hours from empty.</span>
+<span class="legal" title="needs ODM/compliance review">Charge time: {{spec:power.charge_time_hours}} hours from empty.</span> <span class="legal" title="needs ODM/compliance review">Can play while charging: {{spec:power.can_play_while_charging}}.</span>
 
 
 <!-- page: power -->
-# Power
+# Power and pairing
 
 ## Turn on
 
@@ -71,30 +69,23 @@ Hold the knob for 2 seconds again.
 
 The LED shows Atelier is awake: solid for 3 seconds when it connects, then off. It stays off while playing, so a dark LED during music is normal, not a fault.
 
-
-<!-- page: pairing -->
-# Pairing
+## Pairing
 
 1. Hold the knob for 5 seconds until the LED blinks quickly.
 2. On your phone or player, open Bluetooth settings and choose Atelier.
 3. Once connected, the LED goes solid for 3 seconds, then off.
 
-If Atelier does not appear, move your device closer and try again. Only one thing can be paired at a time unless noted otherwise in Specifications.
+If Atelier does not appear, move your device closer and try again. <span class="legal" title="needs ODM/compliance review">Multipoint (more than one device connected at once): {{spec:connectivity.multipoint}}.</span>
 
 
 <!-- page: controls -->
 # Controls
 
-<!-- figure: knob_closeup -->
+<!-- figure: knob_closeup small -->
 
 One knob does everything. Turn it, press it, or hold it.
 
-
-<!-- page: controls-table -->
-# Controls
-
-<!-- subtitle -->
-Quick reference
+## Quick reference
 
 | Action | Result |
 |---|---|
@@ -115,6 +106,8 @@ One white LED, above the knob
 
 | When | LED does |
 |---|---|
+| Power on | Solid for 1 second |
+| Power off | 2 slow blinks |
 | Pairing mode | Fast blink |
 | Just connected | Solid for 3 seconds, then off |
 | Playing | Off |
@@ -126,16 +119,13 @@ One white LED, above the knob
 Every pattern above is proposed and pending confirmation that the LED module and firmware can drive it.
 
 <!-- page: placement -->
-# Placement and stability
+# Placement and care
 
 <span class="legal" title="needs ODM/compliance review">Stand Atelier on a flat, stable surface. The three fins and centre foot are designed to hold it upright there.</span>
 
 <span class="legal" title="needs ODM/compliance review">Keep it away from table edges, and away from water or damp surfaces.</span> <span class="legal" title="needs ODM/compliance review">Do not stand it on a slope or on soft or uneven ground, such as a cushion or rug, where it could tip.</span>
 
-<!-- figure: hero_front small centered -->
-
-<!-- page: care -->
-# Caring for the lacquer and brass
+## Caring for the lacquer and brass
 
 Wipe the lacquer with a soft, dry or barely damp cloth. Do not use solvents, abrasives, or household cleaning sprays: they will dull the finish.
 
@@ -150,7 +140,7 @@ The brass will develop a natural patina over time. That is normal, and part of t
 
 <span class="legal" title="needs ODM/compliance review">Do not open, disassemble, or attempt to repair Atelier yourself.</span> <span class="legal" title="needs ODM/compliance review">There are no user-serviceable parts inside.</span>
 
-<span class="legal" title="needs ODM/compliance review">Use only the supplied cable, or a replacement of the same type, to charge it.</span> <span class="legal" title="needs ODM/compliance review">Do not charge it at temperatures below 0°C or above 45°C, or leave it charging unattended for long periods.</span>
+<span class="legal" title="needs ODM/compliance review">Use only the supplied cable, or a replacement of the same type, to charge it.</span> <span class="legal" title="needs ODM/compliance review">Charging temperature range: {{spec:power.charging_temperature_range}}.</span> <span class="legal" title="needs ODM/compliance review">Do not leave it charging unattended for long periods.</span>
 
 <span class="legal" title="needs ODM/compliance review">Operating temperature: {{spec:environmental.operating_temperature_c}}.</span>
 
@@ -162,7 +152,7 @@ The brass will develop a natural patina over time. That is normal, and part of t
 
 | Symptom | Likely cause | Try this |
 |---|---|---|
-| Won't turn on | Battery empty | Charge for 30 minutes, then try again |
+| Won't turn on | Battery empty | Charge for a while, then try again |
 | Won't pair | Already paired elsewhere | Turn off Bluetooth on the other device, or forget Atelier and pair again |
 | No sound | Volume low, or wrong output selected | Turn the knob to raise volume; check your device's output |
 | LED not responding | Held for the wrong length of time | Hold firmly and count the full 2, 5 or 10 seconds |
@@ -175,8 +165,9 @@ If none of this helps, see Warranty and support.
 
 | | |
 |---|---|
-| Height | {{spec:dimensions_mm.overall_height}} mm |
-| Body diameter | {{spec:dimensions_mm.body_max_diameter}} mm |
+| Height | approx. {{spec:dimensions_mm.overall_height_approx}} mm |
+| Body diameter | approx. {{spec:dimensions_mm.body_max_diameter_approx}} mm |
+| Width across fins | approx. {{spec:dimensions_mm.width_across_fins}} mm |
 | Weight | {{spec:weight_kg.value}} kg |
 | Bluetooth version | {{spec:connectivity.bluetooth_version}} |
 | Range | {{spec:connectivity.range_m}} |
@@ -193,7 +184,7 @@ If none of this helps, see Warranty and support.
 
 ## Warranty
 
-<span class="legal" title="needs ODM/compliance review">{{spec:warranty_and_support.warranty_length}} from date of purchase, covering manufacturing defects under normal use.</span>
+<span class="legal" title="needs ODM/compliance review">{{spec:warranty_and_support.warranty_length}} from date of purchase, covering manufacturing defects under normal use.</span> <span class="legal" title="needs ODM/compliance review">This does not affect your statutory rights.</span>
 
 ## Support
 
@@ -204,6 +195,12 @@ If none of this helps, see Warranty and support.
 
 <!-- subtitle -->
 <span class="legal" title="needs ODM/compliance review">Manufactured by Bathsheva London</span>
+
+<span class="legal" title="needs ODM/compliance review">{{spec:compliance.manufacturer_address}}</span>
+
+<span class="legal" title="needs ODM/compliance review">UK/EU responsible person: {{spec:compliance.uk_eu_responsible_person}}</span>
+
+<span class="legal" title="needs ODM/compliance review">Contact: {{spec:compliance.electronic_contact}}</span>
 
 <span class="legal" title="needs ODM/compliance review">Compliance marks: {{spec:compliance.marks}}</span>
 

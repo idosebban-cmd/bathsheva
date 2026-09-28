@@ -32,15 +32,21 @@ materials_and_finish:
 
 dimensions_mm:
   overall_height: 288.1
+  overall_height_approx: 288
   body_max_diameter: 96.8
-  footprint_diameter: TBD_FROM_ODM
+  body_max_diameter_approx: 97
+  width_across_fins: 136.0
   note: >
     Height and body diameter measured from the supplied CAD (body + nose_cone
-    + collar + foot stack, verified transforms). Footprint diameter (the
-    tripod spread across the three fins) is still TBD: it depends on the
-    fins' assembled mounting angle, which needs the original assembly
-    source (see manual/README.md, "Assembly source" note) rather than an
-    eyeballed fit. Will recompute once that source is found.
+    + collar + foot stack, verified transforms); the _approx fields are the
+    same figures rounded to the nearest mm for the printed spec table.
+    width_across_fins (2026-09-28) was previously TBD pending the fins'
+    real assembled mounting angle -- now available (see assembly.yaml's
+    fin_1/fin_2/fin_3 notes, re-derived from fin_x3.stl's own pilot holes
+    and verified against the reference photo) -- computed as the maximum
+    pairwise distance between any two vertices across all three assembled
+    fin meshes (a convex-hull caliper measurement, scripts/find_fin_transform.py
+    method), rounded to 1 decimal place.
   status: from_model, prototype
   status_note: >
     These are prototype/CAD dimensions, not confirmed production dimensions.
@@ -73,6 +79,8 @@ indicators:
     count: 1
     colour: white (single colour, no RGB)
     patterns:
+      power_on: Solid for 1 s
+      power_off: 2 slow blinks
       pairing_mode: Fast blink
       connected: Solid for 3 s, then off (stays off during playback)
       charging_while_off: Slow pulse
@@ -93,6 +101,7 @@ connectivity:
   range_m: TBD_FROM_ODM
   codecs: TBD_FROM_ODM
   stereo_pairing_support: TBD_FROM_ODM
+  multipoint: TBD_FROM_ODM
   status: tbd
 
 power:
@@ -100,6 +109,8 @@ power:
   playtime_hours: TBD_FROM_ODM
   charge_time_hours: TBD_FROM_ODM
   charge_port: USB-C, located in the collar on the underside
+  charging_temperature_range: TBD_FROM_ODM
+  can_play_while_charging: TBD_FROM_ODM
   input_rating: TBD_FROM_ODM
   output_power_w: TBD_FROM_ODM
   status: mixed
@@ -111,6 +122,9 @@ environmental:
 compliance:
   marks: TBD_FROM_ODM
   regulatory_identifiers: TBD_FROM_ODM
+  manufacturer_address: TBD_FROM_ODM
+  uk_eu_responsible_person: TBD_FROM_ODM
+  electronic_contact: TBD_FROM_ODM
   note: Never print a compliance mark or ID until legal/regulatory confirms it in writing.
   status: tbd
 
