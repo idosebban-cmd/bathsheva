@@ -49,17 +49,23 @@ def translation_matrix(t):
 
 def load_part(name, cfg):
     mesh = trimesh.load(MODELS / cfg["file"])
-    R = rotation_matrix(cfg["rotate"]["axis"], cfg["rotate"]["deg"])
-    Tr = translation_matrix(cfg["translate"])
-    if "tilt" in cfg:
-        # fins: tilt (local splay) -> translate (offset from axis) -> rotate (world azimuth)
+    if "matrix4" in cfg:
+        # fitted_by_eye fins: an explicit rotation+translation computed by
+        # scripts/photo_fit.py (see assembly.yaml's note on each part).
+        T = np.array(cfg["matrix4"], dtype=float)
+    elif "tilt" in cfg:
         Tilt = rotation_matrix(cfg["tilt"]["axis"], cfg["tilt"]["deg"])
+        Tr = translation_matrix(cfg["translate"])
+        R = rotation_matrix(cfg["rotate"]["axis"], cfg["rotate"]["deg"])
         T = R @ Tr @ Tilt
     else:
         # body/nose_cone/collar/foot/grille/bezel/knob: rotate (local flip) -> translate (world position)
+        R = rotation_matrix(cfg["rotate"]["axis"], cfg["rotate"]["deg"])
+        Tr = translation_matrix(cfg["translate"])
         T = Tr @ R
     mesh.apply_transform(T)
     mesh.metadata["part_name"] = name
+    mesh.metadata["fitted_by_eye"] = bool(cfg.get("fitted_by_eye", False))
     return mesh
 
 
@@ -69,6 +75,12 @@ def feature_edges(mesh, view_vector, min_len=0.0):
     kind is "outline" (silhouette or open boundary -- the part's visible profile)
     or "detail" (a crease that isn't also a silhouette edge -- an internal feature
     line, drawn thinner).
+
+    min_len only drops short "detail" edges (e.g. the grille's honeycomb texture,
+    each cell wall a couple of mm). It is NEVER applied to "outline" edges: a
+    silhouette or boundary curve (e.g. the grille's ~66mm outer rim) is tessellated
+    into many short segments, and filtering by per-segment length would wrongly
+    delete the whole outline along with the texture it's meant to simplify.
     """
     edges_out = []
 
@@ -89,15 +101,16 @@ def feature_edges(mesh, view_vector, min_len=0.0):
     adj_kind = np.where(silhouette_mask[keep], "outline", "detail")
     for e, kind in zip(adj_edges, adj_kind):
         p0, p1 = mesh.vertices[e[0]], mesh.vertices[e[1]]
-        if np.linalg.norm(p1 - p0) >= min_len:
-            edges_out.append((p0, p1, str(kind)))
+        kind = str(kind)
+        if kind == "outline" or np.linalg.norm(p1 - p0) >= min_len:
+            edges_out.append((p0, p1, kind))
 
-    # boundary edges (open, non-manifold rims e.g. spigots) are always part of the outline
+    # boundary edges (open, non-manifold rims e.g. spigots) are always part of
+    # the outline, and are never length-filtered for the same reason.
     boundary = mesh.edges[trimesh.grouping.group_rows(mesh.edges_sorted, require_count=1)]
     for e in boundary:
         p0, p1 = mesh.vertices[e[0]], mesh.vertices[e[1]]
-        if np.linalg.norm(p1 - p0) >= min_len:
-            edges_out.append((p0, p1, "outline"))
+        edges_out.append((p0, p1, "outline"))
 
     return edges_out
 
@@ -110,9 +123,15 @@ def sample_edge(p0, p1, spacing):
 
 
 def visible_mask(points, view_vector, occluder):
-    """True where a point is NOT blocked by the occluder mesh on the way to the camera."""
-    origins = points + OCCLUSION_EPS * view_vector
-    directions = np.tile(view_vector, (len(points), 1))
+    """True where a point is NOT blocked by the occluder mesh on the way to the camera.
+
+    view_vector is the direction the camera looks (eye -> scene), so the ray
+    toward the camera -- the one that needs to be clear of obstructions -- is
+    -view_vector, not view_vector.
+    """
+    to_camera = -view_vector
+    origins = points + OCCLUSION_EPS * to_camera
+    directions = np.tile(to_camera, (len(points), 1))
     intersector = trimesh.ray.ray_triangle.RayMeshIntersector(occluder)
     locations, index_ray, _ = intersector.intersects_location(origins, directions, multiple_hits=True)
     occluded = np.zeros(len(points), dtype=bool)
@@ -129,7 +148,29 @@ def project(points, right, up):
     return np.stack([x, y], axis=1)
 
 
-def render_view(parts_cfg, part_names, view_vector, up_vector, out_svg, label="", page_scale=1.0):
+def render_view(
+    parts_cfg,
+    part_names,
+    view_vector,
+    up_vector,
+    out_svg,
+    label="",
+    page_scale=1.0,
+    markers_cfg=None,
+    marker_names=None,
+    crop=None,
+    callouts=None,
+):
+    """
+    crop: optional (xmin, xmax, ymin, ymax) in WORLD mm, applied before projection,
+      to zoom into a sub-region (e.g. the knob) instead of the whole assembly.
+    callouts: optional [(world_xyz, number, text), ...] -- drawn as numbered
+      leader lines pointing at that 3D point (occlusion-tested like everything else).
+
+    Returns a dict: {fitted_by_eye: bool, callout_svg_points: {number: (x,y)}}
+    so callers (build.py) can flag "provisional illustration" footers and
+    place HTML/CSS labels if they choose not to use the baked-in SVG ones.
+    """
     view_vector = np.array(view_vector, dtype=float)
     view_vector /= np.linalg.norm(view_vector)
     up_vector = np.array(up_vector, dtype=float)
@@ -140,6 +181,7 @@ def render_view(parts_cfg, part_names, view_vector, up_vector, out_svg, label=""
     for name in part_names:
         meshes[name] = load_part(name, parts_cfg[name])
     occluder = trimesh.util.concatenate(list(meshes.values()))
+    fitted_by_eye = any(m.metadata.get("fitted_by_eye") for m in meshes.values())
 
     all_segments = []
     n_candidates = 0
@@ -148,9 +190,10 @@ def render_view(parts_cfg, part_names, view_vector, up_vector, out_svg, label=""
         edges = feature_edges(mesh, -view_vector, min_len=min_len)
         n_candidates += len(edges)
         for p0, p1, kind in edges:
+            if crop and not _segment_in_crop(p0, p1, crop):
+                continue
             pts, _ = sample_edge(p0, p1, SAMPLE_SPACING)
             vis = visible_mask(pts, view_vector, occluder)
-            # split into contiguous visible runs
             start = None
             for i, v in enumerate(vis):
                 if v and start is None:
@@ -161,11 +204,33 @@ def render_view(parts_cfg, part_names, view_vector, up_vector, out_svg, label=""
                         all_segments.append((pts[start], pts[end], kind))
                     start = None
 
-    write_svg(all_segments, right_vector, up_vector, out_svg, label, page_scale=page_scale)
-    print(f"{out_svg.name}: {len(all_segments)} visible segments from {n_candidates} candidate edges (page_scale={page_scale})")
+    marker_points = []  # (world_xyz, radius_mm)
+    if markers_cfg and marker_names:
+        for mname in marker_names:
+            mcfg = markers_cfg[mname]
+            wp = np.array(mcfg["world_position"], dtype=float)
+            vis = visible_mask(wp[None, :], view_vector, occluder)[0]
+            if vis:
+                marker_points.append((wp, mcfg["radius_mm"]))
+            fitted_by_eye = fitted_by_eye or bool(mcfg.get("fitted_by_eye", False))
+
+    callout_svg_points = write_svg(
+        all_segments, right_vector, up_vector, out_svg, label,
+        page_scale=page_scale, markers=marker_points, callouts=callouts,
+    )
+    print(f"{out_svg.name}: {len(all_segments)} visible segments from {n_candidates} candidate edges (page_scale={page_scale}, fitted_by_eye={fitted_by_eye})")
+    return {"fitted_by_eye": fitted_by_eye, "callout_svg_points": callout_svg_points}
 
 
-def write_svg(segments, right, up, out_path, label="", page_scale=1.0):
+def _segment_in_crop(p0, p1, crop):
+    xmin, xmax, ymin, ymax = crop
+    for p in (p0, p1):
+        if xmin <= p[0] <= xmax and ymin <= p[2] <= ymax:
+            return True
+    return False
+
+
+def write_svg(segments, right, up, out_path, label="", page_scale=1.0, markers=None, callouts=None):
     """
     page_scale scales the DRAWING (model mm -> page mm) to fit a layout box,
     e.g. 0.35 to shrink a 288 mm-tall object onto a ~100 mm page illustration.
@@ -174,11 +239,17 @@ def write_svg(segments, right, up, out_path, label="", page_scale=1.0):
     the drawing is shown true-size or fitted to a small page box.
     """
     proj = [(project(np.array([p0, p1]), right, up) * page_scale, kind) for p0, p1, kind in segments]
-    allpts = np.concatenate([p for p, _ in proj], axis=0)
+    marker_proj = [(project(np.array([wp]), right, up)[0] * page_scale, r * page_scale) for wp, r in (markers or [])]
+
+    allpts = [p for p, _ in proj]
+    for mp, _ in marker_proj:
+        allpts.append(np.array([mp]))
+    allpts = np.concatenate(allpts, axis=0)
     minx, miny = allpts.min(axis=0)
     maxx, maxy = allpts.max(axis=0)
     margin = 10 * page_scale
-    w = maxx - minx + 2 * margin
+    callout_margin = 22 * page_scale if callouts else 0
+    w = maxx - minx + 2 * margin + callout_margin
     h = maxy - miny + 2 * margin
 
     def flip(pt):
@@ -198,10 +269,31 @@ def write_svg(segments, right, up, out_path, label="", page_scale=1.0):
             x1, y1 = flip(pts[1])
             lines.append(f'<line x1="{x0:.2f}" y1="{y0:.2f}" x2="{x1:.2f}" y2="{y1:.2f}"/>')
         lines.append("</g>")
+
+    for mp, r in marker_proj:
+        cx, cy = flip(mp)
+        lines.append(f'<circle cx="{cx:.2f}" cy="{cy:.2f}" r="{max(r,0.6):.2f}" fill="#0A0A0A" stroke="none"/>')
+
+    callout_svg_points = {}
+    if callouts:
+        # place numbered leader lines pointing right, into the callout margin
+        right_edge = w - callout_margin * 0.35
+        step = h / (len(callouts) + 1)
+        for i, (world_xyz, number, text) in enumerate(callouts):
+            p2d = project(np.array([world_xyz]), right, up)[0] * page_scale
+            px, py = flip(p2d)
+            label_y = step * (i + 1)
+            lines.append(f'<line x1="{px:.2f}" y1="{py:.2f}" x2="{right_edge:.2f}" y2="{label_y:.2f}" stroke="#0A0A0A" stroke-width="{DETAIL_WEIGHT_MM}" fill="none"/>')
+            lines.append(f'<circle cx="{px:.2f}" cy="{py:.2f}" r="0.9" fill="#0A0A0A"/>')
+            lines.append(f'<circle cx="{right_edge+3:.1f}" cy="{label_y:.1f}" r="3" fill="none" stroke="#0A0A0A" stroke-width="0.3"/>')
+            lines.append(f'<text x="{right_edge+3:.1f}" y="{label_y+1.3:.1f}" font-family="Georgia, serif" font-size="3.4" text-anchor="middle" fill="#0A0A0A">{number}</text>')
+            callout_svg_points[number] = (px, py, right_edge + 3, label_y)
+
     if label:
         lines.append(f'<text x="8" y="{h-6:.1f}" font-family="monospace" font-size="4" fill="#999">{label}</text>')
     lines.append("</svg>")
     out_path.write_text("\n".join(lines))
+    return callout_svg_points
 
 
 def main():

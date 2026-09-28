@@ -5,3 +5,4 @@ numpy-stl
 svgwrite
 rtree
 pyyaml
+markdown
