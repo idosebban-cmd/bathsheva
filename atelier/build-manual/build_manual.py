@@ -109,7 +109,7 @@ def before_you_begin(c):
     pg.heading(L, y - 22, "Timing")
     y -= 30
     cols = [("Weekend one", "Inspect and dry-fit, prepare the surfaces, prime, and paint the colours."),
-            ("The week between", "Let the 2K clear coat harden. It feels dry within hours but needs days to "
+            ("The week between", "Let the clear coat harden. It feels dry within hours but needs days to "
              "cure fully."),
             ("Weekend two", "Assemble, weigh it down, and check it stands and photographs well.")]
     cw = (R - L) / 3
@@ -128,9 +128,6 @@ def before_you_begin(c):
     items = ["Spray outdoors or somewhere very well ventilated, and wear the respirator whenever you spray.",
              "Wear a dust mask or the respirator, and nitrile gloves, when sanding resin: its dust shouldn't be "
              "breathed in or left on skin.",
-             "The 2K clear coat contains isocyanates. Spray it outdoors only, wear a proper A2P3 organic "
-             "vapour and particulate respirator (a dust mask is not enough), and make sure nobody else, and "
-             "no pets, are nearby while spraying or while it flashes off.",
              "Wear nitrile gloves when mixing or applying epoxy.",
              "Keep sprays and epoxy away from children and pets, and let fumes clear before bringing parts "
              "indoors."]
@@ -144,7 +141,7 @@ def before_you_begin(c):
     pg.para(L, y - 10, 225, "Work through the seven steps in order. Each part's colour and treatment is listed "
             "on the next page; keep it open while you paint. If something goes wrong, turn to Troubleshooting "
             "at the back: almost every mistake can be sanded out and repainted.")
-    y2 = pg.image("06_04_fins", L + 250, y + 6, width=R - L - 250, caption="Fins on, dry-fitted.")
+    y2 = pg.image("front_finished", L + 250, y + 6, width=R - L - 250, caption="The front, finished.")
     end_page(c, pg, min(yb - 34 - 60, y2), "before you begin")
 
 
@@ -153,7 +150,7 @@ def before_you_begin(c):
 # this set prints in resin (see Step 02 below and README.md's note on resin vs. FDM).
 SW = {"oxblood": "#8A1C15", "gold": "#C4A15A", "black": "#1F1D1C"}
 PARTS = [
-    ("Body", "1", "Oxblood gloss, 2K clear coat", "oxblood"),
+    ("Body", "1", "Oxblood gloss, clear coat", "oxblood"),
     ("Nose cone", "1", "Metallic gold", "gold"),
     ("Fins", "3", "Metallic gold", "gold"),
     ("Grille", "1", "Metallic gold; recess floor behind it masked and painted matt black", "gold"),
@@ -172,7 +169,7 @@ SUPPLIES_LEFT = [
     "U-POL Isolate Acid #8 etch primer, or U-POL Custom Grey primer-filler (proposed, primer)",
     "Oxblood/deep red basecoat to match #8A1C15, colour-matched by a U-POL or automotive "
     "refinish supplier (proposed, colour, confirm on a swatch, Step 04)",
-    "U-POL 2K HS Clearcoat, aerosol or 2K gun mix (proposed, clear; contains isocyanates, see Safety)",
+    "U-POL High Build 1K Clear Lacquer, aerosol (proposed, clear, same system as the primer and colour)",
     "Metallic gold spray, e.g. Rust-Oleum Universal Metallic “Gold” (proposed, for the trim parts, "
     "left uncoated)",
     "Matt black acrylic and a small brush, for the grille recess floor",
@@ -184,7 +181,7 @@ SUPPLIES_RIGHT = [
     f"M4 x 12 mm self-tapping screws, 6 (proposed, for the fins, into their {FIN_PILOT_DIA} mm pilot holes; "
     "epoxy alone is the fallback, see Step 06)",
     f"Steel shot or fishing weights, about {WEIGHT_G} g, for the internal weight (proposed)",
-    "A2P3 respirator (for the 2K clear coat), dust mask, nitrile gloves",
+    "Respirator suitable for solvent-borne spray paint, dust mask, nitrile gloves",
     "Craft knife, blu-tack",
     "A spare printed swatch or offcut, for the Step 04 paint test",
 ]
@@ -214,8 +211,9 @@ def step1_inspect(c):
                 "so tight fits only get tighter.", STAND)
     pg.rule(L, y - 12)
     top = y - 30
-    pg.image("01_exploded_resin", L, top, width=245, height=460, align="center")
-    x = L + 258
+    img_w = 270
+    img_y = pg.image("01_exploded_resin", L, top, width=img_w, height=top - FOOTER_SAFE_Y - 10, align="center")
+    x = L + img_w + 22
     yy = pg.steps(x, top, R - x, [
         "Tick off every part against the inventory. Look for cracks, warping or resin flash.",
         "Stand the collar on the foot, then hold the body over the collar's spigot: it should sit "
@@ -230,7 +228,7 @@ def step1_inspect(c):
         "Stand the nose cone on the body's top rim: it should sit centred and level.",
         "Stand the whole dry stack where it would live, and judge size and proportions."],
         style=BODY_S, gap=5)
-    end_page(c, pg, min(yy, top - 460) - 22, "step 1")
+    end_page(c, pg, min(yy, img_y) - 10, "step 1")
 
 
 def step2_prepare(c):
@@ -303,9 +301,9 @@ def step4_paint(c):
     y = pg.image("04_paint_groups", L, y - 12, width=R - L)
     col = (R - L) / 2 - 10
     pg.heading(L, y - 20, "Swatch test first")
-    ym = pg.para(L, y - 32, col, "Spray the primer, oxblood colour and 2K clear on a spare printed offcut in "
+    ym = pg.para(L, y - 32, col, "Spray the primer, oxblood colour and clear on a spare printed offcut in "
                  "that order, exactly as you plan to spray the body, and let it cure fully (see Step 05's "
-                 "timings). Some colours wrinkle or lift under a 2K clear; if the swatch stays smooth and hard, "
+                 "timings). Some colours wrinkle or lift under some clears; if the swatch stays smooth and hard, "
                  "carry on.", BODY_S)
     pg.heading(L, ym - 18, "Mask before painting")
     ym = pg.bullets(L, ym - 30, col, [
@@ -324,7 +322,7 @@ def step4_paint(c):
         "matt black; wipe the raised surround clean before it dries."], style=BODY_S, gap=3, num_w=20)
     ys = pg.para(x2, ys - 4, R - x2, "<b>Drying times.</b> Typically touch-dry in 15 to 30 minutes, with the "
                  "next coat after 15 to 30 minutes. Check the can.", NOTE)
-    y3 = pg.para(L, min(ym, ys) - 10, R - L, "The 2K clear coat is next, in Step 05; this step's checkpoint "
+    y3 = pg.para(L, min(ym, ys) - 10, R - L, "The clear coat is next, in Step 05; this step's checkpoint "
                  "comes after it.", CAP)
     end_page(c, pg, y3, "step 4")
 
@@ -334,9 +332,8 @@ def step4b_reference(c):
     pg.kicker(H - 110, "Step 04, continued")
     pg.title(H - 145, "Colour reference")
     pg.rule(L, H - 160)
-    y = pg.para(L, H - 176, R - L, "The body and grille recess floor take their colour here; the gold trim "
-                "parts are covered in Step 06 as they're glued on, so mask and paint them alongside the body "
-                "even though they're fitted later.", BODY_S)
+    y = pg.para(L, H - 176, R - L, "Every part, gold trim included, is painted here in Step 04. These views "
+                "show how the finished colours should look once every coat is on.", BODY_S)
     cw = (R - L) / 4
     low = y - 20
     for k, (nm, cap) in enumerate((("04_view_front", "Front"), ("04_view_side", "Side"), ("04_view_rear", "Rear"),
@@ -347,39 +344,30 @@ def step4b_reference(c):
     end_page(c, pg, y3, "step 4 continued")
 
 
-def step5_clearcoat(c):
-    pg = Page(c, "Step 5", 9)
+def step5_6(c, number):
+    """Steps 05 and 06 share a page, as Faro does with its own Steps 5 and 6."""
+    pg = Page(c, "Steps 5 and 6", number)
     pg.kicker(H - 110, "Step 05")
-    pg.title(H - 145, "2K clear coat and cure")
+    pg.title(H - 145, "Clear coat and cure")
     y = pg.para(L, H - 160, 400, "The gold trim is left uncoated (a clear coat dulls metallic paint), but "
                 "the body's oxblood gloss is clear-coated for the lacquer look.", STAND)
     pg.rule(L, y - 12)
     y = pg.steps(L, y - 30, R - L, [
         "Wait at least 24 hours after the oxblood colour coat.",
-        "2K clear contains isocyanates: spray outdoors, wear the A2P3 respirator, and make sure nobody else "
-        "is nearby (see Safety, Before you begin).",
-        "Mix the 2K clear exactly to the pack ratio, in a well-ventilated spot, and use it within its pot "
-        "life.",
-        "Spray two light coats on the body only.",
-        "Leave it warm, dry and dust-free for two to three days. Paint feels dry long before 2K clear is "
+        "Spray 2 to 3 light coats on the body only.",
+        "Leave it warm, dry and dust-free for two to three days. Paint feels dry long before the clear is "
         "fully hard.",
         "Optional: once fully hard, polish the body with car polishing compound."], style=BODY_S, gap=3)
-    y = pg.para(L, y - 6, R - L, "<b>Drying times.</b> 2K clear is typically touch-dry in 30 to 60 minutes, "
-                "recoatable within an hour or after 24 hours (check the can, many 2K products have a "
-                "recoat window either side of which you must key the surface), and fully cured in 2 to 3 "
-                "days at room temperature.", NOTE)
-    y3 = pg.checkpoint(y - 16, "the body's gloss is even and hard: a fingernail pressed on a hidden spot "
-                        "leaves no mark, and the gold trim parts are unclouded.")
-    end_page(c, pg, y3, "step 5")
-
-
-def step6_intro(c):
-    pg = Page(c, "Step 6", 10)
-    pg.kicker(H - 110, "Step 06")
-    pg.title(H - 145, "Assemble")
-    y = pg.para(L, H - 160, 400, "Araldite Rapid gives about five minutes to position a joint. Mix small "
+    y = pg.para(L, y - 6, R - L, "<b>Drying times.</b> Typically touch-dry in 15 to 30 minutes, with the next "
+                "coat after 15 to 30 minutes, and fully cured in a few days at room temperature. Check the "
+                "can.", NOTE)
+    y = pg.checkpoint(y - 16, "the body's gloss is even and hard: a fingernail pressed on a hidden spot "
+                       "leaves no mark, and the gold trim parts are unclouded.")
+    pg.kicker(y - 34, "Step 06")
+    pg.title(y - 68, "Assemble")
+    y = pg.para(L, y - 82, 400, "Araldite Rapid gives about five minutes to position a joint. Mix small "
                 "amounts, one joint at a time, and hold or tape each joint as it sets.", STAND)
-    pg.rule(L, y - 12)
+    pg.rule(L, y - 10)
     y = pg.bullets(L, y - 26, R - L, [
         "Wait about 20 to 30 minutes before handling a glued joint or starting the next one.",
         "Epoxy reaches full strength the next day: leave the finished prototype overnight before lifting it "
@@ -387,17 +375,11 @@ def step6_intro(c):
         "Dry-fit each joint just before you glue it, and wipe off any squeeze-out with a cocktail stick "
         "before it sets."], style=BODY_S)
     pg.heading(L, y - 22, "Order")
-    y2 = pg.para(L, y - 34, R - L, "Front details first, then the fins, then the weight, then seal the base "
-                 "and cap the nose: grille, bezel, knob, fins, weight, collar, foot, nose cone. The weight has "
-                 "to go in before the collar, while the body's underside is still open.", BODY_S)
-    pg.heading(L, y2 - 20, "The knob's own boss, not a dowel")
-    y4 = pg.para(L, y2 - 32, R - L, f"The knob is moulded with its own mounting peg on the back: a "
-                 f"{KNOB_BOSS_DIA:.0f} mm boss, {KNOB_BOSS_LEN:.0f} mm long, sized for the body's own "
-                 f"{KNOB_HOLE_DIA:.1f} mm knob hole ({(KNOB_HOLE_DIA - KNOB_BOSS_DIA) / 2:.1f} mm clearance "
-                 f"all round). That boss is what mounts the knob; no separate dowel or sleeve is needed. (The "
-                 f"knob also has its own {KNOB_SHAFT_BORE:.0f} mm blind bore, for a production encoder shaft; "
-                 f"on the prototype it's just left empty behind the boss.)", BODY_S)
-    end_page(c, pg, y4, "step 6 intro")
+    y4 = pg.para(L, y - 34, R - L, "Front details first, then the fins, then a dry-fit and unweighted tip "
+                 "test before the weight goes in, then seal the base and cap the nose: grille, bezel, knob, "
+                 "fins, dry-fit tip test, weight, collar, foot, nose cone. The weight has to go in before the "
+                 "collar, while the body's underside is still open.", BODY_S)
+    end_page(c, pg, y4, "step 5 and 6")
 
 
 IMG_ASPECT = 1000 / 800   # assembly step renders are 1000x800
@@ -446,7 +428,10 @@ ASSEMBLY_1 = [
      "self-tapping screws from inside, or epoxy alone if you'd rather not drill.", ["06_04_fins"]),
 ]
 ASSEMBLY_2 = [
-    (f"Weight", f"Glue about {WEIGHT_G} g of steel shot low inside the body, through the open bottom, clear "
+    ("Dry-fit tip test", "Dry-fit the collar and foot (no glue yet) and stand the prototype on the fins and "
+     "foot. Nudge it gently from the side and note on the test record how little it takes to tip, unweighted. "
+     "Then take the collar and foot off again.", ["06_04b_dryfit_tip"]),
+    ("Weight", f"Glue about {WEIGHT_G} g of steel shot low inside the body, through the open bottom, clear "
      "of the knob boss and fin screws.", ["06_05_weight"]),
     ("Collar", "Friction-fits onto the body's underside spigot (0.2 mm clearance); glue it in place, sealing "
      "the weight inside.", ["06_06_collar"]),
@@ -481,17 +466,16 @@ def step7_stability(c, number):
     pg = Page(c, "Step 7", number)
     pg.kicker(H - 110, "Step 07")
     pg.title(H - 145, "Stability check and photograph")
-    y = pg.para(L, H - 160, 380, "The model's own numbers describe the production part, not this hand-glued, "
-                "hand-weighted resin one, so this step is a physical test, not a rendered prediction.", STAND)
+    y = pg.para(L, H - 160, R - L, "The model's own numbers describe the production part, not this "
+                "hand-glued, hand-weighted resin one, so this step is a physical test, not a rendered "
+                "prediction. The unweighted comparison was back in Step 06; this is the weighted check.", STAND)
     pg.rule(L, y - 12)
     colw = 260
     pg.heading(L, y - 34, "Tip test")
     yy = pg.steps(L, y - 46, colw, [
         "Stand the finished prototype on a flat, level surface, resting on its three fin tips and the "
         "centre foot.",
-        "Without the steel shot fitted, nudge it gently from the side at about knob height and see how "
-        "little it takes to tip.",
-        "With the steel shot glued in (as built), repeat the same nudge and compare.",
+        "Nudge it gently from the side at about knob height and see how much it takes to tip.",
         "Try it on a soft surface (a rug or cushion) too, and note whether it's noticeably less stable."],
         style=BODY_S, gap=3)
     pg.heading(L, yy - 18, "What good looks like")
@@ -509,8 +493,8 @@ def step7_stability(c, number):
     y2 = pg.image("04_view_three_quarter", x2, y - 20, width=rcw, caption="Three-quarter, for reference.")
     yi = pg.image("07_underside", x2, y2 - 14, width=rcw * 0.72,
                    caption="Underside: fins and foot take the weight.")
-    y3 = pg.checkpoint(min(yy, yi) - 20, "it passes the tip test both weighted and unweighted, the test "
-                        "record is filled in, and both photo sets are taken.")
+    y3 = pg.checkpoint(min(yy, yi) - 20, "it passes the weighted tip test, the test record is filled in "
+                        "(unweighted note from Step 06 included), and both photo sets are taken.")
     end_page(c, pg, y3, "step 7")
 
 
@@ -520,10 +504,10 @@ TROUBLESHOOTING = [
     ("Fin sits proud, or rocks", f"Check the pilot holes are aligned before driving the screws; a fin that's "
      "still proud after gluing can be sanded flush at its root and touched up."),
     ("Paint run or sag", "Let it harden, sand flat with P1200 and spray a light coat over it."),
-    ("Rough, bumpy gloss (orange peel)", "Sand gently with P1200 and polish, or add another light 2K clear "
+    ("Rough, bumpy gloss (orange peel)", "Sand gently with P1200 and polish, or add another light clear "
      "coat. Next time, lighter coats."),
     ("Dust specks", "Once hard, sand the speck with P1200 and respray lightly on a still day."),
-    ("2K clear wrinkles, lifts or stays soft", "Let it harden as far as it will, then sand back and respray "
+    ("Clear wrinkles, lifts or stays soft", "Let it harden as far as it will, then sand back and respray "
      "the colour. Next time, run the Step 04 swatch test all the way through the clear before touching the "
      "real body."),
     ("Grille recess paint bleeds onto the gold rim", "Mask right up to the honeycomb opening before brushing "
@@ -543,8 +527,8 @@ def troubleshooting(c, number):
                 "or recoating.", STAND)
     pg.rule(L, y - 12)
     y = pg.table(L, y - 30, ["Problem", "Fix"], TROUBLESHOOTING, [190, R - L - 190], style=BODY_S)
-    y2 = pg.image("TS_knob_fit", L + 70, y - 14, width=200, align="left", caption="The knob's boss, glued into "
-                  "the body's own hole, no dowel needed.")
+    y2 = pg.image("TS_fin_root", L + 70, y - 14, width=200, align="left", caption="A fin's root, flush "
+                  "against the body: what a good fit looks like.")
     end_page(c, pg, y2, "troubleshooting")
 
 
@@ -566,8 +550,8 @@ def test_record(c, number):
         y -= 24
     y -= 8
     scales = [("Fit", "Loose", "About right", "Tight"), ("Finish", "Rough", "Good", "Excellent"),
-              ("Stability, unweighted", "Tips easily", "Some resistance", "Solid"),
-              ("Stability, weighted", "Tips easily", "Some resistance", "Solid"),
+              ("Stability, unweighted (Step 06)", "Tips easily", "Some resistance", "Solid"),
+              ("Stability, weighted (Step 07)", "Tips easily", "Some resistance", "Solid"),
               ("Weight and feel", "Too light", "About right", "Too heavy"),
               ("Proportions vs. the concept", "Off", "Close", "Spot on")]
     for row in scales:
@@ -591,8 +575,8 @@ def test_record(c, number):
     pg.heading(L, y, "Before you finish")
     y -= 18
     for t in ("Glue fully cured (overnight or longer)", "Stands level without rocking",
-              "Tip test done, both with and without the weight", "Photos taken, both sets",
-              "Changes noted for prototype two"):
+              "Unweighted tip test noted (Step 06)", "Weighted tip test done (Step 07)",
+              "Photos taken, both sets", "Changes noted for prototype two"):
         c.setStrokeColor(GOLD)
         c.setLineWidth(0.6)
         c.rect(L, y - 1, 8, 8, stroke=1, fill=0)
@@ -610,13 +594,14 @@ def main():
     c.setAuthor("Bathsheva London")
     c.setSubject("Oxblood, looks-like prototype")
     for fn in (cover, before_you_begin, parts_and_supplies, step1_inspect, step2_prepare, step3_prime,
-               step4_paint, step4b_reference, step5_clearcoat, step6_intro):
+               step4_paint, step4b_reference):
         fn(c)
-    assembly_page_1(c, 11)
-    assembly_page_2(c, 12)
-    step7_stability(c, 13)
-    troubleshooting(c, 14)
-    test_record(c, 15)
+    step5_6(c, 9)
+    assembly_page_1(c, 10)
+    assembly_page_2(c, 11)
+    step7_stability(c, 12)
+    troubleshooting(c, 13)
+    test_record(c, 14)
     c.save()
     print(OUT, f"{OUT.stat().st_size / 1e6:.1f} MB")
 

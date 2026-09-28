@@ -5,8 +5,9 @@ manual_common/scene.py): clean studio renders on the manual's warm off-white
 paper colour, fine dark outlines, serif labels with thin gold leader lines.
 Parts show the stage they're at: matt white resin (inspection, preparation),
 grey primer (priming), painted colours (from painting on). In the assembly
-steps the parts already in place keep their real colours, a little lighter,
-and the new part is drawn in full colour with a deep red outline.
+steps the parts already in place fade well back towards the paper colour,
+and the new part is drawn at full strength with a thin dark outline (a red
+one, as Faro uses, doesn't read against Atelier's own oxblood body).
 
     python atelier/build-manual/illustrate.py            # all images
     python atelier/build-manual/illustrate.py hero step  # only names containing these words
@@ -127,8 +128,13 @@ def mesh(name):
 # Atelier's own part staging (style, below) is here.
 class Scene(common_scene.Scene):
     def __init__(self, size=(1400, 1000), lights=1.0):
+        # A red highlight outline doesn't read against the oxblood body, so
+        # Atelier's "new part" outline uses the same dark outline colour as
+        # every other edge, just thicker -- and the "done" parts fade back
+        # much further than Faro's, so the new part still stands out at a
+        # glance without relying on the outline colour to do it.
         super().__init__(atelier, mesh, p, size=size, lights=lights, scale=S,
-                          paper=PAPER, outline=OUTLINE, accent=ACCENT)
+                          paper=PAPER, outline=OUTLINE, accent=OUTLINE)
 
     # materials by stage ------------------------------------------------------
     def style(self, name, stage, lit=False, soft=False):
@@ -148,13 +154,32 @@ class Scene(common_scene.Scene):
                 coat = False                              # clear coat dulls metallic paint    # deep honeycomb
                                                             # pockets don't self-shadow into reading as copper
         st = dict(st)
-        if soft:                                          # parts already in place: real colour, a little lighter
-            if "color" in st and st.get("lighting", True) is not False:
-                c = np.array(st["color"]) ** (1 / 2.2)
+        if soft:                                          # parts already fitted: faded well back, so the new
+            if "color" in st and st.get("lighting", True) is not False:  # part (full strength, dark outline)
+                c = np.array(st["color"]) ** (1 / 2.2)                    # reads at a glance
                 paper = np.array(lin(PAPER)) ** (1 / 2.2)
-                st["color"] = tuple((c * 0.85 + paper * 0.15) ** 2.2)
+                st["color"] = tuple((c * 0.45 + paper * 0.55) ** 2.2)
             coat = False
         return st, coat
+
+
+def trim_to_content(img, pad=30):
+    """Crop away blank paper-colour margin around the real content (a render
+    letterboxed by an odd content aspect, e.g. a tall stack beside a synthetic
+    label-margin box, otherwise leaves a lot of dead space top and bottom when
+    placed in a page column at a fixed width). `pad` is in the image's own
+    (working-scale) pixels."""
+    arr = np.asarray(img.convert("RGB")).astype(np.int16)
+    paper = np.array([int(c * 255) for c in hexrgb(PAPER)])
+    diff = np.abs(arr - paper).sum(axis=2)
+    mask = diff > 12
+    if not mask.any():
+        return img
+    rows = np.where(mask.any(axis=1))[0]
+    cols = np.where(mask.any(axis=0))[0]
+    top, bottom = max(rows[0] - pad, 0), min(rows[-1] + pad, img.size[1])
+    left, right = max(cols[0] - pad, 0), min(cols[-1] + pad, img.size[0])
+    return img.crop((left, top, right, bottom))
 
 
 def finish(img, name):
@@ -243,9 +268,14 @@ def assembly_step_1_of_2():
 
 
 def assembly_step_2_of_2():
-    """Step 06, assembly, page 2 of 2: weight, collar, foot, nose cone."""
+    """Step 06, assembly, page 2 of 2: dry-fit tip test, weight, collar, foot,
+    nose cone. The collar and foot are test-fitted here (highlighted, as with
+    any newly-placed part) for the unweighted tip test, then come off again
+    before the steel shot goes in and they're glued on for good below."""
     done4 = ["body", "grille_paint", "grille", "bezel", "knob", "fin_1", "fin_2", "fin_3"]
     base = zoom_bounds(I["z0"] - 5, I["z0"] + 60, r=70)
+    img_step("06_04b_dryfit_tip", done=done4, new=["collar", "foot"], view=(0.5, -0.9, 0.1), fit_to=base,
+              margin=1.2)
     shot_style = dict(color=lin("#8C8F94"), pbr=True, metallic=0.9, roughness=0.4)
     img_step("06_05_weight", done=done4, new=[], view=(0.4, -0.7, -0.5), fit_to=base, margin=1.3,
               extra=[(steel_shot(), shot_style)])
@@ -265,7 +295,7 @@ def img_exploded():
     wherever the part below it now ends -- not a guessed absolute height.
     grille/bezel/knob are pulled out along -Y (the model's front direction,
     see model.py's own note: "front (grille) faces -Y") off the body face."""
-    sc = Scene((1100, 1600))
+    sc = Scene((950, 1650))
     anchors = {}
     dz_of = {}
     z_top = None
@@ -296,7 +326,7 @@ def img_exploded():
     fm = mesh("fin_1")
     lo, hi = bbox(fm)
     fin_w = hi[0] - lo[0]
-    fx0 = I["fin_tip_reach"] + 50
+    fx0 = I["fin_tip_reach"] * 0.55 + 34
     fin_z = anchors["foot"][2] + 40
     for k in range(3):
         m = fm.copy()
@@ -305,17 +335,35 @@ def img_exploded():
         st, coat = sc.style("fin_1", "resin")
         sc.add(m, st, coat)
     anchors["fin_x3"] = np.array([fx0 + 1.5 * fin_w + fin_w / 2, 0, fin_z + hi[2] - lo[2] + 20])
-    sc.fit((0.55, -1.0, 0.22), margin=1.06)
-    keys = ["foot", "collar", "body", "grille", "bezel", "knob", "fin_x3", "nose_cone"]
-    pts = dict(zip(keys, sc.project([anchors[k] for k in keys])))
+    # A synthetic box, well clear of any real part, extends the fitted bounds
+    # further left than the body cluster actually reaches -- reserving a
+    # blank label column on the left of the frame (Faro's own exploded view
+    # gets this for free from its wider part spread; Atelier's front-pulled
+    # cluster sits close to the body, so it needs deliberate margin instead).
+    lo_all = np.min([[b[0], b[2], b[4]] for b in sc.bounds], axis=0)
+    hi_all = np.max([[b[1], b[3], b[5]] for b in sc.bounds], axis=0)
+    margin_box = (lo_all[0] - 85, hi_all[0], lo_all[1], hi_all[1], lo_all[2], hi_all[2])
+    sc.fit((0.55, -1.0, 0.22), margin=1.02, bounds=sc.bounds + [margin_box])
+    stack_keys = ["foot", "collar", "body", "nose_cone"]           # the vertical spine: one shared left column
+    front_keys = ["grille", "bezel", "knob"]                       # pulled toward the camera, off the body face
+    pts = dict(zip(stack_keys + front_keys + ["fin_x3"],
+                    sc.project([anchors[k] for k in stack_keys + front_keys] + [anchors["fin_x3"]])))
     img = sc.image()
     d = ImageDraw.Draw(img)
-    Wpx = img.size[0]
+    Wpx, Hpx = img.size
     ref = {"foot": "Foot", "collar": "Collar", "body": "Body", "grille": "Grille", "bezel": "Bezel",
            "knob": "Knob", "fin_x3": "Fins x3", "nose_cone": "Nose cone"}
-    for k in keys:
+    # every spine and front-cluster label sits in one column outside (to the
+    # left of) the whole stack, each with its own long gold leader back to
+    # its part -- Faro's exploded-view style, rather than a short leader
+    # hugging the part's edge.
+    lx = min(pts[k][0] for k in stack_keys + front_keys) - 30 * S
+    for k in stack_keys + front_keys:
         x, y = pts[k]
-        draw_label(d, ref[k], (min(x + 40 * S, Wpx - 20 * S), y), (x, y), size=25)
+        draw_label(d, ref[k], (lx, y), (x, y), align="right", size=25)
+    fx, fy = pts["fin_x3"]
+    draw_label(d, ref["fin_x3"], (min(fx + 60 * S, Wpx - 20 * S), fy - 90 * S), (fx, fy - 10 * S), size=25)
+    img = trim_to_content(img, pad=36 * S)
     return finish(img, "01_exploded_resin")
 
 
@@ -396,7 +444,7 @@ def img_priming():
     img = sc.image()
     d = ImageDraw.Draw(img)
     for (n, _), (px, py) in zip(labels, pts):
-        draw_label(d, labels_map.get(n, n), (px, py), None, align="center", size=22)
+        draw_label(d, labels_map.get(n, n), (px, py), None, align="center", size=25)
     return finish(img, "03_priming")
 
 
@@ -429,24 +477,52 @@ def img_paint_groups():
     return finish(img, "04_paint_groups")
 
 
+# ---- Before you begin: the front, finished --------------------------------------
+def img_front_finished():
+    """Page 2 (Before you begin): a finished close-up of the front -- grille,
+    LED and knob on the lacquered oxblood body -- so the reader sees the
+    target result before starting, in place of the earlier dry-fit shot."""
+    sc = Scene((1000, 1100))
+    for n in ("body", "grille_paint", "grille", "bezel", "knob"):
+        add_painted(sc, n, lit=True)
+    led = M.envelopes.get("led")
+    if led is not None:
+        col = hexrgb(p.LED_HEX)
+        sc.add(atelier._to_mesh(led, 0.02), dict(color=col, lighting=False), outline=False)
+        z = I["z_led"]
+        y = -M._r_out(z) - 0.25
+        halo = pv.Disc(center=(0, y, z), inner=0, outer=p.LED_DIA * 1.6, normal=(0, -1, 0), r_res=24, c_res=48)
+        r = np.linalg.norm(halo.points[:, [0, 2]] - np.array([0, z]), axis=1)
+        glow = np.exp(-(r / (p.LED_DIA * 0.55)) ** 2) * 0.85
+        rgba = np.column_stack([np.tile(np.array(col) * 255, (len(r), 1)), glow * 255])
+        halo["rgba"] = rgba.astype(np.uint8)
+        sc.pl.add_mesh(halo, scalars="rgba", rgba=True, lighting=False, show_scalar_bar=False)
+    base = zoom_bounds(I["z_knob"] - 18, I["z_grille"] + 42, r=48, y=0)
+    sc.fit((0.4, -1.0, 0.15), margin=1.1, bounds=base)
+    return finish(sc.image(), "front_finished")
+
+
 # ---- Step 04: colour reference views -------------------------------------------
 def img_views():
+    """Colour reference, one per side: framed tight (not the wide margin a
+    full hero shot uses) so the prototype fills the column it's printed at."""
     for name, direction in (("front", (0, -1, 0.12)), ("side", (1, 0, 0.12)), ("rear", (0, 1, 0.12)),
                              ("three_quarter", (0.62, -0.78, 0.2))):
         sc = Scene((700, 1000))
         for n in ORDER:
             add_painted(sc, n, lit=True)
         sc.shadow(0, 0, I["fin_tip_reach"], 0.4)
-        sc.fit(direction, margin=1.12)
+        sc.fit(direction, margin=1.02)
         finish(sc.image(), f"04_view_{name}")
 
 
 # ---- Step 07: stability check -- a straight underside view for the record ------
 # (The tip test itself is physical: rest the real prototype on the fins and nudge
-# it, with and without the steel shot fitted, and note the result on the test
-# record page. There's no simulated "tips at N deg" render here: that would be
-# faking a measurement the model can't make for a hand-glued, hand-weighted
-# resin part -- only the real prototype's own mass and glue lines can.)
+# it. The unweighted comparison happens back in Step 06, before the collar seals
+# the shot in; this step repeats it weighted, as built. There's no simulated
+# "tips at N deg" render here: that would be faking a measurement the model can't
+# make for a hand-glued, hand-weighted resin part -- only the real prototype's
+# own mass and glue lines can.)
 def img_underside():
     sc = Scene((900, 900))
     for n in ORDER:
@@ -455,19 +531,24 @@ def img_underside():
     return finish(sc.image(), "07_underside")
 
 
-# ---- Troubleshooting: the knob boss / body hole fit -----------------------------
-def img_knob_fit():
+# ---- Troubleshooting: a fin's root, flush against the body ----------------------
+def img_fin_root():
+    """What a good fit looks like for 'Fin sits proud, or rocks': fin_1's
+    root highlighted, close in on the joint against the body, with the
+    other two fins and the body faded back."""
     sc = Scene((1000, 800))
-    st, coat = sc.style("body", "paint", soft=True)
-    sc.add(mesh("body"), st, coat)
-    sc.part("knob", "paint", highlight=True)
-    base = zoom_bounds(I["z_knob"] - 20, I["z_knob"] + 20, r=30)
-    sc.fit((0.3, -1.0, 0.0), margin=1.3, bounds=base)
-    return finish(sc.image(), "TS_knob_fit")
+    for n in ("body", "grille_paint", "grille", "bezel", "knob", "fin_2", "fin_3"):
+        st, coat = sc.style(n, "paint", soft=True)
+        sc.add(mesh(n), st, coat)
+    sc.part("fin_1", "paint", highlight=True)
+    base = zoom_bounds(I["z_fin_root_bottom"] - 5, I["z_fin_root_bottom"] + 35, r=42)
+    sc.fit((0.55, -0.95, 0.15), margin=1.2, bounds=base)
+    return finish(sc.image(), "TS_fin_root")
 
 
 REGISTRY = {
     "hero": img_hero,
+    "front_finished": img_front_finished,
     "step1": assembly_step_1_of_2,
     "step2": assembly_step_2_of_2,
     "exploded": img_exploded,
@@ -476,7 +557,7 @@ REGISTRY = {
     "paint_groups": img_paint_groups,
     "views": img_views,
     "underside": img_underside,
-    "knob_fit": img_knob_fit,
+    "fin_root": img_fin_root,
 }
 
 
