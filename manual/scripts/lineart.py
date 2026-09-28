@@ -26,6 +26,13 @@ SAMPLE_SPACING = 1.5  # mm between visibility test points along an edge
 OCCLUSION_EPS = 0.15  # mm, ignore self-hits closer than this
 GRILLE_MIN_EDGE_LEN = 6.0  # mm, drop shorter grille edges (honeycomb texture) for a clean look
 
+# Line weights are specified in mm at print size. The SVG is written 1 unit = 1 mm,
+# so these values are used as literal stroke-width. "outline" = the part's visible
+# profile (silhouette + open boundaries); "detail" = internal feature lines (creases
+# that aren't also part of the silhouette, e.g. panel seams).
+OUTLINE_WEIGHT_MM = 0.25
+DETAIL_WEIGHT_MM = 0.15
+
 
 def rotation_matrix(axis, deg):
     if axis == "NONE" or deg == 0:
@@ -57,7 +64,12 @@ def load_part(name, cfg):
 
 
 def feature_edges(mesh, view_vector, min_len=0.0):
-    """Return (Nx2x3 endpoints, part-relative edge lengths) for crease + silhouette + boundary edges."""
+    """Return [(p0, p1, kind), ...] for crease + silhouette + boundary edges.
+
+    kind is "outline" (silhouette or open boundary -- the part's visible profile)
+    or "detail" (a crease that isn't also a silhouette edge -- an internal feature
+    line, drawn thinner).
+    """
     edges_out = []
 
     # crease edges: dihedral angle between adjacent faces exceeds threshold
@@ -74,17 +86,18 @@ def feature_edges(mesh, view_vector, min_len=0.0):
 
     keep = crease_mask | silhouette_mask
     adj_edges = mesh.face_adjacency_edges[keep]
-    for e in adj_edges:
+    adj_kind = np.where(silhouette_mask[keep], "outline", "detail")
+    for e, kind in zip(adj_edges, adj_kind):
         p0, p1 = mesh.vertices[e[0]], mesh.vertices[e[1]]
         if np.linalg.norm(p1 - p0) >= min_len:
-            edges_out.append((p0, p1))
+            edges_out.append((p0, p1, str(kind)))
 
-    # boundary edges (open, non-manifold rims e.g. spigots) always count as features
+    # boundary edges (open, non-manifold rims e.g. spigots) are always part of the outline
     boundary = mesh.edges[trimesh.grouping.group_rows(mesh.edges_sorted, require_count=1)]
     for e in boundary:
         p0, p1 = mesh.vertices[e[0]], mesh.vertices[e[1]]
         if np.linalg.norm(p1 - p0) >= min_len:
-            edges_out.append((p0, p1))
+            edges_out.append((p0, p1, "outline"))
 
     return edges_out
 
@@ -116,7 +129,7 @@ def project(points, right, up):
     return np.stack([x, y], axis=1)
 
 
-def render_view(parts_cfg, part_names, view_vector, up_vector, out_svg, label=""):
+def render_view(parts_cfg, part_names, view_vector, up_vector, out_svg, label="", page_scale=1.0):
     view_vector = np.array(view_vector, dtype=float)
     view_vector /= np.linalg.norm(view_vector)
     up_vector = np.array(up_vector, dtype=float)
@@ -129,10 +142,12 @@ def render_view(parts_cfg, part_names, view_vector, up_vector, out_svg, label=""
     occluder = trimesh.util.concatenate(list(meshes.values()))
 
     all_segments = []
+    n_candidates = 0
     for name, mesh in meshes.items():
         min_len = GRILLE_MIN_EDGE_LEN if name == "grille" else 0.0
         edges = feature_edges(mesh, -view_vector, min_len=min_len)
-        for p0, p1 in edges:
+        n_candidates += len(edges)
+        for p0, p1, kind in edges:
             pts, _ = sample_edge(p0, p1, SAMPLE_SPACING)
             vis = visible_mask(pts, view_vector, occluder)
             # split into contiguous visible runs
@@ -143,19 +158,26 @@ def render_view(parts_cfg, part_names, view_vector, up_vector, out_svg, label=""
                 if (not v or i == len(vis) - 1) and start is not None:
                     end = i if v else i - 1
                     if end > start:
-                        all_segments.append((pts[start], pts[end]))
+                        all_segments.append((pts[start], pts[end], kind))
                     start = None
 
-    write_svg(all_segments, right_vector, up_vector, out_svg, label)
-    print(f"{out_svg.name}: {len(all_segments)} visible segments from {sum(len(feature_edges(m, -view_vector)) for m in meshes.values())} candidate edges")
+    write_svg(all_segments, right_vector, up_vector, out_svg, label, page_scale=page_scale)
+    print(f"{out_svg.name}: {len(all_segments)} visible segments from {n_candidates} candidate edges (page_scale={page_scale})")
 
 
-def write_svg(segments, right, up, out_path, label=""):
-    pts2d = [project(np.array([p0, p1]), right, up) for p0, p1 in segments]
-    allpts = np.concatenate(pts2d, axis=0)
+def write_svg(segments, right, up, out_path, label="", page_scale=1.0):
+    """
+    page_scale scales the DRAWING (model mm -> page mm) to fit a layout box,
+    e.g. 0.35 to shrink a 288 mm-tall object onto a ~100 mm page illustration.
+    Line weights (OUTLINE_WEIGHT_MM / DETAIL_WEIGHT_MM) are NOT scaled by this --
+    they are specified at final print size, so the same value is used whether
+    the drawing is shown true-size or fitted to a small page box.
+    """
+    proj = [(project(np.array([p0, p1]), right, up) * page_scale, kind) for p0, p1, kind in segments]
+    allpts = np.concatenate([p for p, _ in proj], axis=0)
     minx, miny = allpts.min(axis=0)
     maxx, maxy = allpts.max(axis=0)
-    margin = 10
+    margin = 10 * page_scale
     w = maxx - minx + 2 * margin
     h = maxy - miny + 2 * margin
 
@@ -166,12 +188,16 @@ def write_svg(segments, right, up, out_path, label=""):
     lines = []
     lines.append(f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {w:.1f} {h:.1f}" width="{w:.1f}mm" height="{h:.1f}mm">')
     lines.append(f'<rect x="0" y="0" width="{w:.1f}" height="{h:.1f}" fill="#F7F3EC"/>')
-    lines.append(f'<g stroke="#0A0A0A" stroke-width="0.35" stroke-linecap="round" fill="none">')
-    for p0, p1 in pts2d:
-        x0, y0 = flip(p0)
-        x1, y1 = flip(p1)
-        lines.append(f'<line x1="{x0:.2f}" y1="{y0:.2f}" x2="{x1:.2f}" y2="{y1:.2f}"/>')
-    lines.append("</g>")
+    for kind, weight in (("detail", DETAIL_WEIGHT_MM), ("outline", OUTLINE_WEIGHT_MM)):
+        # draw detail lines first, outline on top, so the profile reads cleanly
+        lines.append(f'<g stroke="#0A0A0A" stroke-width="{weight}" stroke-linecap="round" fill="none">')
+        for pts, k in proj:
+            if k != kind:
+                continue
+            x0, y0 = flip(pts[0])
+            x1, y1 = flip(pts[1])
+            lines.append(f'<line x1="{x0:.2f}" y1="{y0:.2f}" x2="{x1:.2f}" y2="{y1:.2f}"/>')
+        lines.append("</g>")
     if label:
         lines.append(f'<text x="8" y="{h-6:.1f}" font-family="monospace" font-size="4" fill="#999">{label}</text>')
     lines.append("</svg>")
@@ -181,7 +207,7 @@ def write_svg(segments, right, up, out_path, label=""):
 def main():
     cfg = yaml.safe_load(ASSEMBLY_YAML.read_text())
     parts_cfg = cfg["parts"]
-    out_dir = ROOT / "figures" / "_test"
+    out_dir = ROOT / "figures" / "test"
     out_dir.mkdir(parents=True, exist_ok=True)
 
     confident = ["body", "nose_cone", "collar", "foot"]
@@ -189,6 +215,17 @@ def main():
         parts_cfg, confident, cfg["camera"]["front"]["view_dir"], cfg["camera"]["front"]["up"],
         out_dir / "test_front_confident.svg",
         label="body + nose_cone + collar + foot -- verified transforms, no guessed placement",
+    )
+
+    # legibility check: same drawing fitted to a plausible A6 page illustration box
+    # (~100 mm tall, leaving margins/heading room on a 148 mm page), line weights
+    # held at their print-size mm value regardless of this shrink.
+    A6_PAGE_FIT_SCALE = 100.0 / 288.1
+    render_view(
+        parts_cfg, confident, cfg["camera"]["front"]["view_dir"], cfg["camera"]["front"]["up"],
+        out_dir / "test_front_confident_a6scale.svg",
+        label=f"A6 page-fit scale ({A6_PAGE_FIT_SCALE:.2f}x) -- line weights held at print-size mm",
+        page_scale=A6_PAGE_FIT_SCALE,
     )
 
     full = confident + ["grille", "bezel", "knob", "fin_1", "fin_2", "fin_3"]

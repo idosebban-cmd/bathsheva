@@ -2,12 +2,27 @@
 
 Printed instruction booklet for Atelier (Bathsheva London), A6, saddle-stitched.
 
-## Status: Phase 1 (in review)
+## Status
 
-- [x] Page outline -- `outline.md`
-- [x] Hardware spec placeholders -- `specs.yaml`
-- [x] Illustration method chosen and test-rendered -- `scripts/lineart.py`
-- [ ] Open decisions confirmed
+Phase 1 decisions are in (16-page outline, knob/LED/warranty/in-the-box
+locked, print-size line weights). Phase 2 build is **blocked** on one point:
+
+### Assembly source -- not found, do not approximate
+
+Ido asked to pull each part's assembled position from the code that
+generated the STLs, rather than eyeballing it against the reference photo.
+I searched this repo's full git history (both commits), all branches, the
+uploaded file set, and the container filesystem for any CadQuery/build123d/
+OpenSCAD/FreeCAD/STEP source -- there is none. `manual/models/*.stl` and
+`manual/models/PRINT_NOTES.md` are the only source material that exists.
+`manual/scripts/assembly.yaml` still marks grille/bezel/knob/fins as
+ESTIMATE for this reason -- they should not be treated as final until this
+is resolved. See the request thread for how to proceed.
+
+- [x] Page outline -- `outline.md` (16 pages)
+- [x] Hardware spec decisions -- `specs.yaml`
+- [x] Illustration method chosen, print-size line weights, A6 legibility checked -- `scripts/lineart.py`
+- [ ] **Blocked**: assembly source for grille/bezel/knob/fin placement
 - [ ] Phase 2: `content.md`, HTML/CSS layout, `build.py`, final PDF
 
 ## Folder layout
@@ -66,6 +81,18 @@ The grille's honeycomb is deliberately simplified: edges shorter than 6 mm
 are dropped for that part only, so the drawing shows the grille's true
 outer boundary without tracing every one of its ~1,700 hexagonal holes
 (which would look like a smudge at A6 size, not a clean line drawing).
+
+### Line weights
+
+Set at final print size, not model size: `OUTLINE_WEIGHT_MM = 0.25` for the
+visible profile (silhouette + open boundaries), `DETAIL_WEIGHT_MM = 0.15`
+for internal feature lines (creases that aren't also silhouette). `render_view`
+takes a `page_scale` that shrinks the drawing to fit a page layout box
+*without* scaling the line weights, since a real object drawn small on a
+page still needs print-legible lines, not proportionally thinner ones.
+Checked at an A6 page-fit scale (0.35x, fitting the 288 mm-tall body+nose
+stack into a 100 mm page box) in `figures/test/test_front_confident_a6scale*`
+-- stays legible.
 
 Run it with:
 

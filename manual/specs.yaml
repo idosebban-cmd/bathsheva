@@ -36,10 +36,16 @@ dimensions_mm:
   footprint_diameter: TBD_FROM_ODM
   note: >
     Height and body diameter measured from the supplied CAD (body + nose_cone
-    + collar + foot stack). Footprint diameter (the tripod spread across the
-    three fins) is TBD until the fins' true mounting angle is confirmed --
-    see the open decisions list.
-  status: from_model
+    + collar + foot stack, verified transforms). Footprint diameter (the
+    tripod spread across the three fins) is still TBD: it depends on the
+    fins' assembled mounting angle, which needs the original assembly
+    source (see manual/README.md, "Assembly source" note) rather than an
+    eyeballed fit. Will recompute once that source is found.
+  status: from_model, prototype
+  status_note: >
+    These are prototype/CAD dimensions, not confirmed production dimensions.
+    Production tooling may shift them slightly -- re-measure before final
+    print if the ODM's production model differs from this CAD.
 
 weight_kg:
   value: 1.8
@@ -53,21 +59,33 @@ controls:
     double_press: Next track
     hold_2s: Power on / off
     hold_5s: Enter pairing mode
-  status: proposed
+    hold_10s: Factory reset
+  status: confirmed
   note: >
-    This behaviour is a proposal from Ido, not yet confirmed against firmware.
-    Treat every action above as changeable until sign-off.
+    Locked in by Ido on 2026-09-28. hold_10s (factory reset) is new and
+    still needs firmware confirmation from the ODM that a distinct 10 s
+    hold is achievable and won't collide with the 5 s pairing hold --
+    flagged for the ODM, not yet a hardware guarantee.
 
 indicators:
   led:
     location: Small white status LED above the knob, on the front face
     count: 1
-    colours_and_patterns: TBD_FROM_ODM
+    colour: white (single colour, no RGB)
+    patterns:
+      pairing_mode: Fast blink
+      connected: Solid for 3 s, then off (stays off during playback)
+      charging_while_off: Slow pulse
+      fully_charged: Solid until unplugged
+      low_battery: 3 slow blinks, repeated every 60 s
+      factory_reset: 3 fast blinks
+    status: proposed
     note: >
-      Physical presence, position and colour (white) are confirmed. The
-      pattern language (solid / pulsing / flashing / colour per state -- for
-      power, pairing, charging, low battery, error, factory reset, etc.) is
-      TBD_FROM_ODM and needed before the LED guide page can be written.
+      Physical presence, position and colour (white, single-colour) are
+      confirmed. The full pattern language above is Ido's proposal
+      (2026-09-28) and every state in it is "proposed" until the ODM
+      confirms the LED module and firmware can actually drive these
+      patterns (timing, whether off-during-playback is acceptable, etc).
   status: mixed
 
 connectivity:
@@ -97,7 +115,20 @@ compliance:
   status: tbd
 
 warranty_and_support:
-  warranty_length: TBD_FROM_ODM
+  warranty_length: 2 years
+  warranty_length_status: proposed
   support_email: TBD_FROM_ODM
   support_url: TBD_FROM_ODM
-  status: tbd
+  status: mixed
+  note: >
+    Warranty length set by Ido (2026-09-28), status proposed pending formal
+    sign-off. Support email/URL remain TBD_FROM_ODM. Warranty terms print
+    inside the booklet itself -- there is no separate warranty card.
+
+in_the_box:
+  items:
+    - Atelier
+    - USB-C to USB-C cable
+    - This booklet
+  wall_plug_included: false
+  status: confirmed
