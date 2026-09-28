@@ -122,7 +122,7 @@ FITTED_FIGURES = {
 }
 
 
-def build_page_html(page, specs, tbd_log, page_numbers):
+def build_page_html(page, specs, tbd_log, page_numbers, legal_log):
     body = extract_directives(page)
 
     def spec_sub(m):
@@ -138,6 +138,13 @@ def build_page_html(page, specs, tbd_log, page_numbers):
     body = re.sub(r"\{\{spec:([^}]+)\}\}", spec_sub, body)
     body = re.sub(r"\{\{page:([^}]+)\}\}", page_ref_sub, body)
     body = re.sub(r"<!--\s*figure:\s*([^-]+?)\s*-->", figure_sub, body)
+
+    for m in re.finditer(r'<span class="legal"[^>]*>(.*?)</span>', body, re.DOTALL):
+        # spec substitutions already happened above, so this is the final on-page
+        # text; strip any nested tags (e.g. a TBD span inside a legal sentence)
+        # for the plain-text report -- the PDF itself renders the nested markup.
+        plain = re.sub(r"<[^>]+>", "", m.group(1))
+        legal_log.append((page.id, re.sub(r"\s+", " ", plain).strip()))
 
     html_body = markdown.markdown(body, extensions=["tables"])
 
@@ -239,6 +246,18 @@ th {{
   font-family: Helvetica, Arial, sans-serif;
 }}
 
+/* Safety / battery / disposal / warranty / regulatory wording -- flagged in
+   content.md with title="needs ODM/compliance review" on each span. Thin
+   magenta underline, distinct from .tbd's solid magenta fill, so a sentence
+   can carry both (a TBD value inside a legal sentence) without the two
+   markers reading as the same kind of flag. */
+.legal {{
+  text-decoration: underline;
+  text-decoration-color: {MAGENTA};
+  text-decoration-thickness: 0.5pt;
+  text-underline-offset: 1.5pt;
+}}
+
 .figure {{
   display: flex;
   align-items: center;
@@ -315,9 +334,10 @@ def main():
         print(f"WARNING: page count {len(pages)} is not a multiple of 4 (saddle stitch)", file=sys.stderr)
 
     tbd_log = []
+    legal_log = []
     page_html = []
     for p in pages:
-        page_html.append(build_page_html(p, specs, tbd_log, page_numbers))
+        page_html.append(build_page_html(p, specs, tbd_log, page_numbers, legal_log))
 
     html = f'''<!doctype html>
 <html>
@@ -344,14 +364,42 @@ def main():
         print("\nBUILD FAILED: one or more pages overflowed their A6 box (see warnings above).", file=sys.stderr)
         sys.exit(1)
 
-    # TBD report
-    report_lines = [f"Remaining TBD_FROM_ODM values: {len(tbd_log)}", ""]
+    # TBD report. A single spec field can appear on more than one page (e.g.
+    # power.charge_time_hours on both "Charging" and "Specifications") -- each
+    # appearance is a separate magenta mark on the page and worth listing, but
+    # the two counts (occurrences vs. unique fields) are different numbers and
+    # both are reported explicitly so neither reads as a typo of the other.
+    unique_paths = sorted(set(path for _, path in tbd_log))
+    pages_by_path = {}
+    for page_id, path in tbd_log:
+        pages_by_path.setdefault(path, []).append(page_id)
+
+    report_lines = [
+        f"Remaining TBD_FROM_ODM: {len(tbd_log)} occurrences on the page, {len(unique_paths)} unique spec fields.",
+        "",
+        "By occurrence (matches the magenta marks in the PDF, in page order):",
+    ]
     for page_id, path in tbd_log:
         report_lines.append(f"  page '{page_id}': {path}")
+    report_lines += ["", "By unique field (one row per spec, pages it appears on):"]
+    for path in unique_paths:
+        pages = ", ".join(f"'{p}'" for p in pages_by_path[path])
+        report_lines.append(f"  {path}  ({pages})")
+
     report = "\n".join(report_lines)
     (OUT / "tbd_report.txt").write_text(report + "\n")
     print()
     print(report)
+
+    # Legal/compliance report: every sentence tagged needs ODM/compliance review
+    # in content.md (safety, battery, disposal, warranty, regulatory wording).
+    legal_lines = [f"Sentences flagged needs ODM/compliance review: {len(legal_log)}", ""]
+    for page_id, sentence in legal_log:
+        legal_lines.append(f"  page '{page_id}': {sentence}")
+    legal_report = "\n".join(legal_lines)
+    (OUT / "legal_review_report.txt").write_text(legal_report + "\n")
+    print()
+    print(legal_report)
 
 
 if __name__ == "__main__":

@@ -44,20 +44,19 @@ Underside
 1. USB-C port
 2. Foot
 
-Set Atelier down gently. The fins and foot take the weight, so lower it straight down rather than tipping it into place.
+<span class="legal" title="needs ODM/compliance review">Set Atelier down gently. The fins and foot take the weight, so lower it straight down rather than tipping it into place.</span>
 
 <!-- page: charging -->
 # Charging
 
 1. Turn Atelier onto its side, or lift it, so you can see the underside.
-2. Plug the USB-C cable into the port in the collar.
-3. Plug the other end into a USB-C power source.
+2. <span class="legal" title="needs ODM/compliance review">Plug the USB-C cable into the port in the collar.</span>
+3. <span class="legal" title="needs ODM/compliance review">Plug the other end into a USB-C power source.</span>
 
-While charging and switched off, the LED pulses slowly. Once full, it stays solid until you unplug the cable. See the LED guide on page {{page:led-guide}} for every pattern.
+<span class="legal" title="needs ODM/compliance review">While charging and switched off, the LED pulses slowly.</span> <span class="legal" title="needs ODM/compliance review">Once full, it stays solid until you unplug the cable.</span> See the LED guide on page {{page:led-guide}} for every pattern.
 
-Charge time: {{spec:power.charge_time_hours}} hours from empty.
+<span class="legal" title="needs ODM/compliance review">Charge time: {{spec:power.charge_time_hours}} hours from empty.</span>
 
-<!-- footer: provisional -->
 
 <!-- page: power -->
 # Power
@@ -72,7 +71,6 @@ Hold the knob for 2 seconds again.
 
 The LED shows Atelier is awake: solid for 3 seconds when it connects, then off. It stays off while playing, so a dark LED during music is normal, not a fault.
 
-<!-- footer: provisional -->
 
 <!-- page: pairing -->
 # Pairing
@@ -83,7 +81,6 @@ The LED shows Atelier is awake: solid for 3 seconds when it connects, then off. 
 
 If Atelier does not appear, move your device closer and try again. Only one thing can be paired at a time unless noted otherwise in Specifications.
 
-<!-- footer: provisional -->
 
 <!-- page: controls -->
 # Controls
@@ -92,7 +89,6 @@ If Atelier does not appear, move your device closer and try again. Only one thin
 
 One knob does everything. Turn it, press it, or hold it.
 
-<!-- footer: provisional -->
 
 <!-- page: controls-table -->
 # Controls
@@ -132,9 +128,9 @@ Every pattern above is proposed and pending confirmation that the LED module and
 <!-- page: placement -->
 # Placement and stability
 
-Stand Atelier on a flat, stable surface. The three fins and centre foot are designed to hold it upright there.
+<span class="legal" title="needs ODM/compliance review">Stand Atelier on a flat, stable surface. The three fins and centre foot are designed to hold it upright there.</span>
 
-Keep it away from table edges, and away from water or damp surfaces. Do not stand it on a slope or on soft or uneven ground, such as a cushion or rug, where it could tip.
+<span class="legal" title="needs ODM/compliance review">Keep it away from table edges, and away from water or damp surfaces.</span> <span class="legal" title="needs ODM/compliance review">Do not stand it on a slope or on soft or uneven ground, such as a cushion or rug, where it could tip.</span>
 
 <!-- figure: hero_front small centered -->
 
@@ -145,22 +141,21 @@ Wipe the lacquer with a soft, dry or barely damp cloth. Do not use solvents, abr
 
 The brass will develop a natural patina over time. That is normal, and part of the material. Do not use metal polish or tarnish remover on it.
 
-Unplug Atelier before cleaning it.
+<span class="legal" title="needs ODM/compliance review">Unplug Atelier before cleaning it.</span>
 
 <!-- page: safety -->
 # Safety and battery
 
-Keep Atelier away from open flame and standing water. Do not immerse it.
+<span class="legal" title="needs ODM/compliance review">Keep Atelier away from open flame and standing water.</span> <span class="legal" title="needs ODM/compliance review">Do not immerse it.</span>
 
-Do not open, disassemble, or attempt to repair Atelier yourself. There are no user-serviceable parts inside.
+<span class="legal" title="needs ODM/compliance review">Do not open, disassemble, or attempt to repair Atelier yourself.</span> <span class="legal" title="needs ODM/compliance review">There are no user-serviceable parts inside.</span>
 
-Use only the supplied cable, or a replacement of the same type, to charge it. Do not charge it at temperatures below 0°C or above 45°C, or leave it charging unattended for long periods.
+<span class="legal" title="needs ODM/compliance review">Use only the supplied cable, or a replacement of the same type, to charge it.</span> <span class="legal" title="needs ODM/compliance review">Do not charge it at temperatures below 0°C or above 45°C, or leave it charging unattended for long periods.</span>
 
-Operating temperature: {{spec:environmental.operating_temperature_c}}.
+<span class="legal" title="needs ODM/compliance review">Operating temperature: {{spec:environmental.operating_temperature_c}}.</span>
 
-At end of life, recycle Atelier through a WEEE collection point rather than general waste. It contains a built-in battery.
+<span class="legal" title="needs ODM/compliance review">At end of life, recycle Atelier through a WEEE collection point rather than general waste.</span> <span class="legal" title="needs ODM/compliance review">It contains a built-in battery.</span>
 
-<!-- footer: provisional -->
 
 <!-- page: troubleshooting -->
 # Troubleshooting
@@ -194,11 +189,11 @@ If none of this helps, see Warranty and support.
 | Input rating | {{spec:power.input_rating}} |
 | Charge port | {{spec:power.charge_port}} |
 
-Dimensions and weight are prototype/CAD figures and may change slightly in production.
+<span class="legal" title="needs ODM/compliance review">Dimensions and weight are prototype/CAD figures and may change slightly in production.</span>
 
 ## Warranty
 
-{{spec:warranty_and_support.warranty_length}} from date of purchase, covering manufacturing defects under normal use.
+<span class="legal" title="needs ODM/compliance review">{{spec:warranty_and_support.warranty_length}} from date of purchase, covering manufacturing defects under normal use.</span>
 
 ## Support
 
@@ -208,13 +203,13 @@ Dimensions and weight are prototype/CAD figures and may change slightly in produ
 # Regulatory
 
 <!-- subtitle -->
-Manufactured by Bathsheva London
+<span class="legal" title="needs ODM/compliance review">Manufactured by Bathsheva London</span>
 
-Compliance marks: {{spec:compliance.marks}}
+<span class="legal" title="needs ODM/compliance review">Compliance marks: {{spec:compliance.marks}}</span>
 
-Regulatory identifiers: {{spec:compliance.regulatory_identifiers}}
+<span class="legal" title="needs ODM/compliance review">Regulatory identifiers: {{spec:compliance.regulatory_identifiers}}</span>
 
-This product contains a built-in rechargeable battery. Do not dispose of it in household waste. Recycle it through a WEEE collection point or an authorised recycler.
+<span class="legal" title="needs ODM/compliance review">This product contains a built-in rechargeable battery.</span> <span class="legal" title="needs ODM/compliance review">Do not dispose of it in household waste.</span> <span class="legal" title="needs ODM/compliance review">Recycle it through a WEEE collection point or an authorised recycler.</span>
 
 <!-- subtitle -->
 Bathsheva London

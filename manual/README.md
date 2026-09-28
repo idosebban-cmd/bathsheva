@@ -8,20 +8,28 @@ Printed instruction booklet for Atelier (Bathsheva London), A6, saddle-stitched,
 python3 manual/build.py
 ```
 
-rebuilds `manual/out/atelier-manual.pdf` plus one PNG preview per page and
+rebuilds `manual/out/atelier-manual.pdf` plus one PNG preview per page,
 `manual/out/tbd_report.txt` (every `TBD_FROM_ODM` value still in the PDF,
-grouped by page). `manual/out/` is gitignored -- it's a build artifact,
-regenerate it rather than expecting it to be checked in.
+by occurrence AND by unique field -- a field like `power.charge_time_hours`
+can appear on more than one page, so those two counts legitimately differ),
+and `manual/out/legal_review_report.txt` (every sentence tagged `needs
+ODM/compliance review` in `content.md` -- see below). `manual/out/` is
+gitignored -- it's a build artifact, regenerate it rather than expecting it
+to be checked in.
 
 - [x] Page outline -- `outline.md` (16 pages, revised per review)
 - [x] Hardware spec decisions -- `specs.yaml`
 - [x] Illustrations -- `scripts/lineart.py` + `scripts/assembly.yaml`, see below
 - [x] `content.md` -- the manual's copy, pulls every hardware fact from `specs.yaml`
 - [x] `build.py` -- one command, HTML -> PDF + page PNGs, magenta TBD styling,
-      automatic overflow detection (fails the build rather than silently
-      clipping a page)
+      thin magenta underline on every safety/battery/disposal/warranty/
+      regulatory sentence, automatic overflow detection (fails the build
+      rather than silently clipping a page)
 - [ ] Real CAD source for grille/bezel/knob/fin placement (see below) --
       still not found; current art is photo/mesh-fitted and provisional
+- [ ] **Known model issue**: the knob's real mounting hole overlaps the
+      bezel's real position by ~16mm (see below) -- needs a fix in the
+      source model, not something this manual's art can paper over
 
 ## Folder layout
 
@@ -116,6 +124,31 @@ visible profile, `DETAIL_WEIGHT_MM = 0.15` for internal feature lines.
 layout box *without* scaling the line weights. Checked at A6 page-fit scale
 in `figures/test/test_front_confident_a6scale*` -- stays legible.
 
+### Known issue: knob/bezel overlap
+
+The knob is now drawn at its exact real mounting-hole position (`assembly.yaml`
+`knob.translate`, Z 103.3 -- an earlier draft nudged this down by eye to open
+up a gap that isn't actually there; reverted per Ido's review). At that real
+position it overlaps the bezel's real position (also mesh-derived, from its
+4 mounting-screw pilot holes). `scripts/measure_knob_gap.py` measures this
+precisely rather than eyeballing it:
+
+- Along the centreline (top of knob to bottom of bezel, both mesh bounds):
+  **-15.9mm** (a 15.9mm overlap, not a gap).
+- In the front-view projection -- what the line-art actually shows, since
+  that's a 2D drawing -- the two outlines' closest approach is **0.07mm**
+  (touching) and 81% of the knob's circle falls inside the bezel's outline.
+- In true 3D (accounting for depth, since the knob sits further back than
+  the bezel's front face): 11.3mm apart, i.e. they don't physically collide
+  as solid parts -- the overlap is specifically in the front-facing layout
+  of the two openings, which is exactly what matters for how the product
+  looks from the front.
+
+This is a genuine clash between two witness marks in the supplied model, not
+a rendering artefact or a fitting error -- flagged as a model issue to fix
+at the source. The manual's art shows it as-is (front_callouts, hero_front,
+knob_closeup) rather than fudging the two parts apart.
+
 ## content.md syntax
 
 - `<!-- page: id -->` starts a new page (16 of these = 16 pages).
@@ -127,8 +160,19 @@ in `figures/test/test_front_confident_a6scale*` -- stays legible.
   no need to mark it up separately, and it stops being magenta the moment
   a real value replaces `TBD_FROM_ODM` in `specs.yaml`.
 - `{{page:id}}` resolves to another page's printed number, for cross-refs.
-- `<!-- footer: provisional -->` adds the provisional-illustration footer
-  note to that page (set automatically for pages using fitted_by_eye figures).
+- The provisional-illustration footer is set **automatically** whenever a
+  page embeds a figure built from fitted_by_eye geometry (see
+  `FITTED_FIGURES` in `build.py`) -- don't add it by hand, that's how it
+  ended up on text-only pages like Charging in an earlier draft. A manual
+  `<!-- footer: provisional -->` override still works if a future figure
+  needs one without being in `FITTED_FIGURES`, but nothing in `content.md`
+  currently uses it.
+- `<span class="legal" title="needs ODM/compliance review">...</span>`
+  wraps one sentence of safety, battery, disposal, warranty or regulatory
+  wording. Renders with a thin magenta underline in the PDF (distinct from
+  `.tbd`'s solid magenta fill, so a TBD value inside a flagged sentence
+  shows both markers at once, not one masking the other). Every build lists
+  them in `manual/out/legal_review_report.txt`.
 - Everything else is plain Markdown (tables via the `tables` extension).
 
 ## Rebuilding

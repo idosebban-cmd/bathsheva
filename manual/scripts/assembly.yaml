@@ -119,21 +119,29 @@ parts:
     file: knob.stl
     fitted_by_eye: true
     rotate: {axis: X, deg: 90}
-    translate: [0, 50, 86.0]
+    translate: [0, 50, 103.3]
     note: >
       Mesh-derived Z: body.stl has its own knob mounting hole, radius ~9mm
       (matches the knob mesh's 18mm diameter exactly), centred at Z 103.3 --
       corrects the original photo estimate (Z 74.4), which undershot by
-      29mm. Nudged down to Z 86 by eye: at the mesh-exact Z the knob's top
-      edge overlapped the bezel's bottom edge with no visible gap, which
-      doesn't match the reference photo (clear gap, LED floating in it) and
-      is very unlikely to be the real design intent (a hole through this
-      "visible parts only" prototype shell need not land at production
-      tooling's exact inset) -- this adjustment is a genuine fitted_by_eye
-      judgement call against the photo, not mesh data.
+      29mm. Put back exactly on the mounting hole per Ido (2026-09-28): an
+      earlier pass nudged this down to Z 86 to open up a gap against the
+      bezel that isn't actually there at the mesh-exact position -- see
+      "Known issue: knob/bezel overlap" below. That nudge is reverted; the
+      drawing now shows the real overlap rather than hiding it.
       Y (50, front face) clear of the body's real surface radius here
       (47.2mm). Printed front-face-down/shaft-bore-up, so the 90 deg
       rotation about X brings the decorative face back to +Y.
+
+  # --- Known issue: knob/bezel overlap ------------------------------------
+  # At its real mounting-hole position (Z 103.3, radius 9mm -> top edge at
+  # Z 112.3) the knob overlaps the bezel's real lower edge (Z 96.4, from its
+  # own mesh bounds after the transform above) by about 15.9mm -- see
+  # scripts/measure_knob_gap.py for the exact figure. That is a genuine
+  # clash between two witness marks in the supplied model (the knob's own
+  # mounting hole and the bezel's mounting-screw-derived position), not a
+  # rendering choice -- flagged to Ido as a model issue to fix at the
+  # source, separate from this manual's art.
 
   fin_1:
     file: fin_x3.stl

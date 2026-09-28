@@ -78,13 +78,17 @@ def main():
         callouts=under_callouts,
     )
 
-    # 4. Knob close-up: body + knob, cropped tight around the knob, zoomed in.
+    # 4. Knob close-up: cropped tight around the knob, zoomed in.
     #    Arrows for turn/press/hold are added as a schematic overlay afterwards
     #    (not derived from geometry -- they're instructional, not physical).
+    #    Crop is generous on top and includes grille/bezel: at its real
+    #    mounting-hole position the knob overlaps the bezel (see
+    #    scripts/measure_knob_gap.py) and this close-up shows that
+    #    honestly rather than cropping it away.
     results["knob_closeup"] = la.render_view(
-        parts_cfg, ["body", "knob"], front["view_dir"], front["up"],
+        parts_cfg, ["body", "grille", "bezel", "knob"], front["view_dir"], front["up"],
         OUT / "knob_closeup_base.svg", page_scale=2.2,
-        crop=(-22, 22, 64, 96),
+        crop=(-22, 22, 82, 118),
     )
 
     for name, res in results.items():
