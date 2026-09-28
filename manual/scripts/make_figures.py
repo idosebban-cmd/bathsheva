@@ -7,6 +7,7 @@ Output: manual/figures/final/*.svg (+ .png previews via a separate step,
 see manual/build.py)
 """
 
+import json
 import sys
 from pathlib import Path
 
@@ -23,11 +24,12 @@ CONFIDENT = ["body", "nose_cone", "collar", "foot"]
 FITTED = ["grille", "bezel", "knob", "fin_1", "fin_2", "fin_3"]
 FULL = CONFIDENT + FITTED
 
-# world-space anchor points, reused across figures for callouts
+# world-space anchor points, reused across figures for callouts. Grille/LED/
+# knob match the mesh-derived positions in assembly.yaml (scripts/find_front_holes.py).
 NOSE_TIP = (0, 0, 258.3)
-GRILLE_CENTER = (0, 50, 136.3)
-LED_POINT = (0, 49.0, 99.0)
-KNOB_POINT = (0, 50, 86.0)
+GRILLE_CENTER = (0, 50, 136.1)
+LED_POINT = (0, 49.0, 88.1)
+KNOB_POINT = (0, 50, 71.35)
 FIN_TIP = (59.66, 34.45, -22.0)  # fin_2, azimuth 60 deg
 FOOT_TIP = (0, 0, -29.8)
 USB_PORT = (-15.8, -1.4, -16.7)
@@ -81,15 +83,22 @@ def main():
     # 4. Knob close-up: cropped tight around the knob, zoomed in.
     #    Arrows for turn/press/hold are added as a schematic overlay afterwards
     #    (not derived from geometry -- they're instructional, not physical).
-    #    Crop is generous on top and includes grille/bezel: at its real
-    #    mounting-hole position the knob overlaps the bezel (see
-    #    scripts/measure_knob_gap.py) and this close-up shows that
-    #    honestly rather than cropping it away.
+    #    Knob is at its real mounting-hole position (world Z 62.35-80.35,
+    #    see assembly.yaml) with a genuine ~19mm clearance to the grille/
+    #    bezel above it (scripts/measure_knob_gap.py), so body+knob alone
+    #    frames cleanly without needing the bezel for context.
     results["knob_closeup"] = la.render_view(
-        parts_cfg, ["body", "grille", "bezel", "knob"], front["view_dir"], front["up"],
+        parts_cfg, ["body", "knob"], front["view_dir"], front["up"],
         OUT / "knob_closeup_base.svg", page_scale=2.2,
-        crop=(-22, 22, 82, 118),
+        crop=(-20, 20, 58, 90),
     )
+
+    # Persist each figure's real fitted_by_eye status (not a hand-maintained
+    # guess -- build.py reads this to decide the "Provisional illustration"
+    # footer, since a static list went stale the moment the knob stopped
+    # being fitted_by_eye but knob_closeup was still hardcoded as provisional).
+    status = {name: res["fitted_by_eye"] for name, res in results.items()}
+    (OUT / "fitted_status.json").write_text(json.dumps(status, indent=2) + "\n")
 
     for name, res in results.items():
         print(f"{name}: fitted_by_eye={res['fitted_by_eye']}")

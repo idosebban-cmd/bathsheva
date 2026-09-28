@@ -12,6 +12,7 @@ at the end of the build (and written to manual/out/tbd_report.txt) so
 nothing ships hidden.
 """
 
+import json
 import re
 import subprocess
 import sys
@@ -98,6 +99,22 @@ def extract_directives(page):
     return body
 
 
+def load_fitted_status():
+    """Which figures are built from fitted_by_eye geometry, per the LAST
+    make_figures.py run (figures/final/fitted_status.json) -- generated
+    fresh each time from render_view's own return value, not a hand-
+    maintained guess. A hardcoded list here previously went stale the
+    moment a part (the knob) stopped being fitted_by_eye but the figure
+    that used it was still marked provisional by hand."""
+    status_path = FIGURES / "fitted_status.json"
+    if not status_path.exists():
+        return {}
+    return json.loads(status_path.read_text())
+
+
+FITTED_STATUS = load_fitted_status()
+
+
 def embed_figure(match, tbd_log, page):
     name_and_mods = match.group(1).strip().split()
     name = name_and_mods[0]
@@ -108,18 +125,9 @@ def embed_figure(match, tbd_log, page):
     svg = svg_path.read_text()
     svg = re.sub(r"^<\?xml[^>]*\?>\s*", "", svg)
     classes = "figure " + " ".join(f"figure--{m}" for m in mods)
-    if "provisional" in FITTED_FIGURES.get(name, ()):
+    if FITTED_STATUS.get(name):
         page.footer_provisional = True
     return f'<div class="{classes}">{svg}</div>'
-
-
-# figures whose geometry depends on fitted_by_eye (not-yet-confirmed) placement
-FITTED_FIGURES = {
-    "hero_front": ("provisional",),
-    "front_callouts": ("provisional",),
-    "knob_closeup": ("provisional",),
-    "knob_closeup_base": ("provisional",),
-}
 
 
 def build_page_html(page, specs, tbd_log, page_numbers, legal_log):

@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parent.parent
 SRC = ROOT / "figures" / "final" / "knob_closeup_base.svg"
 DST = ROOT / "figures" / "final" / "knob_closeup.svg"
 
-CX, CY, R = 73.3, 54.8, 19.8
+CX, CY, R = 41.0, 64.8, 19.8
 STROKE = 0.3
 
 
@@ -54,7 +54,7 @@ def main():
     extra = []
 
     # PRESS: short straight arrow from directly above, down onto the knob's top edge
-    px0, py0 = CX, CY - R - 22
+    px0, py0 = CX, CY - R - 13
     px1, py1 = CX, CY - R - 2
     extra.append(straight_arrow(px0, py0, px1, py1))
     extra.append(f'<text x="{CX+2:.1f}" y="{py0+6.5:.1f}" font-family="Georgia, serif" font-size="5.0" text-anchor="start" fill="#0A0A0A">PRESS</text>')
@@ -65,8 +65,8 @@ def main():
     extra.append(f'<path d="{arc_path(CX, CY, turn_r, 140, 220)}" stroke="#0A0A0A" stroke-width="{STROKE}" fill="none"/>')
     extra.append(arrowhead(CX, CY, turn_r, 140))
     extra.append(arrowhead(CX, CY, turn_r, 220))
-    extra.append(f'<text x="{CX-turn_r-18:.1f}" y="{CY-16.5:.1f}" font-family="Georgia, serif" font-size="5.0" text-anchor="start" fill="#0A0A0A">TURN</text>')
-    extra.append(f'<text x="{CX-turn_r-18:.1f}" y="{CY-11:.1f}" font-family="Helvetica, Arial, sans-serif" font-size="3.2" text-anchor="start" fill="#555">volume</text>')
+    extra.append(f'<text x="2" y="{CY-16.5:.1f}" font-family="Georgia, serif" font-size="5.0" text-anchor="start" fill="#0A0A0A">TURN</text>')
+    extra.append(f'<text x="2" y="{CY-11:.1f}" font-family="Helvetica, Arial, sans-serif" font-size="3.2" text-anchor="start" fill="#555">volume</text>')
 
     # HOLD: dwell icon (dashed ring + clock hands) to the right of the knob
     hx, hy, hr = CX + R + 12.5, CY, 6.5

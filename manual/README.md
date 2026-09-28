@@ -25,11 +25,13 @@ to be checked in.
       thin magenta underline on every safety/battery/disposal/warranty/
       regulatory sentence, automatic overflow detection (fails the build
       rather than silently clipping a page)
-- [ ] Real CAD source for grille/bezel/knob/fin placement (see below) --
-      still not found; current art is photo/mesh-fitted and provisional
-- [ ] **Known model issue**: the knob's real mounting hole overlaps the
-      bezel's real position by ~16mm (see below) -- needs a fix in the
-      source model, not something this manual's art can paper over
+- [x] Grille/bezel/knob/LED positions -- mesh-derived from real openings on
+      body.stl's front face (see below), not fitted. A ~19mm gap between
+      the knob and the grille/bezel, LED in between: matches the reference
+      photo and Ido's own independent measurement of body.stl.
+- [ ] Real CAD source for the grille/bezel/knob/fin part GEOMETRY itself
+      (their shape, not position) -- still not found; those STLs remain
+      unverified, and the fins' outward reach is still photo-fitted
 
 ## Folder layout
 
@@ -42,11 +44,16 @@ manual/
     lineart.py          Core engine: assembles parts, extracts silhouette +
                           crease edges, removes hidden lines by real ray-cast
                           occlusion, writes single-weight black-line SVGs
-    refit_from_mesh.py  Finds grille/bezel/knob/fin mounting points from
-                          witness marks already in body.stl (see below)
-    photo_fit.py        Original photo-pixel-based fitting (mostly
-                          superseded by refit_from_mesh.py; still used for
-                          the fin tip / footprint radius)
+    find_front_holes.py Ray-casts body.stl's front centreline to find every
+                          real opening -- the current, verified source for
+                          grille/bezel/knob/LED position (see below)
+    refit_from_mesh.py  Vertex-cluster method; superseded for grille/bezel/
+                          knob by find_front_holes.py (it misidentified the
+                          knob once, see below) but still used for the fins'
+                          mounting-hole root
+    measure_knob_gap.py Measures the real knob-to-bezel gap from mesh bounds
+    photo_fit.py        Original photo-pixel-based fitting; only the fin
+                          tip / footprint radius still comes from this
     make_figures.py     Generates the actual figures used in the manual
                           into figures/final/
     annotate_knob.py    Adds the turn/press/hold schematic arrows to the
@@ -72,27 +79,37 @@ transform that rebuilds the real assembly, with a confidence note per part.
 - **body, nose_cone, collar, foot** -- derived directly from the mesh
   geometry (joint rim radii, taper direction, the print-orientation notes).
   High confidence, not fitted_by_eye.
-- **grille, bezel, knob, fins, LED** -- no CAD/generator source for these
-  exists anywhere searched (this repo's full history, all branches, the
-  upload set, the container filesystem) -- see the request thread. Per
-  Ido's go-ahead, these are now fitted from two sources, in order of
-  preference:
-  1. **Witness marks already in body.stl.** Once a real bug in the
-     hidden-line test was fixed (see `lineart.py`'s `visible_mask`
-     docstring -- the occlusion ray was being cast away from the camera
-     instead of toward it), the body mesh turned out to already carry the
-     grille/bezel opening and its 4 mounting-screw pilot holes, the knob's
-     mounting hole, and the fins' mounting pilot holes. `refit_from_mesh.py`
-     finds these by clustering front-facing crease/silhouette edge points
-     and fitting a circle to each cluster -- exact positions, not a guess.
-  2. **The reference photo**, for whatever a witness mark doesn't cover:
-     the fins' outward reach (mounting holes fix only the root), and the
-     LED (no matching hole was found near it -- see the note on the `led`
-     marker in `assembly.yaml`).
-  Every part positioned this way is tagged `fitted_by_eye: true` in
-  `assembly.yaml`, with a note on exactly what was used and why. The PDF
-  build adds a "Provisional illustration" footer to every page that embeds
-  one of these figures.
+- **grille, bezel, knob, LED** -- no CAD/generator source for these parts'
+  own GEOMETRY exists anywhere searched (this repo's full history, all
+  branches, the upload set, the container filesystem), but their POSITION
+  is mesh-derived, not fitted: `scripts/find_front_holes.py` ray-casts
+  along body.stl's front centreline (from far +Y toward -Y) and records
+  every stretch where the front face has no material -- i.e. every real
+  opening, found directly from the triangulated surface. That gives exact
+  centres for the grille/bezel opening, the LED hole and the knob hole (see
+  `assembly.yaml`'s notes on each part for the numbers). Not tagged
+  `fitted_by_eye`.
+
+  An earlier pass (`refit_from_mesh.py`'s vertex-cluster method, still used
+  for the fins below) misidentified the knob's position: a noisy cluster at
+  file_z ~101-110 with a much higher std (4.6-5.0) than every genuine hole
+  found the same way (LED: std 0.01, bezel screws: std 0.19-0.40) turned
+  out to be boundary artefacts from the grille recess's own edge, not a
+  hole at all. Ido caught this by independently measuring body.stl himself
+  and got a different number; re-deriving with the more rigorous ray-cast
+  sweep confirmed his measurement (all three centres within a fraction of a
+  mm) and found the real knob hole 30mm further round the taper. Worth
+  learning from: the cluster method's own std/quality signal already showed
+  the first answer was suspect, and that should have been caught before
+  reporting it rather than after.
+- **fins** -- root mesh-derived (mounting pilot holes, same
+  `refit_from_mesh.py` cluster method, clean low-std holes so no reason to
+  doubt these), tip photo-derived (no matching witness mark for how far out
+  the fin reaches -- mounting holes fix only the root). Tagged
+  `fitted_by_eye: true`; the PDF build adds a "Provisional illustration"
+  footer to every page whose figure includes the fins (front_callouts,
+  hero_front). knob_closeup and underside_callouts don't include them, so
+  they carry no such footer.
 
 `scripts/lineart.py` then, for a given camera view:
 
@@ -124,30 +141,24 @@ visible profile, `DETAIL_WEIGHT_MM = 0.15` for internal feature lines.
 layout box *without* scaling the line weights. Checked at A6 page-fit scale
 in `figures/test/test_front_confident_a6scale*` -- stays legible.
 
-### Known issue: knob/bezel overlap
+### Knob/grille/LED derivation, and the gap between them
 
-The knob is now drawn at its exact real mounting-hole position (`assembly.yaml`
-`knob.translate`, Z 103.3 -- an earlier draft nudged this down by eye to open
-up a gap that isn't actually there; reverted per Ido's review). At that real
-position it overlaps the bezel's real position (also mesh-derived, from its
-4 mounting-screw pilot holes). `scripts/measure_knob_gap.py` measures this
-precisely rather than eyeballing it:
+`scripts/find_front_holes.py`'s centreline sweep of body.stl gives:
 
-- Along the centreline (top of knob to bottom of bezel, both mesh bounds):
-  **-15.9mm** (a 15.9mm overlap, not a gap).
-- In the front-view projection -- what the line-art actually shows, since
-  that's a 2D drawing -- the two outlines' closest approach is **0.07mm**
-  (touching) and 81% of the knob's circle falls inside the bezel's outline.
-- In true 3D (accounting for depth, since the knob sits further back than
-  the bezel's front face): 11.3mm apart, i.e. they don't physically collide
-  as solid parts -- the overlap is specifically in the front-facing layout
-  of the two openings, which is exactly what matters for how the product
-  looks from the front.
+| Feature | file_z range | centre (file_z) | world_z |
+|---|---|---|---|
+| grille/bezel opening | 48.5 - 97.5 | 73.0 | 136.1 |
+| LED hole (dia. ~2mm) | 119.5 - 122.5 | 121.0 | 88.1 |
+| knob hole (dia. ~10mm) | 132.5 - 143.0 | 137.75 | 71.35 |
 
-This is a genuine clash between two witness marks in the supplied model, not
-a rendering artefact or a fitting error -- flagged as a model issue to fix
-at the source. The manual's art shows it as-is (front_callouts, hero_front,
-knob_closeup) rather than fudging the two parts apart.
+All three match Ido's own independent measurement of body.stl to within a
+fraction of a mm (his: grille 73, LED 121, knob 137.5). `scripts/
+measure_knob_gap.py` reports the resulting gap between the knob and the
+grille/bezel, using the parts' real mesh bounds at these positions: **+18.9mm**
+to the grille's bottom edge, +15.9mm to the bezel's (the bezel's own mesh
+extends slightly further down than the grille's) -- a real gap, not an
+overlap, with the LED sitting inside it. Matches the reference photo's
+composition and Ido's own estimate of "about 20mm".
 
 ## content.md syntax
 

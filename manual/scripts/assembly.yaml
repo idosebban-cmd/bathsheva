@@ -9,11 +9,17 @@
 #   body, nose_cone, collar, foot   -> derived from the mesh geometry itself
 #                                       (joint rim radii, taper direction,
 #                                       print-note orientation). High confidence.
-#   grille, bezel, knob, fin_x3     -> positioned by matching bounding-box
-#                                       proportions against the recess found
-#                                       in the body mesh and against the
-#                                       reference photo. First-pass estimate,
-#                                       flagged for visual check in Phase 2.
+#   grille, bezel, knob, LED        -> position derived from real openings
+#                                       found on body.stl's front face (see
+#                                       scripts/find_front_holes.py and the
+#                                       comment above the grille entry below).
+#                                       Not fitted_by_eye. Their own PART
+#                                       geometry (the grille/bezel/knob STL
+#                                       shapes) still has no verified source.
+#   fin_x3                          -> root mesh-derived (mounting pilot
+#                                       holes), tip photo-derived (no
+#                                       matching hole for the outward reach).
+#                                       fitted_by_eye: true.
 #
 # Transform order per part: rotate (about local origin) THEN translate.
 # Rotations are 90-degree-multiple axis rotations only, so no precision is
@@ -60,88 +66,71 @@ parts:
       glues to the underside of the collar cup (world Z -19.8), rounded tip
       down.
 
-  # --- fitted_by_eye parts -------------------------------------------------
-  # No CAD/generator source for these parts was found (searched: this repo's
-  # full git history, all branches, the uploaded file set, the container
-  # filesystem). Ido confirmed (2026-09-28) to proceed by fitting these
-  # against the reference photo rather than waiting. Every part below is
-  # tagged fitted_by_eye: true and will be regenerated from production CAD
-  # once that source is found -- treat the resulting drawings as provisional
-  # (the PDF build marks pages using them with a footer note).
+  # --- grille / bezel / knob / LED: mesh-derived, not fitted_by_eye --------
+  # No CAD/generator source for these parts' own GEOMETRY was found
+  # (searched: this repo's full git history, all branches, the uploaded file
+  # set, the container filesystem) -- the grille/bezel/knob STL shapes
+  # themselves still have no verified source. Their POSITIONS, though, are
+  # now derived directly and rigorously from body.stl, not fitted: see
+  # scripts/find_front_holes.py, which ray-casts along the body's front
+  # centreline (from far +Y toward -Y) and records every stretch where the
+  # front face has no material -- i.e. every real opening, found from the
+  # actual triangulated surface rather than from vertex density.
   #
-  # Derivation: manual/scripts/photo_fit.py. Summary of method: pixel
-  # landmarks were measured on manual/reference/atelier_reference_photo.png
-  # (colour-boundary search, the photo's own cyan/magenta trace overlay, and
-  # a brightness search for the LED). See scripts/refit_from_mesh.py.
+  # This corrects an earlier mistake, caught by Ido independently measuring
+  # body.stl himself: a first pass (refit_from_mesh.py's vertex-cluster
+  # method) misidentified a noisy cluster at file_z ~101-110 as "the knob
+  # hole". That cluster had a much higher std (4.6-5.0) than every genuine
+  # hole found the same way (LED: std 0.01, bezel screw holes: std
+  # 0.19-0.40) -- a red flag that should have been caught at the time. It
+  # was actually boundary artefacts from the grille recess's own edge
+  # (which closes at file_z 97.5, right next to it), not a hole at all. The
+  # real knob hole is 30mm further round the taper, confirmed by a full
+  # centreline sweep with find_front_holes.py:
   #
-  # IMPORTANT UPDATE (2026-09-28, same session): the original occlusion test
-  # in scripts/lineart.py had its ray direction backwards (cast away from
-  # the camera instead of toward it), which silently hid a lot of real
-  # geometry -- including witness marks already modelled into body.stl
-  # itself: the grille/bezel opening, its 4 mounting-screw pilot holes, the
-  # knob's mounting hole, and the fins' mounting pilot holes. Once the
-  # occlusion bug was fixed those became visible and gave EXACT centre
-  # points for grille, bezel, knob and fins, straight from the verified
-  # body mesh -- no photo needed for position, only for the LED (no
-  # matching hole was found for it in body.stl) and for the fins' outward
-  # reach (mounting holes fix the root, not how far the fin extends or its
-  # tip footprint). These parts are still tagged fitted_by_eye because the
-  # PART GEOMETRY itself (grille/bezel/knob/fin STLs) has no verified
-  # source, only their now much more precise POSITION does.
+  #   grille/bezel opening: file_z 48.5-97.5, centre 73.0  -> world_z 136.1
+  #   LED hole (dia. ~2mm):  file_z 119.5-122.5, centre 121.0 -> world_z 88.1
+  #   knob hole (dia. ~10mm): file_z 132.5-143.0, centre 137.75 -> world_z 71.35
+  #
+  # All three centres are within a fraction of a mm of Ido's own independent
+  # measurement of body.stl (grille 73, LED 121, knob 137.5). The knob's
+  # mounting hole is well clear of the grille/bezel opening -- see
+  # scripts/measure_knob_gap.py for the resulting gap, no overlap.
 
   grille:
     file: grille.stl
-    fitted_by_eye: true
     rotate: {axis: NONE, deg: 0}
-    translate: [0, 40.4, 99.4]
+    translate: [0, 40.4, 99.2]
     note: >
-      Mesh-derived Z: body's own bezel mounting-hole rectangle spans Z
-      117.5-155.16 (4 pilot holes found directly in body.stl), centre 136.3
-      -- within 3mm of the original photo estimate (139.2), a good
-      cross-check. Y (50, front face) stays as the earlier clearance fix:
-      body's front wall here is not a clean full hole, a thin mounting flap
-      of material remains out to about Y 34 in places, so Y is set clear of
-      the body's max surface radius (48.4mm) rather than tight against the
-      recess -- 2mm recessed behind the bezel's front face.
+      Z from the real recess opening in body.stl (world_z 136.1, see above)
+      -- was 99.4 (world 136.3) from the old, less precise mounting-hole-
+      rectangle estimate; the 0.2mm difference is noise, not a correction.
+      Y (front face at 50) is a clearance choice, not a hole measurement:
+      the recess itself is a tapered dish (its rim reads ~28-31mm radius,
+      narrower than the body's ~44-48mm baseline), so there's no single
+      "true" Y for a flat front face to sit at -- Y 50 simply clears the
+      body's max surface radius (48.4mm) everywhere, avoiding the
+      hidden-line test wrongly hiding the part behind the taper.
 
   bezel:
     file: bezel.stl
-    fitted_by_eye: true
     rotate: {axis: NONE, deg: 0}
-    translate: [0, 40.5, 96.4]
+    translate: [0, 40.5, 96.2]
     note: >
-      Mesh-derived Z (136.3, see grille's note) from the 4 real mounting
-      pilot holes in body.stl (X +-18.7/18.8, Y 28-31, Z 117.5 and 155.16 --
-      a clean rectangle, high confidence). Y (52, front face) clear of the
-      body's max surface radius, as grille.
+      Z from the same real recess opening as grille (world_z 136.1). Y
+      (front face at 52) clear of the body's max surface radius, same basis
+      as grille.
 
   knob:
     file: knob.stl
-    fitted_by_eye: true
     rotate: {axis: X, deg: 90}
-    translate: [0, 50, 103.3]
+    translate: [0, 50, 71.35]
     note: >
-      Mesh-derived Z: body.stl has its own knob mounting hole, radius ~9mm
-      (matches the knob mesh's 18mm diameter exactly), centred at Z 103.3 --
-      corrects the original photo estimate (Z 74.4), which undershot by
-      29mm. Put back exactly on the mounting hole per Ido (2026-09-28): an
-      earlier pass nudged this down to Z 86 to open up a gap against the
-      bezel that isn't actually there at the mesh-exact position -- see
-      "Known issue: knob/bezel overlap" below. That nudge is reverted; the
-      drawing now shows the real overlap rather than hiding it.
-      Y (50, front face) clear of the body's real surface radius here
-      (47.2mm). Printed front-face-down/shaft-bore-up, so the 90 deg
+      Z from body.stl's real knob mounting hole (world_z 71.35, dia. ~10mm)
+      -- see the note above on how the earlier Z 103.3 was a misidentified
+      cluster. Y (front face at 50) clear of the body's real surface radius
+      here (47.9mm). Printed front-face-down/shaft-bore-up, so the 90 deg
       rotation about X brings the decorative face back to +Y.
-
-  # --- Known issue: knob/bezel overlap ------------------------------------
-  # At its real mounting-hole position (Z 103.3, radius 9mm -> top edge at
-  # Z 112.3) the knob overlaps the bezel's real lower edge (Z 96.4, from its
-  # own mesh bounds after the transform above) by about 15.9mm -- see
-  # scripts/measure_knob_gap.py for the exact figure. That is a genuine
-  # clash between two witness marks in the supplied model (the knob's own
-  # mounting hole and the bezel's mounting-screw-derived position), not a
-  # rendering choice -- flagged to Ido as a model issue to fix at the
-  # source, separate from this manual's art.
 
   fin_1:
     file: fin_x3.stl
@@ -187,22 +176,20 @@ markers:
   # circle.
   led:
     file: null
-    fitted_by_eye: true
-    world_position: [0, 49.0, 99.0]
+    world_position: [0, 49.0, 88.1]
     radius_mm: 1.5
     note: >
-      Placed in the gap between the knob's fitted top edge (Z 86+9=95) and
-      the bezel's front-face bottom edge (Z 96.4) -- satisfies "LED above
-      the knob" using the two fitted landmarks around it, matching the
-      reference photo's composition (LED floating just above the knob,
-      below the grille). Y pushed to 49 (clear of the body's real surface
-      radius here, ~47) after the first pass (Y 42) was fully hidden by the
-      hidden-line test for the same reason as grille/bezel/knob above. No
-      matching small hole was found in body.stl near this gap (the nearest
-      candidate, a ~1.5mm-radius hole at Z 88.5, sits BELOW the knob,
-      contradicting the brief, so it was not used -- it may be an unrelated
-      feature, e.g. a mic port). Lowest-confidence placement in this set,
-      flag for the ODM alongside the LED pattern table in specs.yaml.
+      Mesh-derived, not fitted: body.stl has a real ~2mm-diameter hole at
+      world_z 88.1 (file_z 121.0, see find_front_holes.py), sitting cleanly
+      between the knob (top edge world_z ~80.35) and the bezel (bottom edge
+      world_z ~96.2) -- "LED above the knob", confirmed by the mesh rather
+      than placed to satisfy it. An earlier pass found this same hole but
+      discarded it as a mic port or similar, reasoning it sat BELOW the
+      knob -- that was backwards because the knob was itself misplaced at
+      the time (see the knob's note); with the knob corrected, this hole is
+      exactly where the brief says the LED should be. Y pushed to 49 (clear
+      of the body's real surface radius here, ~47) so the hidden-line test
+      doesn't wrongly hide it, same basis as grille/bezel/knob.
 
 camera:
   front:
