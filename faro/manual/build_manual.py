@@ -11,17 +11,12 @@ EB Garamond throughout, lots of white space, fine gold rules.
 """
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
-from PIL import Image
 from reportlab.lib.colors import HexColor
-from reportlab.lib.enums import TA_LEFT
 from reportlab.lib.pagesizes import A4
-from reportlab.lib.styles import ParagraphStyle
-from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen import canvas
-from reportlab.platypus import Paragraph
 
 HERE = Path(__file__).resolve().parent
 FONTS = HERE / "fonts"
@@ -29,200 +24,22 @@ IMG = HERE.parent / "output" / "manual" / "images"
 OUT = HERE.parent / "output" / "manual" / "Faro_Build_Manual.pdf"
 JPG = HERE.parent / "output" / "manual" / ".jpg"
 
-pdfmetrics.registerFont(TTFont("Garamond", str(FONTS / "EBGaramond-Regular.ttf")))
-pdfmetrics.registerFont(TTFont("Garamond-Italic", str(FONTS / "EBGaramond-Italic.ttf")))
-pdfmetrics.registerFont(TTFont("Garamond-Medium", str(FONTS / "EBGaramond-Medium.ttf")))
-pdfmetrics.registerFontFamily("Garamond", normal="Garamond", italic="Garamond-Italic", bold="Garamond-Medium")
+sys.path.insert(0, str(HERE.parent.parent))
+from manual_common import pdf_page as common  # noqa: E402
 
-W, H = A4
-L, R = 64, W - 64                       # text block
-PAPER = HexColor("#F8F4EC")
-INK = HexColor("#2B2420")
-GREY = HexColor("#6E5F52")
-RED = HexColor("#8A1C15")
-GOLD = HexColor("#B08A3E")
-HAIR = HexColor("#D8CDBC")
+common.register_fonts(FONTS)
 
-BODY = ParagraphStyle("body", fontName="Garamond", fontSize=10.8, leading=15, textColor=INK, alignment=TA_LEFT)
-BODY_S = ParagraphStyle("bodys", parent=BODY, fontSize=9.8, leading=13.4)
-STAND = ParagraphStyle("stand", fontName="Garamond-Italic", fontSize=14.5, leading=19.5, textColor=GREY)
-CAP = ParagraphStyle("cap", fontName="Garamond-Italic", fontSize=9, leading=11.5, textColor=GREY)
-CHECK = ParagraphStyle("check", fontName="Garamond-Italic", fontSize=10.6, leading=14.2, textColor=INK)
-NOTE = ParagraphStyle("note", fontName="Garamond", fontSize=9.4, leading=12.6, textColor=GREY)
+W, H = common.W, common.H
+L, R = common.L, common.R
+PAPER, INK, GREY, RED, GOLD, HAIR = common.PAPER, common.INK, common.GREY, common.RED, common.GOLD, common.HAIR
+BODY, BODY_S, STAND, CAP, CHECK, NOTE = (common.BODY, common.BODY_S, common.STAND, common.CAP, common.CHECK,
+                                          common.NOTE)
 
 
-# ---- drawing helpers ------------------------------------------------------------
-class Page:
-    def __init__(self, c, section, number):
-        self.c = c
-        c.setFillColor(PAPER)
-        c.rect(0, 0, W, H, stroke=0, fill=1)
-        if section:
-            self.header(section)
-        if number:
-            self.footer(number)
-
-    def spaced(self, x, y, text, size=7.6, color=INK, font="Garamond-Medium", space=2.2, align="left"):
-        c = self.c
-        c.setFont(font, size)
-        c.setFillColor(color)
-        w = pdfmetrics.stringWidth(text, font, size) + space * (len(text) - 1)
-        if align == "right":
-            x -= w
-        elif align == "center":
-            x -= w / 2
-        c.drawString(x, y, text, charSpace=space)
-        return w
-
-    def mark(self, x, y, s=1.0):
-        """A small gold sunburst, as in the reference header."""
-        import math
-        c = self.c
-        c.setStrokeColor(GOLD)
-        c.setLineWidth(0.6)
-        for k in range(9):
-            a = math.radians(20 + k * 17.5)
-            c.line(x + 3.2 * s * math.cos(a), y + 3.2 * s * math.sin(a), x + 7 * s * math.cos(a),
-                   y + 7 * s * math.sin(a))
-        c.line(x - 9 * s, y, x + 9 * s, y)
-
-    def header(self, section):
-        c = self.c
-        self.mark(L + 7, H - 47)
-        self.spaced(L + 22, H - 50, "BATHSHEVA LONDON", size=7.4, space=2.4)
-        self.spaced(R, H - 50, section.upper(), size=7.2, color=GREY, space=2.2, align="right")
-        c.setStrokeColor(HAIR)
-        c.setLineWidth(0.5)
-        c.line(L, H - 60, R, H - 60)
-
-    def footer(self, n):
-        c = self.c
-        c.setStrokeColor(HAIR)
-        c.setLineWidth(0.5)
-        c.line(L, 52, R, 52)
-        c.setFont("Garamond-Italic", 8.8)
-        c.setFillColor(GREY)
-        c.drawString(L, 38, "Faro, prototype build manual")
-        c.drawRightString(R, 38, str(n))
-
-    def kicker(self, y, text):
-        self.spaced(L, y, text.upper(), size=8, color=RED, space=2.6)
-
-    def title(self, y, text, size=31):
-        c = self.c
-        c.setFont("Garamond", size)
-        c.setFillColor(INK)
-        c.drawString(L - 1, y, text)
-
-    def para(self, x, y_top, width, text, style=BODY):
-        p = Paragraph(text, style)
-        w, h = p.wrap(width, 1000)
-        p.drawOn(self.c, x, y_top - h)
-        return y_top - h
-
-    def rule(self, x, y, w=62, color=GOLD, width=0.7):
-        self.c.setStrokeColor(color)
-        self.c.setLineWidth(width)
-        self.c.line(x, y, x + w, y)
-
-    def heading(self, x, y, text, color=INK):
-        self.spaced(x, y, text.upper(), size=7.6, color=color, space=2.3)
-
-    def steps(self, x, y_top, width, items, style=BODY, gap=5, num_w=26):
-        y = y_top
-        for i, t in enumerate(items, 1):
-            p = Paragraph(t, style)
-            w, h = p.wrap(width - num_w, 1000)
-            self.c.setFont("Garamond", style.fontSize + 0.6)
-            self.c.setFillColor(RED)
-            self.c.drawString(x, y - style.fontSize - 0.5, f"{i:02d}")
-            p.drawOn(self.c, x + num_w, y - h)
-            y -= h + gap
-        return y
-
-    def checkpoint(self, y_top, text, x=L, width=R - L):
-        """The line that ends each step: when it's safe to move on."""
-        self.rule(x, y_top, 28)
-        self.spaced(x, y_top - 14, "READY TO MOVE ON WHEN", size=7.2, color=RED, space=2.2)
-        return self.para(x, y_top - 20, width, text, CHECK)
-
-    def bullets(self, x, y_top, width, items, style=BODY_S, gap=3):
-        y = y_top
-        for t in items:
-            p = Paragraph(t, style)
-            w, h = p.wrap(width - 12, 1000)
-            self.c.setFillColor(GOLD)
-            self.c.circle(x + 2.5, y - style.fontSize * 0.62, 1.3, stroke=0, fill=1)
-            p.drawOn(self.c, x + 12, y - h)
-            y -= h + gap
-        return y
-
-    def image(self, name, x, y_top, width=None, height=None, caption=None, align="left"):
-        """Place an image by its top-left, scaled to width or height; returns the bottom."""
-        path = IMG / f"{name}.png"
-        im = Image.open(path)
-        iw, ih = im.size
-        if width and height:
-            s = min(width / iw, height / ih)
-        elif width:
-            s = width / iw
-        else:
-            s = height / ih
-        w, h = iw * s, ih * s
-        if align == "center" and width:
-            x += (width - w) / 2
-        JPG.mkdir(parents=True, exist_ok=True)
-        jp = JPG / f"{name}.jpg"
-        if not jp.exists() or jp.stat().st_mtime < path.stat().st_mtime:
-            im.convert("RGB").save(jp, quality=90)
-        self.c.drawImage(str(jp), x, y_top - h, w, h)
-        y = y_top - h
-        if caption:
-            y = self.para(x, y - 5, max(w, 120), caption, CAP)
-        return y
-
-    def table(self, x, y_top, cols, rows, widths, head=True, row_h=None, style=BODY_S, swatch=None, lines=True):
-        """Simple ruled table. cols: header labels; rows: lists of strings."""
-        c = self.c
-        y = y_top
-        if head:
-            xx = x
-            for label, w in zip(cols, widths):
-                self.spaced(xx + (14 if swatch and xx == x else 0), y - 9, label.upper(), size=6.8, color=GREY,
-                            space=1.8)
-                xx += w
-            y -= 15
-            c.setStrokeColor(INK)
-            c.setLineWidth(0.6)
-            c.line(x, y, x + sum(widths), y)
-        for r_i, row in enumerate(rows):
-            hs = []
-            paras = []
-            for t, w in zip(row, widths):
-                p = Paragraph(t, style)
-                _, h = p.wrap(w - 10, 1000)
-                paras.append(p)
-                hs.append(h)
-            h = max(max(hs), row_h or 0) + 7
-            xx = x
-            for k, (p, w) in enumerate(zip(paras, widths)):
-                off = 0
-                if swatch and k == 0:
-                    col = swatch[r_i]
-                    if col:
-                        c.setFillColor(HexColor(col))
-                        c.setStrokeColor(HAIR)
-                        c.setLineWidth(0.4)
-                        c.rect(xx, y - 5 - 7.5, 7.5, 7.5, stroke=1, fill=1)
-                    off = 14
-                p.drawOn(c, xx + off, y - 4 - p.height if hasattr(p, "height") else y - 4 - hs[k])
-                xx += w
-            y -= h
-            if lines:
-                c.setStrokeColor(HAIR)
-                c.setLineWidth(0.4)
-                c.line(x, y, x + sum(widths), y)
-        return y
+def Page(c, section, number):
+    """faro/manual's own Page, bound to Faro's footer text and image dirs.
+    The shared furniture and drawing helpers live in manual_common/pdf_page.py."""
+    return common.Page(c, section, number, footer_text="Faro, prototype build manual", img_dir=IMG, jpg_dir=JPG)
 
 
 # ---- the pages ----------------------------------------------------------------------

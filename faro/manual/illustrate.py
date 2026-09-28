@@ -20,15 +20,17 @@ from pathlib import Path
 
 import numpy as np
 import pyvista as pv
-import vtk
 from PIL import Image, ImageDraw, ImageFont
 
 HERE = Path(__file__).resolve().parent
 FARO = HERE.parent
+ROOT = FARO.parent
+sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(FARO))
 import lamp  # noqa: E402
 import params as p  # noqa: E402
 import studio  # noqa: E402
+from manual_common import scene as common_scene  # noqa: E402
 
 atelier = studio.atelier
 OUT = FARO / "output" / "manual" / "images"
@@ -238,27 +240,13 @@ def led_puck(z=None):
 
 
 # ---- plotter ---------------------------------------------------------------
-class Scene:
-    """A studio plotter on the manual's paper colour, with outline helpers and
-    world -> image projection for labels."""
-
+# The plotter mechanics (add/part/shadow/camera/fit/project/image) live in
+# manual_common/scene.py, shared with atelier/build-manual/illustrate.py.
+# Only Faro's own part staging (style, below) stays here.
+class Scene(common_scene.Scene):
     def __init__(self, size=(1400, 1000), lights=1.0):
-        self.size = (size[0] * S, size[1] * S)
-        pl = pv.Plotter(off_screen=True, window_size=list(self.size), lighting="none")
-        pl.set_background(PAPER)
-        pl.enable_anti_aliasing("ssaa")
-        if atelier._ENV is None:
-            atelier._ENV = atelier._studio_environment()
-        pl.set_environment_texture(atelier._ENV)
-        pl.renderer.GetEnvMapPrefiltered().SetPrefilterMaxSamples(256)
-        pl.renderer.SetEnvironmentUp(0, 0, 1)
-        pl.renderer.SetEnvironmentRight(1, 0, 0)
-        for pos, k in (((-500, -700, 700), atelier.LIGHT_KEY), ((700, -350, 250), atelier.LIGHT_FILL),
-                       ((150, 800, 600), atelier.LIGHT_RIM)):
-            pl.add_light(pv.Light(position=pos, focal_point=(0, 0, 150), intensity=k * p.LIGHT_GAIN * lights))
-        self.pl = pl
-        self.shadows = []
-        self.bounds = []
+        super().__init__(atelier, mesh, p, size=size, lights=lights, scale=S,
+                          paper=PAPER, outline=OUTLINE, accent=ACCENT)
 
     # materials by stage ------------------------------------------------------
     def style(self, name, stage, lit=False, soft=False):
@@ -294,94 +282,6 @@ class Scene:
                 st["color"] = tuple((c * 0.85 + paper * 0.15) ** 2.2)
             coat = False
         return st, coat
-
-    def add(self, m, style, coat=False, outline=True, highlight=False, smooth=True):
-        kw = dict(style)
-        self.bounds.append(m.bounds)
-        a = self.pl.add_mesh(m, smooth_shading=smooth, **kw)
-        if highlight or outline:
-            # outlines from a vertex-merged copy, so only true silhouettes are drawn
-            # (the render mesh has separate vertices per face, for crisp normals)
-            clean = pv.PolyData(m.points, m.faces).clean(tolerance=1e-4)
-            self.pl.add_silhouette(clean, color=ACCENT if highlight else OUTLINE,
-                                   line_width=(3.0 if highlight else 1.1) * S)
-        if coat:
-            prop = a.GetProperty()
-            prop.SetCoatStrength(p.LACQUER_CLEARCOAT)
-            prop.SetCoatRoughness(0.05)
-            prop.SetCoatColor(1.0, 1.0, 1.0)
-            prop.SetCoatIOR(1.5)
-        return a
-
-    def part(self, name, stage="paint", offset=(0, 0, 0), lit=False, soft=False, highlight=False,
-             outline=True, transform=None):
-        m = mesh(name)
-        if transform is not None:
-            m = transform(m)
-        m.translate(offset, inplace=True)
-        st, coat = self.style(name, stage, lit, soft)
-        self.add(m, st, coat, outline=outline, highlight=highlight)
-        return m
-
-    def shadow(self, x, y, r, strength=0.35, z=0.05):
-        g = pv.Disc(center=(x, y, z), inner=0, outer=r * 1.9, normal=(0, 0, 1), r_res=40, c_res=96)
-        d = np.linalg.norm(g.points[:, :2] - np.array([x, y]), axis=1)
-        a = strength * np.exp(-(np.maximum(d - r * 0.75, 0) / (r * 0.28 + 3)) ** 2)
-        rgba = np.zeros((len(d), 4))
-        rgba[:, :3] = np.array([0.30, 0.24, 0.19]) * 255
-        rgba[:, 3] = np.clip(a, 0, 1) * 255
-        g["rgba"] = rgba.astype(np.uint8)
-        self.pl.add_mesh(g, scalars="rgba", rgba=True, lighting=False, show_scalar_bar=False)
-
-    def camera(self, focal, direction, dist=None, view_angle=22, parallel_scale=None, up=(0, 0, 1)):
-        d = np.array(direction, dtype=float)
-        d /= np.linalg.norm(d)
-        c = self.pl.camera
-        c.focal_point = tuple(focal)
-        c.position = tuple(np.array(focal) + d * (dist or 1000))
-        c.up = up
-        if parallel_scale:
-            self.pl.enable_parallel_projection()
-            c.parallel_scale = parallel_scale
-        else:
-            c.view_angle = view_angle
-        self.pl.reset_camera_clipping_range()
-
-    def fit(self, direction, up=(0, 0, 1), margin=1.1, bounds=None):
-        """Orthographic view along `direction`, framed to everything added (or `bounds`)."""
-        bl = bounds or self.bounds
-        lo = np.min([[b[0], b[2], b[4]] for b in bl], axis=0)
-        hi = np.max([[b[1], b[3], b[5]] for b in bl], axis=0)
-        corners = np.array([[x, y, z] for x in (lo[0], hi[0]) for y in (lo[1], hi[1]) for z in (lo[2], hi[2])])
-        d = np.array(direction, float)
-        d /= np.linalg.norm(d)
-        right = np.cross(-d, np.array(up, float))
-        right /= np.linalg.norm(right)
-        tup = np.cross(right, -d)
-        ctr = (lo + hi) / 2
-        rel = corners - ctr
-        r_ = rel @ right
-        u_ = rel @ tup
-        ctr = ctr + right * (r_.max() + r_.min()) / 2 + tup * (u_.max() + u_.min()) / 2
-        aspect = self.size[0] / self.size[1]
-        half = max((u_.max() - u_.min()) / 2, (r_.max() - r_.min()) / 2 / aspect) * margin
-        self.camera(ctr, d, dist=3000, parallel_scale=half, up=tuple(tup))
-
-    def project(self, pts):
-        self.pl.render()
-        co = vtk.vtkCoordinate()
-        co.SetCoordinateSystemToWorld()
-        out = []
-        for q in pts:
-            co.SetValue(*[float(v) for v in q])
-            x, y = co.GetComputedDoubleDisplayValue(self.pl.renderer)
-            out.append((x, self.size[1] - y))
-        return out
-
-    def image(self):
-        img = Image.fromarray(self.pl.screenshot(return_img=True))
-        self.pl.close()
-        return img
 
 
 # ---- 2D annotation (drawn on the render at S x scale) -------------------------
