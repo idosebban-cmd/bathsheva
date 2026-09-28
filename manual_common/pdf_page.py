@@ -33,6 +33,18 @@ RED = HexColor("#8A1C15")
 GOLD = HexColor("#B08A3E")
 HAIR = HexColor("#D8CDBC")
 
+# The footer rule sits at y=52 and the footer text at y=38 (see Page.footer);
+# body content must not cross below FOOTER_SAFE_Y, or it prints through the
+# footer. The header rule sits at H-60, with the kicker/title starting well
+# below that already, so only the bottom edge needs a runtime guard.
+FOOTER_SAFE_Y = 58
+
+
+class PageOverflow(Exception):
+    """Raised when a page's content would cross the footer rule -- fails the
+    build instead of silently printing text or an image under the footer."""
+
+
 _registered_font_dirs: set[str] = set()
 
 
@@ -64,16 +76,15 @@ class Page:
     """One A4 page: paper fill, header (running section title) and footer
     (italic manual name + page number), plus drawing helpers for the body.
 
-    `footer_text`, `img_dir` and `jpg_dir` are the one thing that differs
-    between manuals (which manual's name prints in the footer, and where its
+    `footer_text` and `img_dir` are the one thing that differs between
+    manuals (which manual's name prints in the footer, and where its
     rendered images live) -- everything else here is shared verbatim.
     """
 
-    def __init__(self, c, section, number, *, footer_text, img_dir, jpg_dir):
+    def __init__(self, c, section, number, *, footer_text, img_dir):
         self.c = c
         self.footer_text = footer_text
         self.img_dir = img_dir
-        self.jpg_dir = jpg_dir
         c.setFillColor(PAPER)
         c.rect(0, 0, W, H, stroke=0, fill=1)
         if section:
@@ -122,6 +133,16 @@ class Page:
         c.setFillColor(GREY)
         c.drawString(L, 38, self.footer_text)
         c.drawRightString(R, 38, str(n))
+
+    def check_bounds(self, y, label=""):
+        """Raise PageOverflow if `y` (the lowest point your page's content
+        reached) crosses the footer rule. Call this with the return value of
+        your last drawing call, before c.showPage() -- a layout bug then
+        fails the build instead of silently printing under the footer."""
+        if y < FOOTER_SAFE_Y:
+            raise PageOverflow(f"{label or 'page'}: content bottom at y={y:.1f}pt crosses the footer rule "
+                                f"(must stay at or above y={FOOTER_SAFE_Y}pt) -- overflow of "
+                                f"{FOOTER_SAFE_Y - y:.1f}pt")
 
     def kicker(self, y, text):
         self.spaced(L, y, text.upper(), size=8, color=RED, space=2.6)
@@ -189,11 +210,11 @@ class Page:
         w, h = iw * s, ih * s
         if align == "center" and width:
             x += (width - w) / 2
-        self.jpg_dir.mkdir(parents=True, exist_ok=True)
-        jp = self.jpg_dir / f"{name}.jpg"
-        if not jp.exists() or jp.stat().st_mtime < path.stat().st_mtime:
-            im.convert("RGB").save(jp, quality=90)
-        self.c.drawImage(str(jp), x, y_top - h, w, h)
+        # Drawn straight from the PNG, not a re-encoded JPEG: JPEG's DCT
+        # quantization shifts a flat background colour by a level or two
+        # even at quality=100, which reads as a faint but real rectangle
+        # against the page's own solid paper-colour fill once printed.
+        self.c.drawImage(str(path), x, y_top - h, w, h)
         y = y_top - h
         if caption:
             y = self.para(x, y - 5, max(w, 120), caption, CAP)

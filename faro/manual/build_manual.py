@@ -22,7 +22,6 @@ HERE = Path(__file__).resolve().parent
 FONTS = HERE / "fonts"
 IMG = HERE.parent / "output" / "manual" / "images"
 OUT = HERE.parent / "output" / "manual" / "Faro_Build_Manual.pdf"
-JPG = HERE.parent / "output" / "manual" / ".jpg"
 
 sys.path.insert(0, str(HERE.parent.parent))
 from manual_common import pdf_page as common  # noqa: E402
@@ -39,7 +38,7 @@ BODY, BODY_S, STAND, CAP, CHECK, NOTE = (common.BODY, common.BODY_S, common.STAN
 def Page(c, section, number):
     """faro/manual's own Page, bound to Faro's footer text and image dirs.
     The shared furniture and drawing helpers live in manual_common/pdf_page.py."""
-    return common.Page(c, section, number, footer_text="Faro, prototype build manual", img_dir=IMG, jpg_dir=JPG)
+    return common.Page(c, section, number, footer_text="Faro, prototype build manual", img_dir=IMG)
 
 
 # ---- the pages ----------------------------------------------------------------------

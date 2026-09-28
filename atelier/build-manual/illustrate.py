@@ -62,6 +62,47 @@ def font(size, kind="regular"):
     return ImageFont.truetype(str(FONTS / f), int(size * S))
 
 
+def bbox(m):
+    b = m.bounds
+    return np.array([b[0], b[2], b[4]]), np.array([b[1], b[3], b[5]])
+
+
+def draw_label(d, text, at, anchor, align="left", size=17, sub=None):
+    """Label at `at` (image px) with a thin gold leader to `anchor`, ending in a dot.
+    Identical to faro/manual/illustrate.py's helper of the same name."""
+    f = font(size)
+    x, y = at
+    tw = d.textlength(text, font=f)
+    tx = x - tw if align == "right" else (x - tw / 2 if align == "center" else x)
+    halo = tuple(int(c * 255) for c in hexrgb(PAPER))
+    d.text((tx, y - f.size * 0.62), text, font=f, fill=INK, stroke_width=int(2.5 * S), stroke_fill=halo)
+    if sub:
+        fs = font(size * 0.78, "italic")
+        sw = d.textlength(sub, font=fs)
+        sx = x - sw if align == "right" else (x - sw / 2 if align == "center" else x)
+        d.text((sx, y + f.size * 0.45), sub, font=fs, fill=(110, 95, 82), stroke_width=int(2 * S),
+               stroke_fill=tuple(int(c * 255) for c in hexrgb(PAPER)))
+    if anchor is not None:
+        lx = x + 10 * S if align == "right" else x - 10 * S
+        if align == "center":
+            lx, ly = x, y - f.size * 0.75
+        else:
+            ly = y
+        d.line([(lx, ly), anchor], fill=GOLD_RULE, width=int(1.2 * S))
+        r = 2.6 * S
+        d.ellipse([anchor[0] - r, anchor[1] - r, anchor[0] + r, anchor[1] + r], fill=GOLD_RULE)
+
+
+def badge(d, center, n, size=15, fill=(248, 244, 236), ring=GOLD_RULE, ink=INK):
+    r = size * S
+    x, y = center
+    d.ellipse([x - r, y - r, x + r, y + r], fill=fill, outline=ring, width=int(1.6 * S))
+    f = font(size * 1.15, "medium")
+    t = str(n)
+    tw = d.textlength(t, font=f)
+    d.text((x - tw / 2, y - f.size * 0.62), t, font=f, fill=ink)
+
+
 # ---- the model --------------------------------------------------------------
 M = model.build(p, visual_only=True)
 I = M.info
@@ -78,10 +119,6 @@ def mesh(name):
         MESH[name] = atelier._to_mesh(shape, 0.03)
     return MESH[name].copy()
 
-
-PART_NAMES = ["body", "grille_paint", "grille", "bezel", "knob", "fin_1", "fin_2", "fin_3", "collar", "foot",
-              "nose_cone"]
-GOLD_PARTS = {"nose_cone", "fin_1", "fin_2", "fin_3", "grille", "bezel", "knob", "collar", "foot"}
 
 
 # ---- plotter ------------------------------------------------------------------
@@ -107,8 +144,9 @@ class Scene(common_scene.Scene):
                 coat = True
             else:                                          # gold trim: nose cone, fins, bezel, knob,
                 st = dict(color=lin(p.GOLD_HEX), pbr=True, metallic=p.GOLD_METALLIC,  # collar, foot, grille
-                          roughness=max(p.GOLD_ROUGHNESS, 0.45))          # satin in the studio, not mirror
-                coat = False                                              # clear coat dulls metallic paint
+                          roughness=max(p.GOLD_ROUGHNESS, 0.65))          # matte enough that the grille's
+                coat = False                              # clear coat dulls metallic paint    # deep honeycomb
+                                                            # pockets don't self-shadow into reading as copper
         st = dict(st)
         if soft:                                          # parts already in place: real colour, a little lighter
             if "color" in st and st.get("lighting", True) is not False:
@@ -147,15 +185,28 @@ def img_hero():
     return finish(sc.image(), "00_hero")
 
 
-def img_step(name, done, new, view=(0.62, -1.0, 0.35), size=(1000, 800), fit_to=None, margin=1.08):
+def zoom_bounds(z_lo, z_hi, r=60, x=0.0, y=0.0):
+    """A synthetic single-box bounds list to pass as `fit_to` (Scene.fit
+    expects a list of [xmin,xmax,ymin,ymax,zmin,zmax] boxes), so a step's
+    render frames just the relevant band of the body (e.g. the front face,
+    or the base) instead of the whole 280 mm rocket with empty space above
+    and below it."""
+    return [(x - r, x + r, y - r, y + r, z_lo, z_hi)]
+
+
+def img_step(name, done, new, view=(0.62, -1.0, 0.35), size=(1000, 800), fit_to=None, margin=1.1, extra=None):
     """done: parts already in place (real colours, a little lighter); new: the
-    part(s) added in this step (full colour, red outline)."""
+    part(s) added in this step (full colour, red outline). extra: optional
+    list of (mesh, style_dict) pairs added without silhouette outline (e.g.
+    steel shot)."""
     sc = Scene(size)
     for n in done:
         st, coat = sc.style(n, "paint", soft=True)
         sc.add(mesh(n), st, coat)
     for n in new:
         sc.part(n, "paint", highlight=True)
+    for m, st in (extra or []):
+        sc.add(m, st, outline=False)
     lo_all = np.min([[b[0], b[2], b[4]] for b in sc.bounds], axis=0)
     hi_all = np.max([[b[1], b[3], b[5]] for b in sc.bounds], axis=0)
     sc.shadow((lo_all[0] + hi_all[0]) / 2, (lo_all[1] + hi_all[1]) / 2,
@@ -164,17 +215,268 @@ def img_step(name, done, new, view=(0.62, -1.0, 0.35), size=(1000, 800), fit_to=
     return finish(sc.image(), name)
 
 
-def assembly_step_1_of_3():
-    """Step 06, assembly, page 1: grille, bezel, knob."""
-    img_step("06_01_grille", done=["body", "grille_paint"], new=["grille"])
-    img_step("06_02_bezel", done=["body", "grille_paint", "grille"], new=["bezel"])
+def steel_shot(n=22, seed=3):
+    """A loose cluster of ~6 mm steel shot resting low in the body, glued
+    through the open bottom before the collar goes on."""
+    rng = np.random.default_rng(seed)
+    out = None
+    for _ in range(n):
+        a = rng.uniform(0, 2 * np.pi)
+        r = rng.uniform(0, 15)
+        x, y = r * np.cos(a), r * np.sin(a)
+        z = I["z0"] + 4 + rng.uniform(0, 5)
+        s = pv.Sphere(radius=3.1, center=(x, y, z), theta_resolution=16, phi_resolution=16)
+        out = s if out is None else out.merge(s)
+    return out
+
+
+def assembly_step_1_of_2():
+    """Step 06, assembly, page 1 of 2: grille, bezel, knob, fins."""
+    front = zoom_bounds(I["z0"] + 60, I["z_tip"] * 0.78, r=55, y=0)
+    img_step("06_01_grille", done=["body", "grille_paint"], new=["grille"], fit_to=front)
+    img_step("06_02_bezel", done=["body", "grille_paint", "grille"], new=["bezel"], fit_to=front)
     img_step("06_03_knob", done=["body", "grille_paint", "grille", "bezel"], new=["knob"],
-              view=(0.5, -1.0, 0.0))
+              view=(0.5, -1.0, 0.0), fit_to=front)
+    base = zoom_bounds(I["z0"] - 5, I["z0"] + 110, r=95)
+    img_step("06_04_fins", done=["body", "grille_paint", "grille", "bezel", "knob"],
+              new=["fin_1", "fin_2", "fin_3"], view=(0.55, -0.95, 0.15), fit_to=base, margin=1.15)
+
+
+def assembly_step_2_of_2():
+    """Step 06, assembly, page 2 of 2: weight, collar, foot, nose cone."""
+    done4 = ["body", "grille_paint", "grille", "bezel", "knob", "fin_1", "fin_2", "fin_3"]
+    base = zoom_bounds(I["z0"] - 5, I["z0"] + 60, r=70)
+    shot_style = dict(color=lin("#8C8F94"), pbr=True, metallic=0.9, roughness=0.4)
+    img_step("06_05_weight", done=done4, new=[], view=(0.4, -0.7, -0.5), fit_to=base, margin=1.3,
+              extra=[(steel_shot(), shot_style)])
+    img_step("06_06_collar", done=done4, new=["collar"], view=(0.5, -0.95, 0.05), fit_to=base)
+    foot_base = zoom_bounds(0, I["z0"] + 30, r=40)
+    img_step("06_07_foot", done=done4 + ["collar"], new=["foot"], view=(0.5, -0.9, 0.1), fit_to=foot_base,
+              margin=1.5)
+    top = zoom_bounds(I["z_joint"] - 40, I["z_tip"], r=60)
+    img_step("06_08_nose_cone", done=done4 + ["collar", "foot"], new=["nose_cone"], fit_to=top, margin=1.15)
+
+
+# ---- Step 01: exploded, labelled, white resin --------------------------------
+def img_exploded():
+    """foot/collar/body/nose_cone are already modelled nested in their real
+    assembled positions (the spigots interlock), so 'exploding' them means
+    pulling each one further up than it naturally sits, by a fixed gap above
+    wherever the part below it now ends -- not a guessed absolute height.
+    grille/bezel/knob are pulled out along -Y (the model's front direction,
+    see model.py's own note: "front (grille) faces -Y") off the body face."""
+    sc = Scene((1100, 1600))
+    anchors = {}
+    dz_of = {}
+    z_top = None
+    gap = 22.0
+    for n in ("foot", "collar", "body", "nose_cone"):
+        m = mesh(n)
+        lo, hi = bbox(m)
+        dz = 0.0 if z_top is None else (z_top + gap) - lo[2]
+        dz_of[n] = dz
+        m.translate((0, 0, dz), inplace=True)
+        st, coat = sc.style(n, "resin")
+        sc.add(m, st, coat)
+        # body's own label anchors low on its flank, clear of the grille/bezel/knob
+        # cluster (pulled toward the camera off its front face, below); everything
+        # else anchors at its own vertical centre.
+        z_lbl = lo[2] + (hi[2] - lo[2]) * (0.12 if n == "body" else 0.5)
+        anchors[n] = np.array([lo[0] - 2, 0, z_lbl + dz])
+        z_top = hi[2] + dz
+    body_dz = dz_of["body"]
+    for n, out_y, z_frac in (("grille", -34, 0.85), ("bezel", -48, 0.08), ("knob", -20, 0.5)):
+        m = mesh(n)
+        m.translate((0, out_y, body_dz), inplace=True)
+        st, coat = sc.style(n, "resin")
+        sc.add(m, st, coat)
+        lo, hi = bbox(m)
+        anchors[n] = np.array([lo[0] - 2, (lo[1] + hi[1]) / 2, lo[2] + (hi[2] - lo[2]) * z_frac])
+    # the three fins, laid out to the side (identical parts, printed x3)
+    fm = mesh("fin_1")
+    lo, hi = bbox(fm)
+    fin_w = hi[0] - lo[0]
+    fx0 = I["fin_tip_reach"] + 50
+    fin_z = anchors["foot"][2] + 40
+    for k in range(3):
+        m = fm.copy()
+        m.translate((fx0 + k * (fin_w + 16) - (lo[0] + hi[0]) / 2, -(lo[1] + hi[1]) / 2,
+                     fin_z - (lo[2] + hi[2]) / 2), inplace=True)
+        st, coat = sc.style("fin_1", "resin")
+        sc.add(m, st, coat)
+    anchors["fin_x3"] = np.array([fx0 + 1.5 * fin_w + fin_w / 2, 0, fin_z + hi[2] - lo[2] + 20])
+    sc.fit((0.55, -1.0, 0.22), margin=1.06)
+    keys = ["foot", "collar", "body", "grille", "bezel", "knob", "fin_x3", "nose_cone"]
+    pts = dict(zip(keys, sc.project([anchors[k] for k in keys])))
+    img = sc.image()
+    d = ImageDraw.Draw(img)
+    Wpx = img.size[0]
+    ref = {"foot": "Foot", "collar": "Collar", "body": "Body", "grille": "Grille", "bezel": "Bezel",
+           "knob": "Knob", "fin_x3": "Fins x3", "nose_cone": "Nose cone"}
+    for k in keys:
+        x, y = pts[k]
+        draw_label(d, ref[k], (min(x + 40 * S, Wpx - 20 * S), y), (x, y), size=25)
+    return finish(img, "01_exploded_resin")
+
+
+# ---- Step 02: parts as arrived, white resin -----------------------------------
+def img_parts_as_arrived():
+    sys.path.insert(0, str(ROOT))
+    import build as abuild
+    sc = Scene((1500, 1100))
+    layout = [["body"], ["nose_cone", "collar", "foot"], ["grille", "bezel", "knob", "fin_1"]]
+    labels_map = {"fin_1": "fin x3", "nose_cone": "nose cone"}
+    labels = []
+    gap = 30
+    rows = []
+    for row in reversed(layout):
+        meshes = []
+        for n in row:
+            posed, _ = abuild._print_pose(n, M.parts[n], I)
+            meshes.append((n, atelier._to_mesh(posed, 0.03)))
+        rows.append(meshes)
+    y_row = 0.0
+    for r, row_meshes in enumerate(rows):
+        widths = [bbox(m)[1][0] - bbox(m)[0][0] for _, m in row_meshes]
+        depth = max(bbox(m)[1][1] - bbox(m)[0][1] for _, m in row_meshes)
+        if r:
+            y_row += depth / 2 + 55
+        x = -(sum(widths) + gap * (len(widths) - 1)) / 2
+        for (n, m), w in zip(row_meshes, widths):
+            lo, hi = bbox(m)
+            m.translate((x - lo[0], y_row - (lo[1] + hi[1]) / 2, 0), inplace=True)
+            st, coat = sc.style(n, "resin")
+            sc.add(m, st, coat)
+            sc.shadow(x - lo[0] + (lo[0] + hi[0]) / 2, y_row, max(hi[0] - lo[0], hi[1] - lo[1]) / 2, 0.25)
+            labels.append((n, ((x - lo[0] + lo[0] + hi[0]) / 2, y_row + lo[1] - 4, 0)))
+            x += w + gap
+        y_row += depth / 2
+    sc.fit((0, -0.62, 1.0), margin=1.12)
+    pts = sc.project([q for _, q in labels])
+    img = sc.image()
+    d = ImageDraw.Draw(img)
+    for (n, _), (x, y) in zip(labels, pts):
+        draw_label(d, labels_map.get(n, n), (x, y + 24 * S), None, align="center", size=25)
+    return finish(img, "02_printed_parts")
+
+
+# ---- Step 03: mounted for priming, grey ---------------------------------------
+def img_priming():
+    sc = Scene((1500, 950))
+    names = ["body", "nose_cone", "collar", "foot", "grille", "bezel", "knob", "fin_1"]
+    labels_map = {"fin_1": "fin x3", "nose_cone": "nose cone"}
+    gap = 30
+    x = 0.0
+    labels = []
+    heights = []
+    for n in names:
+        m = mesh(n)
+        lo, hi = bbox(m)
+        h = hi[2] - lo[2]
+        heights.append(h)
+    base_y = 0.0
+    stick_top = max(heights) * 0.55
+    for n, h in zip(names, heights):
+        m = mesh(n)
+        lo, hi = bbox(m)
+        w = hi[0] - lo[0]
+        cx = x + w / 2
+        m.translate((cx - (lo[0] + hi[0]) / 2, -(lo[1] + hi[1]) / 2, stick_top - lo[2]), inplace=True)
+        st, coat = sc.style(n, "primer")
+        sc.add(m, st, coat)
+        stick = pv.Cylinder(center=(cx, 0, stick_top / 2), direction=(0, 0, 1), radius=3.2, height=stick_top,
+                            resolution=24)
+        sc.add(stick, dict(color=lin("#C9A56A"), pbr=True, metallic=0.0, roughness=0.6), outline=False)
+        labels.append((n, np.array([cx, 0, stick_top + (hi[2] - lo[2]) + 6])))
+        x += w + gap
+    board = pv.Cube(center=(x / 2 - gap / 2, 0, -6), x_length=x, y_length=80, z_length=6)
+    sc.add(board, dict(color=lin("#C9A56A"), pbr=True, metallic=0.0, roughness=0.7), outline=False)
+    sc.fit((0.05, -1.0, 0.18), margin=1.1)
+    pts = sc.project([a for _, a in labels])
+    img = sc.image()
+    d = ImageDraw.Draw(img)
+    for (n, _), (px, py) in zip(labels, pts):
+        draw_label(d, labels_map.get(n, n), (px, py), None, align="center", size=22)
+    return finish(img, "03_priming")
+
+
+# ---- Step 04: paint groups ------------------------------------------------------
+def img_paint_groups():
+    sc = Scene((1500, 720))
+    groups = [("Oxblood gloss", ["body"]), ("Metallic gold", ["nose_cone", "fin_1", "grille", "bezel", "knob",
+              "collar", "foot"]), ("Matt black", ["grille_paint"])]
+    x = 0.0
+    gap = 60
+    labels = []
+    for title, names in groups:
+        sub_x = x
+        for n in names:
+            m = mesh(n)
+            lo, hi = bbox(m)
+            w = hi[0] - lo[0]
+            m.translate((sub_x - lo[0], -(lo[1] + hi[1]) / 2, -lo[2]), inplace=True)
+            st, coat = sc.style(n, "paint")
+            sc.add(m, st, coat)
+            sub_x += w + 16
+        labels.append((title, np.array([(x + sub_x - 16) / 2, 0, -14])))
+        x = sub_x + gap
+    sc.fit((0, -1.0, 0.35), margin=1.1)
+    pts = sc.project([a for _, a in labels])
+    img = sc.image()
+    d = ImageDraw.Draw(img)
+    for (title, _), (px, py) in zip(labels, pts):
+        draw_label(d, title, (px, py), None, align="center", size=24)
+    return finish(img, "04_paint_groups")
+
+
+# ---- Step 04: colour reference views -------------------------------------------
+def img_views():
+    for name, direction in (("front", (0, -1, 0.12)), ("side", (1, 0, 0.12)), ("rear", (0, 1, 0.12)),
+                             ("three_quarter", (0.62, -0.78, 0.2))):
+        sc = Scene((700, 1000))
+        for n in ORDER:
+            add_painted(sc, n, lit=True)
+        sc.shadow(0, 0, I["fin_tip_reach"], 0.4)
+        sc.fit(direction, margin=1.12)
+        finish(sc.image(), f"04_view_{name}")
+
+
+# ---- Step 07: stability check -- a straight underside view for the record ------
+# (The tip test itself is physical: rest the real prototype on the fins and nudge
+# it, with and without the steel shot fitted, and note the result on the test
+# record page. There's no simulated "tips at N deg" render here: that would be
+# faking a measurement the model can't make for a hand-glued, hand-weighted
+# resin part -- only the real prototype's own mass and glue lines can.)
+def img_underside():
+    sc = Scene((900, 900))
+    for n in ORDER:
+        add_painted(sc, n, lit=True)
+    sc.fit((0, 0.05, -1.0), up=(0, 1, 0), margin=1.15)
+    return finish(sc.image(), "07_underside")
+
+
+# ---- Troubleshooting: the knob boss / body hole fit -----------------------------
+def img_knob_fit():
+    sc = Scene((1000, 800))
+    st, coat = sc.style("body", "paint", soft=True)
+    sc.add(mesh("body"), st, coat)
+    sc.part("knob", "paint", highlight=True)
+    base = zoom_bounds(I["z_knob"] - 20, I["z_knob"] + 20, r=30)
+    sc.fit((0.3, -1.0, 0.0), margin=1.3, bounds=base)
+    return finish(sc.image(), "TS_knob_fit")
 
 
 REGISTRY = {
     "hero": img_hero,
-    "step": assembly_step_1_of_3,
+    "step1": assembly_step_1_of_2,
+    "step2": assembly_step_2_of_2,
+    "exploded": img_exploded,
+    "parts_as_arrived": img_parts_as_arrived,
+    "priming": img_priming,
+    "paint_groups": img_paint_groups,
+    "views": img_views,
+    "underside": img_underside,
+    "knob_fit": img_knob_fit,
 }
 
 
