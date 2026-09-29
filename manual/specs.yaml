@@ -1,0 +1,148 @@
+# Atelier -- hardware & product facts for the printed manual
+#
+# manual/content.md (Phase 2) pulls every hardware fact from this file, so the
+# manual can be rebuilt the moment real numbers arrive from the ODM.
+#
+# Rules for editing this file:
+#   - TBD_FROM_ODM means "not yet confirmed". Never replace it with a guess,
+#     an invented number, a certification mark, or legal wording.
+#   - status: confirmed   -> value is safe to print as-is.
+#   - status: proposed    -> a working assumption (e.g. knob behaviour) that
+#                             the manual can describe, but that Ido could
+#                             still change before production; content.md
+#                             should phrase these as "how Atelier works" but
+#                             the value itself may still move.
+#   - status: from_model  -> measured directly from the STL/CAD geometry
+#                             supplied for this manual. Reliable for a
+#                             printed illustration; re-measure if the model
+#                             is revised before tooling is finalised.
+#   - status: tbd         -> value is TBD_FROM_ODM, blocking print.
+
+product:
+  name: Atelier
+  brand: Bathsheva London
+  category: Bluetooth speaker
+  status: confirmed
+
+materials_and_finish:
+  body: Oxblood red lacquered body
+  trim: Brushed brass (nose cone, fins, bezel, knob, foot)
+  grille: Photo-etched stainless steel, honeycomb pattern
+  status: confirmed
+
+dimensions_mm:
+  overall_height: 288.1
+  overall_height_approx: 288
+  body_max_diameter: 96.8
+  body_max_diameter_approx: 97
+  width_across_fins: 136.0
+  note: >
+    Height and body diameter measured from the supplied CAD (body + nose_cone
+    + collar + foot stack, verified transforms); the _approx fields are the
+    same figures rounded to the nearest mm for the printed spec table.
+    width_across_fins (2026-09-28) was previously TBD pending the fins'
+    real assembled mounting angle -- now available (see assembly.yaml's
+    fin_1/fin_2/fin_3 notes, re-derived from fin_x3.stl's own pilot holes
+    and verified against the reference photo) -- computed as the maximum
+    pairwise distance between any two vertices across all three assembled
+    fin meshes (a convex-hull caliper measurement, scripts/find_fin_transform.py
+    method), rounded to 1 decimal place.
+  status: from_model, prototype
+  status_note: >
+    These are prototype/CAD dimensions, not confirmed production dimensions.
+    Production tooling may shift them slightly -- re-measure before final
+    print if the ODM's production model differs from this CAD.
+
+weight_kg:
+  value: 1.8
+  note: Production weight, approximate, as given by Ido.
+  status: confirmed
+
+controls:
+  knob:
+    turn: Volume
+    press: Play / pause
+    double_press: Next track
+    hold_2s: Power on / off
+    hold_5s: Enter pairing mode
+    hold_10s: Factory reset
+  status: confirmed
+  note: >
+    Locked in by Ido on 2026-09-28. hold_10s (factory reset) is new and
+    still needs firmware confirmation from the ODM that a distinct 10 s
+    hold is achievable and won't collide with the 5 s pairing hold --
+    flagged for the ODM, not yet a hardware guarantee.
+
+indicators:
+  led:
+    location: Small white status LED above the knob, on the front face
+    count: 1
+    colour: white (single colour, no RGB)
+    patterns:
+      power_on: Solid for 1 s
+      power_off: 2 slow blinks
+      pairing_mode: Fast blink
+      connected: Solid for 3 s, then off (stays off during playback)
+      charging_while_off: Slow pulse
+      fully_charged: Solid until unplugged
+      low_battery: 3 slow blinks, repeated every 60 s
+      factory_reset: 3 fast blinks
+    status: proposed
+    note: >
+      Physical presence, position and colour (white, single-colour) are
+      confirmed. The full pattern language above is Ido's proposal
+      (2026-09-28) and every state in it is "proposed" until the ODM
+      confirms the LED module and firmware can actually drive these
+      patterns (timing, whether off-during-playback is acceptable, etc).
+  status: mixed
+
+connectivity:
+  bluetooth_version: TBD_FROM_ODM
+  range_m: TBD_FROM_ODM
+  codecs: TBD_FROM_ODM
+  stereo_pairing_support: TBD_FROM_ODM
+  multipoint: TBD_FROM_ODM
+  status: tbd
+
+power:
+  battery_capacity_mah: TBD_FROM_ODM
+  playtime_hours: TBD_FROM_ODM
+  charge_time_hours: TBD_FROM_ODM
+  charge_port: USB-C, located in the collar on the underside
+  charging_temperature_range: TBD_FROM_ODM
+  can_play_while_charging: TBD_FROM_ODM
+  input_rating: TBD_FROM_ODM
+  output_power_w: TBD_FROM_ODM
+  status: mixed
+
+environmental:
+  operating_temperature_c: TBD_FROM_ODM
+  status: tbd
+
+compliance:
+  marks: TBD_FROM_ODM
+  regulatory_identifiers: TBD_FROM_ODM
+  manufacturer_address: TBD_FROM_ODM
+  uk_eu_responsible_person: TBD_FROM_ODM
+  electronic_contact: TBD_FROM_ODM
+  note: Never print a compliance mark or ID until legal/regulatory confirms it in writing.
+  status: tbd
+
+warranty_and_support:
+  warranty_length: 2 years
+  warranty_length_status: proposed
+  support_email: TBD_FROM_ODM
+  support_url: TBD_FROM_ODM
+  status: mixed
+  note: >
+    Warranty length set by Ido (2026-09-28), status proposed pending formal
+    sign-off. Support email/URL remain TBD_FROM_ODM. Warranty terms print
+    inside the booklet itself -- there is no separate warranty card.
+
+in_the_box:
+  items:
+    - Atelier
+    - USB-C to USB-C cable
+    - This booklet
+  wall_plug_included: false
+  status: confirmed
