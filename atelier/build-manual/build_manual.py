@@ -334,12 +334,22 @@ def step4b_reference(c):
     pg.rule(L, H - 160)
     y = pg.para(L, H - 176, R - L, "Every part, gold trim included, is painted here in Step 04. These views "
                 "show how the finished colours should look once every coat is on.", BODY_S)
-    cw = (R - L) / 4
-    low = y - 20
-    for k, (nm, cap) in enumerate((("04_view_front", "Front"), ("04_view_side", "Side"), ("04_view_rear", "Rear"),
-                                   ("04_view_three_quarter", "Three-quarter"))):
-        low = min(low, pg.image(nm, L + k * cw, y - 20, width=cw - 8, caption=cap))
-    y3 = pg.checkpoint(low - 22, "every part is evenly coloured with no bare patches or runs, and the masking "
+    top = y - 20
+    checkpoint_reserve = 66.0
+    col_gap, row_gap = 20.0, 16.0
+    col_w = (R - L - col_gap) / 2
+    avail_h = top - FOOTER_SAFE_Y - checkpoint_reserve
+    row_h = (avail_h - row_gap) / 2
+    row1_top = top - row_h - row_gap
+    low = row1_top
+    views = (("04_view_front", "Front"), ("04_view_side", "Side"),
+             ("04_view_rear", "Rear"), ("04_view_three_quarter", "Three-quarter"))
+    for i, (nm, cap) in enumerate(views):
+        rr, cidx = divmod(i, 2)
+        x = L + cidx * (col_w + col_gap)
+        row_top = top if rr == 0 else row1_top
+        low = min(low, pg.image(nm, x, row_top, width=col_w, height=row_h, align="center", caption=cap))
+    y3 = pg.checkpoint(low - 14, "every part is evenly coloured with no bare patches or runs, and the masking "
                         "tape is off.")
     end_page(c, pg, y3, "step 4 continued")
 
@@ -428,9 +438,10 @@ ASSEMBLY_1 = [
      "self-tapping screws from inside, or epoxy alone if you'd rather not drill.", ["06_04_fins"]),
 ]
 ASSEMBLY_2 = [
-    ("Dry-fit tip test", "Dry-fit the collar and foot (no glue yet) and stand the prototype on the fins and "
-     "foot. Nudge it gently from the side and note on the test record how little it takes to tip, unweighted. "
-     "Then take the collar and foot off again.", ["06_04b_dryfit_tip"]),
+    ("Dry-fit tip test", "Once the fin epoxy has set (ideally overnight), dry-fit the collar and foot (no "
+     "glue yet) and stand the prototype on the fins and foot. Nudge it gently from the side and note on the "
+     "test record how little it takes to tip, unweighted. Then take the collar and foot off again.",
+     ["06_04b_dryfit_tip"]),
     ("Weight", f"Glue about {WEIGHT_G} g of steel shot low inside the body, through the open bottom, clear "
      "of the knob boss and fin screws.", ["06_05_weight"]),
     ("Collar", "Friction-fits onto the body's underside spigot (0.2 mm clearance); glue it in place, sealing "

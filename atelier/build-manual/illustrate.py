@@ -334,7 +334,8 @@ def img_exploded():
                      fin_z - (lo[2] + hi[2]) / 2), inplace=True)
         st, coat = sc.style("fin_1", "resin")
         sc.add(m, st, coat)
-    anchors["fin_x3"] = np.array([fx0 + 1.5 * fin_w + fin_w / 2, 0, fin_z + hi[2] - lo[2] + 20])
+    # the leader points at the middle fin's own top edge, not empty space above the cluster
+    anchors["fin_x3"] = np.array([fx0 + (fin_w + 16), 0, fin_z + (hi[2] - lo[2]) / 2 - 4])
     # A synthetic box, well clear of any real part, extends the fitted bounds
     # further left than the body cluster actually reaches -- reserving a
     # blank label column on the left of the frame (Faro's own exploded view
@@ -362,7 +363,7 @@ def img_exploded():
         x, y = pts[k]
         draw_label(d, ref[k], (lx, y), (x, y), align="right", size=25)
     fx, fy = pts["fin_x3"]
-    draw_label(d, ref["fin_x3"], (min(fx + 60 * S, Wpx - 20 * S), fy - 90 * S), (fx, fy - 10 * S), size=25)
+    draw_label(d, ref["fin_x3"], (min(fx + 60 * S, Wpx - 20 * S), fy - 90 * S), (fx, fy), size=25)
     img = trim_to_content(img, pad=36 * S)
     return finish(img, "01_exploded_resin")
 
@@ -374,7 +375,7 @@ def img_parts_as_arrived():
     sc = Scene((1500, 1100))
     layout = [["body"], ["nose_cone", "collar", "foot"], ["grille", "bezel", "knob", "fin_1"]]
     labels_map = {"fin_1": "fin x3", "nose_cone": "nose cone"}
-    labels = []
+    boxes = []
     gap = 30
     rows = []
     for row in reversed(layout):
@@ -396,15 +397,28 @@ def img_parts_as_arrived():
             st, coat = sc.style(n, "resin")
             sc.add(m, st, coat)
             sc.shadow(x - lo[0] + (lo[0] + hi[0]) / 2, y_row, max(hi[0] - lo[0], hi[1] - lo[1]) / 2, 0.25)
-            labels.append((n, ((x - lo[0] + lo[0] + hi[0]) / 2, y_row + lo[1] - 4, 0)))
+            lo2, hi2 = lo + (x - lo[0], y_row - (lo[1] + hi[1]) / 2, 0), hi + (x - lo[0], y_row - (lo[1] + hi[1]) / 2, 0)
+            boxes.append((n, lo2, hi2))
             x += w + gap
         y_row += depth / 2
     sc.fit((0, -0.62, 1.0), margin=1.12)
-    pts = sc.project([q for _, q in labels])
+    # Label each part below its own true screen-space footprint (all 8 world
+    # bbox corners projected, then the lowest point on screen taken), not a
+    # single world-space anchor -- a ring lying flat (the bezel) or a part
+    # whose 3D "front" edge doesn't match its onscreen silhouette otherwise
+    # gets its label placed on top of the part instead of below it. Projected
+    # before sc.image(), which closes the plotter that project() needs.
+    label_pos = []
+    for n, lo2, hi2 in boxes:
+        corners = [(x_, y_, z_) for x_ in (lo2[0], hi2[0]) for y_ in (lo2[1], hi2[1]) for z_ in (lo2[2], hi2[2])]
+        pxs = sc.project(corners)
+        cx = sum(p[0] for p in pxs) / len(pxs)
+        by = max(p[1] for p in pxs)
+        label_pos.append((n, cx, by))
     img = sc.image()
     d = ImageDraw.Draw(img)
-    for (n, _), (x, y) in zip(labels, pts):
-        draw_label(d, labels_map.get(n, n), (x, y + 24 * S), None, align="center", size=25)
+    for n, cx, by in label_pos:
+        draw_label(d, labels_map.get(n, n), (cx, by + 26 * S), None, align="center", size=25)
     return finish(img, "02_printed_parts")
 
 
@@ -533,16 +547,15 @@ def img_underside():
 
 # ---- Troubleshooting: a fin's root, flush against the body ----------------------
 def img_fin_root():
-    """What a good fit looks like for 'Fin sits proud, or rocks': fin_1's
-    root highlighted, close in on the joint against the body, with the
-    other two fins and the body faded back."""
+    """What a good fit looks like for 'Fin sits proud, or rocks': two fin
+    roots flush against the body, in finished colours (this is a reference
+    photo of correct results, not an assembly step, so nothing is faded or
+    highlighted), framed wide enough that both are fully in shot."""
     sc = Scene((1000, 800))
-    for n in ("body", "grille_paint", "grille", "bezel", "knob", "fin_2", "fin_3"):
-        st, coat = sc.style(n, "paint", soft=True)
-        sc.add(mesh(n), st, coat)
-    sc.part("fin_1", "paint", highlight=True)
-    base = zoom_bounds(I["z_fin_root_bottom"] - 5, I["z_fin_root_bottom"] + 35, r=42)
-    sc.fit((0.55, -0.95, 0.15), margin=1.2, bounds=base)
+    for n in ("body", "grille_paint", "grille", "bezel", "knob", "fin_1", "fin_2", "fin_3"):
+        add_painted(sc, n, lit=True)
+    base = zoom_bounds(I["z0"] - 5, I["z_fin_root_top"] + 20, r=95)
+    sc.fit((0.55, -0.95, 0.15), margin=1.15, bounds=base)
     return finish(sc.image(), "TS_fin_root")
 
 
