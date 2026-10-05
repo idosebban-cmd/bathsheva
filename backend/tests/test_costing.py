@@ -240,7 +240,7 @@ def test_cost_items_crud_and_reset(client, faro_project):
     r = client.patch(f"/api/projects/{pid}/cost-items/{led['id']}", json={"unit_cost_low": 20, "unit_cost_high": 20})
     assert r.json()["source"] == "user"
     after = client.get(f"/api/projects/{pid}/costs").json()["unit_cost"]["mid"]
-    assert after - before == pytest.approx(20 - (2.5 + 8.0) / 2, abs=0.02)
+    assert after - before == pytest.approx(20 - (2.53 + 3.74) / 2, abs=0.02)
 
     assert client.patch(f"/api/projects/{pid}/cost-items/{led['id']}", json={"unit_cost_high": 1}).status_code == 422
     r = client.post(f"/api/projects/{pid}/cost-items", json={"name": "Brass finial", "quantity": 1, "unit_cost_low": 3, "unit_cost_high": 5})

@@ -587,7 +587,7 @@ def product_summary(session: Session, project: Project) -> dict[str, Any]:
             "Best combinations search every combination of changes and every region; multi-option changes use their cheapest option.",
             "Tiers: 'no compromise' uses only changes that keep the look and feel; 'slight compromises' also allows the painted "
             "stripe, the plug-in adapter and the 350 mm height; 'any' also allows the straight tube body.",
-            "All rates are model-generated and unverified; treat the ranking as a guide for which quotes to get first.",
+            "Rates are unverified: most are model-generated, some come from published distributor prices. Treat the ranking as a guide for which quotes to get first.",
         ],
     }
 

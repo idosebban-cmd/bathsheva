@@ -1,19 +1,21 @@
 # Bought-in component and packaging prices (GBP per piece, small-batch).
 # These seed the editable cost line items on a new project.
-# PROVENANCE: rough prices written by an AI model. Get real quotes.
+# PROVENANCE: entries with source: model-generated are rough AI-written prices.
+# Entries with URL sources were researched from published distributor prices
+# (Oct 2026); still unverified until you have your own supplier quotes.
 
 bought_in:
   - key: led_module
     name: LED module (5–8 W, CRI 90+)
-    gbp: {low: 2.5, high: 8.0}
-    source: model-generated
-    confidence: low
+    gbp: {low: 2.53, high: 3.74}
+    source: "Bridgelux Vero 10 2700K 90CRI COB: DigiKey BXRC-27G1000 $3.34 @100 (https://www.digikey.com/product-detail/en/bridgelux/BXRC-27G1000-B-23/976-1243-ND/5180215); Vero SE 10 BXRC-27G1000-D-73-SE $4.95 (https://ballastshop.com/bxrc-27g1000-d-73-se-bridgelux-gen7-vero-se-10-led-array-983-lumen-2700k/); USD->GBP at 1.3224 (fxstreet.com GBP/USD, 5 Oct 2026); accessed 2026-10-05; prices read from search-result excerpts (direct page fetch blocked by sandbox network policy). No 500-pc break published."
+    confidence: medium
     verified: false
   - key: led_driver_mains
     name: Certified constant-current LED driver (mains)
-    gbp: {low: 3.0, high: 9.0}
-    source: model-generated
-    confidence: low
+    gbp: {low: 16.6, high: 17.2}
+    source: "Mean Well certified dimmable CC drivers: PCD-25-700A (triac dim) $21.99 @50 (https://www.ledsupply.com/led-drivers/mean-well-pcd-series-with-triac-dimming); LCM-25 $22.70 @25 (https://www.digikey.com/en/products/detail/mean-well-usa-inc/LCM-25/7704704); RS UK LCM-25 £24.71 1-off (https://uk.rs-online.com/web/p/led-drivers/8234743); USD->GBP at 1.3224 (fxstreet.com GBP/USD, 5 Oct 2026); accessed 2026-10-05; prices read from search-result excerpts (direct page fetch blocked by sandbox network policy). Breaks at 25-50 pcs; 500-pc price likely lower."
+    confidence: medium
     verified: false
   - key: mains_cable_plug_switch
     name: Mains cable with plug and inline switch (2 m, fabric)
@@ -59,8 +61,8 @@ bought_in:
     verified: false
   - key: cable_grommet
     name: Strain-relief cable grommet
-    gbp: {low: 0.15, high: 0.60}
-    source: model-generated
+    gbp: {low: 0.06, high: 0.11}
+    source: "Heyco strain-relief bushings, DigiKey @100: model 2126 $0.0762, 2155 $0.1436 (https://azcus.digikey.com/en/products/detail/heyco-products-corporation/2126/15906413, https://azcus.digikey.com/en/products/detail/heyco-products-corporation/2155/15906927); USD->GBP at 1.3224 (fxstreet.com GBP/USD, 5 Oct 2026); accessed 2026-10-05; prices read from search-result excerpts (direct page fetch blocked by sandbox network policy)."
     confidence: medium
     verified: false
   - key: retail_packaging
@@ -79,8 +81,8 @@ bought_in:
     verified: false
   - key: rivet_nut_m4
     name: M4 rivet nut (threaded insert for thin sheet)
-    gbp: {low: 0.08, high: 0.25}
-    source: model-generated
+    gbp: {low: 0.04, high: 0.13}
+    source: "M4 aluminium rivet nuts: Zygology £3.65/100 (https://zygology.com/rivetnuts/standard-rivetnuts/aluminium-rivetnut-small-head-m4-02al01r04011); KayFast £0.13 each (https://www.kayfast.co.uk/view-product/FLANGED-HEAD-ALUMINIUM-RIVNUTS); accessed 2026-10-05; prices read from search-result excerpts (direct page fetch blocked by sandbox network policy)."
     confidence: medium
     verified: false
   - key: secondary_machining
@@ -121,9 +123,9 @@ bought_in:
     verified: false
   - key: external_adapter_12v
     name: Certified external 12 V adapter (UK/EU plugs)
-    gbp: {low: 3.5, high: 8.0}
-    source: model-generated
-    confidence: low
+    gbp: {low: 9.4, high: 10.1}
+    source: "Mean Well GE12I12-P1J 12 V 12 W interchangeable-plug adapter $10.82 @500 (https://www.digikey.com/en/products/detail/mean-well-usa-inc/GE12I12-P1J/7703281) plus UK plug clip $1.65 (Jameco) to £1.93 1-off (https://uk.rs-online.com/web/p/power-supply-accessories/1783436); USD->GBP at 1.3224 (fxstreet.com GBP/USD, 5 Oct 2026); accessed 2026-10-05; prices read from search-result excerpts (direct page fetch blocked by sandbox network policy)."
+    confidence: medium
     verified: false
   - key: lv_cable_switch
     name: Low-voltage cable with inline switch (fabric)

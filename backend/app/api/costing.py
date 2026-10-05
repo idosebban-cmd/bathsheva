@@ -104,7 +104,7 @@ def update_item(item_id: int, body: CostItemUpdate, project: Project = Depends(g
     if item.unit == "pcs" and item.unit_cost_low is None and item.unit_cost_high is None:
         raise HTTPException(422, "A per-piece item needs a unit cost")
     # Editing a seeded price makes it the user's figure unless they say otherwise.
-    if price_changed and "source" not in changes and item.source == "model-generated":
+    if price_changed and "source" not in changes and item.source != "user":
         item.source = "user"
     session.commit()
     return item
