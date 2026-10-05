@@ -9,6 +9,7 @@ const TABS = [
   ["engineering", "Engineering"],
   ["bom", "BOM"],
   ["manufacturing", "Manufacturing"],
+  ["cost-down", "Cost-down"],
   ["dfm", "DFM report"],
   ["revisions", "Revisions"],
 ] as const;

@@ -286,5 +286,6 @@ def assemble(snapshot: Snapshot, config: CostConfig, rules: RuleSet, cost: CostD
     ctx = {
         "skipped": skipped, "details": details, "geometry_source": snapshot.geometry_source,
         "design_changes": design_changes, "flags": flags, "extras": extras_ctx, "region": region,
+        "part_keys": {sp.name: sp.cad_key for sp in snapshot.parts},
     }
     return inputs, ctx

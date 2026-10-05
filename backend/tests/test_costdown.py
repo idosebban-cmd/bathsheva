@@ -338,3 +338,9 @@ def test_pricing_and_scenarios_migration(tmp_path):
         command.downgrade(cfg, "0003")
     assert "cost_scenarios" not in inspect(engine).get_table_names()
     assert "pricing" not in {c["name"] for c in inspect(engine).get_columns("projects")}
+
+
+def test_safety_flag_not_duplicated_for_rerouted_base(ctx):
+    ev = costdown.evaluate_selection(ctx["session"], ctx["project"], [{"key": "base_sheet", "option": 0}], "uk")
+    safety = [f for f in ev["flags"] if f["kind"] == "safety"]
+    assert len(safety) == 1 and "tip-over" in safety[0]["message"]

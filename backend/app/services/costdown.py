@@ -416,7 +416,15 @@ def describe_selection(defs: dict[str, dict[str, Any]], selection: list[tuple[st
 
 def _config_flags(defs: dict[str, dict[str, Any]], selection: list[tuple[str, int]], ctx: dict[str, Any]) -> list[dict[str, str]]:
     flags = [dict(fl, scenario=defs[k]["letter"]) for k, _ in selection for fl in defs[k].get("flags", [])]
+    # A scenario that reroutes a part and carries its own safety flag already covers the
+    # route-change safety flag for that part, so don't repeat it.
+    covered = {
+        defs[k]["effect"]["reroute"]["part"] for k, _ in selection
+        if "reroute" in defs[k].get("effect", {}) and any(f.get("kind") == "safety" for f in defs[k].get("flags", []))
+    }
     for fl in ctx["flags"]:
+        if fl["kind"] == "safety" and ctx["part_keys"].get(fl.get("part")) in covered:
+            continue
         if not any(fl["message"] == f["message"] for f in flags):
             flags.append(fl)
     if ctx["region"].key != "uk":
