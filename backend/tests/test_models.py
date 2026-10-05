@@ -57,13 +57,13 @@ def test_requirements_schema_rejects_bad_power_type():
         Requirements.model_validate({"power_type": "nuclear"})
 
 
-def test_project_api_roundtrip(client, faro):
-    pid = faro["id"]
-    req = faro["requirements"]
+def test_project_api_roundtrip(client, faro_project):
+    pid = faro_project["id"]
+    req = faro_project["requirements"]
     req["production_volume"] = 1000
     r = client.patch(f"/api/projects/{pid}", json={
         "requirements": req,
-        "assumed_fields": [f for f in faro["assumed_fields"] if f != "production_volume"],
+        "assumed_fields": [f for f in faro_project["assumed_fields"] if f != "production_volume"],
     })
     assert r.status_code == 200
     body = r.json()
@@ -72,8 +72,8 @@ def test_project_api_roundtrip(client, faro):
     assert client.patch(f"/api/projects/{pid}", json={"assumed_fields": ["bogus"]}).status_code == 422
 
 
-def test_image_upload(client, faro):
-    pid = faro["id"]
+def test_image_upload(client, faro_project):
+    pid = faro_project["id"]
     png = b"\x89PNG\r\n\x1a\n" + b"0" * 20
     r = client.post(f"/api/projects/{pid}/images", files={"file": ("render.png", png, "image/png")}, data={"kind": "concept"})
     assert r.status_code == 201, r.text
@@ -83,8 +83,8 @@ def test_image_upload(client, faro):
     assert client.delete(f"/api/projects/{pid}/images/{img['id']}").status_code == 204
 
 
-def test_parts_api_crud_and_hierarchy(client, faro):
-    pid = faro["id"]
+def test_parts_api_crud_and_hierarchy(client, faro_project):
+    pid = faro_project["id"]
     parts = client.get(f"/api/projects/{pid}/parts").json()
     assert len(parts) == 7
     led = next(p for p in parts if p["cad_key"] == "led_module")

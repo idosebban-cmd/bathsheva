@@ -1,0 +1,29 @@
+# Minimum inside bend radius for sheet parts, as a multiple of thickness (t).
+# Applies to sheet_forming and any bent sheet feature.
+# PROVENANCE: general knowledge written by an AI model. Check with the fabricator.
+
+bend_radius:
+  - material: al_1050
+    min_radius_t: 0.5
+    plain_language: Very soft; can bend almost flat without cracking.
+    source: model-generated
+    confidence: medium
+    verified: false
+  - material: al_3003
+    min_radius_t: 1.0
+    plain_language: Bends easily; use at least one thickness as inside radius.
+    source: model-generated
+    confidence: medium
+    verified: false
+  - material: al_5052
+    min_radius_t: 1.5
+    plain_language: Bends well; use at least 1.5 × thickness.
+    source: model-generated
+    confidence: medium
+    verified: false
+  - material: al_6061
+    min_radius_t: 3.0
+    plain_language: Hard temper cracks on tight bends; use 3 × thickness or bend in a softer temper.
+    source: model-generated
+    confidence: medium
+    verified: false

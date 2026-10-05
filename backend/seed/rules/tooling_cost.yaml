@@ -1,0 +1,39 @@
+# Tooling-cost categories (one-off cost per part, GBP).
+# PROVENANCE: rough orders of magnitude written by an AI model. Get quotes.
+
+tooling_cost:
+  - key: none
+    name: None
+    gbp_min: 0
+    gbp_max: 0
+    source: model-generated
+    confidence: high
+    verified: false
+  - key: low
+    name: Low
+    gbp_min: 100
+    gbp_max: 2000
+    source: model-generated
+    confidence: low
+    verified: false
+  - key: medium
+    name: Medium
+    gbp_min: 2000
+    gbp_max: 10000
+    source: model-generated
+    confidence: low
+    verified: false
+  - key: high
+    name: High
+    gbp_min: 10000
+    gbp_max: 40000
+    source: model-generated
+    confidence: low
+    verified: false
+  - key: very_high
+    name: Very high
+    gbp_min: 30000
+    gbp_max: 120000
+    source: model-generated
+    confidence: low
+    verified: false

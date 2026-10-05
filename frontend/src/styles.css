@@ -90,3 +90,18 @@ th { font-weight: 600; background: #faf8f5; position: sticky; top: 0; }
 tr.clickable { cursor: pointer; }
 tr.clickable:hover td { background: #faf8f5; }
 tr.selected td { background: #eef4f4; }
+
+.cad-layout { display: grid; grid-template-columns: minmax(300px, 380px) minmax(0, 1fr); gap: 1rem; align-items: start; }
+@media (max-width: 900px) { .cad-layout { grid-template-columns: 1fr; } }
+.params fieldset { border: 1px solid var(--line); border-radius: 6px; margin: 0 0 0.75rem; padding: 0.4rem 0.7rem 0.6rem; }
+.params legend { font-weight: 600; font-size: 0.85rem; padding: 0 0.3rem; }
+.param { display: grid; grid-template-columns: 1fr 6.5rem; gap: 0.15rem 0.5rem; align-items: center; margin: 0.3rem 0; }
+.param label { font-size: 0.86rem; }
+.param .issue { grid-column: 1 / -1; }
+.issue { font-size: 0.8rem; padding: 0.2rem 0.45rem; border-radius: 4px; margin-top: 0.15rem; }
+.issue.error { background: var(--danger-bg); color: var(--danger-ink); }
+.issue.warning { background: var(--warn-bg); color: var(--warn-ink); }
+input.invalid { border-color: var(--danger-ink); }
+.sticky-actions { position: sticky; bottom: 0; background: var(--surface); padding: 0.5rem 0; }
+.viewer { height: 520px; border-radius: 6px; overflow: hidden; border: 1px solid var(--line); }
+.viewer.empty { display: flex; align-items: center; justify-content: center; color: var(--muted); padding: 1rem; text-align: center; }

@@ -116,3 +116,63 @@ export function errorText(e: unknown): string {
   }
   return e instanceof Error ? e.message : String(e);
 }
+
+export interface ParamDef {
+  key: string;
+  label: string;
+  group: string;
+  min: number;
+  max: number;
+  step: number;
+  unit: string;
+  integer: boolean;
+  help: string;
+}
+
+export interface ValidationIssue {
+  param: string | null;
+  message: string;
+  level: "error" | "warning";
+}
+
+export interface ValidationResult {
+  ok: boolean;
+  errors: ValidationIssue[];
+  warnings: ValidationIssue[];
+}
+
+export interface CadOutput {
+  id: number;
+  part_key: string | null;
+  format: "step" | "stl" | "glb";
+  path: string;
+}
+
+export interface CadModel {
+  id: number;
+  version: number;
+  generator: string;
+  parameters: Record<string, number>;
+  part_info: Record<string, { size_mm: number[]; z_range_mm: number[]; volume_mm3: number; valid: boolean }>;
+  created_at: string;
+  outputs: CadOutput[];
+}
+
+export interface WallLimit {
+  process_name: string;
+  min: number;
+  max: number;
+  typical_min: number;
+  typical_max: number;
+  verified: boolean;
+}
+
+export interface CadState {
+  generator: string;
+  param_defs: ParamDef[];
+  parameters: Record<string, number>;
+  derived: Record<string, number>;
+  validation: ValidationResult;
+  wall_limits: Record<string, WallLimit>;
+  latest: CadModel | null;
+}

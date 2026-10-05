@@ -32,7 +32,7 @@ def client(tmp_path):
 
 
 @pytest.fixture()
-def faro(client):
+def faro_project(client):
     r = client.post("/api/projects", json={"name": "Faro", "template": "faro"})
     assert r.status_code == 201, r.text
     return r.json()

@@ -1,0 +1,39 @@
+# Draft angle guidance for moulded, cast and formed parts (degrees).
+# PROVENANCE: general knowledge written by an AI model. Confirm with the toolmaker.
+
+draft_angles:
+  - process: die_casting
+    external_deg: 1.0
+    internal_deg: 2.0
+    plain_language: Walls must taper slightly (about 1° outside, 2° inside) so the part releases from the steel mould.
+    source: model-generated
+    confidence: medium
+    verified: false
+  - process: sand_casting
+    external_deg: 1.5
+    internal_deg: 3.0
+    plain_language: Sand patterns need roughly 1–3° taper to lift cleanly.
+    source: model-generated
+    confidence: medium
+    verified: false
+  - process: injection_moulding_clear
+    external_deg: 1.0
+    internal_deg: 1.0
+    plain_language: About 0.5–1° on polished surfaces, more on textured ones.
+    source: model-generated
+    confidence: medium
+    verified: false
+  - process: pressed_blown_glass
+    external_deg: 3.0
+    internal_deg: 5.0
+    plain_language: Pressed glass needs generous taper (3–5°).
+    source: model-generated
+    confidence: low
+    verified: false
+  - process: metal_spinning
+    external_deg: 0.5
+    internal_deg: 0.5
+    plain_language: The part must slide off the spinning form, so it should widen towards one open end (a slight taper helps).
+    source: model-generated
+    confidence: low
+    verified: false

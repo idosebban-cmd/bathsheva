@@ -3,6 +3,7 @@ import ProjectsPage from "./pages/ProjectsPage";
 import ProjectLayout from "./pages/ProjectLayout";
 import OverviewPage from "./pages/OverviewPage";
 import PartsPage from "./pages/PartsPage";
+import CadPage from "./pages/CadPage";
 
 export default function App() {
   return (
@@ -18,6 +19,7 @@ export default function App() {
           <Route index element={<Navigate to="overview" replace />} />
           <Route path="overview" element={<OverviewPage />} />
           <Route path="parts" element={<PartsPage />} />
+          <Route path="cad" element={<CadPage />} />
         </Route>
       </Routes>
     </div>

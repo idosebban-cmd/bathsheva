@@ -1,0 +1,45 @@
+# Planning assumptions and heuristics used by the rules engine and DFM checks.
+# PROVENANCE: model-generated heuristics. Replace with real targets.
+
+planning:
+  - key: assumed_volume_when_unknown
+    value: 500
+    unit: units
+    plain_language: When production volume is TBD, recommendations assume a first run of about 500 units.
+    source: model-generated
+    confidence: low
+    verified: false
+  - key: cosmetic_min_finish_quality
+    value: good
+    plain_language: Visible (cosmetic) parts need a process with at least "good" as-produced finish, or extra finishing work.
+    source: model-generated
+    confidence: medium
+    verified: false
+  - key: aluminium_wall_mm
+    value: {min: 0.5, max: 10.0}
+    plain_language: General wall thickness range for aluminium parts when no process is chosen yet.
+    source: model-generated
+    confidence: medium
+    verified: false
+  - key: min_stability_ratio
+    value: 0.35
+    plain_language: >-
+      Heuristic: base diameter should be at least about 35% of overall height
+      for a table lamp to feel stable. The real requirement is a tilt test.
+    source: model-generated
+    confidence: low
+    verified: false
+  - key: min_led_to_lantern_clearance_mm
+    value: 10
+    plain_language: Heuristic minimum gap between the LED module and a clear lantern wall to limit hot spots.
+    source: model-generated
+    confidence: low
+    verified: false
+  - key: min_cable_hole_mm
+    value: 7
+    plain_language: >-
+      A typical round 2-core mains flex is roughly 5–7 mm across; the hole
+      must also fit a strain-relief grommet. Check against the chosen cable.
+    source: model-generated
+    confidence: low
+    verified: false

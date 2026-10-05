@@ -1,0 +1,52 @@
+# Fastening and joining methods.
+# PROVENANCE: general knowledge written by an AI model. Not authoritative.
+
+fasteners:
+  - key: machine_screw_tapped
+    name: Machine screws into tapped holes or bosses
+    plain_language: Standard screws (e.g. M3/M4) into threaded holes. Strong, serviceable and hidden underneath.
+    notes: Thin walls cannot hold threads; needs a boss, ring or threaded insert at least ~1.5× screw diameter deep.
+    source: model-generated
+    confidence: high
+    verified: false
+  - key: threaded_insert
+    name: Threaded inserts / rivet nuts
+    plain_language: A metal nut pressed or riveted into thin sheet so it can take a screw.
+    notes: Good for spun or rolled parts where walls are too thin to tap.
+    source: model-generated
+    confidence: medium
+    verified: false
+  - key: adhesive_bonding
+    name: Adhesive bonding
+    plain_language: Glued with a structural adhesive. Invisible, but not easy to take apart and needs clean surfaces.
+    notes: Painted surfaces must be masked in the bond area; check adhesive temperature rating near the LED.
+    source: model-generated
+    confidence: medium
+    verified: false
+  - key: clamp_with_gasket
+    name: Clamped with a soft gasket
+    plain_language: The part is held between two others with a silicone gasket, often pulled together by a central rod. Ideal for glass and clear plastic.
+    notes: Absorbs tolerance on clear tubes; avoid point loads on glass.
+    source: model-generated
+    confidence: medium
+    verified: false
+  - key: bayonet
+    name: Bayonet twist-lock
+    plain_language: Push and twist to lock, like a camera lens. Tool-free access for maintenance.
+    source: model-generated
+    confidence: medium
+    verified: false
+  - key: press_fit
+    name: Press fit
+    plain_language: One part is pressed tightly into another. No fasteners, but needs accurate sizes.
+    source: model-generated
+    confidence: medium
+    verified: false
+  - key: strain_relief_grommet
+    name: Strain-relief cable grommet
+    plain_language: A moulded bush that grips the cable where it enters, so pulling the cable cannot strain the internal connections.
+    notes: Required for mains cables; must be rated for the cable diameter.
+    safety: true
+    source: model-generated
+    confidence: high
+    verified: false

@@ -5,6 +5,7 @@ import { api, errorText, type Project } from "../api";
 const TABS = [
   ["overview", "Overview"],
   ["parts", "Parts"],
+  ["cad", "CAD"],
 ] as const;
 
 export default function ProjectLayout() {
