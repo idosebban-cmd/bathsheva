@@ -7,7 +7,8 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_project
 from app.db import get_session
-from app.models import Part, Project
+from app.config import settings
+from app.models import ExternalQuote, Part, Project
 from app.schemas import PartCreate, PartOut, PartUpdate
 
 router = APIRouter(prefix="/api/projects/{project_id}/parts", tags=["parts"])
@@ -65,5 +66,8 @@ def update_part(part_id: int, body: PartUpdate, project: Project = Depends(get_p
 @router.delete("/{part_id}", status_code=204)
 def delete_part(part_id: int, project: Project = Depends(get_project), session: Session = Depends(get_session)):
     part = _get_part(project, part_id, session)
+    for quote in session.query(ExternalQuote).filter(ExternalQuote.part_id == part.id):
+        if quote.attachment_path:
+            (settings.data_dir / quote.attachment_path).unlink(missing_ok=True)
     session.delete(part)
     session.commit()

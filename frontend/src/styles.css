@@ -147,3 +147,17 @@ tfoot td { border-top: 2px solid var(--line); }
 
 .revision-banner { border-left: 4px solid var(--accent); }
 tr.changed td { background: var(--warn-bg); }
+
+.estimate-box { background: #faf8f5; border: 1px solid var(--line); border-radius: 6px; padding: 0.45rem 0.7rem; margin: 0.3rem 0 0.6rem; }
+.quote-form { border: 1px solid var(--line); border-radius: 6px; padding: 0.7rem; margin-bottom: 0.7rem; background: #fcfbf9; }
+.quote-form label { display: flex; flex-direction: column; gap: 0.2rem; font-size: 0.85rem; font-weight: 500; }
+.quotes table td { vertical-align: top; }
+.cmp { font-size: 0.75rem; font-weight: 700; padding: 0.1rem 0.45rem; border-radius: 999px; white-space: nowrap; }
+.cmp-below { background: var(--ok-bg); color: var(--ok-ink); }
+.cmp-within { background: var(--info-bg); color: var(--info-ink); }
+.cmp-above { background: var(--danger-bg); color: var(--danger-ink); }
+.cmp-currency_mismatch, .cmp-no_estimate { background: var(--line); color: var(--muted); }
+.cmp-pct.cmp-below, .cmp-pct.cmp-above { background: none; }
+.cmp-pct.cmp-below { color: var(--ok-ink); }
+.cmp-pct.cmp-above { color: var(--danger-ink); }
+.dfm-note { margin-top: 0.25rem; padding: 0.25rem 0.4rem; background: var(--warn-bg); color: var(--warn-ink); border-radius: 4px; }

@@ -332,3 +332,39 @@ export interface Snapshot {
 export interface Revision extends RevisionSummary {
   snapshot: Snapshot;
 }
+
+export interface QuoteComparison {
+  status: "no_estimate" | "currency_mismatch" | "below" | "within" | "above";
+  diff: number | null;
+  diff_pct: number | null;
+  text: string;
+}
+
+export interface ExternalQuote {
+  id: number;
+  part_id: number;
+  revision_id: number | null;
+  revision_number: number | null;
+  source: string;
+  quote_date: string;
+  process: string;
+  material: string;
+  finish: string;
+  quantity: number;
+  unit_price: number;
+  currency: string;
+  total_price: number;
+  lead_time_days: number | null;
+  dfm_notes: string;
+  attachment_path: string | null;
+  attachment_filename: string | null;
+  created_at: string;
+  comparison: QuoteComparison;
+}
+
+export interface PartQuotes {
+  part_id: number;
+  estimate: { low: number; high: number; currency: string; basis: string } | null;
+  quotes: ExternalQuote[];
+  note: string;
+}
