@@ -21,7 +21,8 @@ frontend/            Vite + React + TS. Pages per tab, react-three-fiber GLB vie
 backend/app/
   main.py            FastAPI app factory, mounts routers and /files/projects static
   config.py          Settings from env
-  db.py              SQLAlchemy engine/session; create_all (no migrations yet)
+  db.py              SQLAlchemy engine/session; init_db() runs migrations
+  migrate.py         Alembic upgrade at startup (+ adopts pre-migration DBs)
   models.py          ORM. M1 tables plus schema-only later entities
   schemas.py         Pydantic API schemas (Requirements etc.)
   api/               Thin HTTP routers, one per area
@@ -32,10 +33,30 @@ backend/app/
 backend/seed/
   rules/*.yaml       Engineering rules and cost data (editable)
   products/faro.yaml Faro template: parts, requirements placeholders, CAD defaults
+backend/migrations/  Alembic env and versions/ (one file per schema change)
+scripts/             stress_cad.py (CAD soak test), check_run_shutdown.py (run.sh stop behaviour)
 data/                Runtime: SQLite DB, uploads, CAD outputs (gitignored)
 ```
 
 Boundaries: routers handle only HTTP. The rules engine is pure, with no DB access: it takes plain dicts and returns recommendations. The CAD module never imports the DB. The AI layer only explains recommendations the rules engine has already made, and never changes them.
+
+## Database migrations (Alembic)
+
+On startup the app migrates the database to the latest revision (`app/migrate.py`). It never uses `create_all`. A database created by Milestone 1 before migrations existed (no `alembic_version` table) is stamped at the baseline `0001` and then upgraded, so its data is kept.
+
+To change the schema:
+
+1. Edit `backend/app/models.py`.
+2. From `backend/`, generate a migration: `.venv/bin/alembic revision --autogenerate -m "add supplier rating"`. It uses `WORKBENCH_DATABASE_URL` / `WORKBENCH_DATA_DIR`, and that database must already be at head.
+3. Review the new file in `backend/migrations/versions/`. Autogenerate can miss renames and data moves, and SQLite changes run in batch mode.
+4. Run `./run.sh test`. `tests/test_migrations.py` fails if migrating a fresh database doesn't produce exactly the schema in `models.py`, or if there is more than one head.
+5. Commit the model change and the migration together.
+
+Other useful commands, run from `backend/`: `.venv/bin/alembic current`, `.venv/bin/alembic check` (reports any model change that has no migration), and `.venv/bin/alembic downgrade -1`.
+
+## Process management
+
+`run.sh` signals only its own two servers. Ctrl-C or SIGTERM is a clean stop (exit 0). If a server dies unexpectedly, `run.sh` stops the other one and exits with the dead server's status. Never use `kill 0` in a trap that also handles TERM: it re-enters itself and bash segfaults (exit 139). After changing `run.sh`, run `backend/.venv/bin/python scripts/check_run_shutdown.py`.
 
 ## Front-end tabs and API
 
