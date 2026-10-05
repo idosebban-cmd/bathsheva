@@ -130,3 +130,17 @@ input.cell.wide { width: 12rem; }
 .nowrap { flex-wrap: nowrap; margin: 0; }
 tr.derived td { background: #fbfaf7; }
 tfoot td { border-top: 2px solid var(--line); }
+
+.summary-tiles { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.tile { padding: 0.4rem 0.8rem; border-radius: 6px; background: var(--line); font-size: 0.9rem; }
+.tile b { font-size: 1.15rem; margin-right: 0.2rem; }
+.tile.fail { background: var(--danger-bg); color: var(--danger-ink); }
+.tile.warning { background: var(--warn-bg); color: var(--warn-ink); }
+.tile.info { background: var(--info-bg); color: var(--info-ink); }
+.tile.pass { background: var(--ok-bg); color: var(--ok-ink); }
+.level { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; padding: 0.1rem 0.4rem; border-radius: 4px; }
+.level-fail { background: var(--danger-bg); color: var(--danger-ink); }
+.level-warning { background: var(--warn-bg); color: var(--warn-ink); }
+.level-info { background: var(--info-bg); color: var(--info-ink); }
+.level-pass { background: var(--ok-bg); color: var(--ok-ink); }
+.dfm ul { margin: 0.2rem 0; padding-left: 1.1rem; }

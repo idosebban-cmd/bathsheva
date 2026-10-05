@@ -274,3 +274,37 @@ export interface Bom {
   cad_version: number | null;
   notes: string[];
 }
+
+export interface DfmCheck {
+  area: string;
+  level: "pass" | "info" | "warning" | "fail";
+  title: string;
+  detail: string;
+  unverified: boolean;
+  part: string | null;
+}
+
+export interface DfmReport {
+  project: string;
+  generated_at: string;
+  cad_version: number | null;
+  summary: { fail: number; warning: number; info: number; pass: number; safety_items: number; open_questions: number; unverified_checks: number };
+  checks: DfmCheck[];
+  parts: {
+    part_id: number;
+    name: string;
+    process: string;
+    material: string;
+    basis: string;
+    decision: string | null;
+    confidence: string | null;
+    risks: string[];
+    safety_flags: SafetyFlag[];
+    open_questions: string[];
+    uses_unverified_data: boolean;
+  }[];
+  safety: (SafetyFlag & { part: string })[];
+  open_questions: { part: string; question: string }[];
+  assumptions: string[];
+  disclaimer: string;
+}

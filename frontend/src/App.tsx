@@ -6,6 +6,7 @@ import PartsPage from "./pages/PartsPage";
 import CadPage from "./pages/CadPage";
 import EngineeringPage from "./pages/EngineeringPage";
 import BomPage from "./pages/BomPage";
+import DfmPage from "./pages/DfmPage";
 
 export default function App() {
   return (
@@ -24,6 +25,7 @@ export default function App() {
           <Route path="cad" element={<CadPage />} />
           <Route path="engineering" element={<EngineeringPage />} />
           <Route path="bom" element={<BomPage />} />
+          <Route path="dfm" element={<DfmPage />} />
         </Route>
       </Routes>
     </div>

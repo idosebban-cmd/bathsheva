@@ -8,6 +8,7 @@ const TABS = [
   ["cad", "CAD"],
   ["engineering", "Engineering"],
   ["bom", "BOM"],
+  ["dfm", "DFM report"],
 ] as const;
 
 export default function ProjectLayout() {

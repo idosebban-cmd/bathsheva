@@ -318,7 +318,7 @@ def build(params: dict[str, Any]) -> dict[str, cq.Workplane]:
     plate = cq.Workplane("XY").circle(r_plate).extrude(LED_PLATE_THICKNESS).translate((0, 0, z_top - LED_PLATE_THICKNESS))
     stem_h = max(lh * 0.5 - LED_PUCK_HEIGHT / 2, 2.0)
     stem = cq.Workplane("XY").circle(min(6.0, r_plate * 0.5)).extrude(stem_h).translate((0, 0, z_top))
-    puck_r = max(min(20.0, rl - lw - 10.0), 5.0)
+    puck_r = _puck_radius(rl, lw)
     puck = cq.Workplane("XY").circle(puck_r).extrude(LED_PUCK_HEIGHT).translate((0, 0, z_top + stem_h))
     parts["led_module"] = plate.union(stem).union(puck)
 
@@ -349,3 +349,22 @@ def derived_traits(part_key: str, params: dict[str, Any]) -> list[str]:
     if part_key == "lantern":
         return ["constant_section"]
     return []
+
+
+def _puck_radius(lantern_r: float, lantern_wall: float) -> float:
+    """Placeholder LED puck: up to 40 mm across, keeping ~10 mm from the lantern wall."""
+    return max(min(20.0, lantern_r - lantern_wall - 10.0), 5.0)
+
+
+def led_clearance(params: dict[str, Any]) -> float:
+    """Radial gap between the LED puck and the inside of the lantern wall (mm)."""
+    p = {k: float(v) for k, v in params.items()}
+    rl = p["lantern_diameter"] / 2
+    lw = p["lantern_wall_thickness"]
+    return rl - lw - _puck_radius(rl, lw)
+
+
+def body_taper_deg(params: dict[str, Any]) -> float:
+    p = {k: float(v) for k, v in params.items()}
+    h = derived(p)["body_height"]
+    return math.degrees(math.atan2((p["body_diameter"] - p["body_top_diameter"]) / 2, h))
