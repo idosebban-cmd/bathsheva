@@ -74,6 +74,7 @@ class Region(Provenance):
     machine: Span
     labour: Span
     tooling: Span
+    finishing: Span
     freight_duty_pct: Span
     lead_time_note: str = ""
 

@@ -46,7 +46,7 @@ def part_input(part: Part, ctx: Context, template: str | None) -> dict[str, Any]
 def latest_decisions(project: Project) -> dict[int, EngineeringDecision]:
     out: dict[int, EngineeringDecision] = {}
     for d in sorted(project.decisions, key=lambda d: (d.updated_at, d.id)):
-        if d.part_id is not None and d.topic == "material_process":
+        if d.part_id is not None and d.topic in ("material_process", "process_route"):
             out[d.part_id] = d
     return out
 

@@ -16,6 +16,9 @@ from app.costing.model import Assumption, CostInputs, ItemSpec, PartGeometry, Pa
 from app.rules.data import RuleSet
 from app.rules.match import match_finishes
 
+# Processes that make parts from sheet: the part is a shell of roughly the sheet thickness.
+SHEET_FORMED = {"metal_spinning", "deep_drawing", "sheet_forming"}
+
 
 @dataclass(frozen=True)
 class RouteChoice:
@@ -185,6 +188,7 @@ def assemble(snapshot: Snapshot, config: CostConfig, rules: RuleSet, cost: CostD
             geometry=PartGeometry(geo["volume_mm3"], tuple(geo["size_mm"]), "axisymmetric" in sp.traits),
             finish_key=finish_key, finish_name=rules.finishes[finish_key].name if finish_key else None, basis=basis,
             cnc_allowance_mm=rate.stock_allowance_mm if is_cnc else None, tooling_band=band_key,
+            formed_shell_mm=(float(snapshot.params.get("wall_thickness") or 0) or None) if proc_key in SHEET_FORMED else None,
         )
         parts.append(spec)
         details[sp.part_id] = {"form": price.form, "route_label": choice.label if choice else ""}
@@ -222,10 +226,11 @@ def assemble(snapshot: Snapshot, config: CostConfig, rules: RuleSet, cost: CostD
             fr = cost.finish_rates[finish_key]
             fprov = dict(confidence=fr.confidence, verified=fr.verified, source=fr.source)
             fname = rules.finishes[finish_key].name
-            _add(assumptions, Assumption(k["finish_m2"], f"{fname} cost per m²", "£/m²", fr.gbp_per_m2.low, fr.gbp_per_m2.high,
-                                         group="Finishing", **fprov))
-            _add(assumptions, Assumption(k["finish_min"], f"{fname} minimum charge per part", "£", fr.min_per_part.low,
-                                         fr.min_per_part.high, group="Finishing", **fprov))
+            fl, fh = region.finishing.low, region.finishing.high
+            _add(assumptions, _scaled(Assumption(k["finish_m2"], f"{fname} cost per m²", "£/m²", fr.gbp_per_m2.low,
+                                                 fr.gbp_per_m2.high, group="Finishing", **fprov), fl, fh))
+            _add(assumptions, _scaled(Assumption(k["finish_min"], f"{fname} minimum charge per part", "£", fr.min_per_part.low,
+                                                 fr.min_per_part.high, group="Finishing", **fprov), fl, fh))
         tool_label = "stock material, no tooling" if band.gbp_max == 0 else proc_rule.name.lower()
         _add(assumptions, _scaled(Assumption(k["tooling"], f"Tooling for {sp.name.lower()} ({tool_label})", "£",
                                              band.gbp_min, band.gbp_max, band.confidence, band.verified, band.source, "Tooling"),

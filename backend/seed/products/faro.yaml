@@ -246,7 +246,7 @@ scenarios:
     effect:
       remove_part: band
       add_items:
-        - {price_key: masked_stripe, quantity: 1}
+        - {price_key: masked_stripe, quantity: 1, kind: finishing}
     premium_impact: slight
     tradeoffs:
       finish: A crisp masked line is achievable but needs a skilled finisher; no shadow line.

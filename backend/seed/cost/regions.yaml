@@ -1,7 +1,8 @@
-# Manufacturing region multipliers, applied to machine rates, labour and tooling,
+# Manufacturing region multipliers, applied to machine rates, labour, tooling and finishing,
 # plus freight and import duty to the UK as a share of factory cost.
 # PROVENANCE: rough order-of-magnitude figures written by an AI model. Not verified;
 # real rates vary widely by supplier, and duty depends on the product's commodity code.
+# Bought-in components are not adjusted (priced as global commodities).
 
 regions:
   - key: uk
@@ -9,6 +10,7 @@ regions:
     machine: {low: 1.0, high: 1.0}
     labour: {low: 1.0, high: 1.0}
     tooling: {low: 1.0, high: 1.0}
+    finishing: {low: 1.0, high: 1.0}
     freight_duty_pct: {low: 0.0, high: 0.0}
     lead_time_note: Shortest lead time and easiest visits; highest rates.
     source: model-generated
@@ -19,6 +21,7 @@ regions:
     machine: {low: 0.65, high: 0.85}
     labour: {low: 0.45, high: 0.65}
     tooling: {low: 0.75, high: 0.95}
+    finishing: {low: 0.65, high: 0.85}
     freight_duty_pct: {low: 2.0, high: 5.0}
     lead_time_note: Road freight 3–5 days; strong metalwork and lighting supply base.
     source: model-generated
@@ -29,6 +32,7 @@ regions:
     machine: {low: 0.5, high: 0.7}
     labour: {low: 0.3, high: 0.45}
     tooling: {low: 0.5, high: 0.75}
+    finishing: {low: 0.5, high: 0.7}
     freight_duty_pct: {low: 4.0, high: 8.0}
     lead_time_note: Road or sea freight 1–2 weeks; good spinning and lighting suppliers.
     source: model-generated
@@ -39,6 +43,7 @@ regions:
     machine: {low: 0.35, high: 0.55}
     labour: {low: 0.2, high: 0.35}
     tooling: {low: 0.3, high: 0.5}
+    finishing: {low: 0.4, high: 0.6}
     freight_duty_pct: {low: 8.0, high: 15.0}
     lead_time_note: Sea freight 5–7 weeks plus customs; higher MOQs and quality-control effort.
     source: model-generated

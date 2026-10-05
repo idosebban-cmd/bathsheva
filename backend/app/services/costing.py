@@ -16,6 +16,7 @@ from app.costing.model import (
     Assumption,
     CostInputs,
     breakdown,
+    effective_volume_cm3,
     part_quantities,
     part_unit_range,
     sensitivity,
@@ -202,7 +203,10 @@ def explain_line(line: dict[str, Any], inputs: CostInputs, ctx: dict[str, Any], 
             if p.cnc_allowance_mm is not None:
                 return (f"{each}{q['bought_kg']:.2f} kg of {p.material_name} {form}, machined down to a "
                         f"{q['finished_kg']:.2f} kg part ({q['removed_cm3']:.0f} cm³ cut away), at {_money(A[k['price']])}/kg.")
-            return (f"{each}{q['bought_kg']:.2f} kg of {p.material_name} {form} for a {q['finished_kg']:.2f} kg part "
+            shell = ""
+            if p.formed_shell_mm and effective_volume_cm3(p) < p.geometry.volume_cm3 - 1e-6:
+                shell = f" (costed as a {p.formed_shell_mm:g} mm formed shell; the CAD body is solid)"
+            return (f"{each}{q['bought_kg']:.2f} kg of {p.material_name} {form} for a {q['finished_kg']:.2f} kg part{shell} "
                     f"(the extra is trim and scrap), at {_money(A[k['price']])}/kg.")
         if line["category"] == "process":
             how = (f"{q['removed_cm3']:.0f} cm³ of cutting plus handling" if p.cnc_allowance_mm is not None

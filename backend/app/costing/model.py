@@ -106,6 +106,9 @@ class PartSpec:
     basis: str  # "decided" | "recommended"
     cnc_allowance_mm: float | None = None  # set when the process is CNC (stock-based material)
     tooling_band: str = "none"
+    # Sheet-formed parts (spun, pressed, rolled) are shells: if the CAD body is solid, cost
+    # the material as a shell of this wall thickness over the visible surface instead.
+    formed_shell_mm: float | None = None
 
 
 @dataclass
@@ -169,8 +172,16 @@ class Line:
     keys: list[str]
 
 
+def effective_volume_cm3(p: PartSpec) -> float:
+    vol = p.geometry.volume_cm3
+    if p.formed_shell_mm:
+        shell = p.geometry.visible_area_m2 * 1e4 * p.formed_shell_mm / 10  # m2 -> cm2, mm -> cm
+        vol = min(vol, shell)
+    return vol
+
+
 def part_quantities(p: PartSpec, keys: dict[str, str], v: dict[str, float]) -> dict[str, float]:
-    finished_kg = p.geometry.volume_cm3 * p.density_g_cm3 / 1000
+    finished_kg = effective_volume_cm3(p) * p.density_g_cm3 / 1000
     if p.cnc_allowance_mm is not None:
         stock_cm3 = p.geometry.cnc_stock_cm3(p.cnc_allowance_mm)
         bought_kg = stock_cm3 * p.density_g_cm3 / 1000
