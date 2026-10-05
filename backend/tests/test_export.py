@@ -100,3 +100,20 @@ def test_generate_endpoint_creates_versions_and_downloads(client, faro_project):
     z = client.get(f"/api/projects/{pid}/cad/models/2/download.zip")
     names = zipfile.ZipFile(io.BytesIO(z.content)).namelist()
     assert "faro_assembly.step" in names and "parts/base.step" in names
+
+
+def test_repeated_regeneration_in_one_session_is_stable(client, faro_project):
+    """Many regenerations + exports in one process must keep producing valid, distinct versions."""
+    pid = faro_project["id"]
+    params = client.get(f"/api/projects/{pid}/cad").json()["parameters"]
+    for i in range(15):
+        p = {**params, "overall_height": 380 + i * 10, "wall_thickness": 1.5 + (i % 3) * 0.5}
+        r = client.post(f"/api/projects/{pid}/cad/generate", json={"parameters": p})
+        assert r.status_code == 201, (i, r.text)
+        model = r.json()
+        assert model["version"] == i + 1
+        assert all(info["valid"] for info in model["part_info"].values())
+        assert model["part_info"]["top_cap"]["z_range_mm"][1] == pytest.approx(p["overall_height"], abs=0.5)
+        for out in model["outputs"]:
+            assert (settings.data_dir / out["path"]).stat().st_size > 0
+    assert client.get("/api/health").status_code == 200
