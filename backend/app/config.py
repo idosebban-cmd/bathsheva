@@ -32,7 +32,7 @@ def load_settings() -> Settings:
         data_dir=data_dir,
         database_url=db_url,
         llm_provider=provider,
-        anthropic_model=os.environ.get("WORKBENCH_ANTHROPIC_MODEL", "claude-sonnet-5-5"),
+        anthropic_model=os.environ.get("WORKBENCH_ANTHROPIC_MODEL", "claude-opus-5-5"),
     )
 
 

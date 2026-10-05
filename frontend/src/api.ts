@@ -176,3 +176,75 @@ export interface CadState {
   wall_limits: Record<string, WallLimit>;
   latest: CadModel | null;
 }
+
+export interface SourceRef {
+  kind: string;
+  key: string;
+  source: string;
+  confidence: "low" | "medium" | "high";
+  verified: boolean;
+}
+
+export interface SafetyFlag {
+  key: string;
+  message: string;
+  verify_with: string;
+  verified: boolean;
+}
+
+export interface Alternative {
+  process_key: string;
+  process_name: string;
+  material_key: string | null;
+  material_name: string | null;
+  when_to_prefer: string;
+  why_not_chosen: string[];
+  tooling_cost: string;
+  score: number;
+}
+
+export interface Recommendation {
+  part_id: number;
+  part_key: string | null;
+  part_name: string;
+  status: "ok" | "no_match";
+  recommendation: { process_key: string; process_name: string; material_key: string; material_name: string; finish: string } | null;
+  summary: string;
+  reason: string[];
+  assumptions: string[];
+  confidence: "low" | "medium" | "high";
+  confidence_reason: string;
+  alternatives: Alternative[];
+  excluded: { process_key: string; process_name: string; reason: string }[];
+  volume_sensitivity?: { volume: number; process_key: string; process_name: string }[];
+  open_questions: string[];
+  risks: string[];
+  technical: Record<string, string | string[]>;
+  safety_flags: SafetyFlag[];
+  sources: SourceRef[];
+  uses_unverified_data: boolean;
+  inputs: Record<string, unknown>;
+  decision: { id: number; status: string; chosen: Record<string, string>; note: string; updated_at: string } | null;
+}
+
+export interface OpenDecision {
+  topic: string;
+  question: string;
+  options: string[];
+  impact: string;
+  current: string | null;
+  open: boolean;
+}
+
+export interface RecommendationsResponse {
+  recommendations: Recommendation[];
+  open_decisions: OpenDecision[];
+  llm: { enabled: boolean; provider: string };
+}
+
+export interface Explanation {
+  plain_summary: string;
+  tradeoffs: string[];
+  questions_to_consider: string[];
+  caveats: string[];
+}
