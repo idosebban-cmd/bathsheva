@@ -10,7 +10,7 @@ description: >-
 
 requirements:
   approx_dimensions: {height_mm: null, width_mm: null, depth_mm: null}  # TBD
-  target_retail_price: {amount: null, currency: GBP}                    # TBD
+  target_retail_price: {amount: 275, currency: GBP}                     # user, Oct 2026 (range 249–295)
   production_volume: null                                               # TBD
   target_unit_cost: {amount: null, currency: GBP}                       # TBD
   intended_markets: [UK, EU]
@@ -32,7 +32,6 @@ requirements:
 
 assumed_fields:
   - approx_dimensions
-  - target_retail_price
   - production_volume
   - target_unit_cost
   - intended_markets
@@ -159,3 +158,184 @@ cost_items:
   - {kind: bought_in, price_key: cable_grommet, quantity: 1}
   - {kind: packaging, price_key: retail_packaging, quantity: 1}
   - {kind: assembly, name: "Final assembly, wiring and test", quantity: 20, unit: min, confidence: low}
+
+# Retail pricing (user-stated). Channel economics come from seed/cost/pricing.yaml.
+pricing:
+  retail_price: 275
+  retail_low: 249
+  retail_high: 295
+  premium_retail: 395
+  source: "user (Oct 2026)"
+
+# Design-change scenarios for the Cost-down tab. Each is toggleable; `options`
+# are alternatives the optimiser can choose between. Effects:
+#   reroute:      {part, options: [{process, material, tooling?, label}]}  (tooling: override band, e.g. none for stock tube)
+#   remove_part:  cad_key of a part removed from the product
+#   add_items / remove_items: bought-in lines by price_key (quantity or quantity_param)
+#   assembly_min: change to assembly minutes {low, high}
+#   scale_height: new overall height (mm); other linear dimensions scale with it
+# premium_impact: none | slight | significant (significant = changes the design's look)
+scenarios:
+  - key: base_sheet
+    letter: a
+    label: Base spun or pressed from sheet, with a steel weight plate
+    design_change: >-
+      Base becomes a thin formed shell (spun, or pressed at volume) with a steel weight
+      plate inside for mass, and rivet nuts instead of tapped holes.
+    effect:
+      reroute:
+        part: base
+        options:
+          - {process: metal_spinning, material: al_1050, label: Spun}
+          - {process: deep_drawing, material: al_1050, label: Pressed (deep drawn)}
+      # The weight plate and rivet nuts come from seed/cost/route_changes.yaml
+      # (thin_shell_needs_mass), so they are costed wherever a sheet base is used.
+    premium_impact: none
+    flags:
+      - {kind: safety, message: "Stability is safety-relevant: tip-over must be verified on the finished lamp with the weight plate fitted."}
+    tradeoffs:
+      finish: Spun or pressed surface takes black lacquer well after light sanding; edges must be rolled or deburred.
+      weight: The steel plate keeps the lamp heavy and planted, so it still feels substantial in the hand.
+      premium: Looks the same from outside; the weight plate is hidden underneath.
+      lead_time: Spinning forms in 2–4 weeks; press tools 6–10 weeks.
+      tooling: Spinning form a few hundred pounds; press tool tens of thousands (only worth it at volume).
+  - key: band_tube
+    letter: b
+    label: Band cut from stock tube or rolled strip
+    design_change: >-
+      Band becomes a straight ring cut from standard tube (or rolled and joined strip)
+      sitting on a small step in the body, instead of a machined ring that follows the taper.
+    conflicts: [band_stripe]
+    effect:
+      reroute:
+        part: band
+        options:
+          - {process: extrusion, material: al_6063, tooling: none, label: Cut from stock tube}
+          - {process: sheet_forming, material: al_5052, label: Rolled strip}
+    premium_impact: none
+    tradeoffs:
+      finish: Stock tube has a good surface; a rolled strip has a joint that needs to sit at the back.
+      weight: Slightly lighter than a machined ring.
+      premium: Still a separate contrasting part with a crisp shadow line.
+      lead_time: Stock tube is available in days.
+      tooling: None for stock tube; simple rolls for strip.
+  - key: lamp_tube
+    letter: c
+    label: Central threaded lamp tube construction
+    design_change: >-
+      One M10x1 threaded lamp tube runs from base to top cap; a single nut clamps the
+      whole stack and the cable runs through the tube. Replaces tapped holes in thin walls.
+    effect:
+      add_items:
+        - {price_key: lamp_tube_m10, quantity: 1}
+        - {price_key: lamp_nut_set, quantity: 1}
+      remove_items: [screw_m4, screw_m3, rivet_nut_m4]
+      assembly_min: {low: -6, high: -2}
+    premium_impact: none
+    tradeoffs:
+      finish: No visible fixings; parts can be finished completely before assembly.
+      weight: Negligible change.
+      premium: Cleaner, more serviceable construction typical of quality lamps.
+      lead_time: Standard lamp hardware, available off the shelf.
+      tooling: None.
+  - key: band_stripe
+    letter: d
+    label: Band as a masked lacquer stripe on the body
+    design_change: Remove the band part; paint the stripe directly on the body with a masked second colour.
+    conflicts: [band_tube]
+    effect:
+      remove_part: band
+      add_items:
+        - {price_key: masked_stripe, quantity: 1, kind: finishing}
+    premium_impact: slight
+    tradeoffs:
+      finish: A crisp masked line is achievable but needs a skilled finisher; no shadow line.
+      weight: Slightly lighter.
+      premium: Loses the layered look of a separate ring; the stripe reads flatter.
+      lead_time: Removes one part from the supply chain.
+      tooling: Masking jig only.
+  - key: body_tube
+    letter: e
+    label: Body from stock aluminium tube with spun ends
+    design_change: >-
+      Body becomes a straight stock tube with small spun end rings. This removes the
+      lighthouse taper, which is a significant change to the design.
+    effect:
+      reroute:
+        part: main_body
+        options:
+          - {process: extrusion, material: al_6063, tooling: none, label: Stock tube}
+      add_items:
+        - {price_key: spun_end_ring, quantity: 2}
+    premium_impact: significant
+    tradeoffs:
+      finish: Tube surface is excellent; die lines may need light brushing.
+      weight: Similar.
+      premium: Loses the tapered lighthouse silhouette that defines Faro.
+      lead_time: Stock tube in days; end-ring forms 2–4 weeks.
+      tooling: Small spinning forms for the end rings only.
+  - key: lantern_stock
+    letter: f
+    label: Lantern from stock acrylic or borosilicate tube
+    design_change: Lantern cut to length from standard tube; diameter must match a stock size.
+    effect:
+      reroute:
+        part: lantern
+        options:
+          - {process: polymer_tube_cut, material: pmma, label: Stock acrylic tube}
+          - {process: glass_tube_cut, material: borosilicate, label: Stock borosilicate tube}
+    premium_impact: none
+    tradeoffs:
+      finish: Edges need polishing (acrylic) or fire-polishing (glass).
+      weight: Glass is about twice as heavy as acrylic.
+      premium: Borosilicate feels noticeably more premium; acrylic can scratch.
+      lead_time: Stock tube in days.
+      tooling: None.
+  - key: external_adapter
+    letter: g
+    label: Off-the-shelf LED module with an external certified 12 V adapter
+    design_change: >-
+      Replace the internal mains driver and mains cable with a certified external 12 V
+      adapter, a low-voltage cable and an off-the-shelf 12 V LED module.
+    effect:
+      add_items:
+        - {price_key: led_module_12v, quantity: 1}
+        - {price_key: external_adapter_12v, quantity: 1}
+        - {price_key: lv_cable_switch, quantity: 1}
+      remove_items: [led_module, led_driver_mains, mains_cable_plug_switch]
+      assembly_min: {low: -5, high: -2}
+    premium_impact: slight
+    flags:
+      - {kind: compliance, message: "Adapter choice must be verified for compliance (electrical safety, EMC, ecodesign) in each market."}
+    tradeoffs:
+      finish: No change to the lamp.
+      weight: Lighter lamp; the adapter brick sits at the wall.
+      premium: A plug-in adapter feels less premium than a mains cable, but it is common in design lighting.
+      lead_time: Off-the-shelf parts; certification effort moves largely to the adapter supplier.
+      tooling: None.
+  - key: height_350
+    letter: h
+    label: Overall height reduced to 350 mm
+    design_change: All linear dimensions scale with height (wall thicknesses and hole sizes stay the same).
+    effect:
+      scale_height: 350
+    premium_impact: slight
+    tradeoffs:
+      finish: No change.
+      weight: Lighter in proportion to size.
+      premium: Less presence on a table; proportions are unchanged.
+      lead_time: No change.
+      tooling: Smaller forms, marginally cheaper.
+
+# Premium brass edition: band and top cap in brass.
+premium_edition:
+  label: Premium brass edition
+  parts: [band, top_cap]
+  options:
+    - key: plated
+      label: Brass-plated band and top cap
+      finish: brass_plating
+    - key: solid
+      label: Solid brass band and top cap (polished, clear lacquer)
+      material: brass
+      finish: polish

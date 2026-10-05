@@ -30,13 +30,17 @@ backend/app/
   rules/             Rules engine: loads seed YAML, produces recommendations
   cad/               CadQuery generators, parameter validation, export
   ai/                LLM provider abstraction (anthropic | mock | none)
-  costing/           Cost model: data.py (seed loader), model.py (pure calculation)
+  costing/           Cost model: data.py (seed loader), model.py (pure calculation),
+                     assemble.py (snapshot + config -> inputs), pricing.py (retail -> target factory cost)
 backend/seed/
   rules/*.yaml       Engineering rules (editable)
-  cost/*.yaml        Cost rates: material £/kg, process rates, finishes, labour, bought-in prices
+  cost/*.yaml        Cost rates: material £/kg, process rates, finishes, labour, bought-in prices,
+                     regions, route design changes, channel pricing
   products/faro.yaml Faro template: parts, requirements placeholders, CAD defaults
 backend/migrations/  Alembic env and versions/ (one file per schema change)
-scripts/             stress_cad.py (CAD soak test), check_run_shutdown.py (run.sh stop behaviour)
+scripts/             stress_cad.py (CAD soak test), check_run_shutdown.py (run.sh stop behaviour),
+                     cost_audit.py (regenerates docs/cost-assumptions-audit.md)
+docs/                Generated reports (cost-assumptions-audit.md)
 data/                Runtime: SQLite DB, uploads, CAD outputs (gitignored)
 ```
 
@@ -70,7 +74,8 @@ Other useful commands, run from `backend/`: `.venv/bin/alembic current`, `.venv/
 | CAD | `GET /cad`, `POST /cad/validate`, `POST /cad/generate`, `GET /cad/models/{v}/download.zip`; files under `/files/projects/...` |
 | Engineering | `GET /recommendations`, `POST /recommendations/{part}/explain` (LLM), `POST /decisions` |
 | BOM | `GET /bom`, `GET /bom.csv` |
-| Manufacturing | `GET /costs`; `GET/POST /cost-items`, `PATCH/DELETE /cost-items/{id}`, `POST /cost-items/reset` |
+| Manufacturing | `GET /costs`; `GET/POST /cost-items`, `PATCH/DELETE /cost-items/{id}`, `POST /cost-items/reset`; `GET /cost-audit` (+ `.md`, `.csv`) |
+| Cost-down | `GET/PUT /pricing`; `GET /routes`, `POST /parts/{part}/route`; `GET /scenarios`, `POST /scenarios/evaluate`; `GET /cost-down/summary`; `GET/POST /scenario-sets`, `DELETE /scenario-sets/{id}` |
 | DFM report | `GET /dfm`, `GET /dfm.md` |
 | Revisions | `GET/POST /revisions`, `GET /revisions/{n}` (no update or delete) |
 
@@ -85,6 +90,16 @@ For each candidate process in the part's material family, the engine applies har
 `app/costing/model.py` is pure. Each input is a named `Assumption` (low/high plus provenance). Per part: material is CAD volume × density × scrap factor (CNC uses bar stock), process is cycle minutes × machine rate, setup and tooling are divided by the quantity, and finishing is max(minimum charge, visible area × rate). Product-level lines (bought-in parts, assembly minutes × labour rate, packaging) are editable `CostItem` rows, seeded from `faro.yaml` `cost_items` for the current power type.
 
 Ranges: each input is widened by its confidence (`seed/cost/general.yaml` `confidence_spread`; verified inputs are not widened). The range is the midpoint ± the root-sum-square of each input's effect, and the all-worst-case envelope is also reported. Sensitivity moves each assumption ±25% and ranks by unit-cost swing. Process and material come from the part's decision, else the rules recommendation. When a part's manual cost fields are blank, quotes are compared with the model's estimate at the quote's quantity.
+
+## Cost-down in brief
+
+`services/costing.snapshot()` reads the project once. `costing/assemble.assemble(snapshot, CostConfig)` builds model inputs for any configuration: route overrides, removed parts, added or removed items, assembly-time change, height, region, and material or finish overrides. It's pure and takes about 0.3 ms, so routes and scenarios are evaluated by assembling, never by changing the database.
+
+- **Routes:** every `viable` process from the rules engine is costed per part. `seed/cost/route_changes.yaml` adds the design changes and extra parts a route needs; these are costed wherever that route is used (current configuration, route table, scenarios). Selecting a route records a `process_route` decision and sets the part's process and material. CAD is never changed. `costdown.cad_mismatches()` drives the "CAD no longer matches" flags in the BOM and DFM.
+- **Sheet-formed parts** (spun, pressed, rolled) are costed as a shell of the CAD wall thickness when the CAD body is solid.
+- **Scenarios** live in `faro.yaml` `scenarios`. The optimiser searches every non-conflicting subset and every region exhaustively. Each multi-option change uses its cheapest option on its own, which is valid because options touch only their own part (a test checks this against brute force). There are three tiers by `premium_impact`: strict (none), premium (none or slight) and any.
+- **Pricing:** `projects.pricing` overlays defaults from `seed/cost/pricing.yaml` plus the template. DTC target = ex-VAT × dtc share. Retail-channel target = ex-VAT × (1 − retailer margin) × wholesale share. Status: pass ≤ target, close ≤ target × (1 + close band), otherwise fail.
+- **Migrations on SQLite** run with foreign keys off (`app/migrate.py`), because batch rebuilds would otherwise cascade-delete child rows.
 
 ## Conventions
 

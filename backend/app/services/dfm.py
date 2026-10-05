@@ -110,6 +110,14 @@ def build_dfm(project: Project) -> dict[str, Any]:
                     f"A {p['wall_thickness']:g} mm wall can't hold {screw} threads. Add a thicker foot ring or bosses, "
                     "or use threaded inserts / rivet nuts.", unverified=True, part="Main body"))
 
+    # --- Chosen process routes that the CAD doesn't reflect yet ------------
+    from app.services.costdown import cad_mismatches
+
+    for m in cad_mismatches(project):
+        checks.append(_check("Process", "warning", f"{m['part']}: CAD does not match the chosen route",
+                             f"{m['process']} needs: " + " ".join(m["changes"]) + " Update the CAD before quoting.",
+                             unverified=True, part=m["part"]))
+
     # --- Per-part checks ----------------------------------------------------
     parts_out = []
     for part in project.parts:

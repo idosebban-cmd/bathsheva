@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { api, errorText, type CostItem, type CostLine, type CostReport } from "../api";
 import { AssumptionBadge, UnverifiedBadge } from "../components/Badges";
+import CostAudit from "../components/CostAudit";
 import { CategoryBars, SensitivityBars, VolumeRanges, gbp } from "../components/CostCharts";
 import { useProject } from "../components/useProject";
 
@@ -126,6 +127,8 @@ export default function ManufacturingPage() {
       </section>
 
       <ItemsEditor projectId={project.id} items={items} canLoadDefaults={report.can_load_defaults} onChanged={load} />
+
+      {project.template && <CostAudit projectId={project.id} />}
 
       <section className="card">
         <details>

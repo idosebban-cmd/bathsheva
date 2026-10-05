@@ -51,6 +51,10 @@ def run_migrations_online() -> None:
 
 
 def _run(connection) -> None:
+    if connection.dialect.name == "sqlite" and not connection.in_transaction():
+        # Batch rebuilds drop and recreate tables; with foreign keys on that would
+        # cascade-delete child rows. (app.migrate turns them off before calling us.)
+        connection.exec_driver_sql("PRAGMA foreign_keys=OFF")
     # render_as_batch lets ALTER-style migrations work on SQLite.
     context.configure(connection=connection, target_metadata=target_metadata, render_as_batch=True, compare_type=True)
     with context.begin_transaction():

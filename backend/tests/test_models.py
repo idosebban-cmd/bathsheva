@@ -16,7 +16,9 @@ def test_create_faro_from_template(db):
     assert req.power_type == "undecided"
     assert req.production_volume is None
     assert req.intended_markets == ["UK", "EU"]
-    assert {"production_volume", "target_retail_price", "target_unit_cost", "approx_dimensions"} <= set(p.assumed_fields)
+    assert {"production_volume", "target_unit_cost", "approx_dimensions"} <= set(p.assumed_fields)
+    # Target retail price was given by the user (Oct 2026), so it is no longer a placeholder.
+    assert "target_retail_price" not in p.assumed_fields and req.target_retail_price.amount == 275
 
 
 def test_multiple_projects_get_unique_slugs(db):

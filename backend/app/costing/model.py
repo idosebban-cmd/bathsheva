@@ -27,7 +27,9 @@ import math
 from dataclasses import dataclass, field
 from typing import Any
 
-CATEGORY_ORDER = ["material", "process", "setup", "finishing", "tooling", "bought_in", "assembly", "packaging"]
+CATEGORY_ORDER = ["material", "process", "setup", "finishing", "tooling", "bought_in", "assembly", "packaging",
+                  "freight_duty"]
+ITEM_CATEGORIES = {"bought_in", "assembly", "packaging", "finishing"}
 
 
 @dataclass(frozen=True)
@@ -104,6 +106,9 @@ class PartSpec:
     basis: str  # "decided" | "recommended"
     cnc_allowance_mm: float | None = None  # set when the process is CNC (stock-based material)
     tooling_band: str = "none"
+    # Sheet-formed parts (spun, pressed, rolled) are shells: if the CAD body is solid, cost
+    # the material as a shell of this wall thickness over the visible surface instead.
+    formed_shell_mm: float | None = None
 
 
 @dataclass
@@ -117,6 +122,7 @@ class ItemSpec:
     unit: str  # pcs | min
     cost_key: str  # assumption key for GBP per unit (or labour rate for minutes)
     qty_key: str | None = None  # assumption key when the quantity itself is an assumption (minutes)
+    part_id: int | None = None  # set when the item exists because of a part's process route
 
 
 @dataclass
@@ -125,6 +131,8 @@ class CostInputs:
     parts: list[PartSpec] = field(default_factory=list)
     items: list[ItemSpec] = field(default_factory=list)
     spread: dict[str, float] = field(default_factory=lambda: {"high": 0.0, "medium": 0.10, "low": 0.25})
+    # Assumption key holding freight + duty as a % of factory cost (manufacturing region), if any.
+    overhead_key: str | None = None
 
     # Keys used by each part / item, filled in by `keys_for_part`.
     def keys_for_part(self, p: PartSpec) -> dict[str, str]:
@@ -164,8 +172,16 @@ class Line:
     keys: list[str]
 
 
+def effective_volume_cm3(p: PartSpec) -> float:
+    vol = p.geometry.volume_cm3
+    if p.formed_shell_mm:
+        shell = p.geometry.visible_area_m2 * 1e4 * p.formed_shell_mm / 10  # m2 -> cm2, mm -> cm
+        vol = min(vol, shell)
+    return vol
+
+
 def part_quantities(p: PartSpec, keys: dict[str, str], v: dict[str, float]) -> dict[str, float]:
-    finished_kg = p.geometry.volume_cm3 * p.density_g_cm3 / 1000
+    finished_kg = effective_volume_cm3(p) * p.density_g_cm3 / 1000
     if p.cnc_allowance_mm is not None:
         stock_cm3 = p.geometry.cnc_stock_cm3(p.cnc_allowance_mm)
         bought_kg = stock_cm3 * p.density_g_cm3 / 1000
@@ -200,8 +216,12 @@ def evaluate(inputs: CostInputs, values: dict[str, float], quantity: float) -> l
         qty_val = values[it.qty_key] if it.qty_key else it.quantity
         unit_cost = values[it.cost_key] / 60 if it.unit == "min" else values[it.cost_key]
         keys = [it.cost_key] + ([it.qty_key] if it.qty_key else [])
-        category = it.kind if it.kind in ("bought_in", "assembly", "packaging") else "bought_in"
+        category = it.kind if it.kind in ITEM_CATEGORIES else "bought_in"
         lines.append(Line(category, None, it.item_id, it.name, qty_val * unit_cost, keys))
+    if inputs.overhead_key:
+        factory = total(lines)
+        lines.append(Line("freight_duty", None, None, "Freight and import duty",
+                          factory * values[inputs.overhead_key] / 100, [inputs.overhead_key]))
     return lines
 
 
@@ -293,4 +313,32 @@ def sensitivity(inputs: CostInputs, quantity: float, step: float = 0.25, top: in
 
 def volume_table(inputs: CostInputs, quantities: list[float]) -> list[dict[str, float]]:
     return [unit_cost_range(inputs, q) for q in quantities]
+
+
+# ---------------------------------------------------------------------------
+# Volume behaviour: fixed vs per-unit cost and crossover points
+# ---------------------------------------------------------------------------
+
+LARGE_Q = 1e9
+
+
+def fixed_and_variable(inputs: CostInputs, quantity_unit: float = 1.0) -> tuple[float, float]:
+    """Split midpoint cost into one-off cost F (setup + tooling) and per-unit cost v: cost(Q) = v + F/Q."""
+    mids = inputs.mids()
+    v = total(evaluate(inputs, mids, LARGE_Q))
+    f = (total(evaluate(inputs, mids, 1.0)) - v) * quantity_unit
+    return max(f, 0.0), v
+
+
+def crossover(a: tuple[float, float], b: tuple[float, float]) -> float | None:
+    """Quantity where route a and route b cost the same (None if they never cross at a positive quantity).
+
+    Each route is (F, v) with cost(Q) = v + F / Q. Below the crossover the route with the
+    lower one-off cost F is cheaper; above it the route with the lower per-unit cost v is.
+    """
+    (fa, va), (fb, vb) = a, b
+    if abs(va - vb) < 1e-9:
+        return None
+    q = (fa - fb) / (vb - va)
+    return q if q > 1 else None
 

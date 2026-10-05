@@ -19,7 +19,8 @@ def _schema(engine):
         if t == "alembic_version":
             continue
         out[t] = {
-            "columns": [(c["name"], str(c["type"]), c["nullable"]) for c in insp.get_columns(t)],
+            # Column order differs when a later migration appends a column; it is not meaningful.
+            "columns": sorted((c["name"], str(c["type"]), c["nullable"]) for c in insp.get_columns(t)),
             "pk": insp.get_pk_constraint(t)["constrained_columns"],
             "fks": sorted(
                 (tuple(fk["constrained_columns"]), fk["referred_table"], tuple(fk["referred_columns"]),
@@ -153,5 +154,44 @@ def test_external_quotes_migration_preserves_data(tmp_path):
         cfg.attributes["connection"] = conn
         command.downgrade(cfg, "0001")
     assert "external_quotes" not in inspect(engine).get_table_names()
+    with engine.connect() as conn:
+        assert conn.execute(text("select count(*) from parts")).scalar() == 1
+
+
+def test_migrations_never_cascade_delete_with_foreign_keys_on(tmp_path):
+    """Batch table rebuilds (e.g. dropping projects.pricing on downgrade) must keep child rows."""
+    from sqlalchemy import event
+
+    url = f"sqlite:///{tmp_path / 'fk.db'}"
+    engine = create_engine(url)
+
+    @event.listens_for(engine, "connect")
+    def _fk(dbapi_conn, _rec):
+        dbapi_conn.execute("PRAGMA foreign_keys=ON")
+
+    cfg = alembic_config(url)
+    with engine.begin() as conn:
+        cfg.attributes["connection"] = conn
+        command.upgrade(cfg, "0003")
+        conn.execute(text(
+            "insert into projects (id, name, slug, description, template, requirements, assumed_fields, created_at, updated_at) "
+            "values (1, 'F', 'f', '', null, '{}', '[]', '2026-01-01', '2026-01-01')"
+        ))
+        conn.execute(text(
+            "insert into parts (id, project_id, name, function, quantity, material_category, material, process, finish, "
+            "traits, dimensions, tolerances, supplier_notes, open_questions, sort_order) "
+            "values (1, 1, 'Base', '', 1, 'aluminium', '', '', '', '[]', '', '', '', '[]', 0)"
+        ))
+
+    upgrade_database(engine, url)  # app startup path, engine has foreign keys on
+    with engine.connect() as conn:
+        assert conn.execute(text("select count(*) from parts")).scalar() == 1
+        assert conn.execute(text("PRAGMA foreign_keys")).scalar() == 1  # app connections keep FKs on
+
+    # Downgrade through Alembic with a foreign-keys-on connection: the projects rebuild must not cascade.
+    with engine.connect() as conn:
+        cfg.attributes["connection"] = conn
+        command.downgrade(cfg, "0003")
+        conn.commit()
     with engine.connect() as conn:
         assert conn.execute(text("select count(*) from parts")).scalar() == 1

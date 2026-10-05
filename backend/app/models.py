@@ -52,6 +52,8 @@ class Project(Base):
     requirements: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
     # Requirement field names whose values are placeholders / assumptions.
     assumed_fields: Mapped[list[str]] = mapped_column(JSON, default=list)
+    # Pricing assumptions edited by the user (retail price, channel economics). Null = defaults.
+    pricing: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
@@ -230,6 +232,21 @@ class CostItem(Base):
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+
+class CostScenario(Base):
+    """A saved combination of design-change scenarios and a manufacturing region."""
+
+    __tablename__ = "cost_scenarios"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id", ondelete="CASCADE"))
+    name: Mapped[str] = mapped_column(String(200))
+    # [{"key": "base_sheet", "option": 0 | null}]  (null = cheapest option)
+    changes: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list)
+    region: Mapped[str] = mapped_column(String(30), default="uk")
+    notes: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
 # ---------------------------------------------------------------------------

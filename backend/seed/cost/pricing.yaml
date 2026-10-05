@@ -1,0 +1,37 @@
+# Channel economics used to turn a retail price into target factory cost.
+# PROVENANCE: typical rules of thumb written by an AI model. Replace with your own.
+
+pricing:
+  - key: vat_rate
+    value: 0.20
+    plain_language: UK VAT included in the retail price.
+    source: model-generated
+    confidence: high
+    verified: false
+  - key: dtc_factory_share
+    value: 0.33
+    plain_language: >-
+      Selling direct, factory cost should be about a third of the ex-VAT price,
+      leaving room for freight, duty, fulfilment, payment fees, marketing,
+      returns and margin.
+    source: model-generated
+    confidence: low
+    verified: false
+  - key: retailer_margin
+    value: 0.50
+    plain_language: Through a retailer, the retailer keeps about half of the ex-VAT price.
+    source: model-generated
+    confidence: low
+    verified: false
+  - key: wholesale_factory_share
+    value: 0.48
+    plain_language: Of your wholesale price to the retailer, factory cost should be a little under half.
+    source: model-generated
+    confidence: low
+    verified: false
+  - key: close_band
+    value: 0.15
+    plain_language: A cost within 15% above target counts as "close" rather than "fail".
+    source: model-generated
+    confidence: medium
+    verified: false

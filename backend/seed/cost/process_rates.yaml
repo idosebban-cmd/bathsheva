@@ -7,11 +7,13 @@
 #   material_utilisation kg bought per kg in the finished part (>= 1; trim, runners, breakage)
 #   min_per_cm3_removed  CNC only: machining minutes per cm3 of stock removed
 #   stock_allowance_mm   CNC only: extra stock on diameter and length (single value)
+#   lead_time_weeks      tooling + first articles (for trade-off explanations; not costed)
 # PROVENANCE: rough UK small-batch figures written by an AI model. Get real quotes.
 
 process_rates:
   - process: metal_spinning
     machine_gbp_per_hr: {low: 35, high: 60}
+    lead_time_weeks: {low: 2, high: 4}
     setup_hours: {low: 1.0, high: 3.0}
     cycle_min: {low: 4, high: 10}
     cycle_min_per_kg: {low: 3, high: 8}
@@ -21,6 +23,7 @@ process_rates:
     verified: false
   - process: cnc_machining
     machine_gbp_per_hr: {low: 45, high: 80}
+    lead_time_weeks: {low: 1, high: 3}
     setup_hours: {low: 1.5, high: 4.0}
     cycle_min: {low: 3, high: 8}
     cycle_min_per_kg: {low: 0, high: 0}
@@ -32,6 +35,7 @@ process_rates:
     verified: false
   - process: sheet_forming
     machine_gbp_per_hr: {low: 35, high: 55}
+    lead_time_weeks: {low: 2, high: 4}
     setup_hours: {low: 1.0, high: 2.0}
     cycle_min: {low: 8, high: 15}
     cycle_min_per_kg: {low: 5, high: 10}
@@ -41,6 +45,7 @@ process_rates:
     verified: false
   - process: deep_drawing
     machine_gbp_per_hr: {low: 60, high: 100}
+    lead_time_weeks: {low: 6, high: 10}
     setup_hours: {low: 2.0, high: 4.0}
     cycle_min: {low: 0.3, high: 1.0}
     cycle_min_per_kg: {low: 0.2, high: 0.5}
@@ -50,6 +55,7 @@ process_rates:
     verified: false
   - process: die_casting
     machine_gbp_per_hr: {low: 70, high: 120}
+    lead_time_weeks: {low: 8, high: 14}
     setup_hours: {low: 3.0, high: 6.0}
     cycle_min: {low: 1.0, high: 2.5}
     cycle_min_per_kg: {low: 0.5, high: 1.5}
@@ -59,6 +65,7 @@ process_rates:
     verified: false
   - process: sand_casting
     machine_gbp_per_hr: {low: 40, high: 60}
+    lead_time_weeks: {low: 3, high: 6}
     setup_hours: {low: 1.0, high: 2.0}
     cycle_min: {low: 15, high: 30}
     cycle_min_per_kg: {low: 5, high: 12}
@@ -68,6 +75,7 @@ process_rates:
     verified: false
   - process: extrusion
     machine_gbp_per_hr: {low: 35, high: 50}
+    lead_time_weeks: {low: 1, high: 3}
     setup_hours: {low: 0.5, high: 1.0}
     cycle_min: {low: 1, high: 3}
     cycle_min_per_kg: {low: 0, high: 1}
@@ -77,6 +85,7 @@ process_rates:
     verified: false
   - process: polymer_tube_cut
     machine_gbp_per_hr: {low: 30, high: 45}
+    lead_time_weeks: {low: 1, high: 2}
     setup_hours: {low: 0.5, high: 1.0}
     cycle_min: {low: 3, high: 8}
     cycle_min_per_kg: {low: 0, high: 2}
@@ -86,6 +95,7 @@ process_rates:
     verified: false
   - process: injection_moulding_clear
     machine_gbp_per_hr: {low: 40, high: 70}
+    lead_time_weeks: {low: 6, high: 12}
     setup_hours: {low: 2.0, high: 4.0}
     cycle_min: {low: 0.5, high: 1.5}
     cycle_min_per_kg: {low: 0.5, high: 1.5}
@@ -95,6 +105,7 @@ process_rates:
     verified: false
   - process: glass_tube_cut
     machine_gbp_per_hr: {low: 35, high: 55}
+    lead_time_weeks: {low: 2, high: 4}
     setup_hours: {low: 0.5, high: 1.0}
     cycle_min: {low: 5, high: 12}
     cycle_min_per_kg: {low: 0, high: 3}
@@ -104,6 +115,7 @@ process_rates:
     verified: false
   - process: pressed_blown_glass
     machine_gbp_per_hr: {low: 50, high: 90}
+    lead_time_weeks: {low: 8, high: 14}
     setup_hours: {low: 3.0, high: 6.0}
     cycle_min: {low: 1, high: 3}
     cycle_min_per_kg: {low: 1, high: 3}

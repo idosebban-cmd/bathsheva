@@ -69,3 +69,13 @@ material_prices:
     source: model-generated
     confidence: low
     verified: false
+
+  # Cost-only materials (not used by the rules engine): need their own density.
+  - material: brass
+    form: CZ108 sheet / CZ121 bar
+    gbp_per_kg: {low: 6.5, high: 10.0}
+    density_g_cm3: 8.5
+    cost_only: true
+    source: model-generated
+    confidence: low
+    verified: false

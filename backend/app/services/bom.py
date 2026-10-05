@@ -98,6 +98,25 @@ def _hardware(project: Project, params: dict[str, Any]) -> list[dict[str, Any]]:
     return rows
 
 
+def _route_extras(project: Project) -> list[dict[str, Any]]:
+    """Extra parts the chosen process routes need (e.g. a weight plate for a spun base)."""
+    from sqlalchemy.orm import object_session
+
+    from app.services.costing import build_inputs
+
+    session = object_session(project)
+    if session is None or not project.template:
+        return []
+    inputs, ctx = build_inputs(session, project)
+    out = []
+    for it in inputs.items:
+        if it.part_id is None:
+            continue
+        origin = ctx["extras"][it.item_id].origin
+        out.append({"name": it.name, "quantity": it.quantity, "origin": origin})
+    return out
+
+
 def build_bom(project: Project) -> dict[str, Any]:
     recs = {r["part_id"]: r for r in project_recommendations(project)}
     latest = latest_model(project)
@@ -136,6 +155,22 @@ def build_bom(project: Project) -> dict[str, Any]:
             "supplier_notes": part.supplier_notes,
             "flags": flags,
             "derived": False,
+        })
+
+    from app.services.costdown import cad_mismatches
+
+    mismatched = {m["part_id"]: m for m in cad_mismatches(project)}
+    for row in rows:
+        if row["part_id"] in mismatched:
+            row["flags"].append("CAD mismatch")
+            row["supplier_notes"] = (row["supplier_notes"] + " " if row["supplier_notes"] else "") + (
+                "CAD not yet updated for the chosen route: " + " ".join(mismatched[row["part_id"]]["changes"]))
+    for i, ex in enumerate(_route_extras(project), start=1):
+        rows.append({
+            "item": f"R{i}", "level": 0, "part_id": None, "cad_key": None, "name": ex["name"], "quantity": ex["quantity"],
+            "material": "", "process": "Bought-in", "finish": "", "size_mm": "", "status": "derived",
+            "cost_low": None, "cost_high": None, "supplier_notes": f"Needed by the {ex['origin']}.",
+            "flags": ["assumption", "cost TBD"], "derived": True,
         })
 
     hw = _hardware(project, params)
