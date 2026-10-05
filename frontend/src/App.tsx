@@ -7,6 +7,8 @@ import CadPage from "./pages/CadPage";
 import EngineeringPage from "./pages/EngineeringPage";
 import BomPage from "./pages/BomPage";
 import DfmPage from "./pages/DfmPage";
+import RevisionsPage from "./pages/RevisionsPage";
+import RevisionView from "./pages/RevisionView";
 
 export default function App() {
   return (
@@ -26,6 +28,8 @@ export default function App() {
           <Route path="engineering" element={<EngineeringPage />} />
           <Route path="bom" element={<BomPage />} />
           <Route path="dfm" element={<DfmPage />} />
+          <Route path="revisions" element={<RevisionsPage />} />
+          <Route path="revisions/:number" element={<RevisionView />} />
         </Route>
       </Routes>
     </div>

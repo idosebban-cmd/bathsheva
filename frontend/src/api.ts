@@ -308,3 +308,27 @@ export interface DfmReport {
   assumptions: string[];
   disclaimer: string;
 }
+
+export interface RevisionSummary {
+  id: number;
+  number: number;
+  note: string;
+  created_at: string;
+}
+
+export interface Snapshot {
+  schema: number;
+  project: { name: string; description: string; template: string | null };
+  requirements: Requirements;
+  assumed_fields: string[];
+  cad_parameters: Record<string, number> | null;
+  cad_model: CadModel | null;
+  parts: Part[];
+  decisions: { id: number; part_id: number | null; topic: string; status: string; chosen: Record<string, string>; note: string; created_at: string }[];
+  recommendations: Recommendation[];
+  images: ImageInfo[];
+}
+
+export interface Revision extends RevisionSummary {
+  snapshot: Snapshot;
+}

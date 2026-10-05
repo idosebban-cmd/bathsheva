@@ -11,7 +11,7 @@ A local web app for AI-assisted product engineering of physical consumer product
 
 - Front end: http://127.0.0.1:5173. Vite proxies `/api` and `/files` to the backend on :8000.
 - The LLM is optional. Set `ANTHROPIC_API_KEY` to enable the Anthropic provider. `WORKBENCH_LLM_PROVIDER=mock|anthropic|none` overrides the choice. With no key the provider is `none` and everything except "Explain with AI" works.
-- Other environment variables: `WORKBENCH_DATA_DIR` (default `./data`), `WORKBENCH_DATABASE_URL`, `WORKBENCH_ANTHROPIC_MODEL`.
+- Other environment variables: `WORKBENCH_DATA_DIR` (default `./data`), `WORKBENCH_DATABASE_URL`, `WORKBENCH_ANTHROPIC_MODEL` (default `claude-opus-5-5`; explanations use low effort plus server-side refusal fallback).
 - Requirements: Python 3.10–3.13 (for CadQuery wheels) and Node 18+.
 
 ## Architecture
@@ -36,6 +36,25 @@ data/                Runtime: SQLite DB, uploads, CAD outputs (gitignored)
 ```
 
 Boundaries: routers handle only HTTP. The rules engine is pure, with no DB access: it takes plain dicts and returns recommendations. The CAD module never imports the DB. The AI layer only explains recommendations the rules engine has already made, and never changes them.
+
+## Front-end tabs and API
+
+| Tab | Endpoints (`/api/projects/{id}/…`) |
+|---|---|
+| Projects | `GET/POST /api/projects` (template `faro` seeds parts, requirements and CAD defaults) |
+| Overview | `PATCH /api/projects/{id}`, `POST /images` |
+| Parts | `GET/POST/PATCH/DELETE /parts` |
+| CAD | `GET /cad`, `POST /cad/validate`, `POST /cad/generate`, `GET /cad/models/{v}/download.zip`; files under `/files/projects/...` |
+| Engineering | `GET /recommendations`, `POST /recommendations/{part}/explain` (LLM), `POST /decisions` |
+| BOM | `GET /bom`, `GET /bom.csv` |
+| DFM report | `GET /dfm`, `GET /dfm.md` |
+| Revisions | `GET/POST /revisions`, `GET /revisions/{n}` (no update or delete) |
+
+Manufacturing and Factory Pack tabs, cost modelling, compliance and factory feedback are later milestones. Their tables exist in `models.py` but have no API.
+
+## Rules engine in brief
+
+For each candidate process in the part's material family, the engine applies hard exclusions first: missing required traits, excluded traits, or a wall thickness the process can't make. It then scores what's left on trait fit, volume fit, tooling cost, cosmetic finish need and finish compatibility. The best material is the one most often paired with the process that suits the target finish. Confidence comes from the score margin. It drops to low when volume is assumed and the answer changes between 100, 1,000 and 10,000 units, and it is capped at medium while the data is unverified. Traits come from the part plus CAD-derived traits (`faro.derived_traits`, for example tapered vs constant_section).
 
 ## Conventions
 

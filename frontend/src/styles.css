@@ -144,3 +144,6 @@ tfoot td { border-top: 2px solid var(--line); }
 .level-info { background: var(--info-bg); color: var(--info-ink); }
 .level-pass { background: var(--ok-bg); color: var(--ok-ink); }
 .dfm ul { margin: 0.2rem 0; padding-left: 1.1rem; }
+
+.revision-banner { border-left: 4px solid var(--accent); }
+tr.changed td { background: var(--warn-bg); }
