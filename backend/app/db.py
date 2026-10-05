@@ -18,7 +18,7 @@ _SessionLocal: sessionmaker[Session] | None = None
 
 
 def init_db(database_url: str) -> Engine:
-    """Create the engine and all tables. Safe to call repeatedly (tests re-init)."""
+    """Create the engine and migrate the database to head. Safe to call repeatedly (tests re-init)."""
     global _engine, _SessionLocal
     from app import models  # noqa: F401  (registers tables)
 
@@ -33,7 +33,9 @@ def init_db(database_url: str) -> Engine:
             cur.execute("PRAGMA foreign_keys=ON")
             cur.close()
 
-    Base.metadata.create_all(_engine)
+    from app.migrate import upgrade_database
+
+    upgrade_database(_engine, database_url)
     _SessionLocal = sessionmaker(bind=_engine, expire_on_commit=False)
     return _engine
 

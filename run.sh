@@ -16,7 +16,7 @@ setup_backend() {
       python3 -m venv "$VENV"
     fi
   fi
-  if ! "$PY" -c "import cadquery, fastapi, anthropic, pytest" >/dev/null 2>&1; then
+  if ! "$PY" -c "import cadquery, fastapi, anthropic, alembic, pytest" >/dev/null 2>&1; then
     echo "==> Installing backend dependencies (CadQuery is large; first run takes a few minutes)"
     if command -v uv >/dev/null 2>&1; then
       uv pip install -q -p "$PY" -e "$ROOT/backend[dev]"
