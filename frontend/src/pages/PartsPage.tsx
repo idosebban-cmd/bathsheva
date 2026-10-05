@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { api, errorText, type Part, type PartInput } from "../api";
+import QuotesSection from "../components/QuotesSection";
 import { useProject } from "../components/useProject";
 
 export const MATERIAL_CATEGORIES = [
@@ -64,6 +65,27 @@ export default function PartsPage() {
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const selected = parts.find((p) => p.id === selectedId) ?? null;
 
+  const [exportError, setExportError] = useState("");
+
+  // Check first so a "generate CAD first" error is shown instead of downloading an error page.
+  async function exportPack(e: React.MouseEvent<HTMLAnchorElement>) {
+    e.preventDefault();
+    setExportError("");
+    const url = `/api/projects/${project.id}/quote-pack.zip`;
+    const res = await fetch(url);
+    if (!res.ok) {
+      setExportError((await res.json().catch(() => ({ detail: res.statusText }))).detail);
+      return;
+    }
+    const blob = await res.blob();
+    const name = /filename="([^"]+)"/.exec(res.headers.get("content-disposition") ?? "")?.[1] ?? "quote_pack.zip";
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
   async function addPart() {
     const p = await api.post<Part>(`/api/projects/${project.id}/parts`, BLANK);
     await reload();
@@ -71,56 +93,67 @@ export default function PartsPage() {
   }
 
   return (
-    <div className="split">
-      <section className="card">
-        <div className="row" style={{ justifyContent: "space-between" }}>
-          <h2>Parts</h2>
-          <button onClick={addPart}>+ Add part</button>
-        </div>
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Qty</th>
-                <th>Material</th>
-                <th>Process</th>
-                <th>Finish</th>
-                <th>CAD</th>
-              </tr>
-            </thead>
-            <tbody>
-              {partTree(parts).map(({ part, depth }) => (
-                <tr key={part.id} className={part.id === selectedId ? "selected" : "clickable"} onClick={() => setSelectedId(part.id)}>
-                  <td style={{ paddingLeft: `${0.5 + depth * 1.25}rem` }}>{part.name}</td>
-                  <td>{part.quantity}</td>
-                  <td>{part.material || <span className="muted">—</span>}</td>
-                  <td>{part.process || <span className="muted">—</span>}</td>
-                  <td>{part.finish || <span className="muted">—</span>}</td>
-                  <td className="muted small">{part.cad_key ?? "—"}</td>
+    <div className="stack">
+      <div className="split">
+        <section className="card">
+          <div className="row" style={{ justifyContent: "space-between" }}>
+            <h2>Parts</h2>
+            <div className="row">
+              <a href={`/api/projects/${project.id}/quote-pack.zip`} onClick={exportPack}>
+                <button title="Zip of each part's STEP file plus a README with material, finish and quantity from the BOM">
+                  Export parts for quoting
+                </button>
+              </a>
+              <button onClick={addPart}>+ Add part</button>
+            </div>
+          </div>
+          {exportError && <p className="error">{exportError}</p>}
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Qty</th>
+                  <th>Material</th>
+                  <th>Process</th>
+                  <th>Finish</th>
+                  <th>CAD</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <p className="muted small">
-          Material and process are blank until you accept or edit a recommendation on the Engineering tab, or type them here.
-        </p>
-      </section>
-      {selected ? (
-        <PartEditor
-          key={selected.id}
-          part={selected}
-          parts={parts}
-          onSaved={reload}
-          onDeleted={async () => {
-            setSelectedId(null);
-            await reload();
-          }}
-        />
-      ) : (
-        <section className="card muted">Select a part to edit it.</section>
-      )}
+              </thead>
+              <tbody>
+                {partTree(parts).map(({ part, depth }) => (
+                  <tr key={part.id} className={part.id === selectedId ? "selected" : "clickable"} onClick={() => setSelectedId(part.id)}>
+                    <td style={{ paddingLeft: `${0.5 + depth * 1.25}rem` }}>{part.name}</td>
+                    <td>{part.quantity}</td>
+                    <td>{part.material || <span className="muted">—</span>}</td>
+                    <td>{part.process || <span className="muted">—</span>}</td>
+                    <td>{part.finish || <span className="muted">—</span>}</td>
+                    <td className="muted small">{part.cad_key ?? "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="muted small">
+            Material and process are blank until you accept or edit a recommendation on the Engineering tab, or type them here.
+          </p>
+        </section>
+        {selected ? (
+          <PartEditor
+            key={selected.id}
+            part={selected}
+            parts={parts}
+            onSaved={reload}
+            onDeleted={async () => {
+              setSelectedId(null);
+              await reload();
+            }}
+          />
+        ) : (
+          <section className="card muted">Select a part to edit it.</section>
+        )}
+      </div>
+      {selected && <QuotesSection key={`q-${selected.id}`} part={selected} />}
     </div>
   );
 }

@@ -64,7 +64,7 @@ Other useful commands, run from `backend/`: `.venv/bin/alembic current`, `.venv/
 |---|---|
 | Projects | `GET/POST /api/projects` (template `faro` seeds parts, requirements and CAD defaults) |
 | Overview | `PATCH /api/projects/{id}`, `POST /images` |
-| Parts | `GET/POST/PATCH/DELETE /parts` |
+| Parts | `GET/POST/PATCH/DELETE /parts`; quotes `GET/POST /parts/{part}/quotes`, `DELETE /quotes/{id}`; `GET /quote-pack.zip` |
 | CAD | `GET /cad`, `POST /cad/validate`, `POST /cad/generate`, `GET /cad/models/{v}/download.zip`; files under `/files/projects/...` |
 | Engineering | `GET /recommendations`, `POST /recommendations/{part}/explain` (LLM), `POST /decisions` |
 | BOM | `GET /bom`, `GET /bom.csv` |
@@ -86,6 +86,7 @@ For each candidate process in the part's material family, the engine applies har
 - **Units:** millimetres, degrees, GBP.
 - **CAD:** one body per part. A part's `cad_key` equals the generator's body name. Every regeneration creates a new immutable `CadModel` version under `data/projects/<id>/cad/v<n>/`.
 - **Revisions:** an immutable JSON snapshot (requirements, parameters, parts, decisions, recommendations, CAD version and its file paths). No branching.
+- **External quotes:** real supplier quotes and DFM feedback (`ExternalQuote`) are for the user to review against the part's estimated unit-cost range. They never change the rules engine, seed data or part fields automatically. Seed data is updated by hand. The comparison doesn't convert currencies. The quote pack includes only manufactured parts; bought-in parts and hardware are listed in its README.
 - **Decisions:** `EngineeringDecision.status` is one of proposed / accepted / rejected / edited.
 - Tests live in `backend/tests`. Add tests with every rules, CAD, model or export change.
 - Commit after each working vertical slice.
