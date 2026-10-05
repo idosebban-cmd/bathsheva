@@ -3,6 +3,9 @@
 Milestone 1 uses: Project, ReferenceImage, Part, CadModel, CadOutput,
 EngineeringDecision, Revision.
 
+Costing: CostItem holds editable bought-in / assembly / packaging lines; all
+rates live in seed/cost/*.yaml.
+
 Quotes: ExternalQuote records real supplier quotes / DFM feedback per part
 for manual comparison. They never feed the rules engine automatically.
 
@@ -203,6 +206,30 @@ class ExternalQuote(Base):
     attachment_path: Mapped[str | None] = mapped_column(String(500), nullable=True)
     attachment_filename: Mapped[str | None] = mapped_column(String(300), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class CostItem(Base):
+    """Editable product-level cost line: bought-in component, assembly labour or packaging."""
+
+    __tablename__ = "cost_items"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id", ondelete="CASCADE"))
+    kind: Mapped[str] = mapped_column(String(20))  # bought_in | assembly | packaging | other
+    name: Mapped[str] = mapped_column(String(200))
+    quantity: Mapped[float] = mapped_column(Float, default=1.0)
+    unit: Mapped[str] = mapped_column(String(10), default="pcs")  # pcs | min
+    # GBP per unit. Null for minute-based items: they use the seeded labour rate.
+    unit_cost_low: Mapped[float | None] = mapped_column(Float, nullable=True)
+    unit_cost_high: Mapped[float | None] = mapped_column(Float, nullable=True)
+    price_key: Mapped[str | None] = mapped_column(String(50), nullable=True)  # seed/cost/bought_in.yaml key
+    source: Mapped[str] = mapped_column(String(300), default="model-generated")
+    confidence: Mapped[str] = mapped_column(String(10), default="low")
+    verified: Mapped[bool] = mapped_column(Boolean, default=False)
+    notes: Mapped[str] = mapped_column(Text, default="")
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
 
 # ---------------------------------------------------------------------------

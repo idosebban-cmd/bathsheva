@@ -15,6 +15,7 @@ from app.api.deps import get_project
 from app.config import settings
 from app.db import get_session
 from app.models import ExternalQuote, Part, Project, Revision
+from app.services.costing import build_inputs, model_part_estimate, reference_quantity
 from app.services.quotes import QuotePackError, build_quote_pack, estimate_for, quote_dict
 
 router = APIRouter(prefix="/api/projects/{project_id}", tags=["quotes"])
@@ -33,10 +34,22 @@ def _revision_numbers(project: Project) -> dict[int, int]:
     return {r.id: r.number for r in project.revisions}
 
 
+def _model_estimator(project: Project, part: Part, session: Session):
+    """Cost-model estimate for this part at a given piece quantity (None if the model can't cost it)."""
+    if part.cost_low is not None or part.cost_high is not None:
+        return None  # manual values take priority; skip building the model
+    inputs, _ = build_inputs(session, project)
+    if not any(p.part_id == part.id for p in inputs.parts):
+        return None
+    return lambda qty: model_part_estimate(inputs, part, qty)
+
+
 @router.get("/parts/{part_id}/quotes")
 def list_quotes(part_id: int, project: Project = Depends(get_project), session: Session = Depends(get_session)):
     part = _part(project, part_id, session)
-    estimate = estimate_for(part)
+    model = _model_estimator(project, part, session)
+    ref_q, _ = reference_quantity(project)
+    estimate = estimate_for(part, model, ref_q * part.quantity)
     revs = _revision_numbers(project)
     quotes = session.scalars(
         select(ExternalQuote).where(ExternalQuote.part_id == part.id).order_by(ExternalQuote.quote_date.desc(), ExternalQuote.id.desc())
@@ -44,7 +57,9 @@ def list_quotes(part_id: int, project: Project = Depends(get_project), session: 
     return {
         "part_id": part.id,
         "estimate": estimate,
-        "quotes": [quote_dict(q, estimate, revs.get(q.revision_id)) for q in quotes],
+        # Model estimates depend on quantity (setup and tooling are shared), so each quote is
+        # compared with the model at that quote's quantity.
+        "quotes": [quote_dict(q, estimate_for(part, model, q.quantity), revs.get(q.revision_id)) for q in quotes],
         "note": "Quotes are for your review only. They do not change the rules engine or seed data.",
     }
 
@@ -102,7 +117,8 @@ def add_quote(
         quote.attachment_filename = attachment.filename
     session.add(quote)
     session.commit()
-    return quote_dict(quote, estimate_for(part), _revision_numbers(project).get(revision_id))
+    model = _model_estimator(project, part, session)
+    return quote_dict(quote, estimate_for(part, model, quantity), _revision_numbers(project).get(revision_id))
 
 
 @router.delete("/quotes/{quote_id}", status_code=204)

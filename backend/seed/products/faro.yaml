@@ -142,3 +142,20 @@ cad_parameters:
   mounting_hole_count: 3
   mounting_hole_diameter: 4.5
   mounting_hole_pcd: 110
+
+# Default cost line items (prices come from seed/cost/bought_in.yaml).
+# power: only include for that power type; undecided projects get the mains set.
+# quantity_param: take the quantity from a CAD parameter.
+cost_items:
+  - {kind: bought_in, price_key: led_module, quantity: 1}
+  - {kind: bought_in, price_key: led_driver_mains, quantity: 1, power: mains}
+  - {kind: bought_in, price_key: mains_cable_plug_switch, quantity: 1, power: mains}
+  - {kind: bought_in, price_key: battery_pack, quantity: 1, power: battery}
+  - {kind: bought_in, price_key: charge_control_board, quantity: 1, power: battery}
+  - {kind: bought_in, price_key: usb_c_cable, quantity: 1, power: battery}
+  - {kind: bought_in, price_key: screw_m4, quantity_param: mounting_hole_count}
+  - {kind: bought_in, price_key: screw_m3, quantity: 2}
+  - {kind: bought_in, price_key: silicone_gasket, quantity: 2}
+  - {kind: bought_in, price_key: cable_grommet, quantity: 1}
+  - {kind: packaging, price_key: retail_packaging, quantity: 1}
+  - {kind: assembly, name: "Final assembly, wiring and test", quantity: 20, unit: min, confidence: low}

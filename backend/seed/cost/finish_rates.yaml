@@ -1,0 +1,47 @@
+# Finishing cost per part = max(minimum charge, visible area x rate).
+# Visible area is estimated from the part's outer size (side + top), in m2.
+# PROVENANCE: rough UK small-batch figures written by an AI model. Get real quotes.
+
+finish_rates:
+  - finish: wet_lacquer
+    gbp_per_m2: {low: 40, high: 90}
+    min_per_part: {low: 4, high: 8}
+    source: model-generated
+    confidence: low
+    verified: false
+  - finish: powder_coat
+    gbp_per_m2: {low: 20, high: 45}
+    min_per_part: {low: 2, high: 5}
+    source: model-generated
+    confidence: low
+    verified: false
+  - finish: anodise
+    gbp_per_m2: {low: 25, high: 60}
+    min_per_part: {low: 3, high: 6}
+    source: model-generated
+    confidence: low
+    verified: false
+  - finish: polish
+    gbp_per_m2: {low: 60, high: 150}
+    min_per_part: {low: 6, high: 15}
+    source: model-generated
+    confidence: low
+    verified: false
+  - finish: brass_plating
+    gbp_per_m2: {low: 80, high: 200}
+    min_per_part: {low: 10, high: 25}
+    source: model-generated
+    confidence: low
+    verified: false
+  - finish: clear
+    gbp_per_m2: {low: 0, high: 0}
+    min_per_part: {low: 0, high: 0}
+    source: model-generated
+    confidence: medium
+    verified: false
+  - finish: frosted
+    gbp_per_m2: {low: 15, high: 40}
+    min_per_part: {low: 2, high: 5}
+    source: model-generated
+    confidence: low
+    verified: false

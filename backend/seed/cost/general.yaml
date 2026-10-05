@@ -1,0 +1,30 @@
+# General cost settings.
+# PROVENANCE: model-generated assumptions. Replace with your own.
+
+general:
+  - key: labour_gbp_per_hr
+    value: {low: 15, high: 25}
+    plain_language: Hourly cost of assembly and packing labour (UK, fully loaded).
+    source: model-generated
+    confidence: low
+    verified: false
+  - key: confidence_spread
+    value: {high: 0.0, medium: 0.10, low: 0.25}
+    plain_language: >-
+      How much each input's range is widened for its confidence: low-confidence
+      inputs are stretched 25% beyond their stated range, medium 10%, high not at all.
+    source: model-generated
+    confidence: medium
+    verified: false
+  - key: volume_table
+    value: [100, 500, 2000]
+    plain_language: Production quantities shown in the cost-by-volume table.
+    source: model-generated
+    confidence: high
+    verified: false
+  - key: sensitivity_step
+    value: 0.25
+    plain_language: Each assumption is moved up and down by this fraction to rank its effect on unit cost.
+    source: model-generated
+    confidence: high
+    verified: false
