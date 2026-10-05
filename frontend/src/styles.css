@@ -84,3 +84,9 @@ th { font-weight: 600; background: #faf8f5; position: sticky; top: 0; }
   .page { padding: 0.75rem; }
   .grid { grid-template-columns: 1fr; }
 }
+
+.split { display: grid; grid-template-columns: minmax(0, 3fr) minmax(320px, 2fr); gap: 1rem; align-items: start; }
+@media (max-width: 900px) { .split { grid-template-columns: 1fr; } }
+tr.clickable { cursor: pointer; }
+tr.clickable:hover td { background: #faf8f5; }
+tr.selected td { background: #eef4f4; }

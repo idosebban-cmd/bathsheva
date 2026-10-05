@@ -81,3 +81,26 @@ def test_image_upload(client, faro):
     assert client.get(f"/files/{img['path']}").content == png
     assert client.post(f"/api/projects/{pid}/images", files={"file": ("x.exe", b"x")}).status_code == 422
     assert client.delete(f"/api/projects/{pid}/images/{img['id']}").status_code == 204
+
+
+def test_parts_api_crud_and_hierarchy(client, faro):
+    pid = faro["id"]
+    parts = client.get(f"/api/projects/{pid}/parts").json()
+    assert len(parts) == 7
+    led = next(p for p in parts if p["cad_key"] == "led_module")
+
+    r = client.post(f"/api/projects/{pid}/parts", json={"name": "LED driver", "parent_id": led["id"], "material_category": "electrical"})
+    assert r.status_code == 201
+    child = r.json()
+    assert child["parent_id"] == led["id"]
+    assert child["sort_order"] == 7
+
+    # Cycles are rejected.
+    assert client.patch(f"/api/projects/{pid}/parts/{led['id']}", json={"parent_id": child["id"]}).status_code == 422
+
+    r = client.patch(f"/api/projects/{pid}/parts/{child['id']}", json={"quantity": 2, "supplier_notes": "off-the-shelf"})
+    assert r.json()["quantity"] == 2
+    assert client.patch(f"/api/projects/{pid}/parts/{child['id']}", json={"quantity": 0}).status_code == 422
+
+    assert client.delete(f"/api/projects/{pid}/parts/{child['id']}").status_code == 204
+    assert len(client.get(f"/api/projects/{pid}/parts").json()) == 7
