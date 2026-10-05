@@ -340,7 +340,7 @@ def cost_report(session: Session, project: Project) -> dict[str, Any]:
     notes = [
         "Process and material come from your decision on each part, or the rules engine's recommendation where none is set.",
         f"Geometry from {ctx['geometry_source']}.",
-        "Each range is the cheapest and dearest end of every input, widened for low-confidence inputs.",
+        "Ranges show the likely spread: each input varies within its range (widened for low confidence) and the effects are combined as independent.",
         "Setup and tooling are one-off costs spread over the quantity, so unit cost falls with volume.",
     ]
     return {
