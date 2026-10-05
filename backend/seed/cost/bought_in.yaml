@@ -69,3 +69,65 @@ bought_in:
     source: model-generated
     confidence: low
     verified: false
+
+  # --- Parts added by design changes / scenarios ---------------------------
+  - key: steel_weight_plate
+    name: Zinc-plated steel weight plate (~0.8 kg, laser cut)
+    gbp: {low: 1.5, high: 4.0}
+    source: model-generated
+    confidence: low
+    verified: false
+  - key: rivet_nut_m4
+    name: M4 rivet nut (threaded insert for thin sheet)
+    gbp: {low: 0.08, high: 0.25}
+    source: model-generated
+    confidence: medium
+    verified: false
+  - key: secondary_machining
+    name: Secondary machining of cast fitting faces
+    gbp: {low: 3.0, high: 8.0}
+    source: model-generated
+    confidence: low
+    verified: false
+  - key: lamp_tube_m10
+    name: M10x1 threaded lamp tube, cut to length
+    gbp: {low: 0.6, high: 2.0}
+    source: model-generated
+    confidence: medium
+    verified: false
+  - key: lamp_nut_set
+    name: Lamp nuts and washers (M10x1, set)
+    gbp: {low: 0.2, high: 0.6}
+    source: model-generated
+    confidence: medium
+    verified: false
+  - key: masked_stripe
+    name: Masked second-colour lacquer stripe on body
+    gbp: {low: 3.0, high: 7.0}
+    source: model-generated
+    confidence: low
+    verified: false
+  - key: spun_end_ring
+    name: Small spun aluminium end ring
+    gbp: {low: 2.0, high: 5.0}
+    source: model-generated
+    confidence: low
+    verified: false
+  - key: led_module_12v
+    name: Off-the-shelf 12 V LED module (CRI 90+)
+    gbp: {low: 2.0, high: 5.0}
+    source: model-generated
+    confidence: low
+    verified: false
+  - key: external_adapter_12v
+    name: Certified external 12 V adapter (UK/EU plugs)
+    gbp: {low: 3.5, high: 8.0}
+    source: model-generated
+    confidence: low
+    verified: false
+  - key: lv_cable_switch
+    name: Low-voltage cable with inline switch (fabric)
+    gbp: {low: 1.5, high: 4.0}
+    source: model-generated
+    confidence: low
+    verified: false

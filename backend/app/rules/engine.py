@@ -282,6 +282,7 @@ def recommend(rules: RuleSet, part: dict[str, Any], ctx: Context) -> dict[str, A
             "confidence": "low",
             "confidence_reason": "No matching rule data.",
             "alternatives": [],
+            "viable": [],
             "excluded": excluded,
             "open_questions": questions or ["What is this part made from, and how?"],
             "risks": [],
@@ -446,6 +447,12 @@ def recommend(rules: RuleSet, part: dict[str, Any], ctx: Context) -> dict[str, A
         "confidence": level,
         "confidence_reason": "; ".join(why).capitalize() + ".",
         "alternatives": alternatives,
+        # Every process that passed the hard exclusions, best first (for route costing).
+        "viable": [
+            {"process_key": v.process.key, "process_name": v.process.name, "material_key": v.material.key,
+             "material_name": v.material.name, "score": round(v.score, 2)}
+            for v in scored if v.material is not None
+        ],
         "excluded": excluded,
         "volume_sensitivity": sensitivity,
         "open_questions": list(dict.fromkeys(questions)),

@@ -9,14 +9,12 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from app.cad import export, faro
+from app.costing.assemble import CostConfig, SnapItem, SnapPart, Snapshot, assemble
 from app.costing.data import CostData, load_cost_data
 from app.costing.model import (
     CATEGORY_ORDER,
     Assumption,
     CostInputs,
-    ItemSpec,
-    PartGeometry,
-    PartSpec,
     breakdown,
     part_quantities,
     part_unit_range,
@@ -26,7 +24,7 @@ from app.costing.model import (
 )
 from app.models import CostItem, Part, Project
 from app.rules.data import RuleSet, load_rules
-from app.rules.match import match_finishes, match_material, match_process
+from app.rules.match import match_material, match_process
 from app.services.cad import current_parameters, latest_model
 from app.services.recommendations import project_recommendations
 from app.services.templates import load_template
@@ -112,115 +110,70 @@ def reset_items(session: Session, project: Project) -> list[CostItem]:
 # Building model inputs
 # ---------------------------------------------------------------------------
 
+# Parameters that stay fixed when the lamp is scaled to a new height.
+UNSCALED_PARAMS = {"wall_thickness", "lantern_wall_thickness", "cable_hole_diameter", "mounting_hole_diameter",
+                   "mounting_hole_count", "band_position"}
+
+
+def scaled_parameters(params: dict[str, Any], height_mm: float) -> dict[str, Any]:
+    """Scale every linear dimension with overall height; wall thicknesses and hole sizes stay put."""
+    f = height_mm / float(params["overall_height"])
+    out = {}
+    for k, v in params.items():
+        if k in UNSCALED_PARAMS:
+            out[k] = v
+        else:
+            out[k] = round(float(v) * f, 2)
+    out["overall_height"] = height_mm
+    return out
+
 
 def _effective(part: Part, rec: dict[str, Any], rules: RuleSet) -> tuple[str | None, str | None, str]:
     r = rec.get("recommendation") or {}
     proc = match_process(rules, part.process) if part.process else None
     mat = match_material(rules, part.material) if part.material else None
+    if part.material and not mat and part.material.strip().lower() in load_cost_data().material_prices:
+        mat = part.material.strip().lower()  # cost-only material such as brass
     basis = "decided" if (proc or mat) else "recommended"
     return proc or r.get("process_key"), mat or r.get("material_key"), basis
 
 
-def _add(assumptions: dict[str, Assumption], a: Assumption) -> None:
-    assumptions.setdefault(a.key, a)
-
-
-def build_inputs(session: Session, project: Project) -> tuple[CostInputs, dict[str, Any]]:
-    """Model inputs for a project plus context (skipped parts, geometry source, part details)."""
+def snapshot(session: Session, project: Project) -> Snapshot:
+    """Everything the cost model needs from the database, read once."""
     rules = load_rules()
-    cost = load_cost_data()
     recs = {r["part_id"]: r for r in project_recommendations(project)}
     geometry, geometry_source = part_geometry(project)
-    assumptions: dict[str, Assumption] = {}
-    parts: list[PartSpec] = []
-    skipped: list[dict[str, str]] = []
-    details: dict[int, dict[str, Any]] = {}
-
-    labour = cost.general["labour_gbp_per_hr"]
-    _add(assumptions, Assumption("labour_rate", "Assembly labour rate", "£/hr", labour.value["low"], labour.value["high"],
-                                 labour.confidence, labour.verified, labour.source, "Labour"))
-
+    params = current_parameters(project) if project.template else {}
+    parts = []
     for part in project.parts:
-        proc_key, mat_key, basis = _effective(part, recs.get(part.id, {}), rules)
-        if proc_key == "bought_in" or part.material_category in ("electrical", "bought_in"):
-            skipped.append({"name": part.name, "reason": "Bought-in: costed as a line item below, not from CAD."})
-            continue
-        geo = geometry.get(part.cad_key or "")
-        if not geo:
-            skipped.append({"name": part.name, "reason": "No CAD geometry for this part."})
-            continue
-        if proc_key not in cost.process_rates:
-            skipped.append({"name": part.name, "reason": f"No cost rates for process '{part.process or proc_key}'."})
-            continue
-        if mat_key not in cost.material_prices or mat_key not in rules.materials:
-            skipped.append({"name": part.name, "reason": f"No price for material '{part.material or mat_key}'."})
-            continue
-
-        proc_rule, mat_rule = rules.processes[proc_key], rules.materials[mat_key]
-        rate, price = cost.process_rates[proc_key], cost.material_prices[mat_key]
-        finishes = [f for f in match_finishes(rules, part.finish) if f in cost.finish_rates]
-        finish_key = finishes[0] if finishes else None
-        is_cnc = rate.min_per_cm3_removed is not None
-        band = rules.tooling_cost[proc_rule.tooling_cost]
-
-        spec = PartSpec(
-            part_id=part.id, name=part.name, quantity=part.quantity, process_key=proc_key, process_name=proc_rule.name,
-            material_key=mat_key, material_name=mat_rule.name, density_g_cm3=mat_rule.density_g_cm3 or 2.7,
-            geometry=PartGeometry(geo["volume_mm3"], tuple(geo["size_mm"]), "axisymmetric" in (part.traits or [])),
-            finish_key=finish_key, finish_name=cost_finish_name(rules, finish_key), basis=basis,
-            cnc_allowance_mm=rate.stock_allowance_mm if is_cnc else None, tooling_band=proc_rule.tooling_cost,
-        )
-        parts.append(spec)
-        details[part.id] = {"finishes_matched": finishes, "form": price.form}
-        k = CostInputs(assumptions={}).keys_for_part(spec)
-        prov = dict(confidence=rate.confidence, verified=rate.verified, source=rate.source)
-        _add(assumptions, Assumption(k["price"], f"{mat_rule.name} price", "£/kg", price.gbp_per_kg.low,
-                                     price.gbp_per_kg.high, price.confidence, price.verified, price.source, "Material prices"))
-        _add(assumptions, Assumption(k["rate"], f"{proc_rule.name} machine rate", "£/hr", rate.machine_gbp_per_hr.low,
-                                     rate.machine_gbp_per_hr.high, group="Machine rates", **prov))
-        _add(assumptions, Assumption(k["setup"], f"{proc_rule.name} setup time per batch", "hours", rate.setup_hours.low,
-                                     rate.setup_hours.high, group="Setup", **prov))
-        _add(assumptions, Assumption(k["cycle"], f"{proc_rule.name} handling time per part", "min", rate.cycle_min.low,
-                                     rate.cycle_min.high, group="Cycle times", **prov))
-        _add(assumptions, Assumption(k["cycle_kg"], f"{proc_rule.name} extra time per kg", "min/kg",
-                                     rate.cycle_min_per_kg.low, rate.cycle_min_per_kg.high, group="Cycle times", **prov))
-        _add(assumptions, Assumption(k["util"], f"{proc_rule.name} material bought per kg of part", "×",
-                                     rate.material_utilisation.low, rate.material_utilisation.high, group="Scrap / yield", **prov))
-        if is_cnc:
-            _add(assumptions, Assumption(k["removal"], f"{proc_rule.name} time per cm³ cut away", "min/cm³",
-                                         rate.min_per_cm3_removed.low, rate.min_per_cm3_removed.high, group="Cycle times", **prov))
-        if finish_key:
-            fr = cost.finish_rates[finish_key]
-            fprov = dict(confidence=fr.confidence, verified=fr.verified, source=fr.source)
-            fname = rules.finishes[finish_key].name
-            _add(assumptions, Assumption(k["finish_m2"], f"{fname} cost per m²", "£/m²", fr.gbp_per_m2.low, fr.gbp_per_m2.high,
-                                         group="Finishing", **fprov))
-            _add(assumptions, Assumption(k["finish_min"], f"{fname} minimum charge per part", "£", fr.min_per_part.low,
-                                         fr.min_per_part.high, group="Finishing", **fprov))
-        _add(assumptions, Assumption(k["tooling"], f"Tooling for {part.name.lower()} ({proc_rule.name.lower()})", "£",
-                                     band.gbp_min, band.gbp_max, band.confidence, band.verified, band.source, "Tooling"))
-
-    items: list[ItemSpec] = []
+        rec = recs.get(part.id, {})
+        proc, mat, basis = _effective(part, rec, rules)
+        derived = faro.derived_traits(part.cad_key, params) if project.template == "faro" and part.cad_key else []
+        parts.append(SnapPart(
+            part_id=part.id, cad_key=part.cad_key, name=part.name, quantity=part.quantity,
+            material_category=part.material_category, traits=list(part.traits or []), derived_traits=derived,
+            finish_text=part.finish, process_key=proc, material_key=mat, basis=basis, viable=rec.get("viable", []),
+        ))
     db_items = session.query(CostItem).filter(CostItem.project_id == project.id).order_by(CostItem.sort_order, CostItem.id).all()
-    for it in db_items:
-        prov = dict(confidence=it.confidence, verified=it.verified, source=it.source)
-        if it.unit == "min" and it.unit_cost_low is None:
-            cost_key = "labour_rate"
-            qty_key = f"item_qty:{it.id}"
-            _add(assumptions, Assumption(qty_key, f"{it.name} time", "min", it.quantity, it.quantity, group="Labour", **prov))
-        else:
-            cost_key = f"item:{it.id}"
-            qty_key = None
-            low = it.unit_cost_low if it.unit_cost_low is not None else it.unit_cost_high or 0.0
-            high = it.unit_cost_high if it.unit_cost_high is not None else low
-            group = {"packaging": "Packaging", "assembly": "Labour"}.get(it.kind, "Bought-in components")
-            _add(assumptions, Assumption(cost_key, f"{it.name} price" if it.unit == "pcs" else f"{it.name} rate",
-                                         "£" if it.unit == "pcs" else "£/min", min(low, high), max(low, high), group=group, **prov))
-        items.append(ItemSpec(it.id, it.kind, it.name, it.quantity, it.unit, cost_key, qty_key))
+    items = [SnapItem(it.id, it.kind, it.name, it.quantity, it.unit, it.unit_cost_low, it.unit_cost_high, it.price_key,
+                      it.source, it.confidence, it.verified) for it in db_items]
 
-    spread = cost.value("confidence_spread")
-    inputs = CostInputs(assumptions=assumptions, parts=parts, items=items, spread=spread)
-    return inputs, {"skipped": skipped, "geometry_source": geometry_source, "details": details, "db_items": db_items}
+    def for_height(h: float) -> dict[str, Any]:
+        if project.template != "faro" or not params:
+            return {}
+        return _geometry_from_params(json.dumps(scaled_parameters(params, h), sort_keys=True))
+
+    return Snapshot(parts=parts, items=items, params=params, geometry=geometry, geometry_source=geometry_source,
+                    geometry_for_height=for_height)
+
+
+def build_inputs(session: Session, project: Project, config: CostConfig | None = None,
+                 snap: Snapshot | None = None) -> tuple[CostInputs, dict[str, Any]]:
+    """Model inputs for a project (optionally under a configuration) plus context."""
+    snap = snap or snapshot(session, project)
+    inputs, ctx = assemble(snap, config or CostConfig(), load_rules(), load_cost_data())
+    ctx["db_items"] = snap.items
+    return inputs, ctx
 
 
 def cost_finish_name(rules: RuleSet, key: str | None) -> str | None:
@@ -268,7 +221,15 @@ def explain_line(line: dict[str, Any], inputs: CostInputs, ctx: dict[str, Any], 
                 return f"No dedicated tooling needed for {p.process_name.lower()}."
             return (f"One-off {p.process_name.lower()} tooling ({_money(band)}) spread across {quantity:,.0f} units. "
                     "Falls quickly as volume grows.")
+    if line["category"] == "freight_duty":
+        a = A[inputs.overhead_key]
+        return (f"Shipping to the UK and import duty from {ctx['region'].name}: {a.low:g}–{a.high:g}% of the "
+                "factory cost above.")
     it = next(i for i in inputs.items if i.item_id == line["item_id"])
+    extra = ctx.get("extras", {}).get(it.item_id)
+    if extra is not None and extra.origin:
+        qty = f"{it.quantity:g} × " if it.quantity != 1 else ""
+        return f"{qty}{it.name} at {_money(A[it.cost_key])} each, needed by the {extra.origin}."
     if it.unit == "min":
         minutes = A[it.qty_key].mid if it.qty_key else it.quantity
         return f"{minutes:.0f} min of {it.name.lower()} at {_money(A[it.cost_key])}/hr."

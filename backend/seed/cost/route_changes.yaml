@@ -1,0 +1,45 @@
+# Design changes a process route needs on top of the current CAD, and the extra
+# parts they add (costed from bought_in.yaml). A change applies when the route's
+# process is in `processes` and the part has any of `traits_any` (if given).
+# PROVENANCE: engineering judgement written by an AI model.
+
+route_changes:
+  - key: thin_shell_needs_mass
+    processes: [metal_spinning, deep_drawing, sheet_forming]
+    traits_any: [needs_mass]
+    design_change: >-
+      A formed sheet shell is light, so add a steel weight plate inside for
+      stability, and rivet nuts for the mounting screws (thin sheet can't be tapped).
+    items:
+      - {price_key: steel_weight_plate, quantity: 1}
+      - {price_key: rivet_nut_m4, quantity_param: mounting_hole_count}
+    safety: Stability (tip-over) is safety-relevant and must be verified on the finished lamp.
+    source: model-generated
+    confidence: medium
+    verified: false
+  - key: casting_draft
+    processes: [die_casting, sand_casting]
+    design_change: >-
+      Add 1–2° draft to all walls and cored bosses for the screws; the current CAD
+      has vertical walls.
+    items: []
+    source: model-generated
+    confidence: medium
+    verified: false
+  - key: sand_cast_machining
+    processes: [sand_casting]
+    traits_any: [cosmetic]
+    design_change: Machine the visible and fitting faces after casting, then fill before lacquer.
+    items:
+      - {price_key: secondary_machining, quantity: 1}
+    source: model-generated
+    confidence: low
+    verified: false
+  - key: thin_wall_inserts
+    processes: [metal_spinning, sheet_forming, deep_drawing]
+    traits_any: [mounting_holes]
+    design_change: Use rivet nuts or a clamped joint instead of tapped holes in the thin wall.
+    items: []
+    source: model-generated
+    confidence: medium
+    verified: false
