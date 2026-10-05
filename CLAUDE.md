@@ -38,7 +38,9 @@ backend/seed/
                      regions, route design changes, channel pricing
   products/faro.yaml Faro template: parts, requirements placeholders, CAD defaults
 backend/migrations/  Alembic env and versions/ (one file per schema change)
-scripts/             stress_cad.py (CAD soak test), check_run_shutdown.py (run.sh stop behaviour)
+scripts/             stress_cad.py (CAD soak test), check_run_shutdown.py (run.sh stop behaviour),
+                     cost_audit.py (regenerates docs/cost-assumptions-audit.md)
+docs/                Generated reports (cost-assumptions-audit.md)
 data/                Runtime: SQLite DB, uploads, CAD outputs (gitignored)
 ```
 
@@ -72,7 +74,7 @@ Other useful commands, run from `backend/`: `.venv/bin/alembic current`, `.venv/
 | CAD | `GET /cad`, `POST /cad/validate`, `POST /cad/generate`, `GET /cad/models/{v}/download.zip`; files under `/files/projects/...` |
 | Engineering | `GET /recommendations`, `POST /recommendations/{part}/explain` (LLM), `POST /decisions` |
 | BOM | `GET /bom`, `GET /bom.csv` |
-| Manufacturing | `GET /costs`; `GET/POST /cost-items`, `PATCH/DELETE /cost-items/{id}`, `POST /cost-items/reset` |
+| Manufacturing | `GET /costs`; `GET/POST /cost-items`, `PATCH/DELETE /cost-items/{id}`, `POST /cost-items/reset`; `GET /cost-audit` (+ `.md`, `.csv`) |
 | Cost-down | `GET/PUT /pricing`; `GET /routes`, `POST /parts/{part}/route`; `GET /scenarios`, `POST /scenarios/evaluate`; `GET /cost-down/summary`; `GET/POST /scenario-sets`, `DELETE /scenario-sets/{id}` |
 | DFM report | `GET /dfm`, `GET /dfm.md` |
 | Revisions | `GET/POST /revisions`, `GET /revisions/{n}` (no update or delete) |

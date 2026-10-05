@@ -217,3 +217,4 @@ tr.row-current td { background: #f7f5f1; }
 .route-part > summary { color: var(--ink); }
 .scenario-tags { display: flex; gap: 0.3rem; flex-wrap: wrap; align-items: center; }
 .scenario-result .status { font-size: 0.72rem; padding: 0.1rem 0.4rem; }
+.audit-table td:last-child { min-width: 18rem; }

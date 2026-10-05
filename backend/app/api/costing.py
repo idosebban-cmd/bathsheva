@@ -122,3 +122,30 @@ def reset(project: Project = Depends(get_project), session: Session = Depends(ge
     if not project.template:
         raise HTTPException(409, "Only template projects have default cost items")
     return reset_items(session, project)
+
+
+@router.get("/cost-audit")
+def get_cost_audit(project: Project = Depends(get_project), session: Session = Depends(get_session)):
+    from app.services.cost_audit import cost_audit
+
+    return cost_audit(session, project)
+
+
+@router.get("/cost-audit.md")
+def get_cost_audit_md(project: Project = Depends(get_project), session: Session = Depends(get_session)):
+    from fastapi.responses import Response
+
+    from app.services.cost_audit import audit_markdown, cost_audit
+
+    return Response(audit_markdown(cost_audit(session, project)), media_type="text/markdown",
+                    headers={"Content-Disposition": f'attachment; filename="{project.slug}-cost-assumptions-audit.md"'})
+
+
+@router.get("/cost-audit.csv")
+def get_cost_audit_csv(project: Project = Depends(get_project), session: Session = Depends(get_session)):
+    from fastapi.responses import Response
+
+    from app.services.cost_audit import audit_csv, cost_audit
+
+    return Response(audit_csv(cost_audit(session, project)), media_type="text/csv",
+                    headers={"Content-Disposition": f'attachment; filename="{project.slug}-cost-assumptions-audit.csv"'})
