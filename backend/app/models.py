@@ -3,6 +3,9 @@
 Milestone 1 uses: Project, ReferenceImage, Part, CadModel, CadOutput,
 EngineeringDecision, Revision.
 
+Quotes: ExternalQuote records real supplier quotes / DFM feedback per part
+for manual comparison. They never feed the rules engine automatically.
+
 Schema-only (later milestones, no API yet): Supplier, FactoryFeedback,
 FeedbackItem, KnowledgeEntry, ComplianceRecord.
 
@@ -13,10 +16,10 @@ Materials, processes and finishes are not tables: they live in the seed YAML
 from __future__ import annotations
 
 import enum
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from typing import Any
 
-from sqlalchemy import JSON, Boolean, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import JSON, Boolean, Date, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
@@ -174,6 +177,32 @@ class Revision(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
     project: Mapped[Project] = relationship(back_populates="revisions")
+
+
+class ExternalQuote(Base):
+    """A real quote or DFM response from a supplier or quoting service (e.g. Xometry) for one part."""
+
+    __tablename__ = "external_quotes"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id", ondelete="CASCADE"))
+    part_id: Mapped[int] = mapped_column(ForeignKey("parts.id", ondelete="CASCADE"))
+    # Design revision the quote was made against (optional).
+    revision_id: Mapped[int | None] = mapped_column(ForeignKey("revisions.id", ondelete="SET NULL"), nullable=True)
+    source: Mapped[str] = mapped_column(String(200))
+    quote_date: Mapped[date] = mapped_column(Date)
+    process: Mapped[str] = mapped_column(String(200), default="")
+    material: Mapped[str] = mapped_column(String(200), default="")
+    finish: Mapped[str] = mapped_column(String(200), default="")
+    quantity: Mapped[int] = mapped_column(Integer)
+    unit_price: Mapped[float] = mapped_column(Float)
+    currency: Mapped[str] = mapped_column(String(3), default="GBP")
+    lead_time_days: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    dfm_notes: Mapped[str] = mapped_column(Text, default="")
+    # Uploaded quote document, relative to the data directory.
+    attachment_path: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    attachment_filename: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
 
 # ---------------------------------------------------------------------------

@@ -7,7 +7,7 @@ from alembic.script import ScriptDirectory
 from sqlalchemy import create_engine, inspect, text
 
 from app.db import Base, init_db, new_session
-from app.migrate import alembic_config, upgrade_database
+from app.migrate import BASELINE_REVISION, alembic_config, upgrade_database
 from app.services.projects import create_project
 
 
@@ -81,7 +81,12 @@ def test_pre_migration_database_is_adopted(tmp_path):
     """A Milestone 1 database built with create_all (no alembic_version) keeps its data."""
     url = f"sqlite:///{tmp_path / 'legacy.db'}"
     legacy = create_engine(url)
-    Base.metadata.create_all(legacy)
+    # Exactly what Milestone 1's create_all built: the baseline schema, no alembic_version.
+    cfg = alembic_config(url)
+    with legacy.begin() as conn:
+        cfg.attributes["connection"] = conn
+        command.upgrade(cfg, BASELINE_REVISION)
+        conn.execute(text("drop table alembic_version"))
     with legacy.begin() as conn:
         conn.execute(text(
             "insert into projects (name, slug, description, template, requirements, assumed_fields, created_at, updated_at) "
@@ -108,3 +113,45 @@ def test_downgrade_and_upgrade_round_trip(tmp_path):
     upgrade_database(engine, url)
     assert _current(engine) == _head()
     assert "projects" in inspect(engine).get_table_names()
+
+
+def test_external_quotes_migration_preserves_data(tmp_path):
+    """Upgrading a populated 0001 database to 0002 adds external_quotes and keeps existing rows."""
+    url = f"sqlite:///{tmp_path / 'q.db'}"
+    engine = create_engine(url)
+    cfg = alembic_config(url)
+    with engine.begin() as conn:
+        cfg.attributes["connection"] = conn
+        command.upgrade(cfg, "0001")
+        conn.execute(text(
+            "insert into projects (id, name, slug, description, template, requirements, assumed_fields, created_at, updated_at) "
+            "values (1, 'Faro', 'faro', '', 'faro', '{}', '[]', '2026-01-01', '2026-01-01')"
+        ))
+        conn.execute(text(
+            "insert into parts (id, project_id, name, function, quantity, material_category, material, process, finish, "
+            "traits, dimensions, tolerances, supplier_notes, open_questions, sort_order) "
+            "values (1, 1, 'Base', '', 1, 'aluminium', '', '', '', '[]', '', '', '', '[]', 0)"
+        ))
+    assert "external_quotes" not in inspect(engine).get_table_names()
+
+    with engine.begin() as conn:
+        cfg.attributes["connection"] = conn
+        command.upgrade(cfg, "0002")
+    assert "external_quotes" in inspect(engine).get_table_names()
+    cols = {c["name"] for c in inspect(engine).get_columns("external_quotes")}
+    assert {"part_id", "revision_id", "source", "quote_date", "unit_price", "currency", "lead_time_days",
+            "dfm_notes", "attachment_path"} <= cols
+    with engine.begin() as conn:
+        assert conn.execute(text("select name from parts")).scalar() == "Base"
+        conn.execute(text(
+            "insert into external_quotes (project_id, part_id, source, quote_date, process, material, finish, quantity, "
+            "unit_price, currency, dfm_notes, created_at) values (1, 1, 'Xometry', '2026-10-01', '', '', '', 100, 12.5, "
+            "'GBP', '', '2026-10-01')"
+        ))
+
+    with engine.begin() as conn:
+        cfg.attributes["connection"] = conn
+        command.downgrade(cfg, "0001")
+    assert "external_quotes" not in inspect(engine).get_table_names()
+    with engine.connect() as conn:
+        assert conn.execute(text("select count(*) from parts")).scalar() == 1
