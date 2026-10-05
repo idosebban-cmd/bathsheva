@@ -30,8 +30,10 @@ backend/app/
   rules/             Rules engine: loads seed YAML, produces recommendations
   cad/               CadQuery generators, parameter validation, export
   ai/                LLM provider abstraction (anthropic | mock | none)
+  costing/           Cost model: data.py (seed loader), model.py (pure calculation)
 backend/seed/
-  rules/*.yaml       Engineering rules and cost data (editable)
+  rules/*.yaml       Engineering rules (editable)
+  cost/*.yaml        Cost rates: material £/kg, process rates, finishes, labour, bought-in prices
   products/faro.yaml Faro template: parts, requirements placeholders, CAD defaults
 backend/migrations/  Alembic env and versions/ (one file per schema change)
 scripts/             stress_cad.py (CAD soak test), check_run_shutdown.py (run.sh stop behaviour)
@@ -68,14 +70,21 @@ Other useful commands, run from `backend/`: `.venv/bin/alembic current`, `.venv/
 | CAD | `GET /cad`, `POST /cad/validate`, `POST /cad/generate`, `GET /cad/models/{v}/download.zip`; files under `/files/projects/...` |
 | Engineering | `GET /recommendations`, `POST /recommendations/{part}/explain` (LLM), `POST /decisions` |
 | BOM | `GET /bom`, `GET /bom.csv` |
+| Manufacturing | `GET /costs`; `GET/POST /cost-items`, `PATCH/DELETE /cost-items/{id}`, `POST /cost-items/reset` |
 | DFM report | `GET /dfm`, `GET /dfm.md` |
 | Revisions | `GET/POST /revisions`, `GET /revisions/{n}` (no update or delete) |
 
-Manufacturing and Factory Pack tabs, cost modelling, compliance and factory feedback are later milestones. Their tables exist in `models.py` but have no API.
+The Factory Pack tab, compliance and factory feedback are later milestones. Their tables exist in `models.py` but have no API.
 
 ## Rules engine in brief
 
 For each candidate process in the part's material family, the engine applies hard exclusions first: missing required traits, excluded traits, or a wall thickness the process can't make. It then scores what's left on trait fit, volume fit, tooling cost, cosmetic finish need and finish compatibility. The best material is the one most often paired with the process that suits the target finish. Confidence comes from the score margin. It drops to low when volume is assumed and the answer changes between 100, 1,000 and 10,000 units, and it is capped at medium while the data is unverified. Traits come from the part plus CAD-derived traits (`faro.derived_traits`, for example tapered vs constant_section).
+
+## Cost model in brief
+
+`app/costing/model.py` is pure. Each input is a named `Assumption` (low/high plus provenance). Per part: material is CAD volume × density × scrap factor (CNC uses bar stock), process is cycle minutes × machine rate, setup and tooling are divided by the quantity, and finishing is max(minimum charge, visible area × rate). Product-level lines (bought-in parts, assembly minutes × labour rate, packaging) are editable `CostItem` rows, seeded from `faro.yaml` `cost_items` for the current power type.
+
+Ranges: each input is widened by its confidence (`seed/cost/general.yaml` `confidence_spread`; verified inputs are not widened). The range is the midpoint ± the root-sum-square of each input's effect, and the all-worst-case envelope is also reported. Sensitivity moves each assumption ±25% and ranks by unit-cost swing. Process and material come from the part's decision, else the rules recommendation. When a part's manual cost fields are blank, quotes are compared with the model's estimate at the quote's quantity.
 
 ## Conventions
 

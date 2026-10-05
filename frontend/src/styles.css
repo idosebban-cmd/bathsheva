@@ -161,3 +161,30 @@ tr.changed td { background: var(--warn-bg); }
 .cmp-pct.cmp-below { color: var(--ok-ink); }
 .cmp-pct.cmp-above { color: var(--danger-ink); }
 .dfm-note { margin-top: 0.25rem; padding: 0.25rem 0.4rem; background: var(--warn-bg); color: var(--warn-ink); border-radius: 4px; }
+
+/* Cost charts: single series, validated slot-1 blue on the light surface. */
+.viz-root { --series-1: #2a78d6; --surface-1: #ffffff; --grid: #e7e4de; --text-primary: var(--ink); --text-secondary: var(--muted); position: relative; }
+.viz-table td { vertical-align: middle; }
+.viz-col { width: 40%; min-width: 160px; }
+tr.viz-ref td { background: #f4f8fd; }
+.range-track, .sens-track, .share-track { position: relative; height: 22px; border-left: 1px solid var(--grid); cursor: default; }
+.range-bar { position: absolute; top: 6px; height: 10px; background: var(--series-1); opacity: 0.85; border-radius: 4px; }
+.range-mid { position: absolute; top: 2px; width: 2px; height: 18px; margin-left: -1px; background: var(--text-primary); border-radius: 1px; box-shadow: 0 0 0 2px var(--surface-1); }
+.viz-axis { display: flex; justify-content: space-between; margin-left: 60%; }
+.sens-row { display: grid; grid-template-columns: minmax(200px, 1.3fr) minmax(160px, 1fr); gap: 0.6rem; align-items: center; padding: 0.35rem 0; border-bottom: 1px solid var(--line); }
+.sens-label { display: flex; gap: 0.5rem; align-items: flex-start; font-size: 0.88rem; }
+.sens-rank { flex: none; width: 1.4rem; height: 1.4rem; border-radius: 50%; background: var(--line); display: inline-flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; }
+.sens-track { display: flex; align-items: center; gap: 0.4rem; }
+.sens-bar, .share-bar { height: 12px; background: var(--series-1); border-radius: 0 4px 4px 0; min-width: 2px; }
+.sens-value, .share-value { font-size: 0.82rem; white-space: nowrap; color: var(--text-primary); }
+.share-track { display: flex; align-items: center; gap: 0.4rem; }
+.viz-tooltip { position: fixed; z-index: 50; pointer-events: none; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 0.45rem 0.6rem; font-size: 0.82rem; box-shadow: 0 4px 14px rgba(0,0,0,0.12); max-width: 320px; }
+.hero-cost { display: flex; align-items: baseline; gap: 0.75rem; flex-wrap: wrap; }
+.hero-number { font-size: 2rem; font-weight: 700; letter-spacing: -0.01em; }
+.part-cost { border-top: 1px solid var(--line); padding: 0.35rem 0; }
+.part-cost summary { color: var(--ink); display: flex; gap: 0.3rem; align-items: baseline; flex-wrap: wrap; }
+.part-cost-total { margin-left: auto; font-weight: 600; }
+.cost-lines td:first-child { width: 9rem; }
+.nowrap-cell { white-space: nowrap; }
+
+.manufacturing input.cell.wide { width: 16rem; }

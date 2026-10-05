@@ -368,3 +368,102 @@ export interface PartQuotes {
   quotes: ExternalQuote[];
   note: string;
 }
+
+export interface CostLine {
+  category: string;
+  part_id: number | null;
+  item_id: number | null;
+  label: string;
+  low: number;
+  mid: number;
+  high: number;
+  keys: string[];
+  explanation: string;
+  unverified: boolean;
+  confidence: string;
+}
+
+export interface CostRange {
+  quantity: number;
+  low: number;
+  mid: number;
+  high: number;
+  worst_low: number;
+  worst_high: number;
+  is_project_volume?: boolean;
+}
+
+export interface SensitivityRow {
+  key: string;
+  label: string;
+  group: string;
+  unit: string;
+  value: number;
+  confidence: string;
+  verified: boolean;
+  source: string;
+  cost_down: number;
+  cost_up: number;
+  swing: number;
+  swing_pct: number;
+}
+
+export interface CostAssumption {
+  key: string;
+  label: string;
+  group: string;
+  unit: string;
+  low: number;
+  high: number;
+  widened: [number, number];
+  confidence: string;
+  verified: boolean;
+  source: string;
+}
+
+export interface CostReport {
+  currency: string;
+  reference_quantity: number;
+  reference_basis: string;
+  unit_cost: CostRange;
+  volumes: CostRange[];
+  parts: {
+    part_id: number;
+    name: string;
+    quantity: number;
+    process: string;
+    material: string;
+    finish: string | null;
+    basis: string;
+    lines: CostLine[];
+    low: number;
+    mid: number;
+    high: number;
+  }[];
+  product_lines: CostLine[];
+  categories: Record<string, { low: number; mid: number; high: number }>;
+  sensitivity: { step: number; top: SensitivityRow[]; count: number };
+  skipped: { name: string; reason: string }[];
+  assumptions: CostAssumption[];
+  spread: Record<string, number>;
+  uses_unverified_data: boolean;
+  has_items: boolean;
+  can_load_defaults: boolean;
+  notes: string[];
+}
+
+export interface CostItem {
+  id: number;
+  kind: "bought_in" | "assembly" | "packaging" | "other";
+  name: string;
+  quantity: number;
+  unit: "pcs" | "min";
+  unit_cost_low: number | null;
+  unit_cost_high: number | null;
+  price_key: string | null;
+  source: string;
+  confidence: "low" | "medium" | "high";
+  verified: boolean;
+  notes: string;
+  sort_order: number;
+}

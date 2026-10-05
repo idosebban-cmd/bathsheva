@@ -47,8 +47,8 @@ def test_compare_against_estimate():
 def test_estimate_from_part_costs():
     assert estimate_for(Part(name="x", cost_low=None, cost_high=None)) is None
     assert estimate_for(Part(name="x", cost_low=5, cost_high=None))["high"] == 5
-    assert estimate_for(Part(name="x", cost_low=9, cost_high=4)) == {"low": 4, "high": 9, "currency": "GBP",
-                                                                     "basis": "Unit cost estimate on the part (Parts / BOM)"}
+    assert estimate_for(Part(name="x", cost_low=9, cost_high=4)) == {
+        "low": 4, "high": 9, "currency": "GBP", "basis": "Unit cost estimate on the part (Parts / BOM)", "source": "manual"}
 
 
 # --- API -----------------------------------------------------------------------

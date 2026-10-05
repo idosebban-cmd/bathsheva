@@ -1,0 +1,71 @@
+# Material purchase prices (GBP per kg) for the form each process buys
+# (sheet/disc for forming, bar for machining, ingot for casting, tube for clear parts).
+# PROVENANCE: rough UK small-batch prices written by an AI model. Get real quotes.
+
+material_prices:
+  - material: al_1050
+    form: sheet / spinning discs
+    gbp_per_kg: {low: 4.0, high: 6.5}
+    source: model-generated
+    confidence: low
+    verified: false
+  - material: al_3003
+    form: sheet / spinning discs
+    gbp_per_kg: {low: 4.0, high: 6.5}
+    source: model-generated
+    confidence: low
+    verified: false
+  - material: al_5052
+    form: sheet
+    gbp_per_kg: {low: 4.5, high: 7.0}
+    source: model-generated
+    confidence: low
+    verified: false
+  - material: al_6061
+    form: round bar
+    gbp_per_kg: {low: 5.0, high: 8.5}
+    source: model-generated
+    confidence: low
+    verified: false
+  - material: al_6063
+    form: extruded tube
+    gbp_per_kg: {low: 4.0, high: 6.5}
+    source: model-generated
+    confidence: low
+    verified: false
+  - material: al_a380
+    form: casting ingot
+    gbp_per_kg: {low: 2.5, high: 3.5}
+    source: model-generated
+    confidence: low
+    verified: false
+  - material: al_a356
+    form: casting ingot
+    gbp_per_kg: {low: 2.8, high: 4.0}
+    source: model-generated
+    confidence: low
+    verified: false
+  - material: pmma
+    form: cast / extruded tube
+    gbp_per_kg: {low: 8.0, high: 16.0}
+    source: model-generated
+    confidence: low
+    verified: false
+  - material: pc
+    form: extruded tube
+    gbp_per_kg: {low: 9.0, high: 18.0}
+    source: model-generated
+    confidence: low
+    verified: false
+  - material: borosilicate
+    form: drawn tube
+    gbp_per_kg: {low: 10.0, high: 25.0}
+    source: model-generated
+    confidence: low
+    verified: false
+  - material: soda_lime_glass
+    form: batch glass
+    gbp_per_kg: {low: 3.0, high: 8.0}
+    source: model-generated
+    confidence: low
+    verified: false

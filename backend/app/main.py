@@ -5,7 +5,7 @@ from __future__ import annotations
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
-from app.api import bom, cad, dfm, engineering, parts, projects, quotes, revisions
+from app.api import bom, cad, costing, dfm, engineering, parts, projects, quotes, revisions
 from app.config import settings
 from app.db import init_db
 
@@ -21,6 +21,7 @@ def create_app() -> FastAPI:
     app.include_router(dfm.router)
     app.include_router(revisions.router)
     app.include_router(quotes.router)
+    app.include_router(costing.router)
 
     @app.get("/api/health")
     def health():

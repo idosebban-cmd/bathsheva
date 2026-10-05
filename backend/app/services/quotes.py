@@ -10,7 +10,7 @@ import io
 import re
 import zipfile
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Callable
 
 from app.config import settings
 from app.models import ExternalQuote, Part, Project
@@ -20,14 +20,24 @@ from app.services.cad import latest_model
 ESTIMATE_CURRENCY = "GBP"
 
 
-def estimate_for(part: Part) -> dict[str, Any] | None:
-    """The workbench's unit cost estimate for a part (the Parts/BOM cost fields), if set."""
+def manual_estimate(part: Part) -> dict[str, Any] | None:
+    """The unit cost range typed on the part (Parts / BOM), if set."""
     if part.cost_low is None and part.cost_high is None:
         return None
     low = part.cost_low if part.cost_low is not None else part.cost_high
     high = part.cost_high if part.cost_high is not None else part.cost_low
     low, high = min(low, high), max(low, high)
-    return {"low": low, "high": high, "currency": ESTIMATE_CURRENCY, "basis": "Unit cost estimate on the part (Parts / BOM)"}
+    return {"low": low, "high": high, "currency": ESTIMATE_CURRENCY,
+            "basis": "Unit cost estimate on the part (Parts / BOM)", "source": "manual"}
+
+
+def estimate_for(part: Part, model_estimate: Callable[[float], dict[str, Any] | None] | None = None,
+                 quantity: float | None = None) -> dict[str, Any] | None:
+    """Manual estimate if set (it always wins), else the cost model's range at `quantity` pieces."""
+    manual = manual_estimate(part)
+    if manual is not None or model_estimate is None or quantity is None:
+        return manual
+    return model_estimate(quantity)
 
 
 def compare(estimate: dict[str, Any] | None, unit_price: float, currency: str) -> dict[str, Any]:

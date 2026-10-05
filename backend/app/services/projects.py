@@ -48,5 +48,10 @@ def create_project(session: Session, name: str, description: str = "", template:
     )
     session.add(project)
     session.commit()
+    if template:
+        from app.services.costing import default_items
+
+        session.add_all(default_items(project))
+        session.commit()
     session.refresh(project)
     return project
