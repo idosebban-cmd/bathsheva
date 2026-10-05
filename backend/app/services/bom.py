@@ -1,0 +1,203 @@
+"""Bill of materials from parts, latest CAD and joints."""
+
+from __future__ import annotations
+
+import csv
+import io
+from typing import Any
+
+from app.models import Project
+from app.rules.data import load_rules
+from app.services.cad import current_parameters, latest_model
+from app.services.recommendations import project_recommendations
+from app.services.templates import load_template
+
+CSV_COLUMNS = [
+    ("item", "Item"),
+    ("level", "Level"),
+    ("name", "Part"),
+    ("quantity", "Qty"),
+    ("material", "Material"),
+    ("process", "Process"),
+    ("finish", "Finish"),
+    ("size_mm", "Size (mm)"),
+    ("status", "Status"),
+    ("cost_low", "Unit cost low (GBP)"),
+    ("cost_high", "Unit cost high (GBP)"),
+    ("supplier_notes", "Supplier notes"),
+    ("flags", "Flags"),
+]
+
+
+def _tree(parts):
+    ids = {p.id for p in parts}
+    children: dict[int | None, list] = {}
+    for p in parts:
+        key = p.parent_id if p.parent_id in ids else None
+        children.setdefault(key, []).append(p)
+    out = []
+
+    def walk(parent, depth):
+        for p in sorted(children.get(parent, []), key=lambda x: x.sort_order):
+            out.append((p, depth))
+            walk(p.id, depth + 1)
+
+    walk(None, 0)
+    return out
+
+
+def _screw_size(hole_mm: float, table: dict[str, float]) -> str | None:
+    fits = [(size, d) for size, d in table.items() if d <= hole_mm + 1e-6]
+    return max(fits, key=lambda x: x[1])[0] if fits else None
+
+
+def _hardware(project: Project, params: dict[str, Any]) -> list[dict[str, Any]]:
+    """Derived hardware lines from the template joints. Quantities may be assumptions."""
+    if not project.template or not params:
+        return []
+    rules = load_rules()
+    joints = load_template(project.template).get("joints", [])
+    rows = []
+    clearance = rules.plan("metric_clearance_holes_mm")
+    for j in joints:
+        a, b = j["between"]
+        if j["method"] == "machine_screw_tapped" and {a, b} == {"base", "main_body"}:
+            size = _screw_size(float(params["mounting_hole_diameter"]), clearance) or "M?"
+            rows.append({
+                "name": f"{size} machine screw, base to body",
+                "quantity": int(params["mounting_hole_count"]),
+                "material": "Stainless steel (A2)",
+                "notes": f"Size inferred from {params['mounting_hole_diameter']} mm clearance hole; length TBD.",
+                "assumption": True,
+            })
+        elif j["method"] == "machine_screw_tapped" and "led_module" in (a, b):
+            rows.append({
+                "name": "M3 machine screw, LED bracket",
+                "quantity": int(rules.plan("led_mount_screw_count")),
+                "material": "Stainless steel (A2)",
+                "notes": "Quantity and size assumed until the LED module is chosen.",
+                "assumption": True,
+            })
+        elif j["method"] == "clamp_with_gasket":
+            rows.append({
+                "name": f"Silicone gasket ring, {a.replace('_', ' ')} / {b.replace('_', ' ')}",
+                "quantity": 1,
+                "material": "Silicone",
+                "notes": f"Sized for {params['lantern_diameter']} mm lantern; section TBD.",
+                "assumption": True,
+            })
+        elif j["method"] == "strain_relief_grommet":
+            rows.append({
+                "name": "Cable strain-relief grommet",
+                "quantity": 1,
+                "material": "Nylon / TPE (rated)",
+                "notes": f"For {params['cable_hole_diameter']} mm hole; must suit the chosen cable. Safety-critical.",
+                "assumption": True,
+                "safety": True,
+            })
+    return rows
+
+
+def build_bom(project: Project) -> dict[str, Any]:
+    recs = {r["part_id"]: r for r in project_recommendations(project)}
+    latest = latest_model(project)
+    info = latest.part_info if latest else {}
+    params = current_parameters(project) if project.template else {}
+
+    rows: list[dict[str, Any]] = []
+    n = 0
+    for part, depth in _tree(project.parts):
+        n += 1
+        rec = recs.get(part.id) or {}
+        r = rec.get("recommendation") or {}
+        decided = bool(part.material or part.process)
+        size = info.get(part.cad_key or "", {}).get("size_mm")
+        flags = []
+        if not decided and rec.get("uses_unverified_data"):
+            flags.append("unverified rule data")
+        if rec.get("safety_flags"):
+            flags.append("safety: verify")
+        if part.cost_low is None or part.cost_high is None:
+            flags.append("cost TBD")
+        rows.append({
+            "item": str(n),
+            "level": depth,
+            "part_id": part.id,
+            "cad_key": part.cad_key,
+            "name": part.name,
+            "quantity": part.quantity,
+            "material": part.material or r.get("material_name", ""),
+            "process": part.process or r.get("process_name", ""),
+            "finish": part.finish,
+            "size_mm": " x ".join(f"{v:.1f}" for v in size) if size else "",
+            "status": "decided" if decided else ("recommended" if r else "TBD"),
+            "cost_low": part.cost_low,
+            "cost_high": part.cost_high,
+            "supplier_notes": part.supplier_notes,
+            "flags": flags,
+            "derived": False,
+        })
+
+    hw = _hardware(project, params)
+    for i, h in enumerate(hw, start=1):
+        rows.append({
+            "item": f"H{i}",
+            "level": 0,
+            "part_id": None,
+            "cad_key": None,
+            "name": h["name"],
+            "quantity": h["quantity"],
+            "material": h["material"],
+            "process": "Bought-in",
+            "finish": "",
+            "size_mm": "",
+            "status": "derived",
+            "cost_low": None,
+            "cost_high": None,
+            "supplier_notes": h["notes"],
+            "flags": (["assumption"] if h.get("assumption") else []) + (["safety: verify"] if h.get("safety") else []) + ["cost TBD"],
+            "derived": True,
+        })
+
+    priced = [r for r in rows if r["cost_low"] is not None and r["cost_high"] is not None]
+    total = {
+        "low": round(sum(r["cost_low"] * r["quantity"] for r in priced), 2),
+        "high": round(sum(r["cost_high"] * r["quantity"] for r in priced), 2),
+        "priced_items": len(priced),
+        "total_items": len(rows),
+        "complete": len(priced) == len(rows),
+    }
+    return {
+        "rows": rows,
+        "total": total,
+        "cad_version": latest.version if latest else None,
+        "notes": [
+            "Material/process show your decision where set, otherwise the rules-engine recommendation (status 'recommended').",
+            "Hardware lines (H…) are derived from the joint design; quantities and sizes are assumptions.",
+            "Sizes come from the latest generated CAD (bounding box)." if latest else "Generate CAD to fill in part sizes.",
+        ],
+    }
+
+
+def bom_csv(project: Project) -> str:
+    bom = build_bom(project)
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    w.writerow([label for _, label in CSV_COLUMNS])
+    for row in bom["rows"]:
+        out = []
+        for key, _ in CSV_COLUMNS:
+            v = row[key]
+            if key == "name":
+                v = "  " * row["level"] + v
+            elif key == "flags":
+                v = "; ".join(v)
+            elif v is None:
+                v = "TBD" if key.startswith("cost") else ""
+            out.append(v)
+        w.writerow(out)
+    t = bom["total"]
+    w.writerow([])
+    w.writerow(["", "", "Total (priced items only)" if not t["complete"] else "Total", "", "", "", "", "", "",
+                t["low"], t["high"], f"{t['priced_items']}/{t['total_items']} items priced", ""])
+    return buf.getvalue()

@@ -1,0 +1,68 @@
+# Surface finishes. `keywords` map free-text part finishes to a finish key.
+# PROVENANCE: general knowledge written by an AI model. Not authoritative.
+
+finishes:
+  - key: wet_lacquer
+    name: Wet paint / lacquer
+    keywords: [lacquer, paint, painted, coloured, colored]
+    plain_language: >-
+      Sprayed colour coat plus clear lacquer. Gives rich, glossy colours on
+      aluminium; needs a smooth, well-prepared surface because every mark shows
+      through gloss.
+    min_process_finish: good
+    notes: Needs pretreatment (etch primer or conversion coat) for adhesion on aluminium.
+    source: model-generated
+    confidence: medium
+    verified: false
+  - key: powder_coat
+    name: Powder coating
+    keywords: [powder]
+    plain_language: Tough baked-on coating; very durable, slightly thicker and less crisp than wet lacquer.
+    min_process_finish: fair
+    source: model-generated
+    confidence: medium
+    verified: false
+  - key: anodise
+    name: Anodising
+    keywords: [anodise, anodize, anodised, anodized]
+    plain_language: Colour grown into the aluminium surface; very durable, metallic look. Works poorly on cast alloys.
+    min_process_finish: good
+    source: model-generated
+    confidence: medium
+    verified: false
+  - key: polish
+    name: Polished (clear coated)
+    keywords: [polish, polished]
+    plain_language: Polished bare metal under clear lacquer. Shows every defect and fingerprint.
+    min_process_finish: excellent
+    source: model-generated
+    confidence: medium
+    verified: false
+  - key: brass_plating
+    name: Brass plating on aluminium
+    keywords: [brass]
+    plain_language: >-
+      A brass-coloured metal plated onto aluminium. Needs special pretreatment
+      (zincate) and a good plater; solid brass or a brass-effect PVD coating
+      may be more reliable.
+    min_process_finish: good
+    notes: Plating adhesion on aluminium is a known risk; confirm with plater.
+    source: model-generated
+    confidence: low
+    verified: false
+  - key: clear
+    name: Clear (as moulded / polished)
+    keywords: [clear, transparent]
+    plain_language: Left clear; edges and surfaces polished.
+    min_process_finish: good
+    source: model-generated
+    confidence: medium
+    verified: false
+  - key: frosted
+    name: Frosted / diffused
+    keywords: [frost, frosted, diffuse, diffused, satin]
+    plain_language: Sand-blasted, etched or diffuser-grade material that softens the light and hides the LED.
+    min_process_finish: fair
+    source: model-generated
+    confidence: medium
+    verified: false

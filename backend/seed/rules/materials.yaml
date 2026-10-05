@@ -1,0 +1,167 @@
+# Materials: common aluminium alloys and transparent materials.
+# PROVENANCE: general knowledge written by an AI model. Not authoritative.
+#
+# processes       process keys this material is commonly used with, in order of preference
+# finish_compat   finish key -> good | fair | poor
+# max_service_temp_c  for polymers/glass near heat sources (approximate)
+
+materials:
+  - key: al_1050
+    name: Aluminium 1050A (H14)
+    category: aluminium
+    processes: [metal_spinning, deep_drawing]
+    plain_language: >-
+      Nearly pure aluminium: very soft and easy to form, so it is a favourite
+      for spinning. It dents more easily than stronger alloys.
+    finish_compat: {wet_lacquer: good, powder_coat: good, anodise: good, polish: good, brass_plating: fair}
+    density_g_cm3: 2.71
+    source: model-generated
+    confidence: medium
+    verified: false
+
+  - key: al_3003
+    name: Aluminium 3003 (H14)
+    category: aluminium
+    processes: [metal_spinning, deep_drawing, sheet_forming]
+    plain_language: >-
+      A common forming alloy, a little stronger than pure aluminium but still
+      easy to spin and draw.
+    finish_compat: {wet_lacquer: good, powder_coat: good, anodise: fair, polish: good, brass_plating: fair}
+    density_g_cm3: 2.73
+    source: model-generated
+    confidence: medium
+    verified: false
+
+  - key: al_5052
+    name: Aluminium 5052 (H32)
+    category: aluminium
+    processes: [sheet_forming, deep_drawing, metal_spinning]
+    plain_language: >-
+      A stronger sheet alloy with good corrosion resistance. Bends and welds
+      well; a good choice for rolled and welded parts.
+    finish_compat: {wet_lacquer: good, powder_coat: good, anodise: good, polish: fair, brass_plating: fair}
+    density_g_cm3: 2.68
+    source: model-generated
+    confidence: medium
+    verified: false
+
+  - key: al_6061
+    name: Aluminium 6061 (T6)
+    category: aluminium
+    processes: [cnc_machining, extrusion]
+    plain_language: >-
+      The standard alloy for machined parts. It machines cleanly, is widely
+      available and gives a good cosmetic finish. If production volume becomes
+      high, a cast alloy may be cheaper.
+    finish_compat: {wet_lacquer: good, powder_coat: good, anodise: good, polish: good, brass_plating: fair}
+    density_g_cm3: 2.70
+    source: model-generated
+    confidence: high
+    verified: false
+
+  - key: al_6063
+    name: Aluminium 6063 (T5/T6)
+    category: aluminium
+    processes: [extrusion, cnc_machining]
+    plain_language: >-
+      The usual alloy for extruded tubes and profiles. Very smooth surface and
+      anodises beautifully, though it is softer than 6061.
+    finish_compat: {wet_lacquer: good, powder_coat: good, anodise: good, polish: good, brass_plating: fair}
+    density_g_cm3: 2.70
+    source: model-generated
+    confidence: high
+    verified: false
+
+  - key: al_a380
+    name: Aluminium A380 / ADC12 (die-cast)
+    category: aluminium
+    processes: [die_casting]
+    plain_language: >-
+      The most common die-casting alloy. It flows well into moulds, but its
+      high silicon content means it anodises poorly; paint or lacquer is the
+      usual finish.
+    finish_compat: {wet_lacquer: good, powder_coat: good, anodise: poor, polish: fair, brass_plating: poor}
+    density_g_cm3: 2.74
+    source: model-generated
+    confidence: medium
+    verified: false
+
+  - key: al_a356
+    name: Aluminium A356 / LM25 (sand or gravity cast)
+    category: aluminium
+    processes: [sand_casting]
+    plain_language: >-
+      A casting alloy for sand and gravity moulds with good strength. It
+      needs machining and filling for a premium painted surface.
+    finish_compat: {wet_lacquer: fair, powder_coat: good, anodise: poor, polish: fair, brass_plating: poor}
+    density_g_cm3: 2.68
+    source: model-generated
+    confidence: medium
+    verified: false
+
+  - key: pmma
+    name: Acrylic (PMMA)
+    category: clear_polymer_or_glass
+    processes: [polymer_tube_cut, injection_moulding_clear, cnc_machining]
+    plain_language: >-
+      Very clear, glass-like plastic that resists UV yellowing. It scratches
+      and can crack under impact, and softens at relatively low temperatures,
+      so keep heat sources away from it.
+    finish_compat: {clear: good, frosted: good}
+    max_service_temp_c: 70
+    density_g_cm3: 1.18
+    source: model-generated
+    confidence: medium
+    verified: false
+
+  - key: pc
+    name: Polycarbonate (PC)
+    category: clear_polymer_or_glass
+    processes: [polymer_tube_cut, injection_moulding_clear, cnc_machining]
+    plain_language: >-
+      Very tough clear plastic that copes with more heat than acrylic. It
+      scratches more easily and needs UV-stabilised grades to avoid yellowing.
+    finish_compat: {clear: good, frosted: good}
+    max_service_temp_c: 115
+    density_g_cm3: 1.20
+    source: model-generated
+    confidence: medium
+    verified: false
+
+  - key: borosilicate
+    name: Borosilicate glass
+    category: clear_polymer_or_glass
+    processes: [glass_tube_cut, pressed_blown_glass]
+    plain_language: >-
+      Heat-resistant glass (like lab glassware). Feels premium and never
+      yellows, but it can break and is heavier than plastic.
+    finish_compat: {clear: good, frosted: good}
+    max_service_temp_c: 400
+    density_g_cm3: 2.23
+    is_glass: true
+    source: model-generated
+    confidence: medium
+    verified: false
+
+  - key: soda_lime_glass
+    name: Soda-lime glass
+    category: clear_polymer_or_glass
+    processes: [pressed_blown_glass]
+    plain_language: Ordinary glass; cheaper than borosilicate but less resistant to heat shock.
+    finish_compat: {clear: good, frosted: good}
+    max_service_temp_c: 150
+    density_g_cm3: 2.50
+    is_glass: true
+    source: model-generated
+    confidence: medium
+    verified: false
+
+  - key: certified_component
+    name: Certified bought-in component
+    category: electrical
+    processes: [bought_in]
+    plain_language: A standard part bought with datasheet and certification for the target markets.
+    finish_compat: {}
+    source: model-generated
+    confidence: high
+    verified: false

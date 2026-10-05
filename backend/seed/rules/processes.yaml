@@ -1,0 +1,304 @@
+# Manufacturing processes: geometry suitability, economic volume range,
+# tooling/unit cost category, finish quality, wall limits and trade-offs.
+#
+# PROVENANCE: values are general engineering knowledge written by an AI model.
+# They are typical ranges, not supplier data. Verify with manufacturers and set
+# `verified: true` (and a real `source`) only after checking.
+#
+# Fields:
+#   material_categories  which part families the process applies to
+#   requires_all         traits a part must have (else excluded)
+#   excludes             traits that rule the process out
+#   suits                traits that make the process a good fit (+1 each)
+#   poor_fit             traits that make it a worse fit (-1 each)
+#   volume               economic range in units (lifetime / per year order of magnitude)
+#   tooling_cost         key into tooling_cost.yaml
+#   unit_cost            low | medium | high (relative)
+#   finish_quality       poor | fair | good | excellent (as-produced cosmetic quality)
+#   wall_mm              practical wall thickness range
+
+processes:
+  - key: metal_spinning
+    name: Metal spinning
+    material_categories: [aluminium]
+    plain_language: >-
+      A flat aluminium disc is spun on a lathe and pressed over a shaped form.
+      Ideal for round, hollow, lamp-like shapes. Tooling is cheap (a wooden or
+      steel form), so it suits small and medium batches.
+    requires_all: [axisymmetric]
+    excludes: [non_axisymmetric, transparent, electrical]
+    suits: [thin_wall, domed, open_both_ends, closed_top, tapered]
+    poor_fit: [mounting_holes, side_hole, needs_mass]
+    volume: {min: 1, max: 5000}
+    tooling_cost: low
+    unit_cost: medium
+    finish_quality: good
+    wall_mm: {min: 0.5, max: 3.0, typical_min: 1.0, typical_max: 2.0}
+    when_to_prefer: Round hollow parts from prototypes up to a few thousand units.
+    risks:
+      - Faint spin lines can show through glossy lacquer; parts usually need sanding or polishing before finishing.
+      - Walls thin on steep tapers or deep shapes; ask the spinner what minimum wall they can hold.
+      - Trimmed edges are sharp and must be deburred or rolled.
+    source: model-generated
+    confidence: medium
+    verified: false
+
+  - key: cnc_machining
+    name: CNC machining
+    material_categories: [aluminium, clear_polymer_or_glass]
+    plain_language: >-
+      The part is cut from a solid block or bar by a computer-controlled
+      machine. Very accurate with an excellent finish and no tooling cost, but
+      each part is relatively expensive, especially if lots of material is
+      removed.
+    requires_all: []
+    excludes: [electrical]
+    suits: [ring, short, mounting_holes, side_hole, closed_top, needs_mass]
+    poor_fit: [open_both_ends, thin_wall, transparent]
+    volume: {min: 1, max: 500}
+    tooling_cost: none
+    unit_cost: high
+    finish_quality: excellent
+    wall_mm: {min: 1.0, max: 50.0, typical_min: 1.5, typical_max: 10.0}
+    when_to_prefer: Prototypes, small batches, short or chunky parts, or features needing accuracy.
+    risks:
+      - Tall thin-walled hollow parts waste most of the bar and can vibrate while cutting.
+      - Unit cost falls only slowly with volume.
+    source: model-generated
+    confidence: medium
+    verified: false
+
+  - key: sheet_forming
+    name: Rolled and seam-welded sheet
+    material_categories: [aluminium]
+    plain_language: >-
+      Flat sheet is rolled into a tube or cone and the seam is welded and
+      dressed. Low tooling cost, but the seam needs careful finishing to be
+      invisible under paint.
+    requires_all: []
+    excludes: [domed, closed_top, transparent, electrical]
+    suits: [open_both_ends, thin_wall, ring, axisymmetric, tapered]
+    poor_fit: [cosmetic]
+    volume: {min: 50, max: 10000}
+    tooling_cost: low
+    unit_cost: medium
+    finish_quality: fair
+    wall_mm: {min: 0.8, max: 3.0, typical_min: 1.0, typical_max: 2.0}
+    when_to_prefer: Tubes and cones in medium batches where a dressed seam is acceptable.
+    risks:
+      - The weld seam can show through a glossy finish.
+      - Welding heat can distort thin walls and affect roundness.
+    source: model-generated
+    confidence: low
+    verified: false
+
+  - key: deep_drawing
+    name: Deep drawing
+    material_categories: [aluminium]
+    plain_language: >-
+      Sheet is pressed into a die to form a cup or dome shape in one or more
+      strokes. Very cheap per part at high volume, but the press tools are
+      expensive.
+    requires_all: [axisymmetric]
+    excludes: [transparent, electrical]
+    suits: [closed_top, domed, thin_wall]
+    poor_fit: [open_both_ends, tapered]
+    volume: {min: 5000, max: 1000000}
+    tooling_cost: high
+    unit_cost: low
+    finish_quality: good
+    wall_mm: {min: 0.4, max: 3.0, typical_min: 0.8, typical_max: 2.0}
+    when_to_prefer: Cup or dome shapes at volumes of several thousand and up.
+    risks:
+      - Tall parts need several drawing stages, which adds tooling.
+      - Tooling cost only pays back at high volume.
+    source: model-generated
+    confidence: medium
+    verified: false
+
+  - key: die_casting
+    name: High-pressure die casting
+    material_categories: [aluminium]
+    plain_language: >-
+      Molten aluminium is injected into a steel mould. It can make complex
+      shapes with bosses and holes built in, and is cheap per part, but the
+      mould is very expensive and takes months to make.
+    requires_all: []
+    excludes: [transparent, electrical]
+    suits: [mounting_holes, side_hole, needs_mass, closed_top]
+    poor_fit: [thin_wall, open_both_ends]
+    volume: {min: 3000, max: 1000000}
+    tooling_cost: very_high
+    unit_cost: low
+    finish_quality: fair
+    wall_mm: {min: 1.5, max: 6.0, typical_min: 2.0, typical_max: 4.0}
+    when_to_prefer: Complex parts at high volume where tooling cost can be spread over many units.
+    risks:
+      - Porosity can show through high-gloss finishes; cast alloys anodise poorly.
+      - Needs draft angles on all walls; tooling lead time is often 8–12 weeks.
+    source: model-generated
+    confidence: medium
+    verified: false
+
+  - key: sand_casting
+    name: Sand or gravity casting
+    material_categories: [aluminium]
+    plain_language: >-
+      Molten aluminium is poured into a sand or simple metal mould. Cheap
+      tooling and good for heavy parts, but the surface is rough and needs
+      machining and filling before a premium finish.
+    requires_all: []
+    excludes: [transparent, electrical, thin_wall]
+    suits: [needs_mass, closed_top, mounting_holes]
+    poor_fit: [cosmetic]
+    volume: {min: 1, max: 2000}
+    tooling_cost: low
+    unit_cost: medium
+    finish_quality: poor
+    wall_mm: {min: 4.0, max: 25.0, typical_min: 5.0, typical_max: 12.0}
+    when_to_prefer: Heavy, chunky parts in low volume (e.g. a weighted base).
+    risks:
+      - Rough surface needs machining and filler before lacquer.
+      - Larger dimensional variation than other processes.
+    source: model-generated
+    confidence: low
+    verified: false
+
+  - key: extrusion
+    name: Extrusion (cut to length)
+    material_categories: [aluminium]
+    plain_language: >-
+      Aluminium is pushed through a shaped die to make a long profile, which
+      is cut to length. Very economical for straight tubes, but only works for
+      parts with the same cross-section along their length.
+    requires_all: [constant_section]
+    excludes: [tapered, domed, closed_top, transparent, electrical]
+    suits: [open_both_ends, thin_wall, ring]
+    poor_fit: []
+    volume: {min: 500, max: 1000000}
+    tooling_cost: low
+    unit_cost: low
+    finish_quality: good
+    wall_mm: {min: 1.0, max: 10.0, typical_min: 1.5, typical_max: 4.0}
+    when_to_prefer: Straight tubes and rings; a standard tube size may need no die at all.
+    risks:
+      - Cannot make tapered or domed shapes without extra forming.
+      - Faint die lines may need brushing or polishing.
+    source: model-generated
+    confidence: medium
+    verified: false
+
+  - key: polymer_tube_cut
+    name: Cut and polished clear tube
+    material_categories: [clear_polymer_or_glass]
+    plain_language: >-
+      A standard clear acrylic or polycarbonate tube is cut to length and the
+      edges polished. No tooling, low cost, but limited to stock diameters
+      and wall thicknesses.
+    requires_all: [constant_section]
+    excludes: [domed, closed_top, electrical]
+    suits: [transparent, open_both_ends, thin_wall, axisymmetric]
+    poor_fit: []
+    volume: {min: 1, max: 5000}
+    tooling_cost: none
+    unit_cost: low
+    finish_quality: good
+    wall_mm: {min: 2.0, max: 6.0, typical_min: 2.5, typical_max: 4.0}
+    when_to_prefer: Straight clear cylinders in low to medium volume.
+    risks:
+      - Only stock diameters and walls are available; check supplier sizes before fixing dimensions.
+      - Cut edges must be polished to look premium.
+    source: model-generated
+    confidence: medium
+    verified: false
+
+  - key: injection_moulding_clear
+    name: Injection moulding (clear polymer)
+    material_categories: [clear_polymer_or_glass]
+    plain_language: >-
+      Clear plastic is injected into a polished steel mould. Excellent
+      clarity and any shape, cheap per part, but the mould is very expensive.
+    requires_all: []
+    excludes: [electrical]
+    suits: [transparent, domed, closed_top, axisymmetric]
+    poor_fit: [open_both_ends]
+    volume: {min: 5000, max: 1000000}
+    tooling_cost: very_high
+    unit_cost: low
+    finish_quality: excellent
+    wall_mm: {min: 1.5, max: 4.0, typical_min: 2.0, typical_max: 3.0}
+    when_to_prefer: High volume, or shapes a stock tube cannot make.
+    risks:
+      - Flow and weld lines show clearly in transparent parts.
+      - Highly polished mould surfaces add tooling cost.
+    source: model-generated
+    confidence: medium
+    verified: false
+
+  - key: glass_tube_cut
+    name: Cut and finished glass tube
+    material_categories: [clear_polymer_or_glass]
+    plain_language: >-
+      A borosilicate glass tube is cut to length and the edges ground or
+      fire-polished. Feels premium and resists heat, but can break.
+    requires_all: [constant_section]
+    excludes: [domed, closed_top, electrical]
+    suits: [transparent, open_both_ends, axisymmetric, near_heat_source]
+    poor_fit: []
+    volume: {min: 1, max: 100000}
+    tooling_cost: none
+    unit_cost: medium
+    finish_quality: excellent
+    wall_mm: {min: 1.5, max: 5.0, typical_min: 2.0, typical_max: 3.5}
+    when_to_prefer: Premium feel and heat resistance with no tooling.
+    risks:
+      - Breakage risk in use and in transit; edges must be ground or fire-polished.
+      - Heavier than polymer and needs protective packaging.
+    source: model-generated
+    confidence: medium
+    verified: false
+
+  - key: pressed_blown_glass
+    name: Pressed or blown glass
+    material_categories: [clear_polymer_or_glass]
+    plain_language: >-
+      Molten glass is pressed or blown into a mould. Good for domes and
+      shaped glass at volume.
+    requires_all: []
+    excludes: [electrical, open_both_ends]
+    suits: [transparent, domed, closed_top, axisymmetric]
+    poor_fit: []
+    volume: {min: 2000, max: 1000000}
+    tooling_cost: high
+    unit_cost: low
+    finish_quality: good
+    wall_mm: {min: 2.0, max: 6.0, typical_min: 2.5, typical_max: 4.0}
+    when_to_prefer: Shaped glass (domes, closed forms) at volume.
+    risks:
+      - Mould cost and minimum order quantities are significant.
+    source: model-generated
+    confidence: low
+    verified: false
+
+  - key: bought_in
+    name: Bought-in standard component
+    material_categories: [electrical, bought_in]
+    plain_language: >-
+      Buy a standard, certified component from a specialist supplier rather
+      than making it. Electrical parts in particular should come with the
+      certification needed for the target markets.
+    requires_all: []
+    excludes: []
+    suits: [electrical, internal, strain_relief, heat_source, user_accessible]
+    poor_fit: []
+    volume: {min: 1, max: 1000000}
+    tooling_cost: none
+    unit_cost: low
+    finish_quality: good
+    wall_mm: null
+    when_to_prefer: Electrical and standard hardware parts.
+    risks:
+      - Check the supplier's certification and datasheet ratings for the target markets.
+    source: model-generated
+    confidence: high
+    verified: false

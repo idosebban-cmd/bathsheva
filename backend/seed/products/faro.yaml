@@ -1,0 +1,144 @@
+# Faro product template. Seeds a new Faro project.
+# Every value here is editable. Placeholder commercial inputs are listed in
+# `assumed_fields` so the UI labels them as assumptions.
+
+name: Faro
+description: >-
+  A premium decorative electrical table lamp inspired by a lighthouse. Smooth,
+  sculptural and playful, influenced by mid-century Italian product design.
+  Second product of Bathsheva London, after the Atelier speaker.
+
+requirements:
+  approx_dimensions: {height_mm: null, width_mm: null, depth_mm: null}  # TBD
+  target_retail_price: {amount: null, currency: GBP}                    # TBD
+  production_volume: null                                               # TBD
+  target_unit_cost: {amount: null, currency: GBP}                       # TBD
+  intended_markets: [UK, EU]
+  power_type: undecided
+  preferred_materials:
+    - Aluminium main body
+    - Painted / lacquered coloured aluminium sections
+    - Possible brass or brass-plated details
+    - Transparent lantern section
+  preferred_finishes:
+    - Coloured lacquer on aluminium
+    - Black lacquer base
+  functional_requirements:
+    - Decorative table lamp with internal LED light source
+    - Light emitted through a transparent lantern section
+    - Stable on a table or shelf
+  environmental_requirements:
+    - Indoor, domestic use
+
+assumed_fields:
+  - approx_dimensions
+  - target_retail_price
+  - production_volume
+  - target_unit_cost
+  - intended_markets
+
+# One CAD body per part (cad_key must match the generator's body names).
+parts:
+  - cad_key: base
+    name: Base
+    function: Weighted foot that keeps the lamp stable; hides the cable exit and mounting screws.
+    material_category: aluminium
+    finish: Black lacquer
+    traits: [axisymmetric, cosmetic, closed_top, needs_mass, mounting_holes, side_hole]
+    open_questions:
+      - Does the base need added mass (e.g. steel weight plate) to meet the stability target?
+  - cad_key: main_body
+    name: Main body
+    function: Tapered lighthouse tower; the main visual surface of the lamp and the cable route to the lantern.
+    material_category: aluminium
+    finish: Coloured lacquer
+    traits: [axisymmetric, cosmetic, thin_wall, open_both_ends]
+  - cad_key: band
+    name: Decorative band
+    function: Contrasting ring around the tower, like a lighthouse gallery stripe.
+    material_category: aluminium
+    finish: Coloured lacquer (contrast) or brass-plated
+    traits: [axisymmetric, cosmetic, ring, short]
+    open_questions:
+      - Is the band a separate coloured part, or could it be a painted stripe on the main body?
+  - cad_key: lantern
+    name: Lantern
+    function: Transparent section that lets the LED light out.
+    material_category: clear_polymer_or_glass
+    finish: Clear, optionally frosted inside
+    traits: [axisymmetric, transparent, thin_wall, open_both_ends, near_heat_source]
+    open_questions:
+      - Clear or frosted/diffused lantern?
+  - cad_key: top_cap
+    name: Top cap
+    function: Domed roof of the lighthouse; closes the lantern.
+    material_category: aluminium
+    finish: Coloured lacquer or brass-plated
+    traits: [axisymmetric, cosmetic, closed_top, domed]
+  - cad_key: led_module
+    name: LED module and mounting
+    function: Light source and its mounting/heat-spreading bracket inside the lantern.
+    material_category: electrical
+    finish: None (internal)
+    traits: [electrical, heat_source, internal]
+    open_questions:
+      - Target brightness (lumens) and colour temperature?
+      - Dimmable?
+  - cad_key: cable
+    name: Cable / power entry
+    function: Brings power into the lamp through the base, with strain relief.
+    material_category: electrical
+    finish: Cable colour to match
+    traits: [electrical, user_accessible, strain_relief]
+    open_questions:
+      - Inline switch, touch dimmer or switch on the lamp?
+
+# How parts join. References fasteners.yaml keys.
+joints:
+  - between: [base, main_body]
+    method: machine_screw_tapped
+    note: Screws from underneath the base into bosses or a ring in the body foot.
+  - between: [main_body, band]
+    method: adhesive_bonding
+    note: Band slides over the taper and is bonded, or is clamped by the lantern seat.
+  - between: [main_body, lantern]
+    method: clamp_with_gasket
+    note: Lantern sits in a seat with a soft gasket; clamped by the top cap via a central rod.
+  - between: [lantern, top_cap]
+    method: clamp_with_gasket
+    note: Top cap retained by a central threaded rod from the LED mount.
+  - between: [led_module, main_body]
+    method: machine_screw_tapped
+    note: LED bracket screwed to a plate at the top of the body.
+  - between: [cable, base]
+    method: strain_relief_grommet
+    note: Cable passes through the base side hole with a strain-relief grommet.
+
+# Project-level decisions that are still open.
+open_decisions:
+  - topic: power_type
+    question: Mains or rechargeable battery?
+    options: [mains, battery]
+    impact: >-
+      Changes the internal electronics, the cable/power entry part, the
+      compliance scope and whether the metal body needs earthing.
+
+# Default CAD parameters (mm). Placeholder dimensions: overall size is TBD.
+cad_parameters:
+  overall_height: 420
+  base_diameter: 180
+  base_height: 30
+  body_diameter: 130
+  body_top_diameter: 100
+  wall_thickness: 2.0
+  band_height: 22
+  band_position: 0.55
+  lantern_height: 80
+  lantern_diameter: 90
+  lantern_wall_thickness: 3.0
+  top_cap_diameter: 110
+  top_cap_height: 45
+  cable_hole_diameter: 8
+  mounting_hole_count: 3
+  mounting_hole_diameter: 4.5
+  mounting_hole_pcd: 110

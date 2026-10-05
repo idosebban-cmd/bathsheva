@@ -1,0 +1,87 @@
+# Safety flag rules. A recommendation that matches any rule is flagged for
+# human / manufacturer verification. Triggers (all listed conditions must hold):
+#   traits_any       part has at least one of these traits
+#   categories_any   part material category is one of these
+#   materials_any    recommended material key is one of these
+#   processes_any    recommended process key is one of these
+#   power_any        project power type is one of these ("undecided" counts as possibly mains)
+#   polymer_near_heat  recommended material is a polymer and part is near a heat source
+# PROVENANCE: general engineering judgement written by an AI model.
+# These flags never replace certified testing.
+
+safety_rules:
+  - key: electrical_component
+    traits_any: [electrical]
+    message: >-
+      Electrical component. Use certified parts rated for the application;
+      electrical safety must be verified by a qualified engineer or test lab
+      for the target markets (scope depends on mains vs battery).
+    verify_with: Electrical safety engineer / test lab
+    source: model-generated
+    confidence: high
+    verified: false
+  - key: exposed_metal_mains
+    categories_any: [aluminium]
+    power_any: [mains, undecided]
+    message: >-
+      Exposed metal on a lamp that may be mains powered. The design needs
+      either protective earthing (Class I) or double insulation (Class II).
+      This decision must be made with an electrical safety engineer.
+    verify_with: Electrical safety engineer
+    source: model-generated
+    confidence: high
+    verified: false
+  - key: polymer_near_heat
+    polymer_near_heat: true
+    message: >-
+      Plastic part near the LED. Confirm the LED and driver temperatures stay
+      well below the material's service temperature, including in a fault.
+    verify_with: Manufacturer thermal test
+    source: model-generated
+    confidence: medium
+    verified: false
+  - key: glass_breakage
+    materials_any: [borosilicate, soda_lime_glass]
+    message: >-
+      Glass can break into sharp fragments. Confirm edge finishing, gasket
+      retention and drop/impact behaviour.
+    verify_with: Manufacturer / test lab
+    source: model-generated
+    confidence: medium
+    verified: false
+  - key: stability
+    traits_any: [needs_mass]
+    message: >-
+      Stability (tip-over) affects safety for a lamp. Check the finished
+      lamp's tilt stability against the applicable luminaire standard.
+    verify_with: Test lab
+    source: model-generated
+    confidence: medium
+    verified: false
+  - key: cable_anchorage
+    traits_any: [strain_relief]
+    message: >-
+      Cable anchorage and strain relief are safety-critical for mains cables.
+      Use a rated grommet/anchorage and verify by test.
+    verify_with: Electrical safety engineer / test lab
+    source: model-generated
+    confidence: high
+    verified: false
+  - key: battery
+    traits_any: [electrical]
+    power_any: [battery, undecided]
+    message: >-
+      If battery powered: lithium cells need a protection circuit, safe
+      charging design and transport testing (e.g. UN 38.3).
+    verify_with: Battery / electrical safety engineer
+    source: model-generated
+    confidence: medium
+    verified: false
+  - key: sharp_edges
+    processes_any: [metal_spinning, sheet_forming]
+    traits_any: [open_both_ends]
+    message: Trimmed sheet edges can be sharp. Specify deburred or rolled edges.
+    verify_with: Manufacturer
+    source: model-generated
+    confidence: medium
+    verified: false

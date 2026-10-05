@@ -1,0 +1,81 @@
+# Typical achievable tolerances per process (general guidance, not a drawing spec).
+# PROVENANCE: general knowledge written by an AI model. Confirm with suppliers.
+
+tolerances:
+  - process: cnc_machining
+    general_mm: 0.1
+    precision_mm: 0.02
+    plain_language: "Typical ±0.1 mm (ISO 2768-m); ±0.02 mm possible on critical fits at extra cost."
+    source: model-generated
+    confidence: medium
+    verified: false
+  - process: metal_spinning
+    general_mm: 0.4
+    precision_mm: 0.2
+    plain_language: "Typical ±0.3–0.5 mm on diameters; tighter where the part is machined after spinning."
+    source: model-generated
+    confidence: low
+    verified: false
+  - process: sheet_forming
+    general_mm: 0.5
+    precision_mm: 0.3
+    plain_language: "Typical ±0.5 mm; roundness depends on welding and sizing."
+    source: model-generated
+    confidence: low
+    verified: false
+  - process: deep_drawing
+    general_mm: 0.2
+    precision_mm: 0.1
+    plain_language: "Typical ±0.1–0.2 mm on diameters; wall thickness varies along the draw."
+    source: model-generated
+    confidence: low
+    verified: false
+  - process: die_casting
+    general_mm: 0.15
+    precision_mm: 0.05
+    plain_language: "Typical ±0.1–0.2 mm as cast; machine critical faces."
+    source: model-generated
+    confidence: medium
+    verified: false
+  - process: sand_casting
+    general_mm: 1.0
+    precision_mm: 0.5
+    plain_language: "Typical ±0.5–1.5 mm as cast; machine all fitting faces."
+    source: model-generated
+    confidence: low
+    verified: false
+  - process: extrusion
+    general_mm: 0.2
+    precision_mm: 0.1
+    plain_language: "Typical ±0.15–0.3 mm on profile size (EN 755-9 class depends on size)."
+    source: model-generated
+    confidence: low
+    verified: false
+  - process: polymer_tube_cut
+    general_mm: 0.5
+    precision_mm: 0.2
+    plain_language: "Stock tube diameters vary by roughly ±0.3–0.8 mm; design seats with a gasket to absorb it."
+    source: model-generated
+    confidence: low
+    verified: false
+  - process: injection_moulding_clear
+    general_mm: 0.1
+    precision_mm: 0.05
+    plain_language: "Typical ±0.1 mm; depends on shrinkage and part size."
+    source: model-generated
+    confidence: medium
+    verified: false
+  - process: glass_tube_cut
+    general_mm: 0.8
+    precision_mm: 0.3
+    plain_language: "Glass tube diameters vary by about ±0.5–1 mm; always seat glass in a soft gasket."
+    source: model-generated
+    confidence: low
+    verified: false
+  - process: pressed_blown_glass
+    general_mm: 1.0
+    precision_mm: 0.5
+    plain_language: "Typical ±1 mm; seat in a soft gasket."
+    source: model-generated
+    confidence: low
+    verified: false
