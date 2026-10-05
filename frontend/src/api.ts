@@ -248,3 +248,29 @@ export interface Explanation {
   questions_to_consider: string[];
   caveats: string[];
 }
+
+export interface BomRow {
+  item: string;
+  level: number;
+  part_id: number | null;
+  cad_key: string | null;
+  name: string;
+  quantity: number;
+  material: string;
+  process: string;
+  finish: string;
+  size_mm: string;
+  status: "decided" | "recommended" | "TBD" | "derived";
+  cost_low: number | null;
+  cost_high: number | null;
+  supplier_notes: string;
+  flags: string[];
+  derived: boolean;
+}
+
+export interface Bom {
+  rows: BomRow[];
+  total: { low: number; high: number; priced_items: number; total_items: number; complete: boolean };
+  cad_version: number | null;
+  notes: string[];
+}

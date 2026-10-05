@@ -124,3 +124,9 @@ dl.tech dt { font-weight: 600; }
 dl.tech dd { margin: 0; }
 .open-decision { border-top: 1px solid var(--line); padding-top: 0.5rem; }
 code { background: #f1ede6; padding: 0 0.25rem; border-radius: 3px; font-size: 0.85em; }
+
+input.cell { width: 4.5rem; padding: 0.2rem 0.3rem; font-size: 0.85rem; }
+input.cell.wide { width: 12rem; }
+.nowrap { flex-wrap: nowrap; margin: 0; }
+tr.derived td { background: #fbfaf7; }
+tfoot td { border-top: 2px solid var(--line); }

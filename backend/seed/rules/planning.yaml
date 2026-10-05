@@ -43,3 +43,16 @@ planning:
     source: model-generated
     confidence: low
     verified: false
+  - key: metric_clearance_holes_mm
+    value: {M2: 2.4, M2.5: 2.9, M3: 3.4, M4: 4.5, M5: 5.5, M6: 6.6, M8: 9.0}
+    plain_language: Medium-fit clearance hole per metric screw size (ISO 273 style), used to infer screw size from hole diameter.
+    source: model-generated
+    confidence: medium
+    verified: false
+  - key: led_mount_screw_count
+    value: 2
+    unit: screws
+    plain_language: Assumed number of screws holding the LED bracket to its plate.
+    source: model-generated
+    confidence: low
+    verified: false
