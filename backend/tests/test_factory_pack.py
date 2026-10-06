@@ -28,11 +28,18 @@ def test_drawings_render_to_svg_and_pdf_with_title_block(key):
     assert "UNVERIFIED" in svg
 
 
+def _text(svg: str) -> str:
+    """All text in a drawing as one string (notes wrap across several SVG text lines)."""
+    import html
+
+    return " ".join(html.unescape(t) for t in re.findall(r"<text[^>]*>([^<]*)</text>", svg))
+
+
 def test_drawing_dimensions_follow_parameters():
     svg = dr.to_svg(dr.part_drawing({**DEFAULTS, "base_diameter": 130, "band_diameter": 110}, _sheet("base")))
     assert "Ø130" in svg and "PCD Ø102" in svg  # overall diameter and the band-screw pitch circle
-    tower = dr.to_svg(dr.part_drawing(DEFAULTS, _sheet("tower")))
-    assert f"Ø{DEFAULTS['tower_bottom_diameter']:g}" in tower and "arched windows" in tower and "masked line" in tower
+    tower = _text(dr.to_svg(dr.part_drawing(DEFAULTS, _sheet("tower"))))
+    assert f"Ø{DEFAULTS['tower_bottom_diameter']:g}" in tower and "arched windows" in tower and "masked" in tower
     railing = dr.to_svg(dr.part_drawing(DEFAULTS, _sheet("railing")))
     assert "FLAT PATTERN" in railing and "Photo-etched" in railing
     frame = dr.to_svg(dr.part_drawing(DEFAULTS, _sheet("lantern_frame")))
@@ -94,7 +101,9 @@ def test_pack_contents(client, faro_project):
                  "Class A", "orange peel", "colour samples we supply", "Minimum wall thickness", "rattle", "Target total lamp mass",
                  "Golden sample", "UNVERIFIED", "SAFETY", "ISO 2768-m", "AQL 1.0",
                  "[COMPANY NAME]", "[CONTACT NAME, ROLE]", "[QUOTE DEADLINE]", "Colours and finishes", "#121212", "#F9F2E1",
-                 "#8A1C15", "RAL 9005", "RAL 9001", "RAL 3002", "approximate", "Physical colour samples will be supplied",
+                 "#8A1C15", "RAL 9005", "RAL 9001", "RAL 3011 Brown red (approx.) / RAL 3002 Carmine red (approx.)",
+                 "approximate", "Physical colour samples will be supplied and are the master", "satin, 30–50 GU",
+                 "gloss, 80+ GU", "Brushed brass, clear lacquer", "matching our Atelier", "satin black (30–50 GU)",
                  "300 to 500 lamps", "UKCA", "CE marking for the EU may follow", "FOB (port of loading)", "DDP to our UK address",
                  "[DELIVERY ADDRESS, to be filled in]", "GBP or USD", "final assembly", "protective packing", "pull-test",
                  "artwork/",
@@ -121,7 +130,11 @@ def test_pack_contents(client, faro_project):
     bom = zf.read(mech + "bom.csv").decode()
     assert "Weight plate" in bom and "Battery pack" in bom and "Electronics (separate RFQ)" in bom
     assert "cost" not in bom.lower() and "GBP" not in bom
-    assert "Colour reference" in bom and "Oxblood red lacquer #8A1C15, RAL 3002 Carmine red (approx.)" in bom
+    header = bom.splitlines()[0].split(",")
+    assert "Colour reference" in header and "Gloss" in header
+    assert "Oxblood red lacquer #8A1C15, RAL 3011 Brown red (approx.) / RAL 3002 Carmine red (approx.)" in bom
+    assert "satin, 30–50 GU (60°)" in bom and "gloss, 80+ GU (60°)" in bom and "brushed satin grain" in bom
+    assert "Tumble" not in md and "Tumble" not in bom
     assert "artwork/F-05_nameplate_lettering.svg" in bom
     assert "UK and EU" not in md and "UNVERIFIED)" not in emd.split("charging indicator")[1].split("\n")[0]
     assert bom.splitlines()[1].startswith("F-01,Base")
@@ -255,3 +268,12 @@ def test_contact_fields_fill_the_rfqs(client, faro_project):
     client.put(f"/api/projects/{pid}/factory-pack/contact", json={"phone": ""})
     assert "[PHONE]" in client.get(f"/api/projects/{pid}/rfq.md").text
     assert client.get(f"/api/projects/{pid}/factory-pack").json()["missing_contact"] == ["Phone"]
+
+
+def test_brass_drawings_and_finishes_are_brushed():
+    for key in ("gallery", "railing", "lantern_frame", "finial", "knob", "nameplate"):
+        txt = _text(dr.to_svg(dr.part_drawing(DEFAULTS, _sheet(key))))
+        assert "brushed satin" in txt.lower() and "clear lacquer" in txt and "Tumble" not in txt, key
+    assert "Satin black lacquer (#121212), 30–50 GU" in _text(dr.to_svg(dr.part_drawing(DEFAULTS, _sheet("base"))))
+    assert "80+ GU" in _text(dr.to_svg(dr.part_drawing(DEFAULTS, _sheet("tower"))))
+    assert "80+ GU" in _text(dr.to_svg(dr.part_drawing(DEFAULTS, _sheet("cap"))))

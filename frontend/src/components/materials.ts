@@ -4,9 +4,9 @@ import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js
 // Preview materials for the 3D viewer (also used to render screenshots outside the app).
 // Finishes by part name (the GLB's node names are the CAD part keys; a two-tone part's
 // lower colour is exported as "<key>_lower"). Anything else keeps its exported colour.
-export type Finish = "gloss_black" | "cream" | "red" | "brass" | "frosted" | "opal" | "internal" | "etch_fill";
+export type Finish = "satin_black" | "cream" | "red" | "brass" | "frosted" | "opal" | "internal" | "etch_fill";
 export const FINISH: Record<string, Finish> = {
-  base: "gloss_black", base_plate: "internal", felt_pad: "internal",
+  base: "satin_black", base_plate: "internal", felt_pad: "internal",
   band_cream: "cream", tower: "cream", tower_lower: "red", cap: "red",
   nameplate: "brass", knob: "brass", gallery: "brass", railing: "brass", lantern_frame: "brass", cap_spigot: "brass",
   finial: "brass", nameplate_fill: "etch_fill",
@@ -14,16 +14,40 @@ export const FINISH: Record<string, Finish> = {
 };
 const GLOW = new THREE.Color("#ffb45e");
 
+// Design reference colours (the RFQ's hex values) and gloss levels: base satin black 30–50 GU, cream and oxblood
+// red gloss 80+ GU, brass brushed (satin grain) and clear-lacquered like Atelier.
+const BLACK = "#121212", CREAM = "#f9f2e1", RED = "#8a1c15", BRASS = "#c4a15a";
+
+/** Brushed grain without UVs: fine horizontal streaks in the roughness, keyed to world height (mm). */
+function brushed(m: THREE.MeshPhysicalMaterial): THREE.MeshPhysicalMaterial {
+  m.onBeforeCompile = (shader) => {
+    shader.vertexShader = shader.vertexShader
+      .replace("#include <common>", "#include <common>\nvarying vec3 vBrushPos;")
+      .replace("#include <project_vertex>", "#include <project_vertex>\nvBrushPos = (modelMatrix * vec4(transformed, 1.0)).xyz;");
+    shader.fragmentShader = shader.fragmentShader
+      .replace("#include <common>",
+        "#include <common>\nvarying vec3 vBrushPos;\nfloat brushHash(float n) { return fract(sin(n) * 43758.5453); }")
+      .replace("#include <roughnessmap_fragment>",
+        "#include <roughnessmap_fragment>\n" +
+        "float bl = vBrushPos.y * 18.0 + sin(atan(vBrushPos.z, vBrushPos.x) * 3.0) * 0.6;\n" +
+        "float grain = 0.6 * brushHash(floor(bl)) + 0.4 * brushHash(floor(bl * 0.31) + 7.0);\n" +
+        "roughnessFactor = clamp(roughnessFactor + (grain - 0.5) * 0.16, 0.05, 1.0);");
+  };
+  m.customProgramCacheKey = () => "brushed";
+  return m;
+}
+
 export function material(finish: Finish, lit: boolean): THREE.Material {
   switch (finish) {
-    case "gloss_black":
-      return new THREE.MeshPhysicalMaterial({ color: "#0e0e0e", roughness: 0.22, clearcoat: 1, clearcoatRoughness: 0.04 });
-    case "cream":
-      return new THREE.MeshPhysicalMaterial({ color: "#f6ecd6", roughness: 0.42, clearcoat: 0.5, clearcoatRoughness: 0.18 });
-    case "red":
-      return new THREE.MeshPhysicalMaterial({ color: "#7d1913", roughness: 0.4, clearcoat: 0.55, clearcoatRoughness: 0.18 });
-    case "brass":
-      return new THREE.MeshPhysicalMaterial({ color: "#c9a256", metalness: 1, roughness: 0.27, clearcoat: 0.3, clearcoatRoughness: 0.1 });
+    case "satin_black": // 30–50 GU: soft, broad reflections
+      return new THREE.MeshPhysicalMaterial({ color: BLACK, roughness: 0.48, clearcoat: 0.35, clearcoatRoughness: 0.38 });
+    case "cream": // 80+ GU gloss
+      return new THREE.MeshPhysicalMaterial({ color: CREAM, roughness: 0.2, clearcoat: 1, clearcoatRoughness: 0.05 });
+    case "red": // 80+ GU gloss
+      return new THREE.MeshPhysicalMaterial({ color: RED, roughness: 0.2, clearcoat: 1, clearcoatRoughness: 0.05 });
+    case "brass": // brushed satin, clear lacquer
+      return brushed(new THREE.MeshPhysicalMaterial({ color: BRASS, metalness: 1, roughness: 0.36, clearcoat: 0.45,
+        clearcoatRoughness: 0.12 }));
     case "frosted":
       return new THREE.MeshPhysicalMaterial({
         color: "#fbf6ec", roughness: 0.55, transmission: lit ? 0.2 : 0.85, thickness: 2, ior: 1.47,

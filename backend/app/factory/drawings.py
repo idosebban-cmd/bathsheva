@@ -20,6 +20,7 @@ from build123d import Plane, Pos, Rectangle, Rot
 from reportlab.graphics import renderPDF, renderSVG
 from reportlab.graphics.shapes import Circle, Drawing, Group, Line, Polygon, Rect, String
 from reportlab.lib import colors
+from reportlab.pdfbase.pdfmetrics import stringWidth
 
 from app.cad import faro
 
@@ -152,7 +153,12 @@ def _frame_and_title(g: Group, sheet: PartSheet, scale: float):
     for i, (k, v) in enumerate(rows):
         y = y0 + TITLE_H - 13 - i * row_h
         _text(g, x0 + 6, y, k, 6.5, color=colors.HexColor("#555555"))
-        _text(g, x0 + 70, y, v[:62], 7.5, bold=(k == "Part"))
+        size, avail, font = 7.5, TITLE_W - 76, "Helvetica-Bold" if k == "Part" else "Helvetica"
+        while size > 5.0 and stringWidth(v, font, size) > avail:  # shrink long values to fit, never cut them
+            size -= 0.25
+        while stringWidth(v, font, size) > avail and len(v) > 4:
+            v = v[:-2].rstrip() + "…"
+        _text(g, x0 + 70, y, v, size, bold=(k == "Part"))
     _text(g, x0 + 6, y0 + 15, TOLERANCE_NOTE.upper(), 7.5, bold=True)
     _text(g, x0 + 6, y0 + 5, "Unverified design values — confirm before tooling.  Bathsheva London / Product Workbench",
           6.0, color=WARN)
@@ -201,7 +207,12 @@ def _frame_and_title(g: Group, sheet: PartSheet, scale: float):
     for i, (k, v) in enumerate(rows):
         y = y0 + TITLE_H - 13 - i * row_h
         _text(g, x0 + 6, y, k, 6.5, color=colors.HexColor("#555555"))
-        _text(g, x0 + 70, y, v[:62], 7.5, bold=(k == "Part"))
+        size, avail, font = 7.5, TITLE_W - 76, "Helvetica-Bold" if k == "Part" else "Helvetica"
+        while size > 5.0 and stringWidth(v, font, size) > avail:  # shrink long values to fit, never cut them
+            size -= 0.25
+        while stringWidth(v, font, size) > avail and len(v) > 4:
+            v = v[:-2].rstrip() + "…"
+        _text(g, x0 + 70, y, v, size, bold=(k == "Part"))
     _text(g, x0 + 6, y0 + 15, TOLERANCE_NOTE.upper(), 7.5, bold=True)
     _text(g, x0 + 6, y0 + 5, "Unverified design values — confirm before tooling.  Bathsheva London / Product Workbench",
           6.0, color=WARN)
@@ -340,7 +351,7 @@ def _part_notes(key: str, p: dict[str, float], d: dict[str, Any]) -> list[tuple[
                   f"{faro.BAND_SCREWS} × Ø{_fmt(faro.BAND_SCREW_CLEAR)} holes on PCD Ø{_fmt(d['band_screw_pcd'])} (under the band).", INK))
         n.append((f"Rear (+Y): USB-C slot {_fmt(faro.USBC_W)} × {_fmt(faro.USBC_H)}, centre {_fmt(faro.USBC_Z)} above the underside "
                   "(laser cut after spinning).", INK))
-        n.append(("Gloss black lacquer, clear-coated. Nameplate bonded on the front (-Y) after lacquer.", INK))
+        n.append(("Satin black lacquer (#121212), 30–50 GU (60°), clear-coated. Nameplate bonded on the front (-Y) after lacquer.", INK))
         n.append(("SAFETY: tip-over stability to be verified on the finished lamp with the weight plate fitted.", WARN))
     elif key == "tower":
         n.append((f"Spun cone Ø{_fmt(p['tower_bottom_diameter'])} → Ø{_fmt(p['tower_top_diameter'])} over {_fmt(d['tower_height'])}, "
@@ -350,12 +361,13 @@ def _part_notes(key: str, p: dict[str, float], d: dict[str, Any]) -> list[tuple[
             n.append((f"{len(d['windows'])} arched windows {_fmt(p['window_width'])} × {_fmt(p['window_height'])} (round top), laser-cut "
                       f"after spinning; centre heights above the tower foot @ angle from the front, turning to the right: {wins}.", INK))
         n.append((f"Dimmer hole Ø{_fmt(faro.POT_HOLE_D)} on the front, {_fmt(p['knob_z'] - d['tower_bottom_z'])} above the foot.", INK))
-        n.append((f"Two-tone lacquer: red from the foot to {_fmt(p['red_section_height'])} (masked line, crisp and level), cream "
-                  "above; clear-coated. Mask the window edges.", INK))
+        n.append((f"Two-tone gloss lacquer, 80+ GU (60°): oxblood red (#8A1C15) from the foot to {_fmt(p['red_section_height'])} "
+                  "(masked line, crisp and level), cream (#F9F2E1) above; clear-coated. Mask the window edges. Match the "
+                  "physical colour samples.", INK))
     elif key == "band_cream":
         n.append((f"Turned from aluminium 6061 thick tube or a ring blank (near-net stock). {faro.BAND_SCREWS} × M3 tapped blind holes from below on PCD "
                   f"Ø{_fmt(d['band_screw_pcd'])}, 5 deep. Spigot locates the tower (bonded).", INK))
-        n.append(("Cream lacquer, clear-coated; top edge R1.", INK))
+        n.append(("Cream lacquer (#F9F2E1), gloss 80+ GU (60°), clear-coated; top edge R1.", INK))
     elif key == "diffuser":
         n.append((f"Opal (acid-etched) borosilicate 3.3 tube, OD Ø{_fmt(d['diffuser_od'])}, wall {_fmt(faro.DIFFUSER_WALL)}, length "
                   f"{_fmt(d['diffuser_length'])} (window zone only). Nearest stock OD may be proposed. Stands on a spider on the "
@@ -367,13 +379,13 @@ def _part_notes(key: str, p: dict[str, float], d: dict[str, Any]) -> list[tuple[
                   f"rests on it), outer skirt, open underneath; top outer edge R{_fmt(faro.GALLERY_ROUND)}.", INK))
         n.append(("Turned brass locating ring (from tube) soldered under the top: sits on the tower top, spigot fits inside it "
                   "(bonded).", INK))
-        n.append(("Tumble-polished, clear lacquer. The railing is soldered or bonded on the top face.", INK))
+        n.append(("Brushed satin (matching Atelier), clear lacquer. The railing is soldered or bonded on the top face.", INK))
     elif key == "railing":
         fp = railing_flat_pattern(p)
         n.append((f"Photo-etched brass sheet t = {_fmt(faro.RAIL_T)}. Flat pattern {_fmt(fp['length'])} × {_fmt(fp['height'])}: "
                   f"{fp['posts']} posts {_fmt(faro.RAIL_POST_W)} wide at {_fmt(fp['pitch'])} pitch, top and mid rails "
                   f"{_fmt(faro.RAIL_BAR_H)}, foot band {_fmt(faro.RAIL_FOOT_H)}.", INK))
-        n.append(("Rolled to a ring, seam soldered on a post, then soldered to the gallery. Tumble-polished, clear lacquer.", INK))
+        n.append(("Rolled to a ring, seam soldered on a post, then soldered to the gallery. Brushed satin to match the gallery (a tumbled satin is acceptable on the fine railing if it matches the sample), clear lacquer.", INK))
         n.append(("Alternatives to quote: soldered brass wire (Ø1.6 posts and rails) or lost-wax cast brass.", INK))
     elif key == "lantern_frame":
         n.append((f"Brass: bottom ring and top band turned from tube; {int(p['lantern_mullions'])} mullion bars {_fmt(faro.MULLION_W)} × "
@@ -381,7 +393,7 @@ def _part_notes(key: str, p: dict[str, float], d: dict[str, Any]) -> list[tuple[
         n.append((f"Top band carries the bayonet: lip {_fmt(faro.LIP_H)} high, {faro.LOCK_LUGS} entry slots "
                   f"{_fmt(faro.LOCK_LUG_W + 2 * faro.FIT_CLEAR)} wide, and a stop {abs(faro.LOCK_TURN_DEG):g}° clockwise "
                   "(seen from above) from each slot.", INK))
-        n.append(("Lowered over the glass and bonded to the gallery. Tumble-polished, clear lacquer.", INK))
+        n.append(("Lowered over the glass and bonded to the gallery. Brushed satin (matching Atelier), clear lacquer.", INK))
     elif key == "lantern_glass":
         n.append((f"Frosted (acid-etched inside) borosilicate 3.3 tube, OD Ø{_fmt(d['glass_od'])}, wall "
                   f"{_fmt(p['glass_wall_thickness'])}, length {_fmt(d['glass_height'])}. Nearest stock size may be proposed.", INK))
@@ -391,21 +403,23 @@ def _part_notes(key: str, p: dict[str, float], d: dict[str, Any]) -> list[tuple[
         n.append((f"Rim Ø{_fmt(p['cap_rim_diameter'])} × {_fmt(p['cap_rim_height'])}, dome Ø{_fmt(p['cap_dome_diameter'])}, "
                   f"neck for the finial spun in (verify with the spinner; fallback a separate turned collar). Centre hole "
                   f"Ø{_fmt(faro.FINIAL_STUD_D + 0.5)}.", INK))
-        n.append(("Red lacquer, clear-coated. The brass bayonet spigot is bonded under the shoulder.", INK))
+        n.append(("Oxblood red lacquer (#8A1C15), gloss 80+ GU (60°), clear-coated. The brass bayonet spigot is bonded under "
+                  "the shoulder.", INK))
     elif key == "cap_spigot":
         n.append((f"Brass ring turned from tube, with {faro.LOCK_LUGS} lugs {_fmt(faro.LOCK_LUG_W)} × {_fmt(faro.LOCK_LUG_H)} at the foot; "
                   f"fit clearance {_fmt(faro.FIT_CLEAR)} per side in the lantern lip. Flange bonded inside the cap.", INK))
         n.append(("Hidden when fitted: natural brass, no cosmetic finish.", INK))
     elif key == "finial":
         n.append((f"Brass ball Ø{_fmt(p['finial_diameter'])}, turned from close-fitting bar, on a neck, M4 stud through the cap (nyloc nut inside).", INK))
-        n.append(("Tumble-polished, clear lacquer.", INK))
+        n.append(("Brushed satin (matching Atelier), clear lacquer.", INK))
     elif key == "knob":
         n.append((f"Solid brass knob (turned from close-fitting bar) Ø{_fmt(p['knob_diameter'])} × {_fmt(faro.KNOB_PROUD)}, front edge R1; D-shaft bore "
                   "and grub screw (or push-fit) to suit the chosen 9 mm pot.", INK))
-        n.append(("Tumble-polished, clear lacquer. Back face clears the conical tower by 0.5 mm.", INK))
+        n.append(("Brushed satin (matching Atelier), clear lacquer. Back face clears the conical tower by 0.5 mm.", INK))
     elif key == "nameplate":
         n.append((f"Etched brass t = {_fmt(faro.NAMEPLATE_T)}, {_fmt(faro.NAMEPLATE_W)} × {_fmt(faro.NAMEPLATE_H)}, corner R1.2, "
-                  f"formed to R{_fmt(p['base_diameter'] / 2)} (the base). \"FARO\" etched, filled black.", INK))
+                  f"formed to R{_fmt(p['base_diameter'] / 2)} (the base). \"FARO\" etched, filled black. Face brushed satin "
+                  "(matching Atelier), clear lacquer.", INK))
         n.append(("Bonded on the base front, centred {0} above the underside.".format(_fmt(faro.NAMEPLATE_Z)), INK))
         n.append((f"Lettering: \"FARO\" in Cormorant Garamond SemiBold, cap height {_fmt(5.0)}, centred on the plate, etched "
                   "0.15 deep and filled black. Artwork: artwork/F-05_nameplate_lettering.svg / .dxf (1:1). Fine serifs: "
