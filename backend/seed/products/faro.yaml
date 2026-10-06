@@ -597,3 +597,67 @@ premium_edition:
       label: Solid brass cream band and cap (polished, clear lacquer)
       material: brass
       finish: polish
+
+# Questions a supplier will ask that the RFQ can't answer yet. Shown in the Factory Pack tab
+# (never sent to suppliers) with our proposed answer; resolve them before sending.
+rfq_open_questions:
+  - id: battery_config
+    topic: Electronics
+    question: "Battery pack configuration: 1S2P (3.6 V, 6.7 Ah) or 2S (7.2 V, 3.35 Ah)?"
+    why: Sets the charger, the LED driver topology and which pre-certified packs fit.
+    proposed: "1S2P: simplest 5 V USB-C charging and widest choice of certified packs; the RFQ asks suppliers to confirm or propose 2S."
+  - id: dimming
+    topic: Electronics
+    question: Do the lantern and tower lights dim together on the one knob, or does the tower stay at a fixed ratio?
+    why: Defines the control board's channel behaviour.
+    proposed: Both dim together from the knob; tower light at a fixed share of the lantern (ratio set at the factory).
+  - id: charge_indication
+    topic: Electronics
+    question: How is charging and low battery shown to the user?
+    why: The control board and the base need an indicator (LED and light pipe, or a lantern blink).
+    proposed: "No visible indicator on the lamp: the lantern blinks twice at low battery; a small LED by the USB-C port shows charging."
+  - id: tolerances
+    topic: Drawings
+    question: Which general tolerance applies where a drawing gives none?
+    why: The drawings say "tolerances to be agreed"; suppliers price to the tolerance.
+    proposed: "ISO 2768-m for metal parts, ±0.5 mm on glass length and ±0.3 mm on glass OD; fits (bayonet, spigots) as dimensioned."
+  - id: colours
+    topic: Finish
+    question: Exact colours and gloss for the black, cream and red lacquer, and the brass finish.
+    why: Finishers need RAL/Pantone references and gloss levels to quote and match.
+    proposed: "Send physical colour samples or RAL references (e.g. cream ≈ RAL 9001, red ≈ RAL 3011, gloss black RAL 9005, 90+ gloss); brass polished and clear-lacquered."
+  - id: artwork
+    topic: Nameplate
+    question: Nameplate artwork (FARO lettering, font, fill colour).
+    why: The etcher needs vector artwork to tool.
+    proposed: Supply a vector file (SVG/DXF) of the lettering at 1:1 with the RFQ.
+  - id: markets
+    topic: Compliance
+    question: "Markets for launch: UK only, or UK and EU?"
+    why: Sets the marking (UKCA / CE), plug types for option B and the battery regulations.
+    proposed: UK and EU (the requirement is still marked as an assumption).
+  - id: incoterms
+    topic: Commercial
+    question: Delivery terms, currency and delivery address.
+    why: Quotes are not comparable without the same Incoterm and currency.
+    proposed: "Quote FOB (port of loading) and DDP to a UK address, in GBP or USD."
+  - id: assembly
+    topic: Commercial
+    question: Who does final assembly, test and packing?
+    why: Changes who quotes the electronics fitting, the bonding and the retail box.
+    proposed: Ask each mechanical supplier whether they can offer final assembly; packaging quoted separately.
+  - id: packaging
+    topic: Packaging
+    question: Retail box and shipping carton specification.
+    why: Not in the RFQ yet; glass parts need protective packing.
+    proposed: Ask for the supplier's standard protective packing now; brief the retail box separately.
+  - id: adhesive
+    topic: Assembly
+    question: Which structural adhesive for the tower, gallery, frame and spigot bonds?
+    why: Suppliers may propose their own; it affects cure time and long-term strength.
+    proposed: Let suppliers propose (e.g. a two-part methacrylate or epoxy) with a pull-test on samples.
+  - id: quality
+    topic: Quality
+    question: Inspection level (AQL) and who approves the golden sample.
+    why: The RFQ says "to be agreed"; suppliers price inspection into the part.
+    proposed: "AQL 1.0 major / 2.5 minor for cosmetics; golden sample approved by you before production."

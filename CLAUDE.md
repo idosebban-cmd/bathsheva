@@ -47,7 +47,7 @@ backend/seed/
                      regions, route design changes, channel pricing, commodities (LME, FX, premiums)
   products/faro.yaml Faro template: parts, requirements placeholders, CAD defaults
 backend/migrations/  Alembic env and versions/ (one file per schema change)
-scripts/             stress_cad.py (CAD soak test), check_run_shutdown.py (run.sh and launcher stop behaviour),
+scripts/             stress_cad.py (CAD soak test), build_factory_pack.py (docs/factory-pack), check_run_shutdown.py (run.sh and launcher stop behaviour),
                      cost_audit.py (regenerates docs/cost-assumptions-audit.md),
                      setup_mac.sh + mac_env.sh + workbench_check.py (Mac setup, PATH, migrate/self-test)
 Start Workbench.command  Double-click launcher for macOS (wraps run.sh, opens the browser)
@@ -90,7 +90,7 @@ Other useful commands, run from `backend/`: `.venv/bin/alembic current` and `.ve
 | Manufacturing | `GET /costs`; `GET/POST /cost-items`, `PATCH/DELETE /cost-items/{id}`, `POST /cost-items/reset`; `GET/PUT /cost-settings` (volume discounts); `GET /cost-audit?quantity=500` (+ `.md`, `.csv`) |
 | Cost-down | `GET/PUT /pricing` (incl. the DTC price stack); `GET /routes`, `POST /parts/{part}/route`; `GET /scenarios`, `POST /scenarios/evaluate`; `GET /cost-down/summary`; `GET/POST /scenario-sets`, `DELETE /scenario-sets/{id}` |
 | DFM report | `GET /dfm`, `GET /dfm.md` |
-| Factory Pack | `GET /factory-pack`, `GET /factory-pack.zip`, `GET /drawings/{cad_key}.svg\|.pdf`, `GET /rfq.md\|.pdf` |
+| Factory Pack | `GET /factory-pack` (incl. consistency checks and open questions), `GET /factory-pack.zip`, `GET /drawings/{cad_key}.svg\|.pdf`, `GET /rfq.md\|.pdf`, `GET /rfq-electronics.md\|.pdf` |
 | Revisions | `GET/POST /revisions`, `GET /revisions/{n}` (no update or delete) |
 
 The Factory Pack tab has the first part of SPEC §5 (the RFQ pack). Compliance and factory feedback are later milestones; their tables exist in `models.py` but have no API.
@@ -150,6 +150,6 @@ Ranges: each input is widened by its confidence (`seed/cost/general.yaml` `confi
 - **Revisions:** an immutable JSON snapshot (requirements, parameters, parts, decisions, recommendations, CAD version and its file paths). No branching.
 - **External quotes:** real supplier quotes and DFM feedback (`ExternalQuote`) are for the user to review against the part's estimated unit-cost range. They never change the rules engine, seed data or part fields automatically. Seed data is updated by hand. The comparison doesn't convert currencies. The quote pack includes only manufactured parts; bought-in parts and hardware are listed in its README.
 - **Decisions:** `EngineeringDecision.status` is one of proposed / accepted / rejected / edited.
-- **Factory Pack:** drawings cover made-to-drawing parts only (`drawings.DRAWN_PARTS`). Nothing sent to suppliers contains our cost estimates or targets. Mark unverified values (UNVERIFIED) and safety / compliance items in every drawing and the RFQ.
+- **Factory Pack:** the zip has `mechanical/` (RFQ, drawings, STEP, supplier BOM without costs) and `electronics/` (separate RFQ: pre-certified 2 x 18650 pack with pass-through charging, control board with 2-channel dimming, LEDs). Quantities 300 / 500 / 2,000; brass parts are quoted two ways (preferred and near-net, `factory_pack.NEAR_NET_BASIS`). `consistency_checks()` compares the drawings' solids with the saved STEP volumes, each part's process with the one its drawing notes assume (`drawings.NOTE_PROCESS`), the geometry with `PRODUCTION_CHANGES` (`faro.production_change_checks`) and scans supplier documents for £ amounts. Open questions for the user (never sent) come from `faro.yaml` `rfq_open_questions` plus project assumptions. `scripts/build_factory_pack.py` writes `docs/factory-pack/` (zip, consistency.md, open-questions.md) for the default design. Drawings cover made-to-drawing parts only (`drawings.DRAWN_PARTS`). Nothing sent to suppliers contains our cost estimates or targets. Mark unverified values (UNVERIFIED) and safety / compliance items in every drawing and the RFQ.
 - Tests live in `backend/tests`. Add tests with every rules, CAD, model or export change.
 - Commit after each working vertical slice.

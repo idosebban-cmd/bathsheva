@@ -28,7 +28,26 @@ from app.services.cad import current_parameters, latest_model, mass_estimate
 from app.services.recommendations import project_recommendations
 from app.services.templates import load_template
 
-QUANTITY_TIERS = [100, 500, 2000]
+QUANTITY_TIERS = [300, 500, 2000]
+
+# Cost items that are drawn parts (listed with the drawings) or duplicates of the joint hardware
+# the BOM already lists; operations are priced into the part they are done on.
+DRAWN_ITEM_KEYS = {"steel_weight_plate", "bottom_plate"}
+HARDWARE_ITEM_KEYS = {"screw_m25_cs", "standoff_m25", "screw_m3", "magnet_6x2", "silicone_gasket"}
+OPERATION_ITEM_KEYS = {"window_laser_cut": "tower", "masked_stripe": "tower"}
+OPERATION_TEXT = {"masked_stripe": "Masked two-tone lacquer: red lower section with a crisp, level line"}
+ELECTRONIC_PARTS = {"led_module", "tower_light", "battery", "charge_board", "dimmer"}
+
+# How to quote each brass part on a near-net basis (quote B), next to the supplier's preferred method.
+NEAR_NET_BASIS = {
+    "gallery": "Spun from a 1.0 mm CZ108 brass disc; locating ring turned from brass tube",
+    "lantern_frame": "Bottom ring and top band turned from brass tube; mullions from drawn brass flat",
+    "cap_spigot": "Turned from brass tube close to the finished OD and bore",
+    "finial": "Turned from close-fitting brass bar (just over the ball diameter)",
+    "knob": "Turned from close-fitting brass bar (just over the knob diameter)",
+    "railing": "Photo-etched from 0.6 mm brass sheet, rolled and soldered (already near-net)",
+    "nameplate": "Photo-etched from 0.8 mm brass sheet, formed to the base radius (already near-net)",
+}
 
 SAFETY_SHORT = {
     "stability": "tip-over stability to be tested on the finished lamp",
@@ -116,9 +135,10 @@ def pack_contents(project: Project) -> dict[str, Any]:
             "step": f"step/F-{int(row['item']):02d}_{_slug(row['name'])}.step",
         })
 
-    bought = []
-    for it in _bought_in_lines(project, cost):
-        bought.append(it)
+    parts.sort(key=lambda pt: pt["part_no"])
+    bought = _bought_in_lines(project, cost)
+    hardware = [{"item": r["item"], "name": r["name"], "quantity": r["quantity"], "material": r["material"],
+                 "notes": r["supplier_notes"]} for r in bom["rows"] if str(r["item"]).startswith(("H", "R"))]
 
     flags = []
     for row in bom["rows"]:
@@ -132,33 +152,41 @@ def pack_contents(project: Project) -> dict[str, Any]:
 
     runtime = project_runtime(project)
     return {
-        "project": project, "params": params, "bom": bom, "parts": parts, "bought_in": bought,
+        "project": project, "params": params, "bom": bom, "parts": parts, "bought_in": bought, "hardware": hardware,
         "cad_version": latest.version if latest else None, "flags": flags, "mass": mass,
         "assumed": sorted(assumed), "date": date.today().isoformat(), "runtime": runtime,
     }
 
 
 def _bought_in_lines(project: Project, cost) -> list[dict[str, Any]]:
-    """Bought-in components (project cost items plus the route extras), without our prices."""
+    """Bought-in components and operations (project cost items plus route extras), without our prices.
+
+    group: electronics (separate RFQ) | operation (priced into the part it is done on) | hardware.
+    One-off costs (e.g. certification testing) and packaging are ours, not supplier components.
+    """
     from sqlalchemy.orm import object_session
 
     from app.services.costing import build_inputs
 
     session = object_session(project)
-    out = []
+    out: list[dict[str, Any]] = []
     if session is None:
         return out
     inputs, ctx = build_inputs(session, project)
-    drawn_extras = {"steel_weight_plate"}  # made to drawing: listed with the drawn parts instead
+    keys = {it.item_id: it.price_key for it in ctx["db_items"]}
     for it in inputs.items:
-        if it.unit != "pcs" or it.kind == "packaging":
+        if it.unit != "pcs" or it.kind in ("packaging", "one_off", "assembly"):
             continue
         extra = ctx["extras"].get(it.item_id)
-        if extra is not None and extra.price_key in drawn_extras:
+        price_key = extra.price_key if extra is not None else keys.get(it.item_id)
+        if price_key in DRAWN_ITEM_KEYS or price_key in HARDWARE_ITEM_KEYS:
             continue
         electronics = any(w in it.name.lower() for w in ("led", "driver", "adapter", "dimmer", "cable", "battery",
                                                          "board", "potentiometer", "usb"))
-        out.append({"name": it.name, "quantity": it.quantity, "electronics": electronics})
+        group = ("electronics" if electronics else
+                 "operation" if price_key in OPERATION_ITEM_KEYS or it.kind == "finishing" else "hardware")
+        out.append({"name": OPERATION_TEXT.get(price_key or "", it.name), "quantity": it.quantity, "electronics": electronics, "group": group,
+                    "price_key": price_key, "on_part": OPERATION_ITEM_KEYS.get(price_key or "")})
     return out
 
 
@@ -173,7 +201,7 @@ def rfq_blocks(c: dict[str, Any]) -> list[Block]:
     mass = c["mass"] or {}
     target_mass = p.get("target_mass_kg")
     b: list[Block] = []
-    b.append(Block("h1", f"Request for quotation: {project.name} table lamp"))
+    b.append(Block("h1", f"Request for quotation: {project.name} table lamp (metalwork, glass and finishing)"))
     b.append(Block("p", f"Bathsheva London · {c['date']} · CAD version "
                         f"{'v' + str(c['cad_version']) if c['cad_version'] else '(not generated)'} · units: millimetres"))
     b.append(Block("warn", "Values marked UNVERIFIED are design placeholders or unverified data. Items marked SAFETY or "
@@ -197,7 +225,8 @@ def rfq_blocks(c: dict[str, Any]) -> list[Block]:
         "Lantern: frosted borosilicate tube inside a brass frame (rings turned from tube, soldered mullions); the red spun cap "
         "twist-locks onto the frame with a turned brass bayonet spigot (four lugs, 20° turn) and a brass ball finial.",
         "Construction: bonded and screwed, no central rod; no visible fixings.",
-        "Cordless: 2 x 18650 Li-ion cells, USB-C charging, rotary dimmer with a solid brass knob on the tower.",
+        "Cordless: 2 x 18650 Li-ion pack, USB-C charging, rotary dimmer with a solid brass knob on the tower. The "
+        "electronics are quoted separately by electronics suppliers (section 6).",
         f"Target total lamp mass {target_mass:g} kg (estimate from CAD {mass.get('total_kg', 0):.2f} kg; UNVERIFIED)."
         if target_mass else "Target mass: to be agreed.",
     ]))
@@ -213,7 +242,7 @@ def rfq_blocks(c: dict[str, Any]) -> list[Block]:
 
     b.append(Block("h2", "3. Quantities"))
     b.append(Block("p", "Please quote each of these order quantities: " + ", ".join(f"{q:,}" for q in QUANTITY_TIERS)
-                        + " lamps. Tell us your MOQ if it is above any of them."))
+                        + " lamps (one order of each size, not cumulative). Tell us your MOQ if it is above any of them."))
 
     b.append(Block("h2", "4. Parts made to drawing"))
     b.append(Block("table", widths=[1.1, 1.4, 0.8, 1.6, 1.6, 1.5, 2.2, 3.2],
@@ -225,40 +254,54 @@ def rfq_blocks(c: dict[str, Any]) -> list[Block]:
     b.append(Block("p", "Material and process are our current choice; please propose alternatives if they would be "
                         "better or cheaper without breaking the design constraint."))
 
-    b.append(Block("h2", "5. Bought-in components"))
-    b.append(Block("table", widths=[5, 1, 3], header=["Component", "Qty/lamp", "Notes"],
-                   rows=[[it["name"], f"{it['quantity']:g}",
-                          "COMPLIANCE: certified for UK/EU sale" if it["electronics"] else ""] for it in c["bought_in"]]))
+    brass = [pt for pt in c["parts"] if (pt["material"] or "").lower().startswith("brass")]
+    if brass:
+        b.append(Block("h2", "5. Brass parts: please quote two ways"))
+        b.append(Block("p", "For each brass part, please quote (A) your preferred method and (B) the near-net basis below "
+                            "(turned from tube, ring blanks or close-fitting bar, or spun from a disc, rather than machined "
+                            "from solid bar). Tell us the blank or stock size you would buy for each."))
+        mass_g = (c["mass"] or {}).get("parts_kg", {})
+        b.append(Block("table", widths=[0.9, 1.4, 1.5, 0.9, 2.0, 3.3],
+                       header=["Part no.", "Part", "Finished size (mm)", "Finished mass (g)", "A: your preferred method",
+                               "B: near-net basis"],
+                       rows=[[pt["part_no"], pt["name"], pt["size_mm"] or "—",
+                              f"{mass_g[pt['cad_key']] * 1000:.0f}" if pt["cad_key"] in mass_g else "—",
+                              "Your choice (state it)", NEAR_NET_BASIS.get(pt["cad_key"], "Near-net blank of your choice")]
+                             for pt in brass]))
 
-    b.append(Block("h2", "6. Electronics: please quote the cordless baseline and option B"))
-    runtime_line = (f"Runtime target: at least {rt['target_h']:g} h at full brightness with both lights on (our estimate "
-                    f"{rt['hours']:.1f} h from {rt['battery_wh']:.1f} Wh and {rt['load_w']:.1f} W; UNVERIFIED)."
-                    if rt.get("applicable") and rt.get("hours") and rt.get("target_h") else "Runtime target: to be agreed.")
-    b.append(Block("bullets", items=[
-        "Lantern LED: 2700 K, CRI ≥ 90, about 1.5 W, on a Ø38 mm board resting on the gallery ledge.",
-        "Tower light: warm white LED filament strips (about 0.8 W) on a central spine behind the windows.",
-        "Battery: pre-certified 2 x 18650 Li-ion pack (about 3,350 mAh branded cells, protection circuit), user-replaceable; "
-        "the pack supplier provides the UN38.3 test summary and IEC 62133-2 report.",
-        "Control board: USB-C charging, 2-cell charger, 2-channel constant-current LED driver, input for the rotary "
-        "dimmer (slim 9 mm pot with switch, D-shaft).",
-        runtime_line,
-        "Option B (please also quote): certified external 12 V adapter (UK and EU plugs), low-voltage cable and an internal "
-        "DC-DC constant-current driver for both channels; no battery.",
-        "Alternative to quote: capacitive touch dimming on the brass finial instead of the knob.",
-        "COMPLIANCE: electronics certified for UK and EU sale (UKCA / CE: electrical safety, EMC, RoHS, ecodesign for light "
-        "sources). Send certificates and test reports; we will verify them with an accredited test lab.",
-        *[f"COMPLIANCE (battery): {x}" for x in rt.get("compliance", [])],
-    ]))
+    b.append(Block("h2", "6. Bought-in parts, hardware and operations"))
+    ops = [it for it in c["bought_in"] if it["group"] == "operation"]
+    if ops:
+        b.append(Block("p", "Operations to include in the price of the part they are done on:"))
+        b.append(Block("bullets", items=[f"{it['name']}" + (f" (on the {it['on_part'].replace('_', ' ')})" if it["on_part"] else "")
+                                         for it in ops]))
+    b.append(Block("p", "Hardware and bought-in parts (quote them if you supply them, or tell us to supply them):"))
+    rows = [[h["item"], h["name"], f"{h['quantity']:g}", h["material"], h["notes"]] for h in c["hardware"]]
+    rows += [["—", it["name"], f"{it['quantity']:g}", "", ""] for it in c["bought_in"] if it["group"] == "hardware"]
+    b.append(Block("table", widths=[0.6, 3.6, 0.7, 1.6, 3.0], header=["Item", "Component", "Qty/lamp", "Material", "Notes"],
+                   rows=rows))
+    elec = [it for it in c["bought_in"] if it["group"] == "electronics"]
+    b.append(Block("p", "Electronics are sourced through a separate RFQ to electronics suppliers and are not part of this "
+                        "quote: " + "; ".join(it["name"].split(":")[0] for it in elec) + ". Their space is shown in the "
+                        "assembly STEP. If you can offer final assembly, please quote fitting them, wiring, the light-up "
+                        "/ charge / dimming test and packing."))
 
     b.append(Block("h2", "7. Price breakdown requested"))
     b.append(Block("p", "For each part and each quantity, please break the unit price down as below so we can compare it "
-                        "line by line with our cost model."))
-    b.append(Block("table", header=["Part no.", "Qty", "Material (£)", "Cycle time (min)", "Process (£)", "Finishing (£)",
-                                    "Setup per batch (£)", "Tooling one-off (£)", "Unit price (£)"],
-                   rows=[[pt["part_no"], f"{q:,}", "", "", "", "", "", "", ""] for pt in c["parts"][:2] for q in QUANTITY_TIERS]
-                   + [["…", "", "", "", "", "", "", "", ""]]))
-    b.append(Block("p", "Please also state: material grade and the blank / stock size you buy per part, the machine or "
-                        "process used, and who owns the tooling."))
+                        "line by line between suppliers. State the currency and the Incoterm. Brass parts: one row for "
+                        "method A and one for method B."))
+    first = next((pt for pt in c["parts"] if pt not in brass), c["parts"][0] if c["parts"] else None)
+    example = []
+    if first:
+        example += [[first["part_no"], "—", f"{q:,}", "", "", "", "", "", "", ""] for q in QUANTITY_TIERS]
+    if brass:
+        ex = next((pt for pt in brass if pt["cad_key"] == "gallery"), brass[0])
+        example += [[ex["part_no"], m, f"{q:,}", "", "", "", "", "", "", ""] for m in ("A", "B") for q in QUANTITY_TIERS]
+    b.append(Block("table", header=["Part no.", "Method", "Qty", "Material (£)", "Cycle time (min)", "Process (£)",
+                                    "Finishing (£)", "Setup per batch (£)", "Tooling one-off (£)", "Unit price (£)"],
+                   rows=example + [["…", "", "", "", "", "", "", "", "", ""]]))
+    b.append(Block("p", "(£) means the amount in your currency. Please also state: material grade and the blank / stock "
+                        "size you buy per part, the machine or process used, and who owns the tooling."))
 
     b.append(Block("h2", "8. Questions for the supplier"))
     b.append(Block("bullets", items=[
@@ -302,10 +345,256 @@ def rfq_blocks(c: dict[str, Any]) -> list[Block]:
     b.append(Block("bullets", items=[
         "drawings/: one PDF and one SVG per made-to-drawing part (dimensions for quotation, tolerances to be agreed).",
         "step/: one STEP file per made-to-drawing part, plus the full assembly.",
-        "bom.csv: full bill of materials.",
+        "bom.csv: full bill of materials (part numbers, materials, processes; electronics marked as a separate RFQ).",
         "rfq.md / rfq.pdf: this document.",
     ]))
     return b
+
+
+def electronics_rfq_blocks(c: dict[str, Any]) -> list[Block]:
+    """Separate RFQ for battery / electronics suppliers: pack, control board and LEDs."""
+    project: Project = c["project"]
+    p = c["params"]
+    d = faro.derived({k: float(v) for k, v in p.items()})
+    rt = c.get("runtime") or {}
+    spec = (load_template(project.template).get("electrical") or {}) if project.template else {}
+    bat = spec.get("battery", {})
+    loads = {ld["part"]: ld["watts"] for ld in spec.get("loads", [])}
+    bl, bw, bt = faro.BATTERY
+    b: list[Block] = []
+    b.append(Block("h1", f"Request for quotation: {project.name} table lamp (battery pack, control board and LEDs)"))
+    b.append(Block("p", f"Bathsheva London · {c['date']} · CAD version "
+                        f"{'v' + str(c['cad_version']) if c['cad_version'] else '(not generated)'} · units: millimetres"))
+    b.append(Block("warn", "Values marked UNVERIFIED are our working assumptions: confirm them or propose better. Items "
+                           "marked COMPLIANCE or SAFETY must be backed by certificates and test reports for the exact part."))
+
+    b.append(Block("h2", "1. Product"))
+    b.append(Block("p", "A cordless decorative table lamp in spun aluminium and brass, 300 mm tall: a frosted glass lantern "
+                        "at the top and five glowing windows in the tower. The metalwork is quoted separately; this RFQ "
+                        "covers the battery pack, the control board and the two LED light sources."))
+
+    b.append(Block("h2", "2. Quantities and samples"))
+    b.append(Block("bullets", items=[
+        "Please quote each of these order quantities: " + ", ".join(f"{q:,}" for q in QUANTITY_TIERS) + " sets "
+        "(one set = one battery pack, one control board, one lantern LED module, one tower light). Tell us your MOQ.",
+        "Samples: please quote 5 sample sets and the lead time.",
+    ]))
+
+    b.append(Block("h2", "3. Battery pack: pre-certified 2 x 18650"))
+    cap = bat.get("cell_capacity_mah", 3350)
+    b.append(Block("bullets", items=[
+        f"Two branded 18650 Li-ion cells, about {cap:,} mAh class (name the cell brand and model).",
+        "Configuration: we prefer 1S2P (3.6 V nominal), so USB-C charging stays simple. Confirm, or propose 2S (7.2 V) "
+        "with your reasons (UNVERIFIED).",
+        "Protection circuit in the pack: over-charge, over-discharge, over-current and short circuit, plus an NTC "
+        "thermistor so charging stops outside a safe temperature range.",
+        "Pass-through charging: the lamp must work normally while it charges from USB-C. Charging with the lamp on must "
+        "not cycle or over-stress the cells. Tell us whether the power path is on the pack or on the control board.",
+        f"Size: it must fit within {bl:g} × {bw:g} × {bt:g} mm lying flat (cells side by side), with leads.",
+        "Leads and a polarised connector to the control board (for example JST PH 2.0), about 80 mm long (UNVERIFIED). "
+        "The end user must be able to replace the pack with ordinary tools.",
+        "COMPLIANCE: the pack must be pre-certified. Send the UN38.3 test summary and the IEC 62133-2 test report for this "
+        "exact pack (cells, configuration and protection board), plus the safety data sheet. Pack labelling must follow "
+        "EU Batteries Regulation 2023/1542 (CE, crossed-out wheelie bin, capacity in mAh/Wh).",
+    ]))
+
+    b.append(Block("h2", "4. Control board"))
+    lw, tw = loads.get("led_module", 1.5), loads.get("tower_light", 0.8)
+    b.append(Block("bullets", items=[
+        f"USB-C receptacle (5 V input; no USB PD needed; CC resistors so C-to-C cables work). It mounts on the board at the "
+        f"rear of the base, receptacle centre {faro.USBC_Z:g} mm above the base underside. Board envelope about 40 × 25 mm "
+        "(UNVERIFIED; tell us your size).",
+        "Li-ion charger for the pack with the NTC input, and the pass-through power path (section 3).",
+        f"Two constant-current LED channels: lantern about {lw:g} W and tower light about {tw:g} W (UNVERIFIED). Match the "
+        "voltage and current to the LEDs you quote.",
+        "Dimming from a slim rotary potentiometer with switch (9 mm class, D-shaft, M7 bushing), mounted in the tower. "
+        "Switch off at the end of travel. Both channels dim together, with the tower at a fixed share of the lantern set "
+        "at the factory. Smooth dimming down to 5% or lower, with no visible flicker (PWM at 3 kHz or more, or analogue "
+        "dimming: IEEE 1789 low-risk).",
+        "Please quote the potentiometer and its harness too.",
+        "Low battery: the lantern blinks twice, then the lamp dims and switches off before the cells are deeply "
+        "discharged. Standby current 50 µA or less (UNVERIFIED).",
+        "A small charging indicator LED next to the USB-C port (UNVERIFIED).",
+        "Wiring harness: about 250 mm from the base to the lantern LED through the tower, plus leads to the tower light "
+        "and the potentiometer, with connectors.",
+        "COMPLIANCE: please quote USB-C charging and the board tested and documented for UK and EU sale. This means EMC "
+        "(EN IEC 55015 and EN 61547), safety (EN IEC 62368-1 or EN 60598-1 as applicable) and RoHS. Send the test "
+        "reports; we will check them with an accredited test lab.",
+    ]))
+
+    b.append(Block("h2", "5. LEDs"))
+    tl = d["diffuser_length"] - 2 * faro.DIFFUSER_OVERLAP
+    b.append(Block("bullets", items=[
+        f"Lantern LED module: a round aluminium-core board Ø{faro.LED_BOARD_D:g} mm on a heat spreader. Emitter area "
+        f"Ø{faro.LED_EMITTER_D:g} mm or less, total height {faro.LED_H:g} mm or less, 2700 K, CRI 90 or more (R9 above "
+        f"50 preferred), about {lw:g} W. It lights a frosted glass lantern from below; the board rests on a ledge.",
+        f"Tower light: {faro.FILAMENTS} warm-white LED filament strips, 2700 K, about {tw:g} W in total, about "
+        f"{tl:.0f} mm of light along a Ø{faro.SPINE_D:g} mm aluminium spine. The tube behind the windows is "
+        f"{d['diffuser_length']:.0f} mm long. Please quote with and without the spine.",
+        "Colour consistency: 3-step MacAdam binning. Please send datasheets, and LM-80 reports if you have them.",
+        "COMPLIANCE: light sources must meet EU ecodesign (EU 2019/2020) and energy labelling (EU 2019/2015) requirements "
+        "where they apply; please confirm.",
+    ]))
+
+    b.append(Block("h2", "6. Runtime"))
+    b.append(Block("p", f"Target: at least {rt['target_h']:g} h at full brightness with both lights on. Our estimate is "
+                        f"{rt['hours']:.1f} h from {rt['battery_wh']:.1f} Wh and {rt['load_w']:.1f} W (UNVERIFIED). "
+                        "Please give your own runtime and charge time for what you quote."
+                   if rt.get("applicable") and rt.get("hours") and rt.get("target_h") else "Runtime target: to be agreed."))
+
+    b.append(Block("h2", "7. Alternatives to quote"))
+    b.append(Block("bullets", items=[
+        "Option B (mains, no battery): a certified external 12 V adapter (UK and EU plugs), a low-voltage cable and an "
+        "internal DC-DC constant-current driver for both channels, with the same dimming.",
+        "Capacitive touch dimming on the brass finial instead of the knob.",
+    ]))
+
+    b.append(Block("h2", "8. Price breakdown requested"))
+    b.append(Block("table", header=["Item", "Qty", "Unit price", "Tooling / NRE (one-off)", "Certification (one-off)",
+                                    "MOQ", "Lead time"],
+                   rows=[[item, f"{q:,}", "", "", "", "", ""]
+                         for item in ("Battery pack", "Control board + potentiometer + harness", "Lantern LED module",
+                                      "Tower light") for q in QUANTITY_TIERS]))
+    b.append(Block("p", "State the currency and the Incoterm."))
+
+    b.append(Block("h2", "9. Questions for the supplier"))
+    b.append(Block("bullets", items=[
+        "Datasheets for the cells, the protection board, the charger and driver ICs, and the LEDs.",
+        "Certificates and test reports: what exists already and what needs testing, with cost and time.",
+        "Shipping: how you ship the pack (UN3480 alone, or UN3481 packed with equipment) and any surcharge.",
+        "Warranty, country of origin, and the shelf life and storage charge level of the packs.",
+        "Suggested changes that would cut cost or risk.",
+    ]))
+
+    b.append(Block("h2", "10. Space available (from our CAD)"))
+    b.append(Block("table", header=["Item", "Space"], rows=[
+        ["Battery bay in the base", f"{bl:g} × {bw:g} × {bt:g} mm, lying flat; inside height of the base "
+                                    f"{d['base_inner_height']:.1f} mm"],
+        ["Control board", f"about 40 × 25 mm at the base rear; USB-C centre {faro.USBC_Z:g} mm above the underside"],
+        ["Lantern LED board", f"Ø{faro.LED_BOARD_D:g} mm, rests on the gallery ledge (Ø{faro.LEDGE_BORE:g} mm bore); it lifts "
+                              f"out through a Ø{d['led_access_dia']:.0f} mm opening"],
+        ["Tower light", f"Ø{faro.SPINE_D:g} mm spine, {d['gallery_top_z'] - faro.LEDGE_T - 0.5 - p['base_height']:.0f} mm "
+                        f"long; Ø{d['diffuser_od'] - 2 * faro.DIFFUSER_WALL:.0f} mm clear inside the diffuser tube"],
+        ["Potentiometer", f"Ø{faro.POT_D:g} × {faro.POT_DEPTH:g} mm body behind the tower wall, M7 bushing"],
+    ]))
+
+    b.append(Block("h2", "11. Battery compliance (for your information)"))
+    b.append(Block("bullets", items=[f"COMPLIANCE: {x}" for x in rt.get("compliance", [])] or ["None listed."]))
+    return b
+
+
+def supplier_bom_csv(c: dict[str, Any]) -> str:
+    """BOM for suppliers: part numbers, materials and processes, without any cost or internal flags."""
+    import csv
+
+    drawn = {pt["cad_key"]: pt for pt in c["parts"]}
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    w.writerow(["Part no.", "Part", "Qty/lamp", "Material", "Process", "Finish", "Size (mm)", "Supply", "Drawing / STEP",
+                "Notes"])
+    for r in c["bom"]["rows"]:
+        key = r.get("cad_key")
+        item = str(r["item"])
+        if key in drawn:
+            pt = drawn[key]
+            supply, files = "Made to drawing", f"{pt['drawing'].split('/')[-1]}.pdf; {pt['step'].split('/')[-1]}"
+            notes = "; ".join(["UNVERIFIED: " + u for u in pt["unverified"]] + ["SAFETY: " + x for x in pt["safety"]])
+        elif key in ELECTRONIC_PARTS:
+            supply, files, notes = "Electronics (separate RFQ)", "", "COMPLIANCE: certified for UK/EU sale"
+        else:
+            supply, files, notes = "Bought-in", "", r.get("supplier_notes") or ""
+        part_no = f"F-{int(item):02d}" if item.isdigit() else item
+        w.writerow([part_no, r["name"], f"{r['quantity']:g}", r["material"], r["process"], r["finish"], r["size_mm"],
+                    supply, files, notes])
+    return buf.getvalue()
+
+
+_MONEY = re.compile(r"£\s?\d")
+
+
+def consistency_checks(project: Project, c: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+    """Is the pack consistent with the latest CAD, the parts' processes and the production changes?"""
+    from app.services.costdown import cad_mismatches
+
+    c = c or pack_contents(project)
+    rules = load_rules()
+    out: list[dict[str, Any]] = []
+
+    def check(name: str, ok: bool, detail: str) -> None:
+        out.append({"check": name, "ok": bool(ok), "detail": detail})
+
+    model = latest_model(project)
+    if model is None:
+        check("CAD generated", False, "Generate CAD first: drawings and STEP files come from the latest CAD version.")
+        return out
+    # Drawings are cut from solids built now; STEP files were saved when the CAD was generated. If the generator
+    # changed in between (e.g. a new production change), they disagree: compare volumes part by part.
+    built = faro.model(c["params"]).parts
+    info = model.part_info or {}
+    differ = [pt["part_no"] + " " + pt["name"] for pt in c["parts"]
+              if pt["cad_key"] in info and pt["cad_key"] in built
+              and abs(built[pt["cad_key"]].volume - info[pt["cad_key"]]["volume_mm3"]) > 0.005 * info[pt["cad_key"]]["volume_mm3"] + 1]
+    check("Drawings and STEP files show the same solids", not differ,
+          f"CAD v{model.version}: drawings and STEP agree for all {len(c['parts'])} parts" if not differ else
+          f"CAD v{model.version} was generated with an older generator ({', '.join(differ)}); regenerate CAD")
+    bodies = set((model.part_info or {}).keys())
+    check("All bodies in the model", set(faro.PART_KEYS) <= bodies,
+          f"{len(bodies)} bodies" + ("" if set(faro.PART_KEYS) <= bodies else
+                                    f"; missing {', '.join(sorted(set(faro.PART_KEYS) - bodies))}"))
+    steps = {o.part_key: o.path for o in model.outputs if o.format == "step" and o.part_key}
+    missing = [pt["part_no"] for pt in c["parts"] if pt["cad_key"] not in steps
+               or not (settings.data_dir / steps[pt["cad_key"]]).is_file()]
+    check("STEP file for every drawing", not missing,
+          f"{len(c['parts'])} drawings, {len(c['parts']) - len(missing)} STEP files" + (f"; missing {missing}" if missing else ""))
+    stale = []
+    for pt in c["parts"]:
+        need = dr.NOTE_PROCESS.get(pt["cad_key"])
+        if need and rules.processes[need].name != pt["process"]:
+            stale.append(f"{pt['part_no']} {pt['name']}: drawing notes assume {rules.processes[need].name.lower()}, "
+                         f"part is {(pt['process'] or 'TBD').lower()}")
+    check("Drawing notes match each part's process", not stale, "; ".join(stale) or "all match")
+    mism = cad_mismatches(project)
+    check("CAD shows every chosen route's design changes", not mism,
+          "; ".join(f"{m['part']}: {', '.join(m['changes'])}" for m in mism) or "no mismatches")
+    for g in faro.production_change_checks(c["params"]):
+        check(f"Production change: {g['feature']}", g["ok"], g["detail"])
+    rows = {r.get("cad_key") for r in c["bom"]["rows"]}
+    check("BOM lists every drawn part", all(pt["cad_key"] in rows for pt in c["parts"]), "part numbers F-xx follow the BOM items")
+    mass = c.get("mass") or {}
+    check("Mass near target", mass.get("status") in ("ok", None),
+          f"{mass.get('total_kg', 0):.2f} kg vs target {mass.get('target_kg')} kg ({mass.get('status')})")
+    texts = {"rfq": rfq_markdown(rfq_blocks(c)), "electronics rfq": rfq_markdown(electronics_rfq_blocks(c)),
+             "bom.csv": supplier_bom_csv(c)}
+    leaks = [name for name, t in texts.items() if _MONEY.search(t)]
+    check("No prices or cost targets in supplier documents", not leaks, "clean" if not leaks else f"£ amounts in {leaks}")
+    return out
+
+
+def open_questions(project: Project, c: dict[str, Any]) -> list[dict[str, str]]:
+    """What a supplier would ask that isn't answered yet: the template's list plus project assumptions."""
+    tpl = load_template(project.template) if project.template else {}
+    out = [{k: q[k] for k in ("id", "topic", "question", "why", "proposed")} for q in tpl.get("rfq_open_questions", [])]
+    labels = {
+        "production_volume": ("Commercial", "Production volume is still TBD.",
+                              "The RFQ asks for 300 / 500 / 2,000; suppliers will ask which you expect to order first.",
+                              "Say which quantity is the likely first order."),
+        "intended_markets": ("Compliance", "Intended markets are an assumption (UK, EU).",
+                             "Sets UKCA/CE marking, plug types and the battery rules.", "Confirm UK and EU."),
+        "approx_dimensions": ("Drawings", "Overall dimensions are a placeholder.", "Every drawing scales from them.",
+                              "Confirm the dimensions on the Overview tab."),
+    }
+    for f in c.get("assumed", []):
+        if f in labels and not any(q["id"] == "markets" and f == "intended_markets" for q in out):
+            topic, question, why, proposed = labels[f]
+            out.append({"id": f, "topic": topic, "question": question, "why": why, "proposed": proposed})
+    spec = (tpl.get("electrical") or {})
+    unv = [ld["name"] for ld in spec.get("loads", []) if not ld.get("verified")]
+    if unv or not (spec.get("battery") or {}).get("verified", True):
+        out.append({"id": "electrical_data", "topic": "Electronics",
+                    "question": "LED wattages, cell capacity and the runtime estimate are model-generated.",
+                    "why": "The runtime target (and the pack choice) depend on them.",
+                    "proposed": "Keep them as UNVERIFIED targets in the RFQ; check against the suppliers' datasheets."})
+    return out
 
 
 def rfq_markdown(blocks: list[Block]) -> str:
@@ -330,7 +619,7 @@ def rfq_markdown(blocks: list[Block]) -> str:
     return "\n".join(out)
 
 
-def rfq_pdf(blocks: list[Block]) -> bytes:
+def rfq_pdf(blocks: list[Block], title: str = "Request for quotation") -> bytes:
     from reportlab.lib import colors
     from reportlab.lib.pagesizes import A4
     from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
@@ -376,7 +665,7 @@ def rfq_pdf(blocks: list[Block]) -> bytes:
             flow += [t, Spacer(1, 6)]
     buf = io.BytesIO()
     doc = SimpleDocTemplate(buf, pagesize=A4, leftMargin=15 * mm, rightMargin=15 * mm, topMargin=15 * mm, bottomMargin=15 * mm,
-                            title="Request for quotation", author="Bathsheva London")
+                            title=title, author="Bathsheva London")
     doc.build(flow)
     return buf.getvalue()
 
@@ -399,6 +688,21 @@ def drawing_files(c: dict[str, Any], cad_key: str) -> tuple[str, bytes]:
     return dr.to_svg(d), dr.to_pdf(d)
 
 
+def readme(c: dict[str, Any], folder: str) -> str:
+    return "\n".join([
+        f"{c['project'].name} table lamp: request for quotation pack ({c['date']}, CAD v{c['cad_version']})",
+        "",
+        "mechanical/   for metalwork, glass and finishing suppliers:",
+        "              rfq.pdf (and rfq.md), drawings/ (PDF + SVG per part), step/ (STEP per part + assembly), bom.csv",
+        "electronics/  for battery and electronics suppliers:",
+        "              rfq_electronics.pdf (and .md): pre-certified 2 x 18650 pack, control board with dimming, LEDs",
+        "",
+        "Quantities to quote: " + ", ".join(f"{q:,}" for q in QUANTITY_TIERS) + " units.",
+        "Units: millimetres. Values marked UNVERIFIED are working assumptions; SAFETY and COMPLIANCE items need certificates.",
+        "",
+    ])
+
+
 def build_factory_pack(project: Project) -> tuple[str, bytes]:
     model = latest_model(project)
     if model is None:
@@ -407,20 +711,25 @@ def build_factory_pack(project: Project) -> tuple[str, bytes]:
     steps = {o.part_key: o.path for o in model.outputs if o.format == "step" and o.part_key}
     assembly = next((o.path for o in model.outputs if o.format == "step" and o.part_key is None), None)
     blocks = rfq_blocks(c)
+    eblocks = electronics_rfq_blocks(c)
     folder = f"{project.slug}_rfq_pack_v{model.version}"
+    mech, elec = f"{folder}/mechanical", f"{folder}/electronics"
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
-        zf.writestr(f"{folder}/rfq.md", rfq_markdown(blocks))
-        zf.writestr(f"{folder}/rfq.pdf", rfq_pdf(blocks))
-        zf.writestr(f"{folder}/bom.csv", bom_csv(project))
+        zf.writestr(f"{folder}/README.txt", readme(c, folder))
+        zf.writestr(f"{mech}/rfq.md", rfq_markdown(blocks))
+        zf.writestr(f"{mech}/rfq.pdf", rfq_pdf(blocks, "Request for quotation: metalwork, glass and finishing"))
+        zf.writestr(f"{mech}/bom.csv", supplier_bom_csv(c))
         for pt in c["parts"]:
             svg, pdf = drawing_files(c, pt["cad_key"])
-            zf.writestr(f"{folder}/{pt['drawing']}.svg", svg)
-            zf.writestr(f"{folder}/{pt['drawing']}.pdf", pdf)
+            zf.writestr(f"{mech}/{pt['drawing']}.svg", svg)
+            zf.writestr(f"{mech}/{pt['drawing']}.pdf", pdf)
             if pt["cad_key"] in steps:
-                zf.write(settings.data_dir / steps[pt["cad_key"]], f"{folder}/{pt['step']}")
+                zf.write(settings.data_dir / steps[pt["cad_key"]], f"{mech}/{pt['step']}")
         if assembly:
-            zf.write(settings.data_dir / assembly, f"{folder}/step/{project.slug}_assembly.step")
+            zf.write(settings.data_dir / assembly, f"{mech}/step/{project.slug}_assembly.step")
+        zf.writestr(f"{elec}/rfq_electronics.md", rfq_markdown(eblocks))
+        zf.writestr(f"{elec}/rfq_electronics.pdf", rfq_pdf(eblocks, "Request for quotation: battery, control board and LEDs"))
     return f"{folder}.zip", buf.getvalue()
 
 
@@ -432,7 +741,9 @@ def pack_summary(project: Project) -> dict[str, Any]:
     return {
         "cad_version": c["cad_version"], "ready": c["cad_version"] is not None,
         "parts": [{k: v for k, v in pt.items()} for pt in c["parts"]],
-        "bought_in": c["bought_in"], "quantity_tiers": QUANTITY_TIERS, "mass": c["mass"],
+        "bought_in": c["bought_in"], "hardware": c["hardware"], "quantity_tiers": QUANTITY_TIERS, "mass": c["mass"],
+        "brass_parts": [{"part_no": pt["part_no"], "name": pt["name"], "near_net": NEAR_NET_BASIS.get(pt["cad_key"], "")}
+                        for pt in c["parts"] if (pt["material"] or "").lower().startswith("brass")],
         "unverified": unverified,
         "safety": sorted({f"{f['part']}: {f['text']}" for f in c["flags"]}),
         "compliance": ["All electronics (LEDs, control board, battery, dimmer; adapter and driver for option B) certified "
@@ -440,7 +751,12 @@ def pack_summary(project: Project) -> dict[str, Any]:
                        *[f"Battery: {x}" for x in (c.get("runtime") or {}).get("compliance", [])]],
         "runtime": c.get("runtime"),
         "production_changes": faro.PRODUCTION_CHANGES,
+        "consistency": consistency_checks(project, c) if c["cad_version"] is not None else [],
+        "open_questions": open_questions(project, c),
         "rfq_markdown": rfq_markdown(blocks),
+        "electronics_rfq_markdown": rfq_markdown(electronics_rfq_blocks(c)),
         "notes": ["Our cost estimates and targets are not included in anything sent to suppliers.",
+                  "The zip has two folders: mechanical/ for metalwork, glass and finishing suppliers, electronics/ for "
+                  "battery and electronics suppliers.",
                   "Drawings are generated from the current CAD parameters; generate CAD so the STEP files match."],
     }

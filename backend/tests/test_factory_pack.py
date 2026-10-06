@@ -1,6 +1,7 @@
 """RFQ pack: drawings, RFQ document and the zip."""
 
 import io
+import re
 import zipfile
 
 import pytest
@@ -73,30 +74,46 @@ def test_pack_contents(client, faro_project):
     assert r.status_code == 200 and 'faro_rfq_pack_v1.zip' in r.headers["content-disposition"]
     zf = zipfile.ZipFile(io.BytesIO(r.content))
     names = set(zf.namelist())
-    root = "faro_rfq_pack_v1/"
-    assert {root + "rfq.md", root + "rfq.pdf", root + "bom.csv", root + "step/faro_assembly.step"} <= names
+    root, mech, elec = "faro_rfq_pack_v1/", "faro_rfq_pack_v1/mechanical/", "faro_rfq_pack_v1/electronics/"
+    assert {root + "README.txt", mech + "rfq.md", mech + "rfq.pdf", mech + "bom.csv", mech + "step/faro_assembly.step",
+            elec + "rfq_electronics.md", elec + "rfq_electronics.pdf"} <= names
     for stem in ("F-01_base", "F-07_tower", "F-06_cream_band", "F-12_gallery", "F-13_gallery_railing", "F-14_lantern_frame",
                  "F-15_lantern_glass", "F-17_cap", "F-18_cap_bayonet_spigot", "F-04_weight_plate", "F-02_bottom_plate"):
-        assert {f"{root}drawings/{stem}.svg", f"{root}drawings/{stem}.pdf", f"{root}step/{stem}.step"} <= names
+        assert {f"{mech}drawings/{stem}.svg", f"{mech}drawings/{stem}.pdf", f"{mech}step/{stem}.step"} <= names
     assert not any("led" in n.lower() or "battery" in n for n in names)  # bought-in parts are specified, not drawn
-    assert zf.read(root + "rfq.pdf").startswith(b"%PDF")
-    assert zf.read(root + "step/F-07_tower.step").startswith(b"ISO-10303-21;")
+    assert zf.read(mech + "rfq.pdf").startswith(b"%PDF") and zf.read(elec + "rfq_electronics.pdf").startswith(b"%PDF")
+    assert zf.read(mech + "step/F-07_tower.step").startswith(b"ISO-10303-21;")
 
-    md = zf.read(root + "rfq.md").decode()
-    for text in ("100, 500, 2,000", "MOQ", "Tooling", "Lead time", "Samples", "Suggested design changes",
-                 "Material (£)", "Cycle time (min)", "Finishing (£)", "Tooling one-off (£)",
-                 "cordless", "Option B", "DC-DC", "dimmer", "UK and EU sale", "COMPLIANCE", "UN38.3", "62133",
-                 "2023/1542", "Runtime target", "photo-etched", "twist-lock", "Where production departs",
+    md = zf.read(mech + "rfq.md").decode()
+    for text in ("300, 500, 2,000", "MOQ", "Tooling", "Lead time", "Samples", "Suggested design changes",
+                 "Material (£)", "Cycle time (min)", "Finishing (£)", "Tooling one-off (£)", "Method",
+                 "cordless", "photo-etched", "twist-lock", "Where production departs",
                  "visible metal must be solid metal", "metal-effect paint",
                  "Class A", "orange peel", "approved sample", "Minimum wall thickness", "rattle", "Target total lamp mass",
-                 "Golden sample", "UNVERIFIED", "SAFETY", "tolerances to be agreed"):
+                 "Golden sample", "UNVERIFIED", "SAFETY", "tolerances to be agreed",
+                 "Brass parts: please quote two ways", "your preferred method", "near-net basis",
+                 "Spun from a 1.0 mm CZ108 brass disc", "separate RFQ", "Battery bay"):
         assert text in md, text
+    # Not components: our one-off testing cost, and electronics (separate RFQ) aren't priced here.
+    assert "EMC testing" not in md and "| Pre-certified Li-ion battery pack" not in md
+    brass_rows = md.split("## 5. Brass parts")[1].split("## 6.")[0]
+    for name in ("Gallery", "Lantern frame", "Cap bayonet spigot", "Finial", "Dimmer knob", "Gallery railing", "Nameplate"):
+        assert f"| {name} |" in brass_rows, name
+    assert "| F-12 | B | 2,000 |" in md  # breakdown rows for both methods
+
+    emd = zf.read(elec + "rfq_electronics.md").decode()
+    for text in ("300, 500, 2,000", "pre-certified 2 x 18650", "Pass-through charging", "UN38.3", "62133-2", "2023/1542",
+                 "protection", "1S2P", "Two constant-current LED channels", "Dimming", "flicker", "2700 K", "CRI 90",
+                 "filament", "Option B", "DC-DC", "Runtime", "70 × 38 × 19.5", "Space available"):
+        assert text in emd, text
     # Our own cost estimates and targets never go to suppliers.
-    assert "£75" not in md and "target factory cost" not in md.lower() and "cost model estimate" not in md.lower()
-    bom = zf.read(root + "bom.csv").decode()
-    assert "Weight plate" in bom and "Battery pack" in bom
-
-
+    for doc in (md, emd):
+        assert "£75" not in doc and "target factory cost" not in doc.lower() and "cost model estimate" not in doc.lower()
+        assert not re.search(r"£\s?\d", doc)
+    bom = zf.read(mech + "bom.csv").decode()
+    assert "Weight plate" in bom and "Battery pack" in bom and "Electronics (separate RFQ)" in bom
+    assert "cost" not in bom.lower() and "GBP" not in bom
+    assert bom.splitlines()[1].startswith("F-01,Base")
 def test_drawing_and_rfq_endpoints(client, faro_project):
     pid = faro_project["id"]
     r = client.get(f"/api/projects/{pid}/drawings/base.svg")
@@ -111,3 +128,55 @@ def test_drawing_and_rfq_endpoints(client, faro_project):
     assert {p["cad_key"] for p in s["parts"]} == set(dr.DRAWN_PARTS)
     blank = client.post("/api/projects", json={"name": "Blank"}).json()["id"]
     assert client.get(f"/api/projects/{blank}/factory-pack").status_code == 409
+
+
+def test_consistency_checks_and_open_questions(client, faro_project):
+    pid = faro_project["id"]
+    params = client.get(f"/api/projects/{pid}/cad").json()["parameters"]
+    client.post(f"/api/projects/{pid}/cad/generate", json={"parameters": params})
+    s = client.get(f"/api/projects/{pid}/factory-pack").json()
+    checks = {c["check"]: c for c in s["consistency"]}
+    assert all(c["ok"] for c in s["consistency"]), [c for c in s["consistency"] if not c["ok"]]
+    for name in ("Drawings and STEP files show the same solids", "STEP file for every drawing",
+                 "Drawing notes match each part's process", "Production change: Gallery", "Production change: Window diffusers",
+                 "No prices or cost targets in supplier documents"):
+        assert name in checks, name
+    assert s["quantity_tiers"] == [300, 500, 2000]
+    assert {q["id"] for q in s["open_questions"]} >= {"battery_config", "tolerances", "colours", "artwork", "incoterms",
+                                                       "production_volume", "electrical_data"}
+    assert all(q["proposed"] for q in s["open_questions"])
+    assert len(s["brass_parts"]) == 7 and s["electronics_rfq_markdown"].startswith("# Request for quotation")
+    assert client.get(f"/api/projects/{pid}/rfq-electronics.pdf").content.startswith(b"%PDF")
+    assert client.get(f"/api/projects/{pid}/rfq-electronics.md").text.startswith("# Request for quotation")
+
+
+def test_consistency_flags_stale_cad_and_changed_routes(client, faro_project):
+    from app.db import new_session
+    from app.models import CadModel, Part, Project
+    from app.services import factory_pack as fp
+
+    pid = faro_project["id"]
+    params = client.get(f"/api/projects/{pid}/cad").json()["parameters"]
+    client.post(f"/api/projects/{pid}/cad/generate", json={"parameters": params})
+    session = new_session()
+    project = session.get(Project, pid)
+    model = session.query(CadModel).filter_by(project_id=pid).one()
+    info = dict(model.part_info)
+    info["gallery"] = {**info["gallery"], "volume_mm3": info["gallery"]["volume_mm3"] * 3}  # as if made by an older generator
+    model.part_info = info
+    gallery = next(p for p in project.parts if p.cad_key == "gallery")
+    gallery.process = "CNC machining"
+    session.commit()
+    checks = {c["check"]: c for c in fp.consistency_checks(project)}
+    assert not checks["Drawings and STEP files show the same solids"]["ok"]
+    assert "F-12 Gallery" in checks["Drawings and STEP files show the same solids"]["detail"]
+    assert not checks["Drawing notes match each part's process"]["ok"]
+    session.close()
+
+
+def test_production_change_checks_follow_geometry():
+    from app.cad import faro
+
+    checks = {c["feature"]: c for c in faro.production_change_checks(DEFAULTS)}
+    assert all(c["ok"] for c in checks.values()), checks
+    assert {"Shell walls", "Window diffusers", "Gallery", "Cap twist-lock", "Lantern glass"} <= set(checks)

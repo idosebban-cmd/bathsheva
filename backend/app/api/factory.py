@@ -61,3 +61,16 @@ def rfq(fmt: str, project: Project = Depends(get_project)):
         return Response(fp.rfq_pdf(blocks), media_type="application/pdf",
                         headers={"Content-Disposition": f'inline; filename="{project.slug}_rfq.pdf"'})
     raise HTTPException(404, "RFQ is available as .md or .pdf")
+
+
+@router.get("/rfq-electronics.{fmt}")
+def rfq_electronics(fmt: str, project: Project = Depends(get_project)):
+    blocks = fp.electronics_rfq_blocks(_contents(project))
+    if fmt == "md":
+        return Response(fp.rfq_markdown(blocks), media_type="text/markdown",
+                        headers={"Content-Disposition": f'attachment; filename="{project.slug}_rfq_electronics.md"'})
+    if fmt == "pdf":
+        return Response(fp.rfq_pdf(blocks, "Request for quotation: battery, control board and LEDs"),
+                        media_type="application/pdf",
+                        headers={"Content-Disposition": f'inline; filename="{project.slug}_rfq_electronics.pdf"'})
+    raise HTTPException(404, "RFQ is available as .md or .pdf")

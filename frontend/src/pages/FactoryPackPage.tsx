@@ -8,7 +8,7 @@ export default function FactoryPackPage() {
   const [pack, setPack] = useState<FactoryPackSummary | null>(null);
   const [error, setError] = useState("");
   const [preview, setPreview] = useState<string | null>(null);
-  const [showRfq, setShowRfq] = useState(false);
+  const [showRfq, setShowRfq] = useState<"" | "mechanical" | "electronics">("");
   const base = `/api/projects/${project.id}`;
 
   async function load() {
@@ -43,24 +43,75 @@ export default function FactoryPackPage() {
           </div>
         </div>
         <p className="small muted">
-          {pack.ready ? `Uses CAD v${pack.cad_version}.` : "Generate CAD on the CAD tab first: the pack includes the STEP files."} The zip holds a 2D
-          drawing (PDF and SVG) and a STEP file per made-to-drawing part, the full assembly STEP, the RFQ document (PDF and Markdown) and the BOM
-          CSV. Quantity tiers: {pack.quantity_tiers.map((q) => q.toLocaleString()).join(" / ")}.
+          {pack.ready ? `Uses CAD v${pack.cad_version}.` : "Generate CAD on the CAD tab first: the pack includes the STEP files."} The zip has
+          two folders. <b>mechanical/</b> (for metalwork, glass and finishing suppliers) holds a 2D drawing (PDF and SVG) and a STEP file per
+          made-to-drawing part, the assembly STEP, the RFQ and the BOM. <b>electronics/</b> holds a separate RFQ for the battery pack, control
+          board and LEDs. Quantity tiers: {pack.quantity_tiers.map((q) => q.toLocaleString()).join(" / ")}.
         </p>
         <div className="row">
           <a href={`${base}/rfq.pdf`} target="_blank" rel="noreferrer">
-            <button>RFQ (PDF)</button>
+            <button>Mechanical RFQ (PDF)</button>
           </a>
-          <a href={`${base}/rfq.md`} download>
-            <button>RFQ (Markdown)</button>
+          <a href={`${base}/rfq-electronics.pdf`} target="_blank" rel="noreferrer">
+            <button>Electronics RFQ (PDF)</button>
           </a>
-          <button onClick={() => setShowRfq(!showRfq)}>{showRfq ? "Hide" : "Show"} RFQ text</button>
+          <button onClick={() => setShowRfq(showRfq === "mechanical" ? "" : "mechanical")}>
+            {showRfq === "mechanical" ? "Hide" : "Show"} mechanical RFQ text
+          </button>
+          <button onClick={() => setShowRfq(showRfq === "electronics" ? "" : "electronics")}>
+            {showRfq === "electronics" ? "Hide" : "Show"} electronics RFQ text
+          </button>
         </div>
         {pack.notes.map((n) => (
           <p key={n} className="notice small">
             {n}
           </p>
         ))}
+      </section>
+
+      {pack.consistency.length > 0 && (
+        <section className="card">
+          <h2>Consistency with the latest CAD</h2>
+          <table>
+            <tbody>
+              {pack.consistency.map((c) => (
+                <tr key={c.check}>
+                  <td>
+                    <span className={`status status-${c.ok ? "pass" : "fail"}`}>{c.ok ? "✓ OK" : "✗ Fix"}</span>
+                  </td>
+                  <td>{c.check}</td>
+                  <td className="small muted">{c.detail}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      )}
+
+      <section className="card">
+        <h2>Open questions to resolve before sending ({pack.open_questions.length})</h2>
+        <p className="small muted">Suppliers will ask these. They are not in the pack; each has a proposed answer.</p>
+        <table>
+          <thead>
+            <tr>
+              <th>Topic</th>
+              <th>Question</th>
+              <th>Proposed answer</th>
+            </tr>
+          </thead>
+          <tbody>
+            {pack.open_questions.map((q) => (
+              <tr key={q.id}>
+                <td>{q.topic}</td>
+                <td>
+                  {q.question}
+                  <div className="small muted">{q.why}</div>
+                </td>
+                <td className="small">{q.proposed}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </section>
 
       <section className="card">
@@ -156,7 +207,15 @@ export default function FactoryPackPage() {
             </li>
           ))}
         </ul>
-        <h3>Bought-in components listed in the RFQ</h3>
+        <h3>Brass parts quoted two ways (preferred and near-net)</h3>
+        <ul className="small">
+          {pack.brass_parts.map((b) => (
+            <li key={b.part_no}>
+              {b.part_no} {b.name}: {b.near_net}
+            </li>
+          ))}
+        </ul>
+        <h3>Bought-in components (electronics go to the electronics RFQ)</h3>
         <ul className="small">
           {pack.bought_in.map((b) => (
             <li key={b.name}>
@@ -168,8 +227,8 @@ export default function FactoryPackPage() {
 
       {showRfq && (
         <section className="card">
-          <h2>RFQ text</h2>
-          <pre className="rfq-text">{pack.rfq_markdown}</pre>
+          <h2>{showRfq === "mechanical" ? "Mechanical" : "Electronics"} RFQ text</h2>
+          <pre className="rfq-text">{showRfq === "mechanical" ? pack.rfq_markdown : pack.electronics_rfq_markdown}</pre>
         </section>
       )}
     </div>
