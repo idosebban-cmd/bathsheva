@@ -66,7 +66,9 @@ To change the schema:
 4. Run `./run.sh test`. `tests/test_migrations.py` fails if migrating a fresh database doesn't produce exactly the schema in `models.py`, or if there is more than one head.
 5. Commit the model change and the migration together.
 
-Other useful commands, run from `backend/`: `.venv/bin/alembic current`, `.venv/bin/alembic check` (reports any model change that has no migration), and `.venv/bin/alembic downgrade -1`.
+Other useful commands, run from `backend/`: `.venv/bin/alembic current` and `.venv/bin/alembic check` (reports any model change that has no migration). Don't use `alembic downgrade` or `alembic upgrade` from the CLI yet (see the known issue below).
+
+**Known issue (not fixed): CLI `alembic upgrade` / `downgrade` don't persist on SQLite.** They log `Running downgrade 0005 -> 0004` (or upgrade) and exit 0, but `alembic current` is unchanged afterwards. This happens on an empty database too. On a database with projects, a failed `downgrade -1` leaves `_alembic_tmp_projects` behind, and retrying fails with `table _alembic_tmp_projects already exists`. A CLI upgrade leaves `_alembic_tmp_cost_items` the same way. Likely cause: in `migrations/env.py` `_run()`, the `PRAGMA foreign_keys=OFF` executed on a CLI connection autobegins a transaction, so Alembic's `begin_transaction()` defers to it and nothing commits before `engine.connect()` closes and rolls back. SQLite's partially autocommitted batch DDL explains the leftover temp tables. The app's startup path (`app/migrate.py`, which passes its own connection inside `conn.begin()`) is unaffected and still migrated such a database to head. `tests/test_migrations.py` doesn't cover the CLI. Until it's fixed, test downgrades through `alembic.command` with a connection in `cfg.attributes["connection"]` inside `engine.begin()`, as `app/migrate.py` does. Never run them on a real data folder without a backup.
 
 ## Process management
 
