@@ -68,6 +68,20 @@ class Material(Provenance):
     max_service_temp_c: float | None = None
     density_g_cm3: float | None = None
     is_glass: bool = False
+    # metal | glass | polymer; derived from category when not given.
+    kind: Literal["metal", "glass", "polymer"] | None = None
+
+    @property
+    def material_kind(self) -> str | None:
+        if self.kind:
+            return self.kind
+        if self.is_glass:
+            return "glass"
+        if self.category in ("aluminium", "brass", "steel"):
+            return "metal"
+        if self.category == "clear_polymer_or_glass":
+            return "polymer"
+        return None
 
 
 class Finish(Provenance):
@@ -77,6 +91,7 @@ class Finish(Provenance):
     plain_language: str
     min_process_finish: FinishQuality
     notes: str = ""
+    metal_effect: bool = False  # imitates metal (paint / metallised film)
 
 
 class BendRadius(Provenance):
@@ -126,6 +141,28 @@ class SafetyRule(Provenance):
     polymer_near_heat: bool = False
 
 
+class DesignConstraint(Provenance):
+    key: str
+    name: str
+    message: str
+    applies_traits_any: list[str]
+    exempt_traits: list[str] = []
+    exempt_categories: list[str] = []
+    allowed_kinds: list[str]
+    transparent_kinds: list[str] = []
+    trim_traits: list[str] = []
+
+    def applies(self, traits: set[str], category: str) -> bool:
+        if traits & set(self.exempt_traits) or category in self.exempt_categories:
+            return False
+        return bool(traits & set(self.applies_traits_any))
+
+    def kinds_for(self, traits: set[str]) -> set[str]:
+        if "transparent" in traits and self.transparent_kinds:
+            return set(self.transparent_kinds)
+        return set(self.allowed_kinds)
+
+
 class PlanningValue(Provenance):
     key: str
     value: Any
@@ -144,6 +181,7 @@ class RuleSet(BaseModel):
     tooling_cost: dict[str, ToolingCost]
     safety_rules: list[SafetyRule]
     planning: dict[str, PlanningValue]
+    design_constraints: dict[str, DesignConstraint] = {}
 
     def plan(self, key: str) -> Any:
         return self.planning[key].value
@@ -161,6 +199,7 @@ _FILES: dict[str, tuple[str, type[Provenance], str | None]] = {
     "tooling_cost.yaml": ("tooling_cost", ToolingCost, "key"),
     "safety.yaml": ("safety_rules", SafetyRule, None),
     "planning.yaml": ("planning", PlanningValue, "key"),
+    "constraints.yaml": ("design_constraints", DesignConstraint, "key"),
 }
 
 

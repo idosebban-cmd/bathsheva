@@ -7,26 +7,35 @@
 material_prices:
   - material: al_1050
     form: sheet / spinning discs
+    trade_basis: aluminium_sheet
+    price_basis: retail
+    basis_quantity: 1
+    discount_class: merchant_material
     gbp_per_kg: {low: 7.7, high: 9.2}
     source: "UK online full sheets 1050: 2000x1000x3 mm from £125.48 ex VAT = £7.72/kg (https://www.aluminiumwarehouse.co.uk/aluminium/sheet); 2000x1000x6 mm £300/32.52 kg = £9.23/kg (https://www.aluminiumwarehouse.co.uk/products/2000mm-x-1000mm-x-6mm-1050-aluminium-sheet-packs). Reference floor: LME Al cash $3,110-3,129/t (1-5 Oct 2026, https://www.alcircle.com/news/lme-aluminium-price-drops-2-62-as-stocks-remain-stable-at-241-375t-on-october-1-121399) + Rotterdam duty-paid premium ~$330-490/t (https://www.alcircle.com/news/europe-s-aluminium-duty-paid-premium-falls-18-in-august-as-easing-geopolitical-risks-erase-war-premium-120701) = ~£2.6-2.7/kg metal value. accessed 2026-10-05; prices read from search-result excerpts (direct page fetch blocked by sandbox network policy)."
     confidence: medium
     verified: false
   - material: al_3003
     form: sheet / spinning discs
+    trade_basis: aluminium_sheet
     gbp_per_kg: {low: 4.0, high: 6.5}
     source: model-generated
     confidence: low
     verified: false
   - material: al_5052
     form: sheet
+    trade_basis: aluminium_sheet
     gbp_per_kg: {low: 4.5, high: 7.0}
     source: model-generated
     confidence: low
     verified: false
   - material: al_6061
     form: round bar
-    gbp_per_kg: {low: 5.2, high: 11.5}
-    source: "Bar, 6082-T6 used as UK proxy: Cromwell 4in x 24in 6082 £154 ex VAT / 13.3 kg = £11.5/kg (https://cromwell.co.uk/shop/materials-maintenance-and-standard-parts/engineering-materials/4in-x-24in-aluminium-round-bar-grade-6082-1-pce/p/IND4732376K); EU 6061-T6 contract $2.30-3.10/lb = £3.8-5.2/kg (https://www.mwalloys.com/es/aluminum-alloy-6061-price-per-pound-2026/), low end taken at top of contract range. Reference floor: LME Al cash $3,110-3,129/t (1-5 Oct 2026, https://www.alcircle.com/news/lme-aluminium-price-drops-2-62-as-stocks-remain-stable-at-241-375t-on-october-1-121399) + Rotterdam duty-paid premium ~$330-490/t (https://www.alcircle.com/news/europe-s-aluminium-duty-paid-premium-falls-18-in-august-as-easing-geopolitical-risks-erase-war-premium-120701) = ~£2.6-2.7/kg metal value. USD->GBP at 1.3224 (fxstreet.com GBP/USD, 5 Oct 2026); accessed 2026-10-05; prices read from search-result excerpts (direct page fetch blocked by sandbox network policy)."
+    price_basis: retail
+    basis_quantity: 1
+    discount_class: merchant_material
+    gbp_per_kg: {low: 11.5, high: 18.6}
+    source: "Single UK bars, 6082-T6 as the UK proxy for 6061: Cromwell 4in x 24in 6082 £154 ex VAT / 13.3 kg = £11.5/kg (https://cromwell.co.uk/shop/materials-maintenance-and-standard-parts/engineering-materials/4in-x-24in-aluminium-round-bar-grade-6082-1-pce/p/IND4732376K); RS PRO 4in x 24in bar £248.85 ex VAT / 13.3 kg = £18.6/kg (https://uk.rs-online.com/web/p/metal-bars-metal-rods/0495231). Cross-check: EU 6061-T6 contract $2.30-3.10/lb = £3.8-5.2/kg (https://www.mwalloys.com/es/aluminum-alloy-6061-price-per-pound-2026/). accessed 2026-10-05; read from search-result excerpts (direct page fetch blocked)."
     confidence: medium
     verified: false
   - material: al_6063

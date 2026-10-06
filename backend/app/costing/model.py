@@ -109,6 +109,11 @@ class PartSpec:
     # Sheet-formed parts (spun, pressed, rolled) are shells: if the CAD body is solid, cost
     # the material as a shell of this wall thickness over the visible surface instead.
     formed_shell_mm: float | None = None
+    # Volume discount on the material price (merchant prices), applied at quantity >= discount_from.
+    price_discount_key: str | None = None
+    discount_from: float = 0.0
+    # Trade-basis material price: (lme + premium) / fx / 1000 + conversion, by assumption key.
+    trade_keys: dict[str, str] | None = None
 
 
 @dataclass
@@ -123,6 +128,8 @@ class ItemSpec:
     cost_key: str  # assumption key for GBP per unit (or labour rate for minutes)
     qty_key: str | None = None  # assumption key when the quantity itself is an assumption (minutes)
     part_id: int | None = None  # set when the item exists because of a part's process route
+    discount_key: str | None = None  # volume-discount assumption for distributor / retail prices
+    discount_from: float = 0.0  # quantity from which the discount applies
 
 
 @dataclass
@@ -194,8 +201,29 @@ def part_quantities(p: PartSpec, keys: dict[str, str], v: dict[str, float]) -> d
     return {"finished_kg": finished_kg, "bought_kg": bought_kg, "removed_cm3": removed, "minutes": minutes}
 
 
-def evaluate(inputs: CostInputs, values: dict[str, float], quantity: float) -> list[Line]:
-    """Cost lines per product at production quantity Q, for one set of assumption values."""
+def material_price(p: PartSpec, keys: dict[str, str], values: dict[str, float], quantity: float,
+                   raw: bool = False) -> tuple[float, list[str]]:
+    """GBP/kg for a part's material and the assumption keys behind it.
+
+    raw=True gives the researched price as found (no volume discount, no trade basis).
+    """
+    if p.trade_keys and not raw:
+        tk = p.trade_keys
+        price = (values[tk["lme"]] + values[tk["premium"]]) / values[tk["fx"]] / 1000 + values[tk["conversion"]]
+        return price, [tk["lme"], tk["premium"], tk["fx"], tk["conversion"]]
+    price, used = values[keys["price"]], [keys["price"]]
+    if p.price_discount_key and quantity >= p.discount_from and not raw:
+        price *= values[p.price_discount_key]
+        used.append(p.price_discount_key)
+    return price, used
+
+
+def evaluate(inputs: CostInputs, values: dict[str, float], quantity: float, raw: bool = False) -> list[Line]:
+    """Cost lines per product at production quantity Q, for one set of assumption values.
+
+    raw=True prices materials and bought-in items at their researched basis (no volume
+    discount, no trade basis), for showing raw vs adjusted side by side.
+    """
     q = max(float(quantity), 1.0)
     lines: list[Line] = []
     for p in inputs.parts:
@@ -203,7 +231,8 @@ def evaluate(inputs: CostInputs, values: dict[str, float], quantity: float) -> l
         n = p.quantity
         qty = part_quantities(p, k, values)
         rate = values[k["rate"]]
-        lines.append(Line("material", p.part_id, None, p.name, n * qty["bought_kg"] * values[k["price"]], [k["price"]] + (
+        price, price_keys = material_price(p, k, values, q, raw)
+        lines.append(Line("material", p.part_id, None, p.name, n * qty["bought_kg"] * price, price_keys + (
             [k["util"]] if p.cnc_allowance_mm is None else [])))
         lines.append(Line("process", p.part_id, None, p.name, n * qty["minutes"] * rate / 60,
                           [k["rate"], k["cycle"]] + ([k["removal"]] if "removal" in k else [k["cycle_kg"]])))
@@ -216,6 +245,9 @@ def evaluate(inputs: CostInputs, values: dict[str, float], quantity: float) -> l
         qty_val = values[it.qty_key] if it.qty_key else it.quantity
         unit_cost = values[it.cost_key] / 60 if it.unit == "min" else values[it.cost_key]
         keys = [it.cost_key] + ([it.qty_key] if it.qty_key else [])
+        if it.discount_key and q >= it.discount_from and not raw:
+            unit_cost *= values[it.discount_key]
+            keys.append(it.discount_key)
         category = it.kind if it.kind in ITEM_CATEGORIES else "bought_in"
         lines.append(Line(category, None, it.item_id, it.name, qty_val * unit_cost, keys))
     if inputs.overhead_key:
@@ -227,6 +259,11 @@ def evaluate(inputs: CostInputs, values: dict[str, float], quantity: float) -> l
 
 def total(lines: list[Line]) -> float:
     return sum(line.amount for line in lines)
+
+
+def raw_mid(inputs: CostInputs, quantity: float) -> float:
+    """Midpoint unit cost with every price at its researched basis (no volume adjustment)."""
+    return total(evaluate(inputs, inputs.mids(), quantity, raw=True))
 
 
 def _ranges(inputs: CostInputs, quantity: float) -> tuple[list[Line], list[tuple[float, float]], tuple[float, float]]:
@@ -264,7 +301,8 @@ def unit_cost_range(inputs: CostInputs, quantity: float) -> dict[str, float]:
     worst_low = total(evaluate(inputs, inputs.lows(), quantity))
     worst_high = total(evaluate(inputs, inputs.highs(), quantity))
     return {"quantity": quantity, "low": round(low, 2), "mid": round(mid, 2), "high": round(high, 2),
-            "worst_low": round(worst_low, 2), "worst_high": round(worst_high, 2)}
+            "worst_low": round(worst_low, 2), "worst_high": round(worst_high, 2),
+            "raw_mid": round(raw_mid(inputs, quantity), 2)}
 
 
 def part_unit_range(inputs: CostInputs, part_id: int, quantity_of_parts: float) -> dict[str, float] | None:

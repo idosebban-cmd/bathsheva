@@ -33,6 +33,16 @@ process_rates:
     source: model-generated
     confidence: low
     verified: false
+  - process: metal_tube_cut
+    machine_gbp_per_hr: {low: 30, high: 45}
+    lead_time_weeks: {low: 1, high: 2}
+    setup_hours: {low: 0.3, high: 1.0}
+    cycle_min: {low: 1.5, high: 4}
+    cycle_min_per_kg: {low: 0, high: 0}
+    material_utilisation: {low: 1.05, high: 1.15}
+    source: model-generated
+    confidence: low
+    verified: false
   - process: sheet_forming
     machine_gbp_per_hr: {low: 35, high: 55}
     lead_time_weeks: {low: 2, high: 4}

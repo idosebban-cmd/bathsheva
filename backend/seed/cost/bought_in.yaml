@@ -7,12 +7,18 @@
 bought_in:
   - key: led_module
     name: LED module (5–8 W, CRI 90+)
+    price_basis: distributor_small_qty
+    basis_quantity: 100
+    discount_class: electronics
     gbp: {low: 2.53, high: 3.74}
     source: "Bridgelux Vero 10 2700K 90CRI COB: DigiKey BXRC-27G1000 $3.34 @100 (https://www.digikey.com/product-detail/en/bridgelux/BXRC-27G1000-B-23/976-1243-ND/5180215); Vero SE 10 BXRC-27G1000-D-73-SE $4.95 (https://ballastshop.com/bxrc-27g1000-d-73-se-bridgelux-gen7-vero-se-10-led-array-983-lumen-2700k/); USD->GBP at 1.3224 (fxstreet.com GBP/USD, 5 Oct 2026); accessed 2026-10-05; prices read from search-result excerpts (direct page fetch blocked by sandbox network policy). No 500-pc break published."
     confidence: medium
     verified: false
   - key: led_driver_mains
-    name: Certified constant-current LED driver (mains)
+    name: Certified dimmable constant-current LED driver (mains) [power option A]
+    price_basis: distributor_small_qty
+    basis_quantity: 25
+    discount_class: electronics
     gbp: {low: 16.6, high: 17.2}
     source: "Mean Well certified dimmable CC drivers: PCD-25-700A (triac dim) $21.99 @50 (https://www.ledsupply.com/led-drivers/mean-well-pcd-series-with-triac-dimming); LCM-25 $22.70 @25 (https://www.digikey.com/en/products/detail/mean-well-usa-inc/LCM-25/7704704); RS UK LCM-25 £24.71 1-off (https://uk.rs-online.com/web/p/led-drivers/8234743); USD->GBP at 1.3224 (fxstreet.com GBP/USD, 5 Oct 2026); accessed 2026-10-05; prices read from search-result excerpts (direct page fetch blocked by sandbox network policy). Breaks at 25-50 pcs; 500-pc price likely lower."
     confidence: medium
@@ -61,6 +67,8 @@ bought_in:
     verified: false
   - key: cable_grommet
     name: Strain-relief cable grommet
+    price_basis: distributor_small_qty
+    basis_quantity: 100
     gbp: {low: 0.06, high: 0.11}
     source: "Heyco strain-relief bushings, DigiKey @100: model 2126 $0.0762, 2155 $0.1436 (https://azcus.digikey.com/en/products/detail/heyco-products-corporation/2126/15906413, https://azcus.digikey.com/en/products/detail/heyco-products-corporation/2155/15906927); USD->GBP at 1.3224 (fxstreet.com GBP/USD, 5 Oct 2026); accessed 2026-10-05; prices read from search-result excerpts (direct page fetch blocked by sandbox network policy)."
     confidence: medium
@@ -81,6 +89,8 @@ bought_in:
     verified: false
   - key: rivet_nut_m4
     name: M4 rivet nut (threaded insert for thin sheet)
+    price_basis: distributor_small_qty
+    basis_quantity: 100
     gbp: {low: 0.04, high: 0.13}
     source: "M4 aluminium rivet nuts: Zygology £3.65/100 (https://zygology.com/rivetnuts/standard-rivetnuts/aluminium-rivetnut-small-head-m4-02al01r04011); KayFast £0.13 each (https://www.kayfast.co.uk/view-product/FLANGED-HEAD-ALUMINIUM-RIVNUTS); accessed 2026-10-05; prices read from search-result excerpts (direct page fetch blocked by sandbox network policy)."
     confidence: medium
@@ -98,7 +108,7 @@ bought_in:
     confidence: medium
     verified: false
   - key: lamp_nut_set
-    name: Lamp nuts and washers (M10x1, set)
+    name: Lamp nut and washers (M10x1, set for base and cap)
     gbp: {low: 0.2, high: 0.6}
     source: model-generated
     confidence: medium
@@ -122,14 +132,68 @@ bought_in:
     confidence: low
     verified: false
   - key: external_adapter_12v
-    name: Certified external 12 V adapter (UK/EU plugs)
+    name: Certified external 12 V adapter (UK/EU plugs) [power option B]
+    price_basis: distributor_small_qty
+    basis_quantity: 500
+    discount_class: electronics
     gbp: {low: 9.4, high: 10.1}
     source: "Mean Well GE12I12-P1J 12 V 12 W interchangeable-plug adapter $10.82 @500 (https://www.digikey.com/en/products/detail/mean-well-usa-inc/GE12I12-P1J/7703281) plus UK plug clip $1.65 (Jameco) to £1.93 1-off (https://uk.rs-online.com/web/p/power-supply-accessories/1783436); USD->GBP at 1.3224 (fxstreet.com GBP/USD, 5 Oct 2026); accessed 2026-10-05; prices read from search-result excerpts (direct page fetch blocked by sandbox network policy)."
     confidence: medium
     verified: false
   - key: lv_cable_switch
-    name: Low-voltage cable with inline switch (fabric)
+    name: Low-voltage cable (fabric) with DC plug
     gbp: {low: 1.5, high: 4.0}
     source: model-generated
     confidence: low
     verified: false
+
+  # --- Dimming (required) and power option B --------------------------------
+  - key: dimmer_in_base
+    name: In-base rotary dimmer (potentiometer on the driver dim input, solid metal knob)
+    price_basis: distributor_small_qty
+    basis_quantity: 100
+    discount_class: electronics
+    gbp: {low: 3.19, high: 4.61}
+    notes: >-
+      Rotary potentiometer wired to the driver's dim input (LCM-25 3-in-1 dimming or the
+      DC-DC driver's DIM pin), plus a solid aluminium knob. A capacitive touch dimmer is
+      the alternative (modules from about €1.2, Velleman LEDC23 €13 retail, unverified
+      certification); quote both.
+    source: "Potentiometer: Radiohm POTM 100k £2.34 @100 (https://uk.rs-online.com/web/p/potentiometers/4688749), Alpha 100k linear $1.56 @100 (https://www.adafruit.com/product/5277); knob: RS PRO aluminium knobs for 6 mm shaft £2.01-2.27 @1-4 (https://st1-uk.rs-online.com/web/p/potentiometer-knobs/7777322, https://st1-uk.rs-online.com/web/p/potentiometer-knobs/7777331); USD->GBP 1.3224; accessed 2026-10-05; read from search-result excerpts (direct page fetch blocked)"
+    confidence: medium
+    verified: false
+  - key: dimmer_inline_mains
+    name: Inline mains cable dimmer (triac, with switch) [power option A]
+    price_basis: retail
+    basis_quantity: 1
+    discount_class: electronics
+    gbp: {low: 30.0, high: 38.72}
+    notes: Needs a triac-dimmable driver (e.g. Mean Well PCD-25) instead of a 3-in-1 dimming driver.
+    source: "3-core inline slide dimmer and push switch £38.72 ex VAT (https://www.mr-resistor.co.uk/item.aspx?i=19321); LED inline dimmer with switch £36.00 inc VAT = £30.00 ex VAT (https://creative-cables.co.uk/switches-and-dimmer/20350-dimmer-per-led-e-lampadine-tradizionali-infracavo-a-pulsante.html); accessed 2026-10-05; read from search-result excerpts (direct page fetch blocked)"
+    confidence: medium
+    verified: false
+  - key: dimmer_inline_lv
+    name: Inline low-voltage PWM dimmer (12–24 V) [power option B]
+    price_basis: retail
+    basis_quantity: 1
+    discount_class: electronics
+    gbp: {low: 3.43, high: 3.43}
+    source: "Inline LED dimmer switch 12-24 V 4 A, 5.5x2.1 mm, £4.12 inc VAT = £3.43 ex VAT (https://pro.maplin.co.uk/products/inline-led-strip-dimmer-switch-4a); accessed 2026-10-05; read from search-result excerpts (direct page fetch blocked)"
+    confidence: medium
+    verified: false
+  - key: dc_dc_cc_driver
+    name: DC-DC constant-current LED driver, step-up, dimmable (Mean Well LDH-25 class) [power option B]
+    price_basis: distributor_small_qty
+    basis_quantity: 100
+    discount_class: electronics
+    gbp: {low: 7.38, high: 7.82}
+    source: "Mean Well LDH-25-250 $9.76 @100 and LDH-25-350 $10.08 @100 (https://www.trcelectronics.com/products/mean-well-ldh-25-250, https://www.digikey.com/en/products/detail/mean-well-usa-inc/LDH-25-350/12759948); LDH-25-350 $10.34 @100 (https://www.trcelectronics.com/products/mean-well-ldh-25-350); USD->GBP 1.3224; accessed 2026-10-05; read from search-result excerpts (direct page fetch blocked)"
+    confidence: medium
+    verified: false
+  - key: cap_finial_nut
+    name: Decorative cap nut (finial) for the lamp tube, solid brass or aluminium
+    gbp: {low: 0.6, high: 2.5}
+    source: model-generated
+    confidence: low
+    verified: false
+

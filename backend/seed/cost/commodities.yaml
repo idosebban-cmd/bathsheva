@@ -1,0 +1,52 @@
+# Commodity data for trade-basis material prices (sheet aluminium outside the UK):
+#   price (GBP/kg) = (LME aluminium cash + regional premium) [USD/t] / USD per GBP / 1000
+#                    + sheet conversion premium [GBP/kg]
+# Researched values cite their URLs; read from search-result excerpts on 2026-10-05
+# because direct page fetches were blocked. Spot-check before relying on them.
+
+commodities:
+  - key: lme_aluminium_cash
+    name: LME aluminium cash price
+    unit: USD/t
+    value: {low: 3110, high: 3129}
+    price_basis: trade_volume
+    source: "LME Al cash $3,119.5/t on 1 Oct 2026 and $3,110/t official cash on 2 Oct 2026 (https://www.alcircle.com/news/lme-aluminium-price-drops-2-62-as-stocks-remain-stable-at-241-375t-on-october-1-121399); $3,129/t on 5 Oct 2026 (https://tradingeconomics.com/commodity/aluminum); accessed 2026-10-05; read from search-result excerpts (direct page fetch blocked)"
+    confidence: high
+    verified: false
+  - key: usd_per_gbp
+    name: Exchange rate (USD per GBP)
+    unit: USD/GBP
+    value: {low: 1.3224, high: 1.3241}
+    price_basis: trade_volume
+    source: "GBP/USD 1.32406 on 2 Oct 2026 and 1.3224 on 5 Oct 2026 (https://www.mtfxgroup.com/tools/historical-currency-exchange-rates/gbp-to-usd-rate/, https://www.fxstreet.com/news/british-pound-slides-as-france-fiscal-shock-lifts-the-us-dollar-202610051636); accessed 2026-10-05"
+    confidence: high
+    verified: false
+  - key: aluminium_premium_rotterdam_dp
+    name: Aluminium regional premium, Rotterdam duty-paid (EU)
+    unit: USD/t
+    value: {low: 330, high: 490}
+    price_basis: trade_volume
+    source: "Platts European duty-paid P1020 premium $330/t (Dec 2025); Rotterdam duty-paid ~$490/t for the Aug 2026 contract after a ~$600/t May peak (https://www.alcircle.com/news/europe-s-aluminium-duty-paid-premium-falls-18-in-august-as-easing-geopolitical-risks-erase-war-premium-120701, https://www.hellenicshippingnews.com/?p=1117213); accessed 2026-10-05"
+    confidence: medium
+    verified: false
+  - key: aluminium_premium_turkey
+    name: Aluminium regional premium, Turkey
+    unit: USD/t
+    value: {low: 200, high: 500}
+    source: model-generated
+    confidence: low
+    verified: false
+  - key: aluminium_premium_china
+    name: Aluminium premium / domestic price difference, China
+    unit: USD/t
+    value: {low: 0, high: 200}
+    source: model-generated
+    confidence: low
+    verified: false
+  - key: aluminium_sheet_conversion
+    name: Sheet / spinning-circle conversion premium over metal (1050/3003/5052)
+    unit: GBP/kg
+    value: {low: 1.0, high: 2.0}
+    source: model-generated
+    confidence: low
+    verified: false

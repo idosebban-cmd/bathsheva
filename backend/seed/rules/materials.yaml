@@ -62,7 +62,7 @@ materials:
   - key: al_6063
     name: Aluminium 6063 (T5/T6)
     category: aluminium
-    processes: [extrusion, cnc_machining]
+    processes: [metal_tube_cut, extrusion, cnc_machining]
     plain_language: >-
       The usual alloy for extruded tubes and profiles. Very smooth surface and
       anodises beautifully, though it is softer than 6061.
@@ -154,6 +154,20 @@ materials:
     is_glass: true
     source: model-generated
     confidence: medium
+    verified: false
+
+  - key: steel_s275
+    name: Mild steel S275 (zinc plated)
+    category: steel
+    kind: metal
+    processes: []
+    plain_language: >-
+      Ordinary structural steel plate. Used only for hidden parts such as the
+      weight plate; zinc plating stops it rusting.
+    finish_compat: {}
+    density_g_cm3: 7.85
+    source: model-generated
+    confidence: high
     verified: false
 
   - key: certified_component

@@ -57,6 +57,9 @@ class SnapItem:
     source: str
     confidence: str
     verified: bool
+    price_basis: str = "model_estimate"
+    basis_quantity: float | None = None
+    discount_class: str | None = None
 
 
 @dataclass
@@ -68,6 +71,8 @@ class Snapshot:
     geometry_source: str
     # Geometry for a different overall height (scaled parameters); None if not available.
     geometry_for_height: Callable[[float], dict[str, Any]] | None = None
+    # Per-project overrides of the volume-discount assumptions: {class: {low, high}}.
+    volume_discounts: dict[str, dict[str, float]] = field(default_factory=dict)
 
 
 @dataclass
@@ -90,6 +95,8 @@ class CostConfig:
     region: str = "uk"
     material_overrides: dict[str, str] = field(default_factory=dict)  # by cad_key
     finish_overrides: dict[str, str] = field(default_factory=dict)  # by cad_key, finish key
+    # Swap one bought-in price key for another (e.g. inline mains dimmer -> low-voltage dimmer).
+    replace_price_keys: dict[str, str] = field(default_factory=dict)
 
     def merged(self, other: "CostConfig") -> "CostConfig":
         lo1, hi1 = self.assembly_delta_min
@@ -104,6 +111,7 @@ class CostConfig:
             region=other.region if other.region != "uk" else self.region,
             material_overrides={**self.material_overrides, **other.material_overrides},
             finish_overrides={**self.finish_overrides, **other.finish_overrides},
+            replace_price_keys={**self.replace_price_keys, **other.replace_price_keys},
         )
 
 
@@ -115,11 +123,48 @@ def _scaled(a: Assumption, low_mult: float, high_mult: float) -> Assumption:
     return replace(a, low=a.low * low_mult, high=a.high * high_mult)
 
 
+DISCOUNTED_BASES = {"distributor_small_qty", "retail"}
+
+
+def discount_assumption(cost: CostData, snapshot: "Snapshot", cls: str | None, basis: str) -> Assumption | None:
+    """The volume-discount assumption for a price of this basis and class (None = no discount)."""
+    if not cls or basis not in DISCOUNTED_BASES:
+        return None
+    g = cost.discount_classes().get(cls)
+    if g is None:
+        return None
+    over = snapshot.volume_discounts.get(cls) or {}
+    lo, hi = float(over.get("low", g.value["low"])), float(over.get("high", g.value["high"]))
+    edited = bool(over)
+    label = cls.replace("_", " ")
+    return Assumption(f"discount:{cls}", f"Volume price as a share of small-quantity price ({label})", "×", min(lo, hi),
+                      max(lo, hi), "medium" if not edited else "medium", False,
+                      "user (project setting)" if edited else g.source, "Volume discounts")
+
+
+def discount_from(cost: CostData, cls: str) -> float:
+    return float(cost.discount_classes()[cls].value.get("from_quantity", 0))
+
+
 def route_changes_for(cost: CostData, process_key: str, traits: set[str]) -> list[Any]:
     return [
         rc for rc in cost.route_changes.values()
         if process_key in rc.processes and (not rc.traits_any or traits & set(rc.traits_any))
     ]
+
+
+def _trade_keys(assumptions: dict[str, Assumption], cost: CostData, region: Any) -> dict[str, str]:
+    """Add the commodity assumptions behind a trade-basis sheet price; return their keys."""
+    keys = {"lme": "lme_aluminium_cash", "premium": region.aluminium_premium, "fx": "usd_per_gbp",
+            "conversion": "aluminium_sheet_conversion"}
+    out = {}
+    for role, ck in keys.items():
+        c = cost.commodities[ck]
+        akey = f"commodity:{ck}"
+        _add(assumptions, Assumption(akey, c.name, c.unit, c.value.low, c.value.high, c.confidence, c.verified,
+                                     c.source, "Commodity (trade basis)"))
+        out[role] = akey
+    return out
 
 
 def assemble(snapshot: Snapshot, config: CostConfig, rules: RuleSet, cost: CostData) -> tuple[CostInputs, dict[str, Any]]:
@@ -208,6 +253,15 @@ def assemble(snapshot: Snapshot, config: CostConfig, rules: RuleSet, cost: CostD
         prov = dict(confidence=rate.confidence, verified=rate.verified, source=rate.source)
         _add(assumptions, Assumption(k["price"], f"{mat_name} price", "£/kg", price.gbp_per_kg.low,
                                      price.gbp_per_kg.high, price.confidence, price.verified, price.source, "Material prices"))
+        if price.trade_basis == "aluminium_sheet" and region.material_basis == "trade":
+            spec.trade_keys = _trade_keys(assumptions, cost, region)
+            details[sp.part_id]["form"] = f"{price.form} (trade basis: LME + premium + sheet conversion)"
+        else:
+            disc = discount_assumption(cost, snapshot, price.discount_class, price.price_basis)
+            if disc is not None:
+                _add(assumptions, disc)
+                spec.price_discount_key = disc.key
+                spec.discount_from = discount_from(cost, price.discount_class)
         _add(assumptions, _scaled(Assumption(k["rate"], f"{proc_rule.name} machine rate", "£/hr", rate.machine_gbp_per_hr.low,
                                              rate.machine_gbp_per_hr.high, group="Machine rates", **prov),
                                   region.machine.low, region.machine.high))
@@ -242,6 +296,11 @@ def assemble(snapshot: Snapshot, config: CostConfig, rules: RuleSet, cost: CostD
     for it in snapshot.items:
         if it.price_key and it.price_key in config.remove_price_keys:
             continue
+        if it.price_key and it.price_key in config.replace_price_keys:
+            # Swapped for another seed item (e.g. the dimmer for the other power option).
+            extra.append(ExtraItem(config.replace_price_keys[it.price_key], it.quantity, kind=it.kind,
+                                   origin=f"{it.name} for this configuration"))
+            continue
         prov = dict(confidence=it.confidence, verified=it.verified, source=it.source)
         if it.unit == "min" and it.unit_cost_low is None:
             cost_key, qty_key = "labour_rate", f"item_qty:{it.item_id}"
@@ -259,19 +318,31 @@ def assemble(snapshot: Snapshot, config: CostConfig, rules: RuleSet, cost: CostD
             group = {"packaging": "Packaging", "assembly": "Labour"}.get(it.kind, "Bought-in components")
             _add(assumptions, Assumption(cost_key, f"{it.name} price" if it.unit == "pcs" else f"{it.name} rate",
                                          "£" if it.unit == "pcs" else "£/min", min(low, high), max(low, high), group=group, **prov))
-        items.append(ItemSpec(it.item_id, it.kind, it.name, it.quantity, it.unit, cost_key, qty_key))
+        disc = discount_assumption(cost, snapshot, it.discount_class, it.price_basis) if it.unit == "pcs" else None
+        if disc is not None:
+            _add(assumptions, disc)
+        items.append(ItemSpec(it.item_id, it.kind, it.name, it.quantity, it.unit, cost_key, qty_key,
+                              discount_key=disc.key if disc else None,
+                              discount_from=discount_from(cost, it.discount_class) if disc else 0.0))
 
     extras_ctx: dict[int, ExtraItem] = {}
     for n, ex in enumerate(extra, start=1):
         if ex.price_key in config.remove_price_keys:
             continue
+        if ex.price_key in config.replace_price_keys:
+            ex = replace(ex, price_key=config.replace_price_keys[ex.price_key])
         price = cost.bought_in[ex.price_key]
         item_id = -n
         key = f"extra:{ex.price_key}"
         group = "Finishing" if ex.kind == "finishing" else "Bought-in components"
         _add(assumptions, Assumption(key, f"{price.name} price", "£", price.gbp.low, price.gbp.high,
                                      price.confidence, price.verified, price.source, group))
-        items.append(ItemSpec(item_id, ex.kind, price.name, ex.quantity, "pcs", key, None, ex.part_id))
+        disc = discount_assumption(cost, snapshot, price.discount_class, price.price_basis)
+        if disc is not None:
+            _add(assumptions, disc)
+        items.append(ItemSpec(item_id, ex.kind, price.name, ex.quantity, "pcs", key, None, ex.part_id,
+                              discount_key=disc.key if disc else None,
+                              discount_from=discount_from(cost, price.discount_class) if disc else 0.0))
         extras_ctx[item_id] = ex
 
     overhead_key = None

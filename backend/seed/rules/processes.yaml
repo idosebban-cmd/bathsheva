@@ -188,6 +188,30 @@ processes:
     confidence: medium
     verified: false
 
+  - key: metal_tube_cut
+    name: Cut from stock aluminium tube
+    material_categories: [aluminium]
+    plain_language: >-
+      A standard aluminium tube is cut to length on a saw or lathe, then the
+      edges are faced and deburred. No tooling at all, but only stock
+      diameters and wall thicknesses are available.
+    requires_all: [axisymmetric, constant_section]
+    excludes: [tapered, domed, closed_top, transparent, electrical]
+    suits: [ring, short, open_both_ends]
+    poor_fit: [thin_wall]
+    volume: {min: 1, max: 100000}
+    tooling_cost: none
+    unit_cost: low
+    finish_quality: good
+    wall_mm: {min: 1.0, max: 6.0, typical_min: 1.5, typical_max: 3.0}
+    when_to_prefer: Straight rings and sleeves that match a stock tube size.
+    risks:
+      - Only stock diameters and walls are available; check the tube list before fixing the ring size.
+      - Cut faces need facing and a small chamfer to look crisp under lacquer.
+    source: model-generated
+    confidence: medium
+    verified: false
+
   - key: polymer_tube_cut
     name: Cut and polished clear tube
     material_categories: [clear_polymer_or_glass]

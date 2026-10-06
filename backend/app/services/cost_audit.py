@@ -18,7 +18,7 @@ from sqlalchemy.orm import Session
 
 from app.costing.assemble import CostConfig, assemble
 from app.costing.data import load_cost_data
-from app.costing.model import CostInputs, evaluate, sensitivity, total
+from app.costing.model import CostInputs, evaluate, material_price, sensitivity, total
 from app.models import Project
 from app.rules.data import load_rules
 from app.services import costdown
@@ -63,6 +63,12 @@ def _seed_location(key: str, inputs: CostInputs, ctx: dict[str, Any], items_by_i
         return "seed/cost/bought_in.yaml", (it.price_key if it is not None and it.price_key else "?")
     if kind == "item_qty":
         return "seed/products/faro.yaml", "cost_items (assembly minutes)"
+    if kind == "discount":
+        if inputs.assumptions[key].source.startswith("user"):
+            return "project cost settings (edited by you)", f"volume discount: {rest}"
+        return "seed/cost/general.yaml", f"volume_discount_{rest}"
+    if kind == "commodity":
+        return "seed/cost/commodities.yaml", rest
     return "?", key
 
 
@@ -96,6 +102,15 @@ def _seed_span(key: str, inputs: CostInputs, rules, cost) -> tuple[float, float]
 
 def how_to_verify(key: str, label: str, inputs: CostInputs, ctx: dict[str, Any], items_by_id: dict[int, Any]) -> str:
     kind, _, rest = key.partition(":")
+    if kind == "discount":
+        return ("Ask two suppliers for their price at 100, 500 and 2,000 pcs; the ratio of the 500-pc price to the "
+                "small-quantity price is the real discount.")
+    if kind == "commodity":
+        if "conversion" in rest:
+            return "Ask a sheet supplier or spinner for the price of 1050 spinning circles in £/kg and subtract the metal value."
+        if "premium" in rest:
+            return "Check the regional premium in a metals price report, or ask a mill for its metal surcharge basis."
+        return "Published market data: check on the day you order (LME / Bank of England)."
     if kind == "mat_price":
         if rest.startswith("al_"):
             return ("Ask an aluminium stockist for a price per kg for this alloy and form (sheet discs or bar) at your quantity; "
@@ -248,6 +263,8 @@ def cost_audit(session: Session, project: Project) -> dict[str, Any]:
             "swing_pct": round(swing / base * 100, 1) if base else 0.0,
         })
 
+    prices = price_basis_rows(inputs, cost, items_by_id)
+
     rows.sort(key=lambda x: -abs(x["swing"]))
     for i, row in enumerate(rows, start=1):
         row["rank"] = i
@@ -264,7 +281,9 @@ def cost_audit(session: Session, project: Project) -> dict[str, Any]:
             "region": region, "region_name": cost.regions[region].name,
         },
         "unit_cost_mid": round(base, 2),
+        "unit_cost_raw_mid": round(total(evaluate(inputs, inputs.mids(), q, raw=True)), 2),
         "rows": rows,
+        "prices": prices,
         "unverified": sum(1 for x in rows if not x["verified"]),
         "notes": [
             f"Impact: each value moved ±{STEP:.0%} with everything else at its midpoint, at {q} units "
@@ -276,6 +295,53 @@ def cost_audit(session: Session, project: Project) -> dict[str, Any]:
             "Range widening for confidence affects the range only, not the midpoint, so it is not listed.",
         ],
     }
+
+
+BASIS_LABEL = {"trade_volume": "trade / volume", "distributor_small_qty": "distributor, small quantity",
+               "retail": "retail", "model_estimate": "model estimate"}
+
+
+def price_basis_rows(inputs: CostInputs, cost, items_by_id: dict[int, Any]) -> list[dict[str, Any]]:
+    """Each price input: researched (raw) price and basis next to the volume-adjusted price at 500 and 2,000."""
+    mids = inputs.mids()
+    out: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for p in inputs.parts:
+        k = inputs.keys_for_part(p)
+        if k["price"] in seen:
+            continue
+        seen.add(k["price"])
+        a = inputs.assumptions[k["price"]]
+        mp = cost.material_prices.get(p.material_key)
+        adj = {str(q): round(material_price(p, k, mids, q)[0], 2) for q in (500, 2000)}
+        out.append({
+            "label": a.label, "unit": "£/kg", "raw_low": a.low, "raw_high": a.high, "raw_mid": round(a.mid, 4),
+            "basis": BASIS_LABEL.get(mp.price_basis if mp else "model_estimate", "?"),
+            "basis_quantity": mp.basis_quantity if mp else None,
+            "adjustment": ("trade basis (LME + premium + sheet conversion)" if p.trade_keys else
+                           ("volume discount" if p.price_discount_key else "none")),
+            "adjusted": adj, "source": a.source,
+        })
+    for it in inputs.items:
+        if it.unit != "pcs" or it.cost_key in seen:
+            continue
+        seen.add(it.cost_key)
+        a = inputs.assumptions[it.cost_key]
+        if it.cost_key.startswith("extra:"):
+            bp = cost.bought_in[it.cost_key.split(":", 1)[1]]
+            basis, bq = bp.price_basis, bp.basis_quantity
+        else:
+            db = items_by_id.get(it.item_id)
+            basis, bq = (db.price_basis, db.basis_quantity) if db is not None else ("model_estimate", None)
+        disc = mids.get(it.discount_key, 1.0) if it.discount_key else 1.0
+        adj = {str(q): round(a.mid * (disc if it.discount_key and q >= it.discount_from else 1.0), 2) for q in (500, 2000)}
+        out.append({
+            "label": a.label, "unit": "£", "raw_low": a.low, "raw_high": a.high, "raw_mid": round(a.mid, 4),
+            "basis": BASIS_LABEL.get(basis, basis), "basis_quantity": bq,
+            "adjustment": "volume discount" if it.discount_key else "none",
+            "adjusted": adj, "source": a.source,
+        })
+    return out
 
 
 def _fmt_value(row: dict[str, Any]) -> str:
@@ -321,6 +387,22 @@ def audit_markdown(a: dict[str, Any]) -> str:
             f"{r['confidence']} | {'yes' if r['verified'] else 'no'} | ±£{abs(r['swing']):.2f} ({abs(r['swing_pct']):.1f}%) | "
             f"{r['how_to_verify']} |"
         )
+    lines += [
+        "",
+        "## Researched prices vs volume-adjusted prices",
+        "",
+        f"Unit cost at {a['quantity']} with every price at its researched basis (no volume adjustment): "
+        f"£{a['unit_cost_raw_mid']:.2f}; volume-adjusted: £{a['unit_cost_mid']:.2f}.",
+        "",
+        "| Price | Researched (raw) | Basis | Basis qty | Adjustment | Used at 500 | Used at 2,000 |",
+        "|---|---|---|---|---|---|---|",
+    ]
+    for pr in a.get("prices", []):
+        raw = f"£{pr['raw_low']:g}" if pr["raw_low"] == pr["raw_high"] else f"£{pr['raw_low']:g}–£{pr['raw_high']:g}"
+        unit = "/kg" if pr["unit"] == "£/kg" else ""
+        bq = f"{pr['basis_quantity']:g}" if pr["basis_quantity"] else "—"
+        lines.append(f"| {pr['label']} | {raw}{unit} | {pr['basis']} | {bq} | {pr['adjustment']} | "
+                     f"£{pr['adjusted']['500']:.2f}{unit} | £{pr['adjusted']['2000']:.2f}{unit} |")
     lines += ["", "## Notes", ""] + [f"- {n}" for n in a["notes"]]
     return "\n".join(lines) + "\n"
 

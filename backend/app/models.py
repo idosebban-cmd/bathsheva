@@ -54,6 +54,8 @@ class Project(Base):
     assumed_fields: Mapped[list[str]] = mapped_column(JSON, default=list)
     # Pricing assumptions edited by the user (retail price, channel economics). Null = defaults.
     pricing: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    # Cost-model settings edited by the user, e.g. volume discounts {class: {low, high}}. Null = defaults.
+    cost_settings: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
@@ -225,7 +227,12 @@ class CostItem(Base):
     unit_cost_low: Mapped[float | None] = mapped_column(Float, nullable=True)
     unit_cost_high: Mapped[float | None] = mapped_column(Float, nullable=True)
     price_key: Mapped[str | None] = mapped_column(String(50), nullable=True)  # seed/cost/bought_in.yaml key
-    source: Mapped[str] = mapped_column(String(300), default="model-generated")
+    source: Mapped[str] = mapped_column(Text, default="model-generated")
+    # Where the price comes from: trade_volume | distributor_small_qty | retail | model_estimate,
+    # the quantity it applies to, and the volume-discount class applied at volume (if any).
+    price_basis: Mapped[str] = mapped_column(String(30), default="model_estimate")
+    basis_quantity: Mapped[float | None] = mapped_column(Float, nullable=True)
+    discount_class: Mapped[str | None] = mapped_column(String(50), nullable=True)
     confidence: Mapped[str] = mapped_column(String(10), default="low")
     verified: Mapped[bool] = mapped_column(Boolean, default=False)
     notes: Mapped[str] = mapped_column(Text, default="")
