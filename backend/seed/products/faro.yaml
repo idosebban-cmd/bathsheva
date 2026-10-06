@@ -1,37 +1,46 @@
 # Faro product template. Seeds a new Faro project.
 # Every value here is editable. Placeholder commercial inputs are listed in
 # `assumed_fields` so the UI labels them as assumptions.
+#
+# Source of truth for the design: the approved prototype model on branch
+# claude/rocket-speaker-3d-model-xav3pn (faro/lamp.py, faro/params.py and the
+# build manual), adapted for production in metal (decisions Oct 2026).
 
 name: Faro
 description: >-
-  A premium decorative electrical table lamp inspired by a lighthouse. Smooth,
-  sculptural and playful, influenced by mid-century Italian product design.
+  A premium decorative cordless table lamp in the form of a lighthouse: black
+  base with a brass nameplate, cream tower with a red lower section and five
+  glowing windows spiralling up it, brass gallery and railing, frosted lantern
+  and a red twist-lock cap with a brass finial. Rechargeable over USB-C.
   Second product of Bathsheva London, after the Atelier speaker.
 
 requirements:
-  approx_dimensions: {height_mm: null, width_mm: null, depth_mm: null}  # TBD
-  target_retail_price: {amount: 275, currency: GBP}                     # user, Oct 2026 (range 249–295)
+  approx_dimensions: {height_mm: 300, width_mm: 113, depth_mm: 113}     # prototype (confirmed Oct 2026); felt adds 1.9 mm
+  target_retail_price: {amount: 275, currency: GBP}                     # user, Oct 2026; compared at 199 / 229 / 275
   production_volume: null                                               # TBD
   target_unit_cost: {amount: null, currency: GBP}                       # TBD
   intended_markets: [UK, EU]
-  power_type: undecided
+  power_type: battery
+  battery_runtime_h: 8                                                  # at full brightness, lantern + tower lights on
   preferred_materials:
-    - Aluminium main body
-    - Painted / lacquered coloured aluminium sections
-    - Possible brass or brass-plated details
-    - Borosilicate glass lantern (no plastic on visible parts)
+    - Spun aluminium base, tower and cap
+    - Solid brass gallery, railing, lantern frame, finial, knob and nameplate
+    - Borosilicate glass lantern and window diffuser (no plastic on visible parts)
   preferred_finishes:
-    - Coloured lacquer on aluminium
-    - Black lacquer base
+    - Gloss black lacquer base, clear-coated
+    - Cream and red lacquer on aluminium (two-tone tower, masked line)
+    - Polished brass, clear lacquer
   functional_requirements:
-    - Decorative table lamp with internal LED light source
-    - Light emitted through a transparent lantern section
+    - Cordless decorative table lamp, rechargeable over USB-C (2 x 18650 cells)
+    - User-replaceable battery (bottom plate on standard screws)
+    - Dimmable with a rotary brass knob on the tower
+    - Light from a frosted lantern and five glowing tower windows
+    - Twist-lock cap that lifts off to reach the lantern LED
     - Stable on a table or shelf
   environmental_requirements:
     - Indoor, domestic use
 
 assumed_fields:
-  - approx_dimensions
   - production_volume
   - target_unit_cost
   - intended_markets
@@ -39,132 +48,191 @@ assumed_fields:
 # One CAD body per part (cad_key must match the generator's body names).
 # Traits: `hidden` marks functional parts that are never seen (they may be plastic or
 # rubber); `visible_trim` marks bought-in parts with a visible metal element.
+# made_to_drawing: bought-in parts that still get a drawing in the factory pack.
 parts:
   - cad_key: base
     name: Base
     function: >-
-      Spun aluminium shell that hides the weight plate, the dimmer and the cable entry;
-      the lamp tube clamps it to the body.
+      Spun aluminium shell with a generous rounded top edge. Houses the battery, the
+      control board (USB-C port at the rear) and the steel weight plate.
     material_category: aluminium
+    finish: Gloss black lacquer, clear-coated
+    traits: [axisymmetric, cosmetic, closed_top, thin_wall, needs_mass, side_hole]
+  - cad_key: base_plate
+    name: Bottom plate
+    function: Laser-cut aluminium plate closing the base; four M2.5 screws into the standoffs so the battery can be replaced.
+    material_category: bought_in
+    material: Aluminium 5052, 2 mm
+    process: Laser cut, countersunk (made to drawing)
     finish: Black lacquer
-    traits: [axisymmetric, cosmetic, closed_top, thin_wall, needs_mass, mounting_holes, side_hole]
-  - cad_key: main_body
-    name: Main body
-    function: Tapered lighthouse tower with a locating step for the band; the main visual surface of the lamp.
-    material_category: aluminium
-    finish: Coloured lacquer
-    traits: [axisymmetric, cosmetic, thin_wall, open_both_ends]
-  - cad_key: band
-    name: Decorative band
-    function: Straight ring cut from stock tube, sitting on the body's step like a lighthouse gallery stripe.
-    material_category: aluminium
-    finish: Coloured lacquer (contrast) or brass-plated
-    traits: [axisymmetric, cosmetic, ring, short, open_both_ends]
-  - cad_key: lantern
-    name: Lantern
-    function: Borosilicate glass tube that lets the LED light out, clamped between gaskets.
-    material_category: clear_polymer_or_glass
-    finish: Clear, optionally frosted inside
-    traits: [axisymmetric, transparent, thin_wall, open_both_ends, near_heat_source]
-    open_questions:
-      - Clear or frosted (acid-etched or sand-blasted inside) glass?
-  - cad_key: top_cap
-    name: Top cap
-    function: Spun domed roof of the lighthouse; clamps the lantern via the cap nut.
-    material_category: aluminium
-    finish: Coloured lacquer or brass-plated
-    traits: [axisymmetric, cosmetic, closed_top, domed, thin_wall]
-  - cad_key: led_module
-    name: LED module and mounting
-    function: >-
-      LED plate on the body top (clamped by a threaded LED holder on the lamp tube) and the
-      LED module around the tube inside the lantern.
-    material_category: electrical
-    finish: None (internal)
-    traits: [electrical, heat_source, internal]
-    open_questions:
-      - Target brightness (lumens)? Colour temperature 2700K, CRI 90+, dimmable.
-      - LED arrangement around the central tube (COB on a bracket, or a ring module) to agree with the supplier.
-  - cad_key: cable
-    name: Cable / power entry
-    function: Brings power into the base through a strain-relief grommet; the cable then runs up the lamp tube.
-    material_category: electrical
-    finish: Cable colour to match
-    traits: [electrical, user_accessible, strain_relief]
-  - cad_key: dimmer
-    name: Dimmer (in base)
-    function: Rotary dimmer on the base with a solid metal knob (touch dimmer as an alternative).
-    material_category: electrical
-    finish: Knob in solid aluminium or brass, finish to match
-    traits: [electrical, user_accessible, visible_trim]
+    traits: [hidden, user_accessible]
+    made_to_drawing: true
+  - cad_key: felt_pad
+    name: Felt pad
+    function: Felt laminated to a thin steel disc, held by four magnets in the bottom plate; covers the screws.
+    material_category: bought_in
+    finish: Black felt
+    traits: [hidden]
   - cad_key: weight_plate
     name: Weight plate
-    function: Laser-cut steel plate inside the base for stability; clamped by the lamp nut and screwed to rivet nuts so it can't rattle.
+    function: Laser-cut steel plate round the battery, screwed up into the cream band; gives the lamp its planted feel.
     material_category: bought_in
     material: Mild steel S275 (zinc plated)
     process: Laser cut and zinc plated (made to drawing)
     finish: Zinc plated
     traits: [hidden, needs_mass]
-  - cad_key: lamp_tube
-    name: Lamp tube
-    function: Hollow M10x1 threaded tube running the full height; clamps the stack and carries the cable.
-    material_category: bought_in
-    finish: Zinc plated
-    traits: [hidden]
-  - cad_key: lamp_nut
-    name: Lamp nut and washer
-    function: Nut and washer under the weight plate that tighten the lamp tube.
-    material_category: bought_in
-    finish: Zinc plated
-    traits: [hidden]
-  - cad_key: cap_nut
-    name: Cap nut (finial)
-    function: Decorative domed nut on top of the cap; tightens the cap, lantern and gaskets.
-    material_category: bought_in
-    finish: Solid brass or aluminium, finish to match the cap
-    traits: [visible_trim, user_accessible]
-  - cad_key: gasket_lower
-    name: Lantern gasket (lower)
-    function: Silicone ring between the LED plate and the glass.
-    material_category: bought_in
-    finish: None
-    traits: [hidden]
-  - cad_key: gasket_upper
-    name: Lantern gasket (upper)
-    function: Silicone ring between the glass and the inside of the cap.
-    material_category: bought_in
-    finish: None
-    traits: [hidden]
+    made_to_drawing: true
+  - cad_key: nameplate
+    name: Nameplate
+    function: Curved brass plate with "FARO" etched in, bonded on the front of the base.
+    material_category: brass
+    finish: Tumble-polished, etched lettering filled black, clear lacquer
+    traits: [cosmetic, fine_detail, flat_pattern, thin_wall]
+  - cad_key: band_cream
+    name: Cream band
+    function: Turned aluminium ring between base and tower; the base screws into it and the tower is bonded on its spigot.
+    material_category: aluminium
+    finish: Cream lacquer, clear-coated
+    traits: [axisymmetric, cosmetic, ring, short, open_both_ends, mounting_holes]
+  - cad_key: tower
+    name: Tower
+    function: >-
+      Spun tapered cone, lacquered cream with a red lower section (masked line),
+      with five arched windows spiralling up it and the dimmer knob on the front.
+    material_category: aluminium
+    finish: Two-tone lacquer (cream, red lower section, masked line), clear-coated
+    traits: [axisymmetric, cosmetic, thin_wall, open_both_ends]
+  - cad_key: diffuser
+    name: Window diffuser
+    function: Opal borosilicate tube inside the tower behind all five windows, so they glow evenly and hide the internals.
+    material_category: clear_polymer_or_glass
+    finish: Opal (acid-etched) glass
+    traits: [axisymmetric, transparent, thin_wall, open_both_ends, near_heat_source]
+  - cad_key: tower_light
+    name: Tower light
+    function: LED filament strips on a central aluminium spine inside the diffuser; lights the windows and carries the wiring.
+    material_category: electrical
+    finish: None (internal)
+    traits: [electrical, heat_source, internal]
+  - cad_key: dimmer
+    name: Dimmer
+    function: Slim rotary potentiometer with switch behind the tower wall; its shaft carries the brass knob.
+    material_category: electrical
+    finish: None (internal)
+    traits: [electrical, internal]
+  - cad_key: knob
+    name: Dimmer knob
+    function: Solid turned brass knob on the front of the red section (on/off and dimming).
+    material_category: brass
+    finish: Tumble-polished, clear lacquer
+    traits: [axisymmetric, cosmetic, short, user_accessible]
+  - cad_key: gallery
+    name: Gallery
+    function: Turned brass platform ring on the tower top, with a ledge for the lantern LED and a spigot bonded into the tower.
+    material_category: brass
+    finish: Tumble-polished, clear lacquer
+    traits: [axisymmetric, cosmetic, ring, short, open_both_ends]
+  - cad_key: railing
+    name: Gallery railing
+    function: Photo-etched brass strip (posts and two rails) rolled into a ring, soldered at the seam and onto the gallery.
+    material_category: brass
+    finish: Tumble-polished, clear lacquer
+    traits: [axisymmetric, cosmetic, fine_detail, thin_wall, ring, open_both_ends]
+  - cad_key: lantern_frame
+    name: Lantern frame
+    function: >-
+      Turned brass bottom ring and top band (bayonet lip and slots) with eight mullion bars
+      soldered between them; lowered over the glass and bonded to the gallery.
+    material_category: brass
+    finish: Tumble-polished, clear lacquer
+    traits: [axisymmetric, cosmetic, ring, open_both_ends, user_accessible]
+  - cad_key: lantern_glass
+    name: Lantern glass
+    function: Frosted borosilicate tube standing on the gallery inside the frame.
+    material_category: clear_polymer_or_glass
+    finish: Frosted (acid-etched inside)
+    traits: [axisymmetric, transparent, thin_wall, open_both_ends, near_heat_source]
+  - cad_key: led_module
+    name: Lantern LED
+    function: Warm white LED board on an aluminium spreader resting on the gallery ledge; lifts out with the cap off.
+    material_category: electrical
+    finish: None (internal)
+    traits: [electrical, heat_source, internal]
+  - cad_key: cap
+    name: Cap
+    function: Spun domed cap with a rim and a small neck for the finial; twist-locks onto the lantern frame.
+    material_category: aluminium
+    finish: Red lacquer, clear-coated
+    traits: [axisymmetric, cosmetic, closed_top, domed, thin_wall, user_accessible]
+  - cad_key: cap_spigot
+    name: Cap bayonet spigot
+    function: Turned brass ring with four lugs, bonded inside the cap; the lugs lock under the lantern's lip with a 20° turn.
+    material_category: brass
+    finish: None (hidden when fitted)
+    traits: [axisymmetric, hidden, ring, short]
+  - cad_key: finial
+    name: Finial
+    function: Turned brass ball on a neck, with an M4 stud through the cap (nut inside).
+    material_category: brass
+    finish: Tumble-polished, clear lacquer
+    traits: [axisymmetric, cosmetic, short, user_accessible]
+  - cad_key: battery
+    name: Battery pack
+    function: 2 x 18650 Li-ion cells with a protection circuit, lying flat in the base; user-replaceable.
+    material_category: electrical
+    finish: None (internal)
+    traits: [electrical, internal, user_accessible]
+  - cad_key: charge_board
+    name: Control board
+    function: USB-C charging, the 2-cell charger and the 2-channel LED driver with the dimmer input; USB-C port at the rear.
+    material_category: electrical
+    finish: None (internal)
+    traits: [electrical, internal, user_accessible]
 
-# How parts join. References fasteners.yaml keys.
+# How parts join. References fasteners.yaml keys. `hardware` lines appear in the BOM.
 joints:
-  - between: [base, main_body]
-    method: central_lamp_tube
-    note: The body foot sits on the base; the lamp tube pulls the LED plate down so the body is clamped between plate and base.
+  - between: [base, band_cream]
+    method: machine_screw_tapped
+    note: Three M3 screws from inside the base, through the weight plate and the base top, into tapped holes in the band.
+    hardware:
+      - {name: "M3 x 25 socket screw, weight plate + base to band", quantity: 3, material: "Stainless steel (A2)",
+         notes: "Heads in counterbores in the weight plate; length to suit the plate thickness."}
   - between: [weight_plate, base]
-    method: threaded_insert
-    note: M4 screws through the plate into rivet nuts in the base shell stop it turning or rattling; the lamp nut clamps it.
-  - between: [main_body, band]
+    method: machine_screw_tapped
+    note: Clamped against the base top by the same three band screws.
+  - between: [band_cream, tower]
     method: adhesive_bonding
-    note: Ring slides down from the top and sits on the body step; bonded at the step.
-  - between: [main_body, lantern]
+    note: The tower foot sits over the band's spigot and is bonded (structural adhesive).
+  - between: [tower, gallery]
+    method: adhesive_bonding
+    note: The gallery's spigot sits inside the tower top and is bonded.
+  - between: [gallery, railing]
+    method: adhesive_bonding
+    note: Railing soldered (or bonded) to the gallery top.
+  - between: [gallery, lantern_frame]
+    method: adhesive_bonding
+    note: The frame is lowered over the glass and bonded to the gallery.
+  - between: [lantern_frame, cap]
+    method: bayonet
+    note: Four lugs on the cap spigot drop through slots in the frame's lip and turn 20° clockwise to a stop.
+  - between: [cap, cap_spigot]
+    method: adhesive_bonding
+    note: Spigot flange bonded under the cap shoulder.
+  - between: [base_plate, weight_plate]
+    method: machine_screw_tapped
+    note: Four M2.5 countersunk screws into hex standoffs screwed into the weight plate (user can replace the battery).
+    hardware:
+      - {name: "M2.5 x 6 countersunk screw, hex socket", quantity: 4, material: "Stainless steel, black", notes: "Bottom plate to standoffs."}
+      - {name: "M2.5 hex standoff, aluminium", quantity: 4, material: "Aluminium", notes: "Length to suit the plate thickness."}
+      - {name: "N52 magnet 6 x 2 mm", quantity: 4, material: "NdFeB, nickel plated", notes: "Bonded into the bottom plate; hold the felt disc."}
+  - between: [diffuser, tower]
     method: clamp_with_gasket
-    note: Glass sits on the lower gasket on the LED plate.
-  - between: [lantern, top_cap]
-    method: clamp_with_gasket
-    note: Cap nut on the lamp tube pulls the cap down onto the upper gasket.
-  - between: [cable, base]
-    method: strain_relief_grommet
-    note: Cable passes through the base side hole with a strain-relief grommet.
+    note: Diffuser stands on a silicone ring on the base top; a second ring centres its top inside the tower.
+    hardware:
+      - {name: "Silicone ring, diffuser", quantity: 2, material: "Silicone", notes: "Sized for the diffuser tube; section TBD."}
 
 # Project-level decisions that are still open.
-open_decisions:
-  - topic: power_type
-    question: "Power: (A) internal mains dimmable driver, or (B) certified external low-voltage adapter with an internal DC-DC driver?"
-    options: [mains, mains_external_adapter]
-    impact: >-
-      Changes the electronics, the cable, the compliance scope (B moves most of it to the
-      adapter supplier) and whether the metal body needs earthing.
+open_decisions: []
 
 # Engineering decisions accepted by the user (Oct 2026), recorded on new projects.
 decisions:
@@ -172,86 +240,164 @@ decisions:
     process: metal_spinning
     material: al_1050
     reason: >-
-      Spun aluminium base shell with an internal steel weight plate and rivet nuts: same look
-      as a solid base at a fraction of the material and machining cost. Tip-over stability
-      stays an open safety check.
-  - part: band
-    process: metal_tube_cut
-    material: al_6063
+      Spun aluminium base shell with a laser-cut steel weight plate round the battery:
+      the prototype's form with real metal and real weight. Tip-over stability stays an
+      open safety check.
+  - part: band_cream
+    process: cnc_machining
+    material: al_6061
+    reason: Turned aluminium ring; it carries the tapped holes for the base screws and the spigot that locates the tower.
+  - part: tower
+    process: metal_spinning
+    material: al_1050
     reason: >-
-      Band as a straight ring cut from stock tube, sitting on a locating step in the body:
-      keeps a separate contrasting part with a crisp shadow line, no tooling.
-  - part: lantern
+      One spun cone with two-tone lacquer (red lower section, masked line) replaces the
+      prototype's separate red band; windows laser-cut after spinning.
+  - part: diffuser
     process: glass_tube_cut
     material: borosilicate
-    reason: >-
-      Borosilicate glass tube cut to length (replaces acrylic): premium feel, scratch
-      resistance, and it never yellows.
+    reason: One opal borosilicate tube behind all five windows replaces five resin diffusers (glass, not plastic, on view).
+  - part: gallery
+    process: cnc_machining
+    material: brass
+    reason: Turned solid brass, as the prototype's brass gallery.
+  - part: railing
+    process: photo_etching
+    material: brass
+    reason: Photo-etched brass rolled into a ring (default); soldered wire and lost-wax casting stay as alternatives.
+  - part: lantern_frame
+    process: cnc_machining
+    material: brass
+    reason: Turned brass rings with soldered mullion bars; the bayonet lip and slots are machined in the top band.
+  - part: lantern_glass
+    process: glass_tube_cut
+    material: borosilicate
+    reason: Frosted borosilicate tube, 2 mm wall (the prototype's 1.2 mm ring is thinner than stock tube).
+  - part: cap
+    process: metal_spinning
+    material: al_1050
+    reason: Spun cap with the neck spun in; a turned brass spigot carries the bayonet lugs.
+  - part: cap_spigot
+    process: cnc_machining
+    material: brass
+    reason: Lugs can't be spun, so they are turned on a brass ring bonded inside the cap.
+  - part: finial
+    process: cnc_machining
+    material: brass
+    reason: Turned brass ball and neck with an M4 stud.
+  - part: knob
+    process: cnc_machining
+    material: brass
+    reason: Solid turned brass knob on a D-shaft rotary pot.
+  - part: nameplate
+    process: photo_etching
+    material: brass
+    reason: Etched brass plate bonded on the surface (a recess can't be spun into the base).
+  - topic: power
+    chosen: {value: battery}
+    reason: Cordless and rechargeable over USB-C with 2 x 18650 cells (baseline); the external 12 V adapter stays as option B.
   - topic: construction
-    chosen: {value: central_lamp_tube, scenario: lamp_tube}
+    chosen: {value: bonded_and_screwed}
     reason: >-
-      Central threaded lamp tube construction: one tube clamps the whole stack, the cable
-      runs inside it and no fixings show; replaces tapped holes in thin walls.
+      No central rod: the base screws into the turned band through the weight plate, the
+      tower and gallery are bonded on turned spigots, and the cap twist-locks on.
 
-# Default CAD parameters (mm, kg). Placeholder dimensions: overall size is TBD.
+# Electrical model for the runtime estimate (pure calculation in app/electrical.py).
+electrical:
+  battery:
+    cells: 2
+    cell_capacity_mah: 3350
+    cell_voltage: 3.6
+    usable_fraction: 0.90
+    source: "model-generated (typical branded 18650, e.g. 3,350 mAh class; check the chosen cell's datasheet)"
+    confidence: low
+    verified: false
+  driver_efficiency: 0.85
+  loads:
+    - {part: led_module, name: Lantern LED, watts: 1.5, source: model-generated, confidence: low, verified: false}
+    - {part: tower_light, name: Tower light, watts: 0.8, source: model-generated, confidence: low, verified: false}
+  compliance:
+    - "Li-ion cells must have a protection circuit (over-charge, over-discharge, over-current and short circuit) with thermal protection for charging."
+    - "UN38.3 test summary needed for the cells and pack before shipping (air and sea transport rules for lithium batteries)."
+    - "IEC 62133-2 certification for the cells and pack (UK and EU market expectation)."
+    - "EU Batteries Regulation (EU) 2023/1542: from 18 Feb 2027 portable batteries in appliances must be readily removable and replaceable by the end user with commonly available tools; plus labelling (CE, separate collection symbol, capacity) and producer registration. The screwed bottom plate (M2.5, standard hex key) is designed for this."
+    - "UK: Waste Batteries and Accumulators Regulations 2009 (producer registration and take-back; UK rules are being revised). Verify with a compliance consultant."
+    - "USB-C charging: confirm charging safety and EMC with the control-board supplier (e.g. IEC 62368-1 / EN 55015 as applicable)."
+
+# Default CAD parameters (mm, kg): the prototype's dimensions (faro/params.py at 300 mm).
 cad_parameters:
-  overall_height: 420
-  base_diameter: 180
-  base_height: 30
-  body_diameter: 130
-  body_top_diameter: 100
-  wall_thickness: 2.0
-  band_height: 22
-  band_position: 0.55
-  band_wall_thickness: 2.0
-  step_depth: 2.0
-  lantern_height: 80
-  lantern_diameter: 90
-  lantern_wall_thickness: 3.5
-  top_cap_diameter: 110
-  top_cap_height: 45
-  cable_hole_diameter: 8
-  mounting_hole_count: 3
-  mounting_hole_diameter: 6.0
-  mounting_hole_pcd: 110
-  weight_plate_diameter: 130
-  weight_plate_thickness: 8
-  tube_diameter: 10
-  dimmer_hole_diameter: 7.5
-  target_mass_kg: 2.0
+  overall_height: 300
+  target_mass_kg: 1.2
+  base_diameter: 113
+  base_height: 27
+  base_top_round: 6
+  weight_plate_thickness: 10
+  band_diameter: 97
+  band_height: 6
+  red_section_height: 36
+  tower_bottom_diameter: 92
+  tower_top_diameter: 65
+  wall_thickness: 1.5
+  window_count: 5
+  window_width: 11.7
+  window_height: 21
+  window_first_z: 113
+  window_last_z: 165
+  window_turn_deg: 90
+  knob_diameter: 20
+  knob_z: 52
+  gallery_diameter: 90
+  gallery_height: 9.7
+  railing_height: 14
+  railing_posts: 16
+  lantern_diameter: 55
+  lantern_height: 41.3
+  lantern_mullions: 8
+  glass_wall_thickness: 2.0
+  cap_rim_diameter: 71
+  cap_rim_height: 6
+  cap_dome_diameter: 58.5
+  cap_height: 33
+  finial_diameter: 14
+  finial_height: 19
 
 # Default cost line items (prices come from seed/cost/bought_in.yaml).
-# power: only include for that power type; undecided projects get the mains set.
+# power: only include for that power type; undecided projects get the battery set.
 # quantity_param: take the quantity from a CAD parameter.
 cost_items:
-  - {kind: bought_in, price_key: led_module, quantity: 1}
-  - {kind: bought_in, price_key: led_driver_mains, quantity: 1, power: mains}
-  - {kind: bought_in, price_key: mains_cable_plug_switch, quantity: 1, power: mains}
+  - {kind: bought_in, price_key: led_module_lantern, quantity: 1}
+  - {kind: bought_in, price_key: tower_light, quantity: 1}
   - {kind: bought_in, price_key: battery_pack, quantity: 1, power: battery}
   - {kind: bought_in, price_key: charge_control_board, quantity: 1, power: battery}
   - {kind: bought_in, price_key: usb_c_cable, quantity: 1, power: battery}
-  - {kind: bought_in, price_key: dimmer_in_base, quantity: 1}
-  - {kind: bought_in, price_key: screw_m4, quantity_param: mounting_hole_count}
-  - {kind: bought_in, price_key: lamp_tube_m10, quantity: 1}
-  - {kind: bought_in, price_key: lamp_nut_set, quantity: 1}
-  - {kind: bought_in, price_key: cap_finial_nut, quantity: 1}
+  - {kind: bought_in, price_key: dimmer_rotary, quantity: 1}
+  - {kind: bought_in, price_key: window_laser_cut, quantity: 1}
+  - {kind: finishing, price_key: masked_stripe, quantity: 1}
+  - {kind: bought_in, price_key: bottom_plate, quantity: 1}
+  - {kind: bought_in, price_key: felt_steel_disc, quantity: 1}
+  - {kind: bought_in, price_key: magnet_6x2, quantity: 4}
+  - {kind: bought_in, price_key: screw_m25_cs, quantity: 4}
+  - {kind: bought_in, price_key: standoff_m25, quantity: 4}
+  - {kind: bought_in, price_key: screw_m3, quantity: 3}
   - {kind: bought_in, price_key: silicone_gasket, quantity: 2}
-  - {kind: bought_in, price_key: cable_grommet, quantity: 1}
+  - {kind: bought_in, price_key: structural_adhesive, quantity: 1}
   - {kind: packaging, price_key: retail_packaging, quantity: 1}
-  - {kind: assembly, name: "Final assembly, wiring and test", quantity: 16, unit: min, confidence: low}
+  - {kind: assembly, name: "Final assembly, bonding, wiring and test", quantity: 24, unit: min, confidence: low}
 
 # Retail pricing (user-stated). Channel economics come from seed/cost/pricing.yaml.
+# price_points: retail prices (inc. VAT) compared side by side in the Cost-down tab.
 pricing:
   retail_price: 275
-  retail_low: 249
+  retail_low: 199
   retail_high: 295
   premium_retail: 395
+  price_points: [199, 229, 275]
   source: "user (Oct 2026)"
 
 # Design-change scenarios for the Cost-down tab. Each is toggleable; `options`
 # are alternatives the optimiser can choose between. Effects:
 #   reroute:      {part, options: [{process, material, tooling?, label}]}  (tooling: override band, e.g. none for stock tube)
-#   remove_part:  cad_key of a part removed from the product
+#   remove_part:  cad_key (or list) of parts removed from the product
 #   add_items / remove_items: bought-in lines by price_key (quantity or quantity_param)
 #   assembly_min: change to assembly minutes {low, high}
 #   scale_height: new overall height (mm); other linear dimensions scale with it
@@ -259,17 +405,17 @@ pricing:
 # Power options shown side by side in the product view. Option B forces scenario g.
 power_options:
   - key: A
-    label: "A: internal mains dimmable driver"
+    label: "A: cordless, 2 x 18650 rechargeable over USB-C"
     scenario: null
   - key: B
-    label: "B: certified external low-voltage adapter + internal DC-DC driver"
+    label: "B: certified external 12 V adapter + internal DC-DC driver (no battery)"
     scenario: external_adapter
 
 scenarios:
   - key: base_pressed
     letter: a
     label: Base pressed (deep drawn) instead of spun
-    design_change: Same thin shell, weight plate and rivet nuts; the shell is deep drawn in a press tool instead of spun.
+    design_change: Same thin shell and weight plate; the shell is deep drawn in a press tool instead of spun.
     effect:
       reroute:
         part: base
@@ -284,109 +430,111 @@ scenarios:
       premium: Looks the same as the spun base.
       lead_time: Press tools 6–10 weeks.
       tooling: Press tool tens of thousands of pounds; only worth it at volume.
-  - key: band_stripe
-    letter: d
-    label: Band as a masked lacquer stripe on the body
-    design_change: Remove the band part; paint the stripe directly on the body with a masked second colour.
-    effect:
-      remove_part: band
-      add_items:
-        - {price_key: masked_stripe, quantity: 1, kind: finishing}
-    premium_impact: slight
-    tradeoffs:
-      finish: A crisp masked line is achievable but needs a skilled finisher; no shadow line.
-      weight: Slightly lighter.
-      premium: Loses the layered look of a separate ring; the stripe reads flatter.
-      lead_time: Removes one part from the supply chain.
-      tooling: Masking jig only.
-  - key: body_tube
-    letter: e
-    label: Body from stock aluminium tube with spun ends
+  - key: no_tower_windows
+    letter: b
+    label: No tower windows (shows what the windows cost)
     design_change: >-
-      Body becomes a straight stock tube with small spun end rings. This removes the
+      Leave out the five windows: no window laser-cutting, no opal diffuser tube and no
+      tower light. The tower becomes a plain two-tone cone and only the lantern glows.
+    effect:
+      remove_part: [diffuser, tower_light]
+      remove_items: [window_laser_cut, tower_light, silicone_gasket]
+      assembly_min: {low: -4, high: -2}
+    premium_impact: significant
+    tradeoffs:
+      finish: Plain tower; no masking of window edges.
+      weight: About 0.13 kg lighter (no diffuser tube).
+      premium: Loses the spiralling windows, one of Faro's signature details.
+      lead_time: One process fewer (no window laser-cutting fixture).
+      tooling: No laser fixture.
+      runtime: Longer runtime (lantern LED only).
+  - key: tower_tube
+    letter: e
+    label: Tower from straight stock aluminium tube
+    design_change: >-
+      Tower becomes a straight stock tube instead of a spun cone. This removes the
       lighthouse taper, which is a significant change to the design.
     effect:
       reroute:
-        part: main_body
+        part: tower
         options:
           - {process: metal_tube_cut, material: al_6063, tooling: none, label: Stock tube}
-      add_items:
-        - {price_key: spun_end_ring, quantity: 2}
     premium_impact: significant
     tradeoffs:
       finish: Tube surface is excellent; die lines may need light brushing.
       weight: Similar.
       premium: Loses the tapered lighthouse silhouette that defines Faro.
-      lead_time: Stock tube in days; end-ring forms 2–4 weeks.
-      tooling: Small spinning forms for the end rings only.
+      lead_time: Stock tube in days.
+      tooling: None.
   - key: external_adapter
     letter: g
-    label: "Power option B: certified external 12 V adapter with an internal DC-DC driver"
+    label: "Power option B: certified external 12 V adapter with an internal DC-DC driver (no battery)"
     design_change: >-
-      Replace the internal mains driver and mains cable with a certified external 12 V
-      adapter, a low-voltage cable and an internal step-up DC-DC constant-current driver
-      for the same LED module. Dimming stays on the driver's dim input.
+      Replace the battery, the USB-C charging board and the cable with a certified external
+      12 V adapter, a low-voltage cable and an internal DC-DC constant-current driver for
+      both LED channels. The rotary dimmer stays on the driver's dim input.
     effect:
       add_items:
         - {price_key: external_adapter_12v, quantity: 1}
         - {price_key: dc_dc_cc_driver, quantity: 1}
         - {price_key: lv_cable_switch, quantity: 1}
-      remove_items: [led_driver_mains, mains_cable_plug_switch]
-      replace_items: {dimmer_inline_mains: dimmer_inline_lv}
-      assembly_min: {low: -4, high: -1}
+      remove_items: [battery_pack, charge_control_board, usb_c_cable]
+      assembly_min: {low: -2, high: 0}
     premium_impact: slight
     flags:
       - {kind: compliance, message: "Adapter and DC-DC driver must be verified for compliance (electrical safety, EMC, ecodesign) in each market."}
     tradeoffs:
-      finish: No change to the lamp.
-      weight: Lighter lamp; the adapter brick sits at the wall.
-      premium: A plug-in adapter feels less premium than a mains cable, but it is common in design lighting.
+      finish: A cable entry replaces the USB-C port.
+      weight: About 0.1 kg lighter (no cells).
+      premium: Loses the cordless freedom that suits a decorative lamp; a plug-in adapter is common in design lighting.
       lead_time: Off-the-shelf parts; certification effort moves largely to the adapter supplier.
       tooling: None.
-  - key: height_350
-    letter: h
-    label: Overall height reduced to 350 mm
-    design_change: All linear dimensions scale with height (wall thicknesses and hole sizes stay the same).
-    effect:
-      scale_height: 350
-    premium_impact: slight
-    tradeoffs:
-      finish: No change.
-      weight: Lighter in proportion to size.
-      premium: Less presence on a table; proportions are unchanged.
-      lead_time: No change.
-      tooling: Smaller forms, marginally cheaper.
-  - key: dimmer_inline
+  - key: dimmer_touch
     letter: j
-    label: Inline cable dimmer instead of the in-base dimmer
+    label: Touch dimmer on the finial instead of the rotary knob
     design_change: >-
-      Replace the in-base rotary (or touch) dimmer with an inline dimmer on the cable:
-      mains triac dimmer for option A (needs a triac-dimmable driver), low-voltage PWM
-      dimmer for option B. The base loses the knob and its hole.
+      Replace the rotary pot and brass knob with a capacitive touch sensor: touching the
+      brass finial switches and dims. The tower loses the knob and its hole.
     effect:
+      remove_part: knob
       add_items:
-        - {price_key: dimmer_inline_mains, quantity: 1}
-      remove_items: [dimmer_in_base]
+        - {price_key: touch_dimmer_board, quantity: 1}
+      remove_items: [dimmer_rotary]
     premium_impact: slight
-    flags:
-      - {kind: compliance, message: "Inline dimmer must be certified for the cable and load in each market."}
     tradeoffs:
-      finish: Cleaner base with no knob.
+      finish: Cleaner tower with no knob.
       weight: No change.
-      premium: An inline dimmer on the cable feels less special than a control on the lamp.
-      lead_time: Off-the-shelf.
+      premium: Loses the tactile brass knob from the prototype; touch dimming is less obvious to a new user.
+      lead_time: Off-the-shelf sensor.
       tooling: None.
+  - key: railing_method
+    letter: k
+    label: Railing made another way
+    design_change: The prototype's railing made as soldered brass wire (round posts) or as a lost-wax brass casting.
+    effect:
+      reroute:
+        part: railing
+        options:
+          - {process: wire_forming, material: brass, label: "Soldered brass wire (round posts, like the prototype)"}
+          - {process: investment_casting, material: brass, label: Lost-wax cast brass}
+    premium_impact: none
+    tradeoffs:
+      finish: Wire is round like the prototype; casting needs fettling and polishing.
+      weight: Casting is heavier (posts at least 1.5 mm).
+      premium: All read as a brass railing at arm's length.
+      lead_time: Wire 1–3 weeks; casting needs a wax tool (6–10 weeks).
+      tooling: Wire needs a jig; casting a wax injection tool.
 
-# Premium brass edition: band and top cap in brass. Solid brass or real plating on
+# Premium brass edition: cap and cream band in brass. Solid brass or real plating on
 # the metal part only; brass-look coatings are not allowed (visible metal must be solid metal).
 premium_edition:
   label: Premium brass edition
-  parts: [band, top_cap]
+  parts: [band_cream, cap]
   options:
     - key: plated
-      label: Brass-plated band and top cap
+      label: Brass-plated cream band and cap
       finish: brass_plating
     - key: solid
-      label: Solid brass band and top cap (polished, clear lacquer)
+      label: Solid brass cream band and cap (polished, clear lacquer)
       material: brass
       finish: polish

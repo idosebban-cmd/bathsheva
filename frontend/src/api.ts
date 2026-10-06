@@ -9,6 +9,7 @@ export interface Requirements {
   target_unit_cost: { amount: number | null; currency: string };
   intended_markets: string[];
   power_type: PowerType;
+  battery_runtime_h?: number | null;
   preferred_materials: string[];
   preferred_finishes: string[];
   functional_requirements: string[];
@@ -172,10 +173,45 @@ export interface CadState {
   generator: string;
   param_defs: ParamDef[];
   parameters: Record<string, number>;
-  derived: Record<string, number>;
+  derived: Record<string, unknown>;
+  production_changes?: { feature: string; prototype: string; production: string }[];
   validation: ValidationResult;
   wall_limits: Record<string, WallLimit>;
   latest: CadModel | null;
+}
+
+export interface RuntimeLoad {
+  part: string | null;
+  name: string;
+  watts: number;
+  hours_alone: number | null;
+  source: string;
+  verified: boolean;
+}
+
+export interface Runtime {
+  applicable: boolean;
+  reason?: string;
+  hours?: number | null;
+  target_h?: number | null;
+  status?: "pass" | "close" | "fail" | "unknown";
+  battery_wh?: number;
+  delivered_wh?: number;
+  load_w?: number;
+  loads?: RuntimeLoad[];
+  assumptions?: Record<string, string | number>;
+  unverified?: boolean;
+  note?: string;
+  without_tower_light_h?: number | null;
+  compliance?: string[];
+}
+
+export interface TemplateUpgradePlan {
+  needed: boolean;
+  remove: { cad_key: string; name: string; quotes: number }[];
+  add: { cad_key: string; name: string }[];
+  requirements: string[];
+  done?: boolean;
 }
 
 export interface SourceRef {

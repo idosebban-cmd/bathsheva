@@ -7,7 +7,6 @@ import io
 from typing import Any
 
 from app.models import Project
-from app.rules.data import load_rules
 from app.services.cad import current_parameters, latest_model
 from app.services.recommendations import project_recommendations
 from app.services.templates import load_template
@@ -46,63 +45,15 @@ def _tree(parts):
     return out
 
 
-def _screw_size(hole_mm: float, table: dict[str, float]) -> str | None:
-    fits = [(size, d) for size, d in table.items() if d <= hole_mm + 1e-6]
-    return max(fits, key=lambda x: x[1])[0] if fits else None
-
-
 def _hardware(project: Project, params: dict[str, Any]) -> list[dict[str, Any]]:
-    """Derived hardware lines from the template joints. Quantities may be assumptions."""
-    if not project.template or not params:
+    """Hardware lines listed on the template's joints. Quantities and sizes are assumptions."""
+    if not project.template:
         return []
-    rules = load_rules()
-    joints = load_template(project.template).get("joints", [])
     rows = []
-    clearance = rules.plan("metric_clearance_holes_mm")
-    for j in joints:
-        a, b = j["between"]
-        if j["method"] == "threaded_insert" and "weight_plate" in (a, b):
-            rows.append({
-                "name": "M4 machine screw, weight plate to rivet nuts",
-                "quantity": int(params["mounting_hole_count"]),
-                "material": "Stainless steel (A2)",
-                "notes": "Through the weight plate into the base rivet nuts so the plate can't turn or rattle; length TBD.",
-                "assumption": True,
-            })
-        elif j["method"] == "machine_screw_tapped" and {a, b} == {"base", "main_body"}:
-            size = _screw_size(float(params["mounting_hole_diameter"]), clearance) or "M?"
-            rows.append({
-                "name": f"{size} machine screw, base to body",
-                "quantity": int(params["mounting_hole_count"]),
-                "material": "Stainless steel (A2)",
-                "notes": f"Size inferred from {params['mounting_hole_diameter']} mm clearance hole; length TBD.",
-                "assumption": True,
-            })
-        elif j["method"] == "machine_screw_tapped" and "led_module" in (a, b):
-            rows.append({
-                "name": "M3 machine screw, LED bracket",
-                "quantity": int(rules.plan("led_mount_screw_count")),
-                "material": "Stainless steel (A2)",
-                "notes": "Quantity and size assumed until the LED module is chosen.",
-                "assumption": True,
-            })
-        elif j["method"] == "clamp_with_gasket" and not {"gasket_lower", "gasket_upper"} & set(_cad_keys(project)):
-            rows.append({
-                "name": f"Silicone gasket ring, {a.replace('_', ' ')} / {b.replace('_', ' ')}",
-                "quantity": 1,
-                "material": "Silicone",
-                "notes": f"Sized for {params['lantern_diameter']} mm lantern; section TBD.",
-                "assumption": True,
-            })
-        elif j["method"] == "strain_relief_grommet":
-            rows.append({
-                "name": "Cable strain-relief grommet",
-                "quantity": 1,
-                "material": "Nylon / TPE (rated)",
-                "notes": f"For {params['cable_hole_diameter']} mm hole; must suit the chosen cable. Safety-critical.",
-                "assumption": True,
-                "safety": True,
-            })
+    for j in load_template(project.template).get("joints", []):
+        for h in j.get("hardware", []):
+            rows.append({"name": h["name"], "quantity": h.get("quantity", 1), "material": h.get("material", ""),
+                         "notes": h.get("notes", ""), "assumption": True, "safety": bool(h.get("safety"))})
     return rows
 
 

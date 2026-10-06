@@ -82,11 +82,16 @@ def test_region_decides_material_basis(client, faro_project):
     session.close()
 
 
+DISTRIBUTOR_LED = {"name": "Distributor-priced LED", "quantity": 1, "unit_cost_low": 3.0, "unit_cost_high": 3.0,
+                   "price_basis": "distributor_small_qty", "basis_quantity": 100, "discount_class": "electronics"}
+
+
 def test_cost_settings_api_edits_discounts(client, faro_project):
     pid = faro_project["id"]
     s = client.get(f"/api/projects/{pid}/cost-settings").json()["volume_discounts"]
     assert s["electronics"]["low"] == 0.4 and s["electronics"]["high"] == 0.6 and not s["electronics"]["verified"]
     assert s["merchant_material"]["low"] == 0.5 and s["merchant_material"]["confidence"] == "medium"
+    assert client.post(f"/api/projects/{pid}/cost-items", json=DISTRIBUTOR_LED).status_code == 201
     before = client.get(f"/api/projects/{pid}/costs").json()["unit_cost"]["mid"]
     r = client.put(f"/api/projects/{pid}/cost-settings", json={"volume_discounts": {"electronics": {"low": 0.9, "high": 1.0}}})
     assert r.status_code == 200 and r.json()["volume_discounts"]["electronics"]["edited"]
@@ -101,18 +106,21 @@ def test_cost_settings_api_edits_discounts(client, faro_project):
 def test_cost_items_carry_basis_and_user_prices_are_volume_prices(client, faro_project):
     pid = faro_project["id"]
     items = client.get(f"/api/projects/{pid}/cost-items").json()
-    led = next(i for i in items if i["price_key"] == "led_module")
-    assert led["price_basis"] == "distributor_small_qty" and led["basis_quantity"] == 100 and led["discount_class"] == "electronics"
+    led = next(i for i in items if i["price_key"] == "led_module_lantern")
+    assert led["price_basis"] == "model_estimate" and led["discount_class"] is None  # a rough estimate, not a researched price
     r = client.patch(f"/api/projects/{pid}/cost-items/{led['id']}", json={"unit_cost_low": 2.0, "unit_cost_high": 2.2})
     assert r.json()["price_basis"] == "trade_volume" and r.json()["discount_class"] is None
 
 
 def test_audit_shows_raw_and_adjusted_prices(client, faro_project):
-    a = client.get(f"/api/projects/{faro_project['id']}/cost-audit").json()
+    pid = faro_project["id"]
+    client.post(f"/api/projects/{pid}/cost-items", json=DISTRIBUTOR_LED)
+    a = client.get(f"/api/projects/{pid}/cost-audit").json()
     assert a["unit_cost_raw_mid"] > a["unit_cost_mid"]
-    led = next(p for p in a["prices"] if p["label"].startswith("LED module"))
+    led = next(p for p in a["prices"] if p["label"].startswith("Distributor-priced LED"))
     assert led["adjustment"] == "volume discount" and led["adjusted"]["500"] < led["raw_mid"]
     keys = {r["key"] for r in a["rows"]}
     assert "discount:electronics" in keys
-    md = client.get(f"/api/projects/{faro_project['id']}/cost-audit.md").text
+    md = client.get(f"/api/projects/{pid}/cost-audit.md").text
     assert "Researched prices vs volume-adjusted prices" in md
+    assert client.get(f"/api/projects/{pid}/cost-audit?quantity=2000").json()["quantity"] == 2000

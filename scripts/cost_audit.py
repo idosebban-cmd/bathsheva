@@ -1,4 +1,4 @@
-"""Write docs/cost-assumptions-audit.md for a fresh, default Faro project.
+"""Write docs/cost-assumptions-audit.md for a fresh, default Faro project (at 500 and 2,000 units).
 
 Usage (from the repo root): backend/.venv/bin/python scripts/cost_audit.py
 Uses a temporary database, so it reflects the seed data and template only.
@@ -23,10 +23,14 @@ from app.services.projects import create_project  # noqa: E402
 init_db(settings.database_url)
 session = new_session()
 project = create_project(session, "Faro", template="faro")
-audit = cost_audit(session, project)
 out = ROOT / "docs" / "cost-assumptions-audit.md"
 out.parent.mkdir(exist_ok=True)
-out.write_text(audit_markdown(audit))
-print(f"Wrote {out.relative_to(ROOT)}: {len(audit['rows'])} values, unit cost £{audit['unit_cost_mid']:.2f} at {audit['quantity']}")
-for r in audit["rows"][:5]:
-    print(f"  {r['rank']}. {r['label']}: ±£{abs(r['swing']):.2f} ({abs(r['swing_pct']):.1f}%)")
+sections = []
+for q in (500, 2000):
+    audit = cost_audit(session, project, q)
+    sections.append(audit_markdown(audit))
+    print(f"{len(audit['rows'])} values, unit cost £{audit['unit_cost_mid']:.2f} at {audit['quantity']}")
+    for r in audit["rows"][:5]:
+        print(f"  {r['rank']}. {r['label']}: ±£{abs(r['swing']):.2f} ({abs(r['swing_pct']):.1f}%)")
+out.write_text("\n\n---\n\n".join(sections))
+print(f"Wrote {out.relative_to(ROOT)}")

@@ -1,6 +1,8 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { api, errorText, fileUrl, type Project, type Requirements } from "../api";
 import { AssumptionBadge } from "../components/Badges";
+import RuntimeCard from "../components/RuntimeCard";
+import TemplateUpgradeBanner from "../components/TemplateUpgradeBanner";
 import { useProject } from "../components/useProject";
 
 type ListField =
@@ -71,6 +73,7 @@ export default function OverviewPage() {
 
   return (
     <div className="stack">
+      <TemplateUpgradeBanner />
       <section className="card">
         <h2>Product</h2>
         <div className="field">
@@ -132,6 +135,16 @@ export default function OverviewPage() {
               <option value="passive">Passive (no power)</option>
             </select>
           </>) })}
+          {(req.power_type === "battery" || req.power_type === "undecided") && renderField({
+            field: "battery_runtime_h", label: "Battery runtime target (hours at full brightness, all lights on)", children: (<>
+              <input
+                type="number"
+                step={0.5}
+                placeholder="TBD"
+                value={show(req.battery_runtime_h)}
+                onChange={(e) => setReq({ ...req, battery_runtime_h: num(e.target.value) })}
+              />
+            </>) })}
           {LIST_FIELDS.map(([field, label]) => (
             renderField({ field, label: `${label} (one per line)`, children: (<>
               <textarea
@@ -151,6 +164,7 @@ export default function OverviewPage() {
         </div>
       </section>
 
+      <RuntimeCard />
       <ImagesSection />
     </div>
   );

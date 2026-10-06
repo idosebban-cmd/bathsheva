@@ -28,18 +28,34 @@ def test_drawings_render_to_svg_and_pdf_with_title_block(key):
 
 
 def test_drawing_dimensions_follow_parameters():
-    svg = dr.to_svg(dr.part_drawing({**DEFAULTS, "base_diameter": 200}, _sheet("base")))
-    assert "Ø200" in svg and "Ø110" in svg  # overall diameter and rivet-nut pitch circle
-    body = dr.to_svg(dr.part_drawing(DEFAULTS, _sheet("main_body")))
-    assert f"Ø{DEFAULTS['body_diameter']:g}" in body and "locating step" in body
+    svg = dr.to_svg(dr.part_drawing({**DEFAULTS, "base_diameter": 130, "band_diameter": 110}, _sheet("base")))
+    assert "Ø130" in svg and "PCD Ø102" in svg  # overall diameter and the band-screw pitch circle
+    tower = dr.to_svg(dr.part_drawing(DEFAULTS, _sheet("tower")))
+    assert f"Ø{DEFAULTS['tower_bottom_diameter']:g}" in tower and "arched windows" in tower and "masked line" in tower
+    railing = dr.to_svg(dr.part_drawing(DEFAULTS, _sheet("railing")))
+    assert "FLAT PATTERN" in railing and "Photo-etched" in railing
+    frame = dr.to_svg(dr.part_drawing(DEFAULTS, _sheet("lantern_frame")))
+    assert "bayonet" in frame and "PLAN VIEW" in frame
+
+
+def test_drawings_are_cut_from_the_cad_solids():
+    """The section of each drawn part has the solid's height and outer diameter."""
+    parts = faro.build(DEFAULTS)
+    for key in ("base", "tower", "gallery", "cap", "lantern_glass", "diffuser"):
+        faces = dr.section_faces(key, DEFAULTS)
+        x0, y0, x1, y1 = dr._bounds(faces)
+        bb = parts[key].bounding_box()
+        assert y1 - y0 == pytest.approx(bb.size.Z, abs=0.05), key
+        assert x1 - x0 == pytest.approx(bb.size.X, abs=0.2), key
 
 
 def test_section_profiles_match_cad_heights():
     prof = faro.section_profiles(DEFAULTS)
     d = faro.derived({k: float(v) for k, v in DEFAULTS.items()})
-    assert prof["main_body"]["height"] == pytest.approx(d["body_height"])
-    assert prof["lantern"]["height"] == pytest.approx(d["glass_length"])
-    assert max(z for _, z in prof["top_cap"]["outline"]) == pytest.approx(DEFAULTS["top_cap_height"])
+    assert prof["tower"]["height"] == pytest.approx(d["tower_height"])
+    assert prof["lantern_glass"]["height"] == pytest.approx(d["glass_height"])
+    assert prof["cap"]["z0"] == pytest.approx(d["cap_bottom_z"])
+    assert prof["base"]["diameter"] == pytest.approx(DEFAULTS["base_diameter"])
 
 
 def test_pack_needs_cad(client, faro_project):
@@ -59,16 +75,18 @@ def test_pack_contents(client, faro_project):
     names = set(zf.namelist())
     root = "faro_rfq_pack_v1/"
     assert {root + "rfq.md", root + "rfq.pdf", root + "bom.csv", root + "step/faro_assembly.step"} <= names
-    for stem in ("F-01_base", "F-02_main_body", "F-03_decorative_band", "F-04_lantern", "F-05_top_cap", "F-09_weight_plate"):
+    for stem in ("F-01_base", "F-07_tower", "F-06_cream_band", "F-12_gallery", "F-13_gallery_railing", "F-14_lantern_frame",
+                 "F-15_lantern_glass", "F-17_cap", "F-18_cap_bayonet_spigot", "F-04_weight_plate", "F-02_bottom_plate"):
         assert {f"{root}drawings/{stem}.svg", f"{root}drawings/{stem}.pdf", f"{root}step/{stem}.step"} <= names
-    assert not any("led_module" in n or "cable" in n for n in names)  # bought-in parts are specified, not drawn
+    assert not any("led" in n.lower() or "battery" in n for n in names)  # bought-in parts are specified, not drawn
     assert zf.read(root + "rfq.pdf").startswith(b"%PDF")
-    assert zf.read(root + "step/F-02_main_body.step").startswith(b"ISO-10303-21;")
+    assert zf.read(root + "step/F-07_tower.step").startswith(b"ISO-10303-21;")
 
     md = zf.read(root + "rfq.md").decode()
     for text in ("100, 500, 2,000", "MOQ", "Tooling", "Lead time", "Samples", "Suggested design changes",
                  "Material (£)", "Cycle time (min)", "Finishing (£)", "Tooling one-off (£)",
-                 "Option A", "Option B", "DC-DC", "Dimmer", "UK and EU sale", "COMPLIANCE",
+                 "cordless", "Option B", "DC-DC", "dimmer", "UK and EU sale", "COMPLIANCE", "UN38.3", "62133",
+                 "2023/1542", "Runtime target", "photo-etched", "twist-lock", "Where production departs",
                  "visible metal must be solid metal", "metal-effect paint",
                  "Class A", "orange peel", "approved sample", "Minimum wall thickness", "rattle", "Target total lamp mass",
                  "Golden sample", "UNVERIFIED", "SAFETY", "tolerances to be agreed"):
@@ -76,7 +94,7 @@ def test_pack_contents(client, faro_project):
     # Our own cost estimates and targets never go to suppliers.
     assert "£75" not in md and "target factory cost" not in md.lower() and "cost model estimate" not in md.lower()
     bom = zf.read(root + "bom.csv").decode()
-    assert "Weight plate" in bom and "Lamp tube" in bom
+    assert "Weight plate" in bom and "Battery pack" in bom
 
 
 def test_drawing_and_rfq_endpoints(client, faro_project):

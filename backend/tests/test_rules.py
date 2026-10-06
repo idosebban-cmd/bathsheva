@@ -105,14 +105,14 @@ def test_every_faro_part_gets_a_complete_card():
 
 
 def test_tapered_spun_body_and_no_extrusion():
-    rec = recommend(RULES, faro_part("main_body"), ctx())
+    rec = recommend(RULES, faro_part("tower"), ctx())
     assert rec["recommendation"]["process_key"] == "metal_spinning"
     assert any(e["process_key"] == "extrusion" for e in rec["excluded"])
 
 
 def test_straight_body_makes_extrusion_viable_at_volume():
-    straight = {**PARAMS, "body_top_diameter": PARAMS["body_diameter"]}
-    part = faro_part("main_body", derived_traits=faro.derived_traits("main_body", straight))
+    straight = {**PARAMS, "tower_top_diameter": PARAMS["tower_bottom_diameter"], "window_count": 0}
+    part = faro_part("tower", derived_traits=faro.derived_traits("tower", straight))
     rec = recommend(RULES, part, ctx(cad_parameters=straight, production_volume=20000))
     assert rec["recommendation"]["process_key"] == "extrusion"
     assert rec["recommendation"]["material_key"] in ("al_6063", "al_6061")
@@ -125,8 +125,9 @@ def test_volume_changes_base_recommendation():
     # The base is now a thin shell: at high volume it is pressed rather than spun.
     assert high["recommendation"]["process_key"] == "deep_drawing"
     assert high["recommendation"]["material_key"] == "al_1050"
-    solid = {**faro_part("base"), "traits": [t for t in faro_part("base")["traits"] if t != "thin_wall"]}
-    assert recommend(RULES, solid, ctx(production_volume=50000))["recommendation"]["process_key"] == "die_casting"
+    solid = {**faro_part("base"), "traits": [t for t in faro_part("base")["traits"] if t != "thin_wall"] + ["mounting_holes"]}
+    thick = {**PARAMS, "wall_thickness": 2.5}  # a cast base has a thicker wall than the 1.5 mm spun shell
+    assert recommend(RULES, solid, ctx(cad_parameters=thick, production_volume=50000))["recommendation"]["process_key"] == "die_casting"
 
 
 def test_unknown_volume_is_an_explicit_assumption_and_lowers_confidence():
@@ -146,7 +147,7 @@ def test_volume_insensitive_parts_do_not_lean_on_assumed_volume():
 
 def test_wall_thickness_outside_process_range_penalised():
     thick = {**PARAMS, "wall_thickness": 8}
-    rec = recommend(RULES, faro_part("main_body"), ctx(cad_parameters=thick))
+    rec = recommend(RULES, faro_part("tower"), ctx(cad_parameters=thick))
     assert rec["recommendation"]["process_key"] != "metal_spinning"
 
 
@@ -157,11 +158,11 @@ def test_confidence_never_high_on_unverified_data():
 
 
 def test_technical_details_present():
-    body = recommend(RULES, faro_part("main_body"), ctx())
+    body = recommend(RULES, faro_part("tower"), ctx())
     assert "wall_thickness" in body["technical"] and "tolerances" in body["technical"]
-    assert any("base" in f for f in body["technical"]["fastening"])
-    solid = {**faro_part("base"), "traits": [t for t in faro_part("base")["traits"] if t != "thin_wall"]}
-    cast = recommend(RULES, solid, ctx(production_volume=50000))
+    assert any("band" in f for f in body["technical"]["fastening"])
+    solid = {**faro_part("base"), "traits": [t for t in faro_part("base")["traits"] if t != "thin_wall"] + ["mounting_holes"]}
+    cast = recommend(RULES, solid, ctx(cad_parameters={**PARAMS, "wall_thickness": 2.5}, production_volume=50000))
     assert "draft_angles" in cast["technical"]
 
 
@@ -173,20 +174,22 @@ def flags(rec):
 
 
 def test_safety_flags():
-    assert {"electrical_component", "cable_anchorage"} <= flags(recommend(RULES, faro_part("cable"), ctx()))
-    assert "exposed_metal_mains" in flags(recommend(RULES, faro_part("main_body"), ctx(power_type="mains")))
-    assert "exposed_metal_mains" in flags(recommend(RULES, faro_part("main_body"), ctx(power_type="undecided")))
-    assert "exposed_metal_mains" not in flags(recommend(RULES, faro_part("main_body"), ctx(power_type="battery")))
+    cable = {"id": 7, "name": "Cable", "material_category": "electrical", "traits": ["electrical", "user_accessible", "strain_relief"]}
+    assert {"electrical_component", "cable_anchorage"} <= flags(recommend(RULES, cable, ctx()))
+    assert "electrical_component" in flags(recommend(RULES, faro_part("charge_board"), ctx()))
+    assert "exposed_metal_mains" in flags(recommend(RULES, faro_part("tower"), ctx(power_type="mains")))
+    assert "exposed_metal_mains" in flags(recommend(RULES, faro_part("tower"), ctx(power_type="undecided")))
+    assert "exposed_metal_mains" not in flags(recommend(RULES, faro_part("tower"), ctx(power_type="battery")))
     assert "battery" in flags(recommend(RULES, faro_part("led_module"), ctx(power_type="battery")))
     assert "battery" not in flags(recommend(RULES, faro_part("led_module"), ctx(power_type="mains")))
     assert "stability" in flags(recommend(RULES, faro_part("base"), ctx()))
 
 
 def test_polymer_lantern_flagged_glass_lantern_flagged_differently():
-    rec = recommend(RULES, faro_part("lantern"), ctx(production_volume=200))
+    rec = recommend(RULES, faro_part("lantern_glass"), ctx(production_volume=200))
     if rec["recommendation"]["material_key"] in ("pmma", "pc"):
         assert "polymer_near_heat" in flags(rec)
-    glass = recommend(RULES, faro_part("lantern"), ctx(production_volume=50000))
+    glass = recommend(RULES, faro_part("lantern_glass"), ctx(production_volume=50000))
     assert glass["recommendation"]["material_key"] == "borosilicate"
     assert "glass_breakage" in flags(glass) and "polymer_near_heat" not in flags(glass)
 
@@ -200,7 +203,7 @@ def test_no_match_for_unknown_category():
 
 
 def test_mock_provider_explains_without_changing_recommendation():
-    rec = recommend(RULES, faro_part("cable"), ctx())
+    rec = recommend(RULES, faro_part("charge_board"), ctx())
     exp = MockProvider().explain(rec)
     assert isinstance(exp, Explanation)
     assert rec["recommendation"]["process_name"] in exp.plain_summary
@@ -214,13 +217,13 @@ def test_recommendations_and_decisions_api(client, faro_project):
     pid = faro_project["id"]
     data = client.get(f"/api/projects/{pid}/recommendations").json()
     assert len(data["recommendations"]) == len(load_template("faro")["parts"])
-    assert data["open_decisions"][0]["topic"] == "power_type" and data["open_decisions"][0]["open"]
-    body = next(r for r in data["recommendations"] if r["part_key"] == "main_body")
+    assert not any(d["open"] for d in data["open_decisions"])  # power was decided (cordless)
+    body = next(r for r in data["recommendations"] if r["part_key"] == "tower")
 
     r = client.post(f"/api/projects/{pid}/decisions", json={"part_id": body["part_id"], "status": "accepted", "recommendation": body})
     assert r.status_code == 201
     part = next(p for p in client.get(f"/api/projects/{pid}/parts").json() if p["id"] == body["part_id"])
-    assert part["process"] == "Metal spinning"
+    assert part["process"] == body["recommendation"]["process_name"]
 
     r = client.post(f"/api/projects/{pid}/decisions", json={
         "part_id": body["part_id"], "status": "edited", "recommendation": body,
@@ -230,7 +233,7 @@ def test_recommendations_and_decisions_api(client, faro_project):
     rec = next(r for r in client.get(f"/api/projects/{pid}/recommendations").json()["recommendations"] if r["part_id"] == body["part_id"])
     assert rec["decision"]["status"] == "edited"
     # Accepting spinning now applies spinning wall limits in CAD validation.
-    assert client.get(f"/api/projects/{pid}/cad").json()["wall_limits"]["main_body"]["process_name"] == "Metal spinning"
+    assert client.get(f"/api/projects/{pid}/cad").json()["wall_limits"]["tower"]["process_name"] == "Metal spinning"
 
     r = client.post(f"/api/projects/{pid}/decisions", json={"topic": "power_type", "status": "accepted", "chosen": {"value": "mains"}})
     assert r.status_code == 201
@@ -263,7 +266,7 @@ def test_app_works_with_llm_disabled(client, faro_project, monkeypatch):
 
 
 def test_visible_parts_constraint_excludes_plastic_and_shows_why():
-    lantern = recommend(RULES, faro_part("lantern"), ctx(production_volume=200))
+    lantern = recommend(RULES, faro_part("lantern_glass"), ctx(production_volume=200))
     assert lantern["recommendation"]["material_key"] == "borosilicate"
     by_proc = {e["process_key"]: e for e in lantern["excluded"]}
     for proc in ("polymer_tube_cut", "injection_moulding_clear"):
@@ -277,14 +280,16 @@ def test_visible_parts_constraint_excludes_plastic_and_shows_why():
 def test_hidden_parts_are_exempt_and_trim_gets_a_requirement():
     plate = recommend(RULES, faro_part("weight_plate"), ctx())
     assert not any(c["scope"] == "part" for c in plate["constraints"])
-    knob = recommend(RULES, faro_part("dimmer"), ctx())
+    spigot = recommend(RULES, faro_part("cap_spigot"), ctx())  # hidden brass part
+    assert not any(c["scope"] == "part" for c in spigot["constraints"])
+    knob = recommend(RULES, faro_part("dimmer", traits=["electrical", "visible_trim"]), ctx())
     assert any(c["scope"] == "visible_trim" and "solid metal" in c["requirement"] for c in knob["constraints"])
 
 
 def test_metal_effect_finish_is_a_violation():
-    body = recommend(RULES, faro_part("main_body", finish="Brass-effect paint"), ctx())
+    body = recommend(RULES, faro_part("tower", finish="Brass-effect paint"), ctx())
     c = next(c for c in body["constraints"] if c["key"] == "visible_parts_solid_metal")
     assert c["violations"]
-    band_q = recommend(RULES, faro_part("band"), ctx())["open_questions"]
+    band_q = recommend(RULES, faro_part("band_cream", finish="Brass-plated"), ctx())["open_questions"]
     assert any("Brass-look coatings are not allowed" in q for q in band_q)
     assert not any("PVD" in q for q in band_q)

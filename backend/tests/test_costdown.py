@@ -85,22 +85,23 @@ def test_pricing_api_defaults_edit_and_validation(ctx):
 def test_routes_only_include_viable_processes(ctx):
     data = costdown.part_routes(ctx["session"], ctx["project"], ctx["snap"])
     parts = {p["name"]: p for p in data["parts"]}
-    assert set(parts) == {"Base", "Main body", "Decorative band", "Lantern", "Top cap"}  # bought-in parts excluded
-    body = {r["process_key"] for r in parts["Main body"]["routes"]}
-    assert "extrusion" not in body  # tapered body: rules engine excludes extrusion
-    assert {"metal_spinning", "sheet_forming"} <= body
-    # Visible parts must be solid metal or glass: plastic lantern routes are excluded by the constraint.
-    lantern = {r["process_key"] for r in parts["Lantern"]["routes"]}
-    assert lantern == {"glass_tube_cut"}
-    band = {r["process_key"] for r in parts["Decorative band"]["routes"]}
-    assert "metal_tube_cut" in band
+    assert set(parts) == {"Base", "Nameplate", "Cream band", "Tower", "Window diffuser", "Dimmer knob", "Gallery",
+                          "Gallery railing", "Lantern frame", "Lantern glass", "Cap", "Cap bayonet spigot",
+                          "Finial"}  # bought-in and electrical parts excluded
+    tower = {r["process_key"] for r in parts["Tower"]["routes"]}
+    assert "extrusion" not in tower and "metal_tube_cut" not in tower  # tapered tower: excluded by the rules engine
+    assert "metal_spinning" in tower
+    # Visible parts must be solid metal or glass: plastic routes for the glass parts are excluded by the constraint.
+    assert {r["process_key"] for r in parts["Lantern glass"]["routes"]} == {"glass_tube_cut"}
+    assert {r["process_key"] for r in parts["Window diffuser"]["routes"]} == {"glass_tube_cut"}
+    railing = {r["process_key"] for r in parts["Gallery railing"]["routes"]}
+    assert {"photo_etching", "wire_forming", "investment_casting"} <= railing
     for p in data["parts"]:
         assert sum(r["is_current"] for r in p["routes"]) == 1
         assert all(r["viable"] or r["is_current"] for r in p["routes"])
         for r in p["routes"]:
             assert set(r["costs"]) == {"100", "500", "2000"}
             assert set(r["tradeoffs"]) == {"cost", "finish", "weight", "premium", "lead_time", "tooling"}
-
 
 def test_route_design_changes_and_extra_parts(ctx):
     data = costdown.part_routes(ctx["session"], ctx["project"], ctx["snap"])
@@ -149,24 +150,28 @@ def test_sheet_formed_parts_costed_as_shells():
 
 def test_template_decisions_recorded_and_cad_matches(ctx):
     c, pid = ctx["client"], ctx["pid"]
+    parts = {p["cad_key"]: p for p in c.get(f"/api/projects/{pid}/parts").json()}
     session = new_session()
     ds = session.query(EngineeringDecision).filter_by(project_id=pid).all()
-    routes = {d.chosen["process_key"]: d for d in ds if d.topic == "process_route"}
-    assert set(routes) == {"metal_spinning", "metal_tube_cut", "glass_tube_cut"}
+    by_part = {d.part_id: d for d in ds if d.topic == "process_route"}
+    assert {d.chosen["process_key"] for d in by_part.values()} == {"metal_spinning", "cnc_machining", "glass_tube_cut",
+                                                                    "photo_etching"}
     assert all(d.status == "accepted" and d.note for d in ds)
-    assert "Tip-over" in routes["metal_spinning"].note or "tip-over" in routes["metal_spinning"].note.lower()
-    assert set(routes["metal_spinning"].chosen["design_change_keys"]) == {"thin_shell_needs_mass", "thin_wall_inserts"}
-    assert not routes["metal_spinning"].chosen["cad_mismatch"]  # the generator models the shell, plate and rivet nuts
-    assert any(d.topic == "construction" and d.chosen["value"] == "central_lamp_tube" for d in ds)
+    base = by_part[parts["base"]["id"]]
+    assert "tip-over" in base.note.lower()
+    assert set(base.chosen["design_change_keys"]) == {"thin_shell_needs_mass"}
+    assert not base.chosen["cad_mismatch"]  # the generator models the shell and the weight plate
+    assert any(d.topic == "construction" and d.chosen["value"] == "bonded_and_screwed" for d in ds)
+    assert any(d.topic == "power" and d.chosen["value"] == "battery" for d in ds)
     session.close()
-    parts = {p["cad_key"]: p for p in c.get(f"/api/projects/{pid}/parts").json()}
-    assert parts["lantern"]["material"] == "Borosilicate glass" and parts["band"]["process"] == "Cut from stock aluminium tube"
+    assert parts["lantern_glass"]["material"] == "Borosilicate glass"
+    assert parts["railing"]["process"] == "Photo-etched brass sheet (formed after etching)"
+    assert parts["gallery"]["material"].startswith("Brass")
     assert costdown.cad_mismatches(ctx["project"]) == []
     assert not any("CAD mismatch" in r["flags"] for r in c.get(f"/api/projects/{pid}/bom").json()["rows"])
     # Re-applying is idempotent.
     from app.services.decisions import apply_template_decisions
     assert apply_template_decisions(ctx["session"], ctx["project"]) == []
-
 
 def test_old_cad_without_weight_plate_flags_mismatch(ctx):
     from app.models import CadModel
@@ -205,7 +210,7 @@ def test_select_route_records_decision_and_updates_everything(ctx):
     assert part["process"] == "High-pressure die casting"
     cost = c.get(f"/api/projects/{pid}/costs").json()
     assert next(p for p in cost["parts"] if p["name"] == "Base")["process"] == "High-pressure die casting"
-    assert not any("weight plate" in ln["label"].lower() for ln in cost["product_lines"])
+    assert not any("steel weight plate" in ln["label"].lower() for ln in cost["product_lines"])
     assert cost["unit_cost"]["mid"] != before
     bom = c.get(f"/api/projects/{pid}/bom").json()
     assert "CAD mismatch" in next(r for r in bom["rows"] if r["name"] == "Base")["flags"]
@@ -224,54 +229,51 @@ def cfg_for(c, *keys, region="uk", option=0):
     return costdown.selection_config(c["defs"], [(k, option) for k in keys], region, c["snap"].params)
 
 
-def test_band_stripe_removes_band_and_adds_stripe(ctx):
-    inputs, actx = assemble(ctx["snap"], cfg_for(ctx, "band_stripe"), ctx["rules"], ctx["cost"])
-    assert "Decorative band" not in {p.name for p in inputs.parts}
-    assert any("Removed" in s["reason"] for s in actx["skipped"] if s["name"] == "Decorative band")
-    assert any(i.kind == "finishing" and "stripe" in i.name.lower() for i in inputs.items)
-    assert mid(ctx, cfg_for(ctx, "band_stripe")) < mid(ctx, CostConfig())
-
+def test_no_tower_windows_removes_diffuser_light_and_cutting(ctx):
+    cfg = cfg_for(ctx, "no_tower_windows")
+    inputs, actx = assemble(ctx["snap"], cfg, ctx["rules"], ctx["cost"])
+    assert "Window diffuser" not in {p.name for p in inputs.parts}
+    assert any("Removed" in s["reason"] for s in actx["skipped"] if s["name"] == "Window diffuser")
+    names = " | ".join(i.name for i in inputs.items).lower()
+    assert "laser-cut 5 arched windows" not in names and "tower light" not in names
+    saving = mid(ctx, CostConfig()) - mid(ctx, cfg)
+    assert 10 < saving < 40  # what the windows cost per lamp
 
 def test_power_option_b_swaps_electrics_adds_dc_dc_driver_and_flags_compliance(ctx):
+    base_names = " | ".join(i.name for i in assemble(ctx["snap"], CostConfig(), ctx["rules"], ctx["cost"])[0].items)
+    assert "2 x 18650" in base_names and "USB-C charging" in base_names  # cordless baseline
     inputs, _ = assemble(ctx["snap"], cfg_for(ctx, "external_adapter"), ctx["rules"], ctx["cost"])
     names = " | ".join(i.name for i in inputs.items)
-    assert "driver (mains)" not in names and "Mains cable" not in names
-    assert "12 V adapter" in names and "DC-DC constant-current" in names and "LED module" in names
-    assert "dimmer" in names.lower()  # dimming stays (in-base dimmer on the DC-DC driver's dim input)
+    assert "18650" not in names and "USB-C charging cable" not in names
+    assert "12 V adapter" in names and "DC-DC constant-current" in names and "Lantern LED" in names
+    assert "rotary potentiometer" in names  # dimming stays on the driver's dim input
     ev = costdown.evaluate_selection(ctx["session"], ctx["project"], [{"key": "external_adapter"}], "uk")
     assert any(f["kind"] == "compliance" for f in ev["flags"])
 
+def test_touch_dimmer_replaces_knob_and_pot(ctx):
+    inputs, actx = assemble(ctx["snap"], cfg_for(ctx, "dimmer_touch"), ctx["rules"], ctx["cost"])
+    names = [i.name for i in inputs.items]
+    assert any("touch dimmer" in n.lower() for n in names) and not any("rotary potentiometer" in n for n in names)
+    assert "Dimmer knob" not in {p.name for p in inputs.parts}
 
-def test_dimmer_options_follow_power_option(ctx):
-    a_inputs, _ = assemble(ctx["snap"], cfg_for(ctx, "dimmer_inline"), ctx["rules"], ctx["cost"])
-    a_names = [i.name for i in a_inputs.items]
-    assert any("Inline mains cable dimmer" in n for n in a_names) and not any("In-base rotary" in n for n in a_names)
-    b_inputs, _ = assemble(ctx["snap"], cfg_for(ctx, "dimmer_inline", "external_adapter"), ctx["rules"], ctx["cost"])
-    b_names = [i.name for i in b_inputs.items]
-    assert any("Inline low-voltage PWM dimmer" in n for n in b_names) and not any("mains cable dimmer" in n for n in b_names)
-    base_names = [i.name for i in assemble(ctx["snap"], CostConfig(), ctx["rules"], ctx["cost"])[0].items]
-    assert any("In-base rotary dimmer" in n for n in base_names)
-
-
-def test_lamp_tube_construction_is_the_default(ctx):
+def test_cordless_construction_is_the_default(ctx):
     names = [i.name.lower() for i in assemble(ctx["snap"], CostConfig(), ctx["rules"], ctx["cost"])[0].items]
-    assert any("lamp tube" in n for n in names) and any("cap nut" in n for n in names)
-    assert not any("m3 " in n for n in names)  # no LED-bracket screws: the LED holder threads onto the tube
-    # The spun base keeps its weight plate and rivet nuts (route change extras).
-    assert any("weight plate" in n for n in names) and any("rivet nut" in n for n in names)
-
+    assert not any("lamp tube" in n or "cap nut" in n or "rivet nut" in n for n in names)  # no central rod
+    assert any("m3 " in n for n in names) and any("standoff" in n for n in names) and any("magnet" in n for n in names)
+    # The spun base keeps its weight plate (route change extra).
+    assert any("weight plate" in n for n in names)
 
 def test_base_pressed_keeps_route_change_extras(ctx):
     inputs, actx = assemble(ctx["snap"], cfg_for(ctx, "base_pressed"), ctx["rules"], ctx["cost"])
     names = [i.name.lower() for i in inputs.items]
     assert next(p for p in inputs.parts if p.name == "Base").process_key == "deep_drawing"
-    assert any("weight plate" in n for n in names) and any("rivet nut" in n for n in names)
+    assert any("weight plate" in n for n in names)
     assert any(f["kind"] == "safety" for f in actx["flags"])
 
 
 def test_constraint_excludes_plastic_scenario_options(ctx):
     defs = {"lantern_plastic": {"key": "lantern_plastic", "letter": "z", "label": "Acrylic lantern", "premium_impact": "none",
-                                "effect": {"reroute": {"part": "lantern", "options": [
+                                "effect": {"reroute": {"part": "lantern_glass", "options": [
                                     {"process": "polymer_tube_cut", "material": "pmma", "label": "Acrylic"},
                                     {"process": "glass_tube_cut", "material": "borosilicate", "label": "Glass"}]}}}}
     ok, why = costdown.option_allowed(defs["lantern_plastic"], 0, ctx["snap"], ctx["rules"])
@@ -279,7 +281,7 @@ def test_constraint_excludes_plastic_scenario_options(ctx):
     assert costdown.option_allowed(defs["lantern_plastic"], 1, ctx["snap"], ctx["rules"])[0]
     opts = costdown._cheapest_options(ctx["snap"], defs, "uk", 500, ctx["rules"], ctx["cost"])
     assert opts["lantern_plastic"] == 1
-    only_plastic = {"x": {**defs["lantern_plastic"], "effect": {"reroute": {"part": "lantern", "options": [
+    only_plastic = {"x": {**defs["lantern_plastic"], "effect": {"reroute": {"part": "lantern_glass", "options": [
         {"process": "polymer_tube_cut", "material": "pmma", "label": "Acrylic"}]}}}}
     best = costdown.optimise(ctx["snap"], only_plastic, 500, ctx["rules"], ctx["cost"])
     assert best["selection"] == []  # never chosen
@@ -289,12 +291,13 @@ def test_constraint_excludes_plastic_scenario_options(ctx):
     assert material_allowed(ctx["rules"], {"hidden"}, "bought_in", None)[0]
 
 
-def test_height_reduction_scales_geometry_and_cost(ctx):
-    inputs, _ = assemble(ctx["snap"], cfg_for(ctx, "height_350"), ctx["rules"], ctx["cost"])
-    body = next(p for p in inputs.parts if p.name == "Main body")
-    assert body.geometry.size_mm[2] < ctx["snap"].geometry["main_body"]["size_mm"][2]
-    assert mid(ctx, cfg_for(ctx, "height_350")) < mid(ctx, CostConfig())
-
+def test_height_change_scales_geometry_and_cost(ctx):
+    defs = {"h": {"key": "h", "letter": "h", "label": "Taller", "effect": {"scale_height": 340}}}
+    cfg = costdown.selection_config(defs, [("h", 0)], "uk", ctx["snap"].params)
+    inputs, _ = assemble(ctx["snap"], cfg, ctx["rules"], ctx["cost"])
+    tower = next(p for p in inputs.parts if p.name == "Tower")
+    assert tower.geometry.size_mm[2] > ctx["snap"].geometry["tower"]["size_mm"][2]
+    assert mid(ctx, cfg) > mid(ctx, CostConfig())
 
 def test_region_multipliers_and_freight(ctx):
     uk, _ = assemble(ctx["snap"], CostConfig(), ctx["rules"], ctx["cost"])
@@ -312,24 +315,28 @@ def test_unknown_scenarios_rejected(ctx):
 
 def test_evaluate_selection_reports_marginal_savings_and_targets(ctx):
     ev = ctx["client"].post(f"/api/projects/{ctx['pid']}/scenarios/evaluate",
-                            json={"changes": [{"key": "base_pressed", "option": None}, {"key": "height_350"}], "region": "portugal"}).json()
-    assert [s["key"] for s in ev["selection"]] == ["base_pressed", "height_350"]
+                            json={"changes": [{"key": "base_pressed", "option": None}, {"key": "dimmer_touch"}], "region": "portugal"}).json()
+    assert [s["key"] for s in ev["selection"]] == ["base_pressed", "dimmer_touch"]
     assert ev["selection"][0]["option_label"] == "Pressed (deep drawn)"
-    assert {m["key"] for m in ev["marginal"]} == {"base_pressed", "height_350", "region"}
+    assert {m["key"] for m in ev["marginal"]} == {"base_pressed", "dimmer_touch", "region"}
     marg = {m["key"]: m["saving"]["500"] for m in ev["marginal"]}
-    assert marg["height_350"] > 0 and marg["region"] > 0
+    assert marg["dimmer_touch"] > 0 and marg["region"] > 0
     row = next(v for v in ev["volumes"] if v["quantity"] == 500)
     assert set(row["targets"]) == {"dtc", "retail"} and row["raw_mid"] >= row["mid"]
 
 
 def test_scenario_catalog(ctx):
     cat = ctx["client"].get(f"/api/projects/{ctx['pid']}/scenarios").json()
-    assert [s["letter"] for s in cat["scenarios"]] == list("adeghj")
+    assert [s["letter"] for s in cat["scenarios"]] == list("abegjk")
     assert all(o["allowed"] for s in cat["scenarios"] for o in s["options"])
     assert {r["key"] for r in cat["regions"]} == {"uk", "portugal", "turkey", "china"}
     assert all(not r["verified"] for r in cat["regions"])
     for s in cat["scenarios"]:
-        assert set(s["tradeoffs"]) == {"finish", "weight", "premium", "lead_time", "tooling"}
+        assert {"finish", "weight", "premium", "lead_time", "tooling"} <= set(s["tradeoffs"])
+    windows = next(s for s in cat["scenarios"] if s["key"] == "no_tower_windows")
+    assert windows["premium_impact"] == "significant" and windows["options"][0]["saving"]["500"] > 10
+    railing = next(s for s in cat["scenarios"] if s["key"] == "railing_method")
+    assert [o["label"].split(" (")[0] for o in railing["options"]] == ["Soldered brass wire", "Lost-wax cast brass"]
 
 
 # --- product-level optimum -----------------------------------------------------------
@@ -372,15 +379,22 @@ def test_tiers_are_ordered_and_summary_complete(ctx):
     for r in sm["rows"]:
         assert {r["targets"]["dtc"]["status"], r["targets"]["retail"]["status"]} <= {"pass", "close", "fail"}
     cur = next(r for r in sm["rows"] if r["quantity"] == 500 and r["tier"] == "current")
-    assert cur["targets"]["dtc"]["status"] == "fail"  # ~£150 vs ~£76 target
+    assert cur["targets"]["dtc"]["status"] == "fail"  # ~£220 vs ~£76 target
     prem = sm["premium"]
     assert prem["retail"] == 395 and len(prem["rows"]) == 16
-    assert all(not any(s["key"] == "band_stripe" for s in r["selection"]) for r in prem["rows"])  # brass band needs a band
+    pp = sm["price_points"]
+    assert [p["retail_inc_vat"] for p in pp["points"]] == [199, 229, 275]
+    assert pp["points"][0]["dtc"] < pp["points"][1]["dtc"] < pp["points"][2]["dtc"]
+    for row in pp["rows"]:
+        assert set(row["by_price"]) == {"199", "229", "275"}
+        assert {row["by_price"][k]["dtc"]["status"] for k in row["by_price"]} <= {"pass", "close", "fail"}
+    assert {(r["quantity"], r["tier"]) for r in pp["rows"]} >= {(500, "current"), (2000, "current"), (500, "strict"),
+                                                                 (2000, "strict")}
 
 
 def test_scenario_sets_crud(ctx):
     c, pid = ctx["client"], ctx["pid"]
-    r = c.post(f"/api/projects/{pid}/scenario-sets", json={"name": "Lean", "changes": [{"key": "height_350"}], "region": "turkey"})
+    r = c.post(f"/api/projects/{pid}/scenario-sets", json={"name": "Lean", "changes": [{"key": "dimmer_touch"}], "region": "turkey"})
     assert r.status_code == 201
     assert c.post(f"/api/projects/{pid}/scenario-sets", json={"name": "Bad", "region": "mars"}).status_code == 422
     assert [s["name"] for s in c.get(f"/api/projects/{pid}/scenario-sets").json()] == ["Lean"]

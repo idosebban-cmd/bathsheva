@@ -2,7 +2,7 @@
 
 ## Run on your Mac
 
-Works on Apple Silicon and Intel Macs running macOS 11 (Big Sur) or newer. You need an
+Works on Apple Silicon and Intel Macs running macOS 12 (Monterey) or newer. You need an
 internet connection for the first setup, and about 3 GB of free disk space.
 
 ### 1. Download the code (once)
@@ -86,12 +86,12 @@ Everything else works without a key.
   **Open**, then click **Open**. On macOS 15 or newer, open **System Settings → Privacy &
   Security**, scroll down, and click **Open Anyway**. Or, from the `bathsheva` folder in
   Terminal, run: `xattr -d com.apple.quarantine "Start Workbench.command"; chmod +x "Start Workbench.command"`
-- **The CadQuery / backend packages step fails.** Check your internet connection and run the
+- **The CAD kernel (build123d) / backend packages step fails.** Check your internet connection and run the
   setup again. If it still fails:
   - Delete the `backend/.venv` folder and run the setup again. It rebuilds the folder with the
     tested Python version (3.12).
   - If you use Anaconda or Miniconda, run `conda deactivate` first.
-  - Check your macOS version (Apple menu → About This Mac). CadQuery needs macOS 11 or newer.
+  - Check your macOS version (Apple menu → About This Mac). The CAD kernel needs macOS 12 or newer.
   - Send `~/Bathsheva Workbench/logs/setup.log` to whoever maintains the workbench.
 - **"Port 5173 (or 8000) is already in use".** The workbench is probably already running in
   another Terminal window. Close that window and try again. The launcher shows which program

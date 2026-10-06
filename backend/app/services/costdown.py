@@ -17,7 +17,7 @@ from sqlalchemy.orm import Session
 from app.costing.assemble import CostConfig, ExtraItem, RouteChoice, Snapshot, assemble, route_changes_for
 from app.costing.data import CostData, load_cost_data
 from app.costing.model import CostInputs, crossover, evaluate, fixed_and_variable, part_quantities, total, unit_cost_range
-from app.costing.pricing import PRICING_KEYS, assess, targets
+from app.costing.pricing import PRICING_KEYS, assess, factory_targets, targets
 from app.models import EngineeringDecision, Part, Project
 from app.rules.data import RuleSet, load_rules
 from app.services.costing import reference_quantity, snapshot
@@ -314,7 +314,8 @@ def change_config(defn: dict[str, Any], option: int, params: dict[str, Any]) -> 
         opt = eff["reroute"]["options"][option]
         cfg.routes[eff["reroute"]["part"]] = RouteChoice(opt["process"], opt["material"], opt.get("tooling"), opt.get("label", ""))
     if "remove_part" in eff:
-        cfg.removed_parts.add(eff["remove_part"])
+        rp = eff["remove_part"]
+        cfg.removed_parts |= set(rp if isinstance(rp, list) else [rp])
     for it in eff.get("add_items", []):
         qty = float(params.get(it["quantity_param"], 1)) if it.get("quantity_param") else float(it.get("quantity", 1))
         cfg.add_items.append(ExtraItem(it["price_key"], qty, kind=it.get("kind", "bought_in"), origin=f"scenario {defn['letter']}"))
@@ -406,7 +407,7 @@ def resolve(selection: list[dict[str, Any]], defs: dict[str, dict[str, Any]], sn
         out.append((s["key"], int(opt)))
     keys = tuple(k for k, _ in out)
     if _conflict(keys, defs):
-        raise HTTPException(422, "These scenarios conflict (e.g. a band from tube and a painted band stripe)")
+        raise HTTPException(422, "These scenarios conflict with each other")
     return out
 
 
@@ -577,6 +578,41 @@ def edition_config(project: Project, option_key: str, removed: set[str]) -> Cost
     return cfg
 
 
+def price_points(project: Project) -> list[float]:
+    """Retail prices (inc. VAT) to compare side by side: the template's list plus the planned price."""
+    tpl = load_template(project.template).get("pricing", {}) if project.template else {}
+    values, _ = pricing_values(project)
+    pts = {float(x) for x in tpl.get("price_points", [])}
+    if values["retail_price"]:
+        pts.add(float(values["retail_price"]))
+    return sorted(pts)
+
+
+def price_point_table(project: Project, rows: list[dict[str, Any]], values: dict[str, float]) -> dict[str, Any]:
+    """Current and best configurations (first power option) against the DTC and retail-channel targets at each
+    retail price point."""
+    pts = price_points(project)
+    close = values["close_band"]
+    points = [factory_targets(rp, values) for rp in pts]
+    first_power = rows[0]["power"] if rows else None
+    out = []
+    for r in rows:
+        if r["power"] != first_power or r["tier"] not in ("current", "strict", "premium", "any") or r.get("same_as"):
+            continue
+        mid = r["cost"]["mid"]
+        out.append({
+            "quantity": r["quantity"], "label": r["label"], "tier": r["tier"], "region_name": r["region_name"],
+            "selection": [s["label"] + (f" ({s['option_label']})" if s["option_label"] else "") for s in r["selection"]],
+            "cost": {"low": r["cost"]["low"], "mid": mid, "high": r["cost"]["high"]},
+            "by_price": {f"{pt['retail_inc_vat']:g}": assess(mid, pt, close) for pt in points},
+        })
+    return {"points": points, "rows": out, "power_label": rows[0]["power_label"] if rows else "",
+            "notes": ["DTC target = ex-VAT price × DTC factory share; retail-channel target = ex-VAT price × (1 − retailer "
+                      "margin) × wholesale factory share (Pricing panel above).",
+                      "Status compares the midpoint estimate with each target: pass at or under, close within "
+                      f"{close:.0%} over, fail beyond."]}
+
+
 def product_summary(session: Session, project: Project) -> dict[str, Any]:
     """Current configuration vs best combinations at 500 and 2,000 units, against both cost targets,
     plus the premium brass edition."""
@@ -628,19 +664,19 @@ def product_summary(session: Session, project: Project) -> dict[str, Any]:
                 seen.append((key, label))
                 rows.append(row(label, sel, best["region"], q) | {"tier": tier, "same_as": same_as, "power": power["key"],
                                                                  "power_label": power["label"]})
-            # The brass edition needs a separate band, so the painted-stripe change is excluded.
             for opt in ("plated", "solid"):
                 ed_cur = edition_config(project, opt, set())
                 ed_extra = ed_cur.merged(extra) if extra is not None else ed_cur
                 premium_rows.append(row(f"Brass edition ({opt}), current configuration", forced, "uk", q, ed_cur,
                                         tg["premium"]) | {"power": power["key"], "power_label": power["label"]})
-                be = optimise(snap, defs, q, rules, cost, tier="strict", forbid=forbid | {"band_stripe"}, extra=ed_extra)
+                be = optimise(snap, defs, q, rules, cost, tier="strict", forbid=forbid, extra=ed_extra)
                 premium_rows.append(row(f"Brass edition ({opt}), best with no compromise", forced + be["selection"],
                                         be["region"], q, ed_cur, tg["premium"]) | {"power": power["key"],
                                                                                     "power_label": power["label"]})
     ed = load_template(project.template).get("premium_edition", {})
     return {
         "targets": tg, "close_band": close, "rows": rows, "power_options": powers,
+        "price_points": price_point_table(project, rows, values),
         "premium": {"label": ed.get("label", "Premium edition"), "retail": values["premium_retail"],
                     "targets": tg["premium"], "rows": premium_rows,
                     "options": {o["key"]: o["label"] for o in ed.get("options", [])}},
@@ -648,10 +684,10 @@ def product_summary(session: Session, project: Project) -> dict[str, Any]:
             "Status compares the midpoint estimate with each target: pass at or under, close within "
             f"{close:.0%} over, fail beyond.",
             "Best combinations search every combination of changes and every region; multi-option changes use their cheapest option.",
-            "Power options are costed side by side: A keeps the internal mains driver; B always uses the external adapter and "
+            "Power options are costed side by side: A is cordless (2 x 18650, USB-C); B always uses the external adapter and "
             "an internal DC-DC driver (scenario g), whatever the tier.",
-            "Tiers: 'no compromise' uses only changes that keep the look and feel; 'slight compromises' also allows the painted "
-            "stripe, the inline dimmer and the 350 mm height; 'any' also allows the straight tube body.",
+            "Tiers: 'no compromise' uses only changes that keep the look and feel; 'slight compromises' also allows the touch "
+            "dimmer; 'any' also allows the plain tower without windows and the straight tube tower.",
             "Changes whose options break a design constraint (e.g. plastic on a visible part) are never chosen.",
             "Rates are unverified: most are model-generated, some come from published distributor prices. Treat the ranking as a guide for which quotes to get first.",
         ],

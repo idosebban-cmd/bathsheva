@@ -103,7 +103,12 @@ tr.selected td { background: #eef4f4; }
 .issue.warning { background: var(--warn-bg); color: var(--warn-ink); }
 input.invalid { border-color: var(--danger-ink); }
 .sticky-actions { position: sticky; bottom: 0; background: var(--surface); padding: 0.5rem 0; }
-.viewer { height: 520px; border-radius: 6px; overflow: hidden; border: 1px solid var(--line); }
+.viewer { position: relative; height: 560px; border-radius: 6px; overflow: hidden; border: 1px solid var(--line); }
+.viewer-toggle { position: absolute; top: 0.6rem; right: 0.8rem; background: rgba(255, 255, 255, 0.85); padding: 0.2rem 0.5rem;
+  border-radius: 4px; }
+table.changes td { vertical-align: top; }
+.viewer-toggle button { margin-right: 0.4rem; }
+.viewer-toggle button.active { font-weight: 700; text-decoration: underline; }
 .viewer.empty { display: flex; align-items: center; justify-content: center; color: var(--muted); padding: 1rem; text-align: center; }
 
 .rec-card { display: flex; flex-direction: column; gap: 0.5rem; }

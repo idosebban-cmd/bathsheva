@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from sqlalchemy.orm import Session
 
@@ -163,27 +163,30 @@ def put_cost_settings(body: CostSettingsIn, project: Project = Depends(get_proje
 
 
 @router.get("/cost-audit")
-def get_cost_audit(project: Project = Depends(get_project), session: Session = Depends(get_session)):
+def get_cost_audit(quantity: int = Query(500, ge=1, le=1_000_000), project: Project = Depends(get_project),
+                   session: Session = Depends(get_session)):
     from app.services.cost_audit import cost_audit
 
-    return cost_audit(session, project)
+    return cost_audit(session, project, quantity)
 
 
 @router.get("/cost-audit.md")
-def get_cost_audit_md(project: Project = Depends(get_project), session: Session = Depends(get_session)):
+def get_cost_audit_md(quantity: int = Query(500, ge=1, le=1_000_000), project: Project = Depends(get_project),
+                      session: Session = Depends(get_session)):
     from fastapi.responses import Response
 
     from app.services.cost_audit import audit_markdown, cost_audit
 
-    return Response(audit_markdown(cost_audit(session, project)), media_type="text/markdown",
+    return Response(audit_markdown(cost_audit(session, project, quantity)), media_type="text/markdown",
                     headers={"Content-Disposition": f'attachment; filename="{project.slug}-cost-assumptions-audit.md"'})
 
 
 @router.get("/cost-audit.csv")
-def get_cost_audit_csv(project: Project = Depends(get_project), session: Session = Depends(get_session)):
+def get_cost_audit_csv(quantity: int = Query(500, ge=1, le=1_000_000), project: Project = Depends(get_project),
+                       session: Session = Depends(get_session)):
     from fastapi.responses import Response
 
     from app.services.cost_audit import audit_csv, cost_audit
 
-    return Response(audit_csv(cost_audit(session, project)), media_type="text/csv",
+    return Response(audit_csv(cost_audit(session, project, quantity)), media_type="text/csv",
                     headers={"Content-Disposition": f'attachment; filename="{project.slug}-cost-assumptions-audit.csv"'})

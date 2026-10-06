@@ -11,14 +11,34 @@ setup_backend() {
   if [ ! -x "$PY" ]; then
     echo "==> Creating Python venv (backend/.venv)"
     if command -v uv >/dev/null 2>&1; then
-      # Same pinned Python as scripts/setup_mac.sh (CadQuery wheels exist for it everywhere).
+      # Same pinned Python as scripts/setup_mac.sh (OpenCASCADE wheels exist for it everywhere).
       uv venv -q --python 3.12 "$VENV"
     else
       python3 -m venv "$VENV"
     fi
   fi
-  if ! "$PY" -c "import cadquery, fastapi, anthropic, alembic, pytest" >/dev/null 2>&1; then
-    echo "==> Installing backend dependencies (CadQuery is large; first run takes a few minutes)"
+  # The CAD kernel moved from CadQuery to build123d. Both ship an OCP module, and removing
+  # CadQuery's deletes files build123d's package shares, so that one is reinstalled below.
+  local repair=0
+  if "$PY" -c "import cadquery" >/dev/null 2>&1; then
+    echo "==> Removing CadQuery (replaced by build123d)"
+    if command -v uv >/dev/null 2>&1; then
+      uv pip uninstall -q -p "$PY" cadquery cadquery-ocp cadquery-ocp-proxy || true
+    else
+      "$PY" -m pip uninstall -q -y cadquery cadquery-ocp cadquery-ocp-proxy || true
+    fi
+    repair=1
+  fi
+  if [ "$repair" = 1 ] || ! "$PY" -c "import build123d" >/dev/null 2>&1; then
+    echo "==> Reinstalling the CAD kernel (build123d's OpenCASCADE)"
+    if command -v uv >/dev/null 2>&1; then
+      uv pip install -q -p "$PY" --reinstall cadquery-ocp-novtk cadquery-ocp-proxy || true
+    else
+      "$PY" -m pip install -q --force-reinstall cadquery-ocp-novtk cadquery-ocp-proxy || true
+    fi
+  fi
+  if ! "$PY" -c "import build123d, fastapi, anthropic, alembic, pytest" >/dev/null 2>&1; then
+    echo "==> Installing backend dependencies (the CAD kernel is large; first run takes a few minutes)"
     if command -v uv >/dev/null 2>&1; then
       uv pip install -q -p "$PY" -e "$ROOT/backend[dev]"
     else

@@ -64,13 +64,14 @@ def part_geometry(project: Project) -> tuple[dict[str, Any], str]:
 
 
 def default_items(project: Project, cost: CostData | None = None) -> list[CostItem]:
-    """Template cost items for the project's current power type (undecided -> mains set)."""
+    """Template cost items for the project's current power type (undecided -> the template's default set)."""
     if not project.template:
         return []
     cost = cost or load_cost_data()
     tpl = load_template(project.template)
     power = (project.requirements or {}).get("power_type", "undecided")
-    effective_power = "mains" if power == "undecided" else power
+    default_power = tpl.get("requirements", {}).get("power_type", "mains")
+    effective_power = default_power if power == "undecided" else power
     params = current_parameters(project)
     items = []
     for i, spec in enumerate(tpl.get("cost_items", [])):
@@ -80,7 +81,7 @@ def default_items(project: Project, cost: CostData | None = None) -> list[CostIt
         price = cost.bought_in.get(spec.get("price_key") or "")
         note = ""
         if spec.get("power") and power == "undecided":
-            note = "Power type undecided: assumes mains."
+            note = f"Power type undecided: assumes {effective_power}."
         items.append(CostItem(
             project_id=project.id,
             kind=spec["kind"],
@@ -115,10 +116,11 @@ def reset_items(session: Session, project: Project) -> list[CostItem]:
 # ---------------------------------------------------------------------------
 
 # Parameters that stay fixed when the lamp is scaled to a new height.
-UNSCALED_PARAMS = {"wall_thickness", "lantern_wall_thickness", "cable_hole_diameter", "mounting_hole_diameter",
-                   "mounting_hole_count", "band_position", "band_wall_thickness", "step_depth", "tube_diameter",
-                   "dimmer_hole_diameter", "weight_plate_thickness", "target_mass_kg",
-                   "base_height"}  # the base cavity must still fit the weight plate and dimmer
+# (as in the prototype: walls, the knob, counts and angles don't scale; the base keeps its
+# height so the battery and weight plate still fit).
+UNSCALED_PARAMS = {"wall_thickness", "glass_wall_thickness", "weight_plate_thickness", "target_mass_kg", "base_height",
+                   "base_top_round", "window_count", "window_turn_deg", "railing_posts", "lantern_mullions",
+                   "knob_diameter", "railing_height", "cap_rim_height"}
 
 
 def scaled_parameters(params: dict[str, Any], height_mm: float) -> dict[str, Any]:

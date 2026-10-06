@@ -2,6 +2,17 @@
 # PROVENANCE: general knowledge written by an AI model. Not authoritative.
 
 finishes:
+  - key: tumble_polish
+    name: Tumble (barrel) polished, clear lacquered
+    keywords: [tumble, barrel polish, vibratory]
+    plain_language: >-
+      Small solid metal parts polished in batches in a vibratory or barrel
+      tumbler, then clear lacquered so the brass stays bright. Much cheaper per
+      part than hand polishing, with a slightly softer shine.
+    min_process_finish: fair
+    source: model-generated
+    confidence: low
+    verified: false
   - key: wet_lacquer
     name: Wet paint / lacquer
     keywords: [lacquer, paint, painted, coloured, colored]
@@ -40,7 +51,7 @@ finishes:
     verified: false
   - key: brass_plating
     name: Brass plating on aluminium
-    keywords: [brass]
+    keywords: [brass plating, brass-plated, brass plated]
     plain_language: >-
       Real brass plated onto an aluminium part. Needs special pretreatment
       (zincate) and a good plater; solid brass is the more reliable option.

@@ -38,15 +38,16 @@ TRAIT_TEXT = {
     "non_axisymmetric": "not round",
     "hidden": "hidden inside the product",
     "visible_trim": "has a visible metal element (e.g. a knob)",
+    "fine_detail": "finely detailed (thin posts, bars or lettering)",
+    "flat_pattern": "made from a flat pattern",
 }
 
 # Which CAD parameter holds the wall thickness for a part.
 WALL_PARAM = {
     "base": "wall_thickness",
-    "main_body": "wall_thickness",
-    "band": "wall_thickness",
-    "top_cap": "wall_thickness",
-    "lantern": "lantern_wall_thickness",
+    "tower": "wall_thickness",
+    "cap": "wall_thickness",
+    "lantern_glass": "glass_wall_thickness",
 }
 
 COMPAT_SCORE = {"good": 2, "fair": 0.5, "poor": -2}
