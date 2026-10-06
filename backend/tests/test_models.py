@@ -9,19 +9,20 @@ from app.services.projects import create_project
 def test_create_faro_from_template(db):
     p = create_project(db, "Faro", template="faro")
     assert p.slug == "faro"
-    assert [part.cad_key for part in p.parts] == [
-        "base", "main_body", "band", "lantern", "top_cap", "led_module", "cable", "dimmer", "weight_plate",
-        "lamp_tube", "lamp_nut", "cap_nut", "gasket_lower", "gasket_upper",
-    ]
-    # Hidden functional parts are marked hidden; the cap nut and dimmer knob are visible metal trim.
+    from app.cad import faro
+
+    assert [part.cad_key for part in p.parts] == faro.PART_KEYS  # one part per CAD body
+    # Hidden functional parts are marked hidden; visible brass details are made parts in solid brass.
     by = {part.cad_key: part for part in p.parts}
-    assert all("hidden" in by[k].traits for k in ("weight_plate", "lamp_tube", "lamp_nut", "gasket_lower", "gasket_upper"))
-    assert "visible_trim" in by["cap_nut"].traits and "visible_trim" in by["dimmer"].traits
+    assert all("hidden" in by[k].traits for k in ("weight_plate", "base_plate", "felt_pad", "cap_spigot"))
+    assert all(by[k].material_category == "brass" for k in ("gallery", "railing", "lantern_frame", "finial", "knob"))
     req = Requirements.model_validate(p.requirements)
-    assert req.power_type == "undecided"
+    assert req.power_type == "battery" and req.battery_runtime_h == 8
     assert req.production_volume is None
     assert req.intended_markets == ["UK", "EU"]
-    assert {"production_volume", "target_unit_cost", "approx_dimensions"} <= set(p.assumed_fields)
+    # Dimensions follow the approved prototype: confirmed, not a placeholder.
+    assert req.approx_dimensions.height_mm == 300 and "approx_dimensions" not in p.assumed_fields
+    assert {"production_volume", "target_unit_cost"} <= set(p.assumed_fields)
     # Target retail price was given by the user (Oct 2026), so it is no longer a placeholder.
     assert "target_retail_price" not in p.assumed_fields and req.target_retail_price.amount == 275
 
@@ -93,14 +94,14 @@ def test_image_upload(client, faro_project):
 def test_parts_api_crud_and_hierarchy(client, faro_project):
     pid = faro_project["id"]
     parts = client.get(f"/api/projects/{pid}/parts").json()
-    assert len(parts) == 14
+    assert len(parts) == 21
     led = next(p for p in parts if p["cad_key"] == "led_module")
 
     r = client.post(f"/api/projects/{pid}/parts", json={"name": "LED driver", "parent_id": led["id"], "material_category": "electrical"})
     assert r.status_code == 201
     child = r.json()
     assert child["parent_id"] == led["id"]
-    assert child["sort_order"] == 14
+    assert child["sort_order"] == 21
 
     # Cycles are rejected.
     assert client.patch(f"/api/projects/{pid}/parts/{led['id']}", json={"parent_id": child["id"]}).status_code == 422
@@ -110,4 +111,4 @@ def test_parts_api_crud_and_hierarchy(client, faro_project):
     assert client.patch(f"/api/projects/{pid}/parts/{child['id']}", json={"quantity": 0}).status_code == 422
 
     assert client.delete(f"/api/projects/{pid}/parts/{child['id']}").status_code == 204
-    assert len(client.get(f"/api/projects/{pid}/parts").json()) == 14
+    assert len(client.get(f"/api/projects/{pid}/parts").json()) == 21

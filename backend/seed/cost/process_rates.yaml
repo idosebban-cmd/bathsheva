@@ -133,3 +133,33 @@ process_rates:
     source: model-generated
     confidence: low
     verified: false
+  - process: photo_etching
+    machine_gbp_per_hr: {low: 35, high: 60}
+    lead_time_weeks: {low: 2, high: 4}
+    setup_hours: {low: 0.5, high: 1.5}
+    cycle_min: {low: 1.5, high: 4}
+    cycle_min_per_kg: {low: 0, high: 0}
+    material_utilisation: {low: 2.0, high: 3.5}
+    source: model-generated
+    confidence: low
+    verified: false
+  - process: investment_casting
+    machine_gbp_per_hr: {low: 40, high: 70}
+    lead_time_weeks: {low: 6, high: 10}
+    setup_hours: {low: 1.0, high: 2.5}
+    cycle_min: {low: 6, high: 15}
+    cycle_min_per_kg: {low: 5, high: 15}
+    material_utilisation: {low: 1.4, high: 1.9}
+    source: model-generated
+    confidence: low
+    verified: false
+  - process: wire_forming
+    machine_gbp_per_hr: {low: 28, high: 45}
+    lead_time_weeks: {low: 1, high: 3}
+    setup_hours: {low: 0.5, high: 1.0}
+    cycle_min: {low: 18, high: 35}
+    cycle_min_per_kg: {low: 0, high: 0}
+    material_utilisation: {low: 1.1, high: 1.3}
+    source: model-generated
+    confidence: low
+    verified: false

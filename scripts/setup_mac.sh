@@ -17,7 +17,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 VENV="$ROOT/backend/.venv"
 PY="$VENV/bin/python"
-# CadQuery has prebuilt wheels for Python 3.12 on both Apple Silicon and Intel Macs.
+# build123d (OpenCASCADE) has prebuilt wheels for Python 3.12 on both Apple Silicon and Intel Macs (macOS 12+).
 PYTHON_VERSION="3.12"
 MIN_NODE_MAJOR=18
 TOTAL_STEPS=7
@@ -152,8 +152,8 @@ step "Xcode command line tools"
 if [ "$IS_MAC" = 1 ]; then
   macos_version="$(sw_vers -productVersion)"
   macos_major="${macos_version%%.*}"
-  if [ "$macos_major" -lt 11 ]; then
-    HINT="CadQuery needs macOS 11 (Big Sur) or newer. Update macOS in System Settings."
+  if [ "$macos_major" -lt 12 ]; then
+    HINT="The CAD kernel needs macOS 12 (Monterey) or newer. Update macOS in System Settings."
     fail "This Mac runs macOS $macos_version, which is too old."
   fi
   ok "macOS $macos_version on $(uname -m)"
@@ -250,8 +250,8 @@ fi
 
 # --- 4. Python environment and backend packages ------------------------------
 
-step "Python $PYTHON_VERSION and backend packages (CadQuery is large; the first run takes a few minutes)"
-HINT="Check your internet connection and run the script again. If CadQuery keeps failing, see Troubleshooting in README.md."
+step "Python $PYTHON_VERSION and backend packages (the CAD kernel is large; the first run takes a few minutes)"
+HINT="Check your internet connection and run the script again. If the CAD kernel keeps failing, see Troubleshooting in README.md."
 have_py=""
 if [ -x "$PY" ]; then
   have_py="$("$PY" -c 'import sys; print("%d.%d" % sys.version_info[:2])' 2>/dev/null || true)"
@@ -266,10 +266,28 @@ else
   run uv venv --quiet --python "$PYTHON_VERSION" --python-preference only-managed "$VENV"
   [ "$DRY_RUN" = 1 ] || ok "Created backend/.venv with Python $PYTHON_VERSION"
 fi
+# The CAD kernel moved from CadQuery to build123d. Both ship an OCP module, and removing
+# CadQuery's deletes files build123d's package shares, so that one is reinstalled after.
+OCP_PKGS="cadquery-ocp-novtk cadquery-ocp-proxy"
+repair_ocp() {
+  # shellcheck disable=SC2086  # word splitting of the package list is intended
+  run uv pip install --quiet --python "$PY" --reinstall $OCP_PKGS
+}
+had_cadquery=0
+if [ -x "$PY" ] && "$PY" -c "import cadquery" >/dev/null 2>&1; then
+  info "Removing CadQuery (replaced by build123d)."
+  run uv pip uninstall --quiet --python "$PY" cadquery cadquery-ocp cadquery-ocp-proxy
+  had_cadquery=1
+fi
 run uv pip install --quiet --python "$PY" -e "$ROOT/backend[dev]"
+[ "$had_cadquery" = 1 ] && repair_ocp
+if [ "$DRY_RUN" = 0 ] && ! "$PY" -c "import build123d" >/dev/null 2>&1; then
+  info "Repairing the CAD kernel install."
+  repair_ocp
+fi
 if [ "$DRY_RUN" = 0 ]; then
-  "$PY" -c "import cadquery, fastapi, alembic" || fail "The backend packages did not install correctly."
-  ok "Backend packages installed (CadQuery $("$PY" -c 'import cadquery; print(cadquery.__version__)'))"
+  "$PY" -c "import build123d, fastapi, alembic" || fail "The backend packages did not install correctly."
+  ok "Backend packages installed (build123d $("$PY" -c 'import build123d; print(build123d.__version__)'))"
 fi
 
 # --- 5. Front-end packages ---------------------------------------------------

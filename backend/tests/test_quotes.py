@@ -3,7 +3,7 @@ import io
 import zipfile
 from datetime import date
 
-import cadquery as cq
+from build123d import import_step
 import pytest
 
 from app.config import SEED_DIR, settings
@@ -134,9 +134,9 @@ def test_quote_pack_requires_cad(client, faro_project):
 def test_quote_pack_zip(client, faro_project):
     pid = faro_project["id"]
     params = client.get(f"/api/projects/{pid}/cad").json()["parameters"]
-    client.post(f"/api/projects/{pid}/cad/generate", json={"parameters": {**params, "overall_height": 450}})
-    body = _part(client, pid, "main_body")
-    client.patch(f"/api/projects/{pid}/parts/{body['id']}", json={"material": "Aluminium 3003 (H14)", "process": "Metal spinning", "quantity": 2})
+    client.post(f"/api/projects/{pid}/cad/generate", json={"parameters": {**params, "overall_height": 320}})
+    tower = _part(client, pid, "tower")
+    client.patch(f"/api/projects/{pid}/parts/{tower['id']}", json={"material": "Aluminium 3003 (H14)", "quantity": 2})
 
     r = client.get(f"/api/projects/{pid}/quote-pack.zip")
     assert r.status_code == 200 and r.headers["content-type"] == "application/zip"
@@ -145,23 +145,25 @@ def test_quote_pack_zip(client, faro_project):
     names = sorted(zf.namelist())
     folder = "faro_quote_pack_v1/"
     assert names == sorted(folder + n for n in [
-        "README.md", "01_base.step", "02_main_body.step", "03_decorative_band.step", "04_lantern.step", "05_top_cap.step",
-        "09_weight_plate.step",
-    ])  # bought-in LED module, cable, lamp tube, nuts and gaskets are not sent; the weight plate is made to drawing
+        "README.md", "01_base.step", "02_bottom_plate.step", "04_weight_plate.step", "05_nameplate.step",
+        "06_cream_band.step", "07_tower.step", "08_window_diffuser.step", "11_dimmer_knob.step", "12_gallery.step",
+        "13_gallery_railing.step", "14_lantern_frame.step", "15_lantern_glass.step", "17_cap.step",
+        "18_cap_bayonet_spigot.step", "19_finial.step",
+    ])  # electronics and the felt are not sent; the plates are made to drawing
 
     for n in names:
         if n.endswith(".step"):
             assert zf.read(n).startswith(b"ISO-10303-21;")
-    out = zf.extract(folder + "02_main_body.step", path=str(settings.data_dir / "unzipped"))
-    body_solid = cq.importers.importStep(out)
-    assert len(body_solid.solids().vals()) == 1
-    # Body = overall − base − LED plate flange − visible lantern − cap − cap nut.
-    assert body_solid.val().BoundingBox().zlen == pytest.approx(450 - 30 - 1.5 - 80 - 45 - 12, abs=0.5)
+    out = zf.extract(folder + "07_tower.step", path=str(settings.data_dir / "unzipped"))
+    tower_solid = import_step(out)
+    assert len(tower_solid.solids()) == 1
+    # Tower = overall − finial − cap − lantern − gallery − (base + band).
+    assert tower_solid.solids()[0].bounding_box().size.Z == pytest.approx(320 - 19 - 33 - 41.3 - 9.7 - 33, abs=0.5)
 
     readme = zf.read(folder + "README.md").decode()
     assert "CAD version v1" in readme
-    assert "| 02_main_body.step | Main body | 2 | Aluminium 3003 (H14) | Metal spinning | Coloured lacquer |" in readme
+    assert "| 07_tower.step | Tower | 2 | Aluminium 3003 (H14) | Metal spinning | Two-tone lacquer" in readme
     base_line = next(line for line in readme.splitlines() if line.startswith("| 01_base.step"))
-    assert "Metal spinning" in base_line and "(recommended)" not in base_line and "Black lacquer" in base_line  # accepted decision
-    assert "- LED module and mounting × 1: bought-in component" in readme
-    assert "M4 machine screw" in readme  # derived hardware listed as not included
+    assert "Metal spinning" in base_line and "(recommended)" not in base_line and "Gloss black lacquer" in base_line
+    assert "- Battery pack × 1: bought-in component" in readme
+    assert "M3 x 25 socket screw" in readme  # hardware listed as not included

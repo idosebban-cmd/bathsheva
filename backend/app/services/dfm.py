@@ -90,20 +90,60 @@ def build_dfm(project: Project) -> dict[str, Any]:
         min_clear = rules.plan("min_led_to_lantern_clearance_mm")
         checks.append(_check(
             "Thermal", "pass" if clearance >= min_clear else "warning", "LED to lantern clearance",
-            f"About {clearance:.0f} mm between the LED and the lantern wall (heuristic minimum {min_clear} mm). "
-            "Confirm temperatures by test once the LED is chosen.", unverified=True, part="Lantern"))
+            f"About {clearance:.0f} mm between the LED emitter and the frosted glass (heuristic minimum {min_clear} mm). "
+            "A 1.5 W LED runs cool; confirm temperatures by test once the LED is chosen.", unverified=True, part="Lantern glass"))
 
-        min_hole = rules.plan("min_cable_hole_mm")
-        checks.append(_check(
-            "Electrical", "pass" if p["cable_hole_diameter"] >= min_hole else "warning", "Cable entry hole size",
-            f"Cable hole is {p['cable_hole_diameter']:g} mm (heuristic minimum {min_hole} mm for a mains flex plus grommet).",
-            unverified=True, part="Cable / power entry"))
+        d = faro.derived({k: float(v) for k, v in params.items()})
+        n_win = int(p["window_count"])
+        if n_win:
+            checks.append(_check(
+                "Process", "warning", f"{n_win} tower windows: laser-cut after spinning",
+                "The arched windows are cut into the spun cone with a 5-axis laser (or a fixture), then deburred and "
+                "masked for lacquer. Ask the spinner whether they cut in-house; scenario b shows what the windows cost.",
+                unverified=True, part="Tower"))
+            checks.append(_check(
+                "Assembly", "info", "Window diffuser and tower light",
+                f"One opal borosilicate tube Ø{d['diffuser_od']:.0f} mm stands on a silicone ring behind all {n_win} windows; "
+                "the tower light (LED filament strips on a spine) sits inside it. Insert both before the tower is bonded.",
+                unverified=True, part="Window diffuser"))
+
+        from app.services.electrical import project_runtime
+
+        rt = project_runtime(project)
+        if rt.get("applicable"):
+            if rt["hours"] is not None:
+                lvl = {"pass": "pass", "close": "warning", "fail": "fail"}.get(rt["status"], "info")
+                tgt = f" vs target {rt['target_h']:g} h" if rt.get("target_h") else ""
+                checks.append(_check(
+                    "Electrical", lvl, "Battery runtime at full brightness",
+                    f"About {rt['hours']:.1f} h{tgt} ({rt['battery_wh']:.1f} Wh battery, {rt['load_w']:.1f} W of LEDs: "
+                    + ", ".join(f"{ld['name']} {ld['watts']:g} W" for ld in rt["loads"]) + "). " + rt["note"],
+                    unverified=rt["unverified"], part="Battery pack"))
+            for c in rt.get("compliance", []):
+                checks.append(_check("Electrical", "warning", "Battery compliance", c, unverified=True, part="Battery pack"))
 
         checks.append(_check(
-            "Assembly", "pass", "Central lamp tube construction",
-            "One M10x1 lamp tube clamps base, body, LED plate, glass and cap; no threads are cut in thin walls. "
-            f"The weight plate is screwed to {int(p['mounting_hole_count'])} rivet nuts in the base so it can't turn or rattle.",
+            "Assembly", "pass", "Construction (no central rod)",
+            "Three M3 screws clamp the weight plate and base to the turned cream band; the tower and gallery are bonded "
+            "on turned spigots; the cap twist-locks onto the lantern (four lugs, 20° turn) and lifts off to reach the LED. "
+            "The bottom plate is on four M2.5 screws so the battery is user-replaceable.",
             unverified=True, part="Base"))
+        if latest is not None:
+            try:
+                bay = faro.model(latest.parameters).info.get("bayonet", {})
+            except Exception:  # pragma: no cover - geometry kernel failure
+                bay = {}
+            if bay:
+                ok = not bay.get("locked_clash_mm3") and not bay.get("entry_clash_mm3") and bay.get("led_lifts_out")
+                checks.append(_check(
+                    "Assembly", "pass" if ok else "fail", "Cap twist-lock fit",
+                    f"Locked clash {bay.get('locked_clash_mm3', 0):g} mm³, entry clash {bay.get('entry_clash_mm3', 0):g} mm³, "
+                    f"{bay.get('lug_under_lip_mm', 0):g} mm of lug under the lip; the LED lifts out with the cap off: "
+                    f"{'yes' if bay.get('led_lifts_out') else 'no'}.", part="Cap bayonet spigot"))
+        checks.append(_check(
+            "Process", "info", "Prototype features adapted for metal production",
+            "; ".join(f"{c['feature']}: {c['production']}" for c in faro.PRODUCTION_CHANGES[:6]) + ". Full list in the CAD tab.",
+            part=None))
 
         from app.services.cad import mass_estimate
 
@@ -133,10 +173,12 @@ def build_dfm(project: Project) -> dict[str, Any]:
         proc = rules.processes.get(proc_key) if proc_key else None
         name = part.name
 
-        if proc is None:
+        if proc is None and part.material_category in ("bought_in", "electrical"):
+            pass  # bought in (by datasheet or made to drawing): no process route to check
+        elif proc is None:
             checks.append(_check("Process", "warning", f"{name}: no process", "Set or accept a process for this part.", part=name))
-        elif params and part.cad_key in ("main_body", "lantern", "base") and proc.wall_mm:
-            wall = float(params["lantern_wall_thickness" if part.cad_key == "lantern" else "wall_thickness"])
+        elif params and part.cad_key in ("tower", "lantern_glass", "base", "cap") and proc.wall_mm:
+            wall = float(params["glass_wall_thickness" if part.cad_key == "lantern_glass" else "wall_thickness"])
             w = proc.wall_mm
             if not w.min <= wall <= w.max:
                 level = "fail"
@@ -150,13 +192,13 @@ def build_dfm(project: Project) -> dict[str, Any]:
 
         draft = rules.draft_angles.get(proc_key or "")
         if draft and params:
-            if part.cad_key == "main_body":
+            if part.cad_key == "tower":
                 taper = faro.body_taper_deg(params)
                 ok = taper >= draft.external_deg
                 checks.append(_check("Process", "pass" if ok else "warning", f"{name}: draft / taper",
                                      f"Body taper is {taper:.1f}° vs {draft.external_deg:g}° needed for {proc.name.lower()}.",
                                      not draft.verified, part=name))
-            elif part.cad_key in ("base", "top_cap", "band"):
+            elif part.cad_key in ("base", "cap", "band_cream"):
                 checks.append(_check("Process", "warning", f"{name}: no draft in CAD",
                                      f"The CAD model has vertical walls; {proc.name.lower()} needs about "
                                      f"{draft.external_deg:g}° external / {draft.internal_deg:g}° internal draft.",
@@ -188,7 +230,8 @@ def build_dfm(project: Project) -> dict[str, Any]:
 
     assumptions = [f"{REQ_LABELS.get(f, f)} is a placeholder / assumption." for f in project.assumed_fields]
     if params:
-        assumptions.append("CAD dimensions are placeholders until Faro's real size is set.")
+        assumptions.append("CAD dimensions follow the approved prototype (300 mm); production details (walls, fixings, "
+                           "glass sizes) are proposals to confirm with suppliers.")
     assumptions.append("All rule data is model-generated and unverified unless marked otherwise.")
 
     counts = {lvl: sum(1 for c in checks if c["level"] == lvl) for lvl in ("fail", "warning", "info", "pass")}

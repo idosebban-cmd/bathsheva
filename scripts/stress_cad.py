@@ -56,7 +56,7 @@ def main():
     failures = 0
     t0 = time.time()
     for i in range(N):
-        p = {**params, "overall_height": 380 + (i % 20) * 10, "wall_thickness": 1.5 + (i % 3) * 0.5}
+        p = {**params, "overall_height": 280 + (i % 20) * 10, "wall_thickness": 1.2 + (i % 3) * 0.3}
         try:
             model = call("POST", f"/api/projects/{pid}/cad/generate", {"parameters": p})
             for out in model["outputs"]:

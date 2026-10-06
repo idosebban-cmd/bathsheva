@@ -30,14 +30,14 @@ bought_in:
     confidence: low
     verified: false
   - key: battery_pack
-    name: Li-ion battery pack with protection circuit
-    gbp: {low: 4.0, high: 10.0}
+    name: "Li-ion battery pack: 2 x 18650 (3,350 mAh, branded cells), protection circuit, holder and leads"
+    gbp: {low: 7.0, high: 13.0}
     source: model-generated
     confidence: low
     verified: false
   - key: charge_control_board
-    name: USB-C charging and LED control board
-    gbp: {low: 2.0, high: 6.0}
+    name: "Control board: USB-C charging, 2-cell charger, 2-channel constant-current LED driver, dimmer input"
+    gbp: {low: 5.0, high: 11.0}
     source: model-generated
     confidence: low
     verified: false
@@ -82,8 +82,8 @@ bought_in:
 
   # --- Parts added by design changes / scenarios ---------------------------
   - key: steel_weight_plate
-    name: Zinc-plated steel weight plate (~0.8 kg, laser cut)
-    gbp: {low: 1.5, high: 4.0}
+    name: Zinc-plated steel weight plate (laser cut, ~0.4 kg, battery cut-out, tapped holes)
+    gbp: {low: 2.0, high: 5.0}
     source: model-generated
     confidence: low
     verified: false
@@ -114,7 +114,7 @@ bought_in:
     confidence: medium
     verified: false
   - key: masked_stripe
-    name: Masked second-colour lacquer stripe on body
+    name: Masked second-colour lacquer section (e.g. a red lower tower)
     gbp: {low: 3.0, high: 7.0}
     source: model-generated
     confidence: low
@@ -193,6 +193,72 @@ bought_in:
   - key: cap_finial_nut
     name: Decorative cap nut (finial) for the lamp tube, solid brass or aluminium
     gbp: {low: 0.6, high: 2.5}
+    source: model-generated
+    confidence: low
+    verified: false
+  - key: led_module_lantern
+    name: "Lantern LED: 1.5 W warm white (2700 K, CRI 90+) board on an aluminium spreader"
+    gbp: {low: 1.5, high: 4.0}
+    source: model-generated
+    confidence: low
+    verified: false
+  - key: tower_light
+    name: "Tower light: 4 LED filament strips (2700 K, ~0.8 W total) on an aluminium spine"
+    gbp: {low: 2.0, high: 5.0}
+    source: model-generated
+    confidence: low
+    verified: false
+  - key: dimmer_rotary
+    name: Slim rotary potentiometer with switch (9 mm class, D-shaft) and curved spacer washer
+    gbp: {low: 0.6, high: 1.8}
+    source: model-generated
+    confidence: low
+    verified: false
+  - key: touch_dimmer_board
+    name: Capacitive touch dimmer sensor (touch the brass finial)
+    gbp: {low: 1.0, high: 3.0}
+    source: model-generated
+    confidence: low
+    verified: false
+  - key: window_laser_cut
+    name: Laser-cut 5 arched windows in the spun tower (5-axis laser or fixture), deburr
+    gbp: {low: 2.5, high: 7.0}
+    source: model-generated
+    confidence: low
+    verified: false
+  - key: bottom_plate
+    name: Bottom plate, laser-cut 2 mm aluminium, countersunk, black lacquer
+    gbp: {low: 1.2, high: 3.0}
+    source: model-generated
+    confidence: low
+    verified: false
+  - key: felt_steel_disc
+    name: Felt pad laminated to a 0.4 mm steel disc
+    gbp: {low: 0.5, high: 1.5}
+    source: model-generated
+    confidence: low
+    verified: false
+  - key: magnet_6x2
+    name: N52 magnet disc 6 x 2 mm
+    gbp: {low: 0.05, high: 0.15}
+    source: model-generated
+    confidence: low
+    verified: false
+  - key: screw_m25_cs
+    name: M2.5 x 6 countersunk screw, hex socket, black
+    gbp: {low: 0.02, high: 0.08}
+    source: model-generated
+    confidence: low
+    verified: false
+  - key: standoff_m25
+    name: M2.5 hex standoff, aluminium (bottom plate to weight plate)
+    gbp: {low: 0.08, high: 0.25}
+    source: model-generated
+    confidence: low
+    verified: false
+  - key: structural_adhesive
+    name: Structural adhesive (tower, gallery, frame and spigot bonds), per lamp
+    gbp: {low: 0.3, high: 1.0}
     source: model-generated
     confidence: low
     verified: false

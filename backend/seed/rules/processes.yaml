@@ -45,7 +45,7 @@ processes:
 
   - key: cnc_machining
     name: CNC machining
-    material_categories: [aluminium, clear_polymer_or_glass]
+    material_categories: [aluminium, brass, clear_polymer_or_glass]
     plain_language: >-
       The part is cut from a solid block or bar by a computer-controlled
       machine. Very accurate with an excellent finish and no tooling cost, but
@@ -257,6 +257,78 @@ processes:
       - Highly polished mould surfaces add tooling cost.
     source: model-generated
     confidence: medium
+    verified: false
+
+  - key: photo_etching
+    name: Photo-etched brass sheet (formed after etching)
+    material_categories: [brass]
+    plain_language: >-
+      A pattern is printed onto thin brass sheet and the rest is chemically
+      etched away, leaving very fine, crisp parts such as railings and
+      nameplates. The flat part is then rolled or bent to shape and soldered.
+      Tooling is just a photo-tool, so it suits small batches.
+    requires_all: [fine_detail]
+    excludes: [closed_top, domed, transparent, electrical, needs_mass]
+    suits: [thin_wall, ring, open_both_ends, flat_pattern, cosmetic]
+    poor_fit: [tapered]
+    volume: {min: 10, max: 100000}
+    tooling_cost: low
+    unit_cost: low
+    finish_quality: good
+    wall_mm: {min: 0.1, max: 1.5, typical_min: 0.3, typical_max: 0.8}
+    when_to_prefer: Fine flat or rolled details (railings, grilles, nameplates) in brass.
+    risks:
+      - Etched edges have a slight bevel; very fine bars are fragile until soldered in place.
+      - Rolling and soldering the seam of a ring needs a jig and a skilled hand.
+    source: model-generated
+    confidence: medium
+    verified: false
+
+  - key: investment_casting
+    name: Investment (lost-wax) casting
+    material_categories: [brass]
+    plain_language: >-
+      A wax copy of the part is coated in ceramic, the wax is melted out and
+      molten brass is poured in. Gives fine detail in one piece, but needs a
+      wax injection tool and finishing after casting.
+    requires_all: []
+    excludes: [transparent, electrical]
+    suits: [fine_detail, short, ring, cosmetic]
+    poor_fit: [thin_wall, open_both_ends]
+    volume: {min: 100, max: 50000}
+    tooling_cost: medium
+    unit_cost: medium
+    finish_quality: fair
+    wall_mm: {min: 1.0, max: 20.0, typical_min: 1.5, typical_max: 6.0}
+    when_to_prefer: Detailed brass parts in one piece at a few hundred units and up.
+    risks:
+      - Bars under about 1.5 mm may not fill; posts may need to be thicker than the prototype.
+      - Cast surfaces need fettling and polishing before they look like turned brass.
+    source: model-generated
+    confidence: low
+    verified: false
+
+  - key: wire_forming
+    name: Brass wire, formed and soldered
+    material_categories: [brass]
+    plain_language: >-
+      Posts and rails are cut and bent from brass wire and soldered together
+      on a jig. No tooling beyond the jig, but it is slow hand work.
+    requires_all: [fine_detail]
+    excludes: [closed_top, domed, transparent, electrical, needs_mass]
+    suits: [ring, open_both_ends]
+    poor_fit: [thin_wall]
+    volume: {min: 1, max: 2000}
+    tooling_cost: low
+    unit_cost: high
+    finish_quality: fair
+    wall_mm: {min: 0.8, max: 3.0, typical_min: 1.2, typical_max: 2.0}
+    when_to_prefer: Round-section railings in small batches.
+    risks:
+      - Labour-heavy; consistency depends on the solderer.
+      - Solder joints need cleaning before polishing.
+    source: model-generated
+    confidence: low
     verified: false
 
   - key: glass_tube_cut

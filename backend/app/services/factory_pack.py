@@ -17,6 +17,7 @@ from dataclasses import dataclass
 from datetime import date
 from typing import Any
 
+from app.cad import faro
 from app.config import settings
 from app.costing.data import load_cost_data
 from app.factory import drawings as dr
@@ -31,11 +32,11 @@ QUANTITY_TIERS = [100, 500, 2000]
 
 SAFETY_SHORT = {
     "stability": "tip-over stability to be tested on the finished lamp",
-    "glass_breakage": "glass breakage, edge finishing and gasket retention to be verified",
+    "glass_breakage": "glass breakage, edge finishing and retention to be verified",
     "exposed_metal_mains": "exposed metal on a mains lamp: earthing (Class I) or double insulation (Class II) to be decided",
     "electrical_component": "certified component; electrical safety to be verified by a test lab",
     "cable_anchorage": "cable anchorage / strain relief is safety-critical; verify by test",
-    "battery": "battery safety (not used for Faro unless the power choice changes)",
+    "battery": "Li-ion battery safety: protection circuit, UN38.3 and IEC 62133-2 to be verified",
     "polymer_near_heat": "plastic near the LED: thermal check",
     "sharp_edges": "sharp edges must be removed",
 }
@@ -104,8 +105,8 @@ def pack_contents(project: Project) -> dict[str, Any]:
         if proc and proc.wall_mm and not proc.verified:
             unverified.append(f"wall thickness limits for {proc.name.lower()} come from unverified rule data")
         safety = [SAFETY_SHORT.get(f["key"], f["message"]) for f in rec.get("safety_flags", [])
-                  if f["key"] not in ("battery", "polymer_near_heat")]
-        if key == "weight_plate":
+                  if f["key"] not in ("polymer_near_heat",)]
+        if key in ("weight_plate", "base"):
             safety = [SAFETY_SHORT["stability"]]
         parts.append({
             "cad_key": key, "part_no": f"F-{int(row['item']):02d}", "name": row["name"], "quantity": row["quantity"],
@@ -123,14 +124,17 @@ def pack_contents(project: Project) -> dict[str, Any]:
     for row in bom["rows"]:
         rec = recs.get(row.get("part_id"), {})
         for f in rec.get("safety_flags", []):
-            if f["key"] in ("battery", "polymer_near_heat"):
+            if f["key"] in ("polymer_near_heat",):
                 continue
             flags.append({"part": row["name"], "kind": "safety", "text": SAFETY_SHORT.get(f["key"], f["message"])})
     mass = mass_estimate(project)
+    from app.services.electrical import project_runtime
+
+    runtime = project_runtime(project)
     return {
         "project": project, "params": params, "bom": bom, "parts": parts, "bought_in": bought,
         "cad_version": latest.version if latest else None, "flags": flags, "mass": mass,
-        "assumed": sorted(assumed), "date": date.today().isoformat(),
+        "assumed": sorted(assumed), "date": date.today().isoformat(), "runtime": runtime,
     }
 
 
@@ -152,7 +156,8 @@ def _bought_in_lines(project: Project, cost) -> list[dict[str, Any]]:
         extra = ctx["extras"].get(it.item_id)
         if extra is not None and extra.price_key in drawn_extras:
             continue
-        electronics = any(w in it.name.lower() for w in ("led", "driver", "adapter", "dimmer", "cable"))
+        electronics = any(w in it.name.lower() for w in ("led", "driver", "adapter", "dimmer", "cable", "battery",
+                                                         "board", "potentiometer", "usb"))
         out.append({"name": it.name, "quantity": it.quantity, "electronics": electronics})
     return out
 
@@ -176,17 +181,29 @@ def rfq_blocks(c: dict[str, Any]) -> list[Block]:
 
     b.append(Block("h2", "1. Product summary"))
     b.append(Block("p", " ".join(project.description.split())))
+    d = faro.derived({k: float(v) for k, v in p.items()})
+    rt = c.get("runtime") or {}
     b.append(Block("bullets", items=[
-        f"Overall height {p['overall_height']:g} mm, base Ø{p['base_diameter']:g} mm, body Ø{p['body_diameter']:g}→"
-        f"{p['body_top_diameter']:g} mm (UNVERIFIED: overall size still a placeholder).",
-        "Base: spun aluminium shell with an internal laser-cut steel weight plate, fixed to M4 rivet nuts so nothing rattles.",
-        "Body: spun tapered aluminium shell with a locating step; band: straight ring cut from stock aluminium tube, bonded on the step.",
-        "Lantern: borosilicate glass tube between silicone gaskets; top cap: spun aluminium dome with a solid metal cap nut.",
-        "Construction: one central M10x1 hollow lamp tube clamps the whole stack; the cable runs inside it. No visible fixings.",
-        "Dimming is required: rotary dimmer with a solid metal knob in the base (inline cable dimmer as an alternative).",
+        f"Overall height {p['overall_height']:g} mm (plus a {abs(d['felt_bottom_z']):g} mm felt pad), base Ø{p['base_diameter']:g} mm, "
+        f"tower Ø{p['tower_bottom_diameter']:g}→{p['tower_top_diameter']:g} mm, lantern Ø{p['lantern_diameter']:g} mm. "
+        "Form and proportions follow our approved prototype.",
+        "Base: spun aluminium shell, gloss black, with a laser-cut steel weight plate round the battery; aluminium bottom "
+        "plate on four M2.5 screws so the user can replace the battery; felt pad on magnets.",
+        "Cream band: turned aluminium ring; the base screws into it (three M3) and the tower is bonded on its spigot.",
+        f"Tower: spun aluminium cone, two-tone lacquer (red lower section, masked line), {int(p['window_count'])} arched windows "
+        "laser-cut after spinning, an opal borosilicate diffuser tube and a tower light behind them.",
+        "Gallery and railing: turned solid brass ring; photo-etched brass railing rolled into a ring (please also quote "
+        "soldered brass wire and lost-wax casting).",
+        "Lantern: frosted borosilicate tube inside a brass frame (turned rings, soldered mullions); the red spun cap "
+        "twist-locks onto the frame with a turned brass bayonet spigot (four lugs, 20° turn) and a brass ball finial.",
+        "Construction: bonded and screwed, no central rod; no visible fixings.",
+        "Cordless: 2 x 18650 Li-ion cells, USB-C charging, rotary dimmer with a solid brass knob on the tower.",
         f"Target total lamp mass {target_mass:g} kg (estimate from CAD {mass.get('total_kg', 0):.2f} kg; UNVERIFIED)."
         if target_mass else "Target mass: to be agreed.",
     ]))
+    b.append(Block("p", "Where production departs from the 3D-printed prototype:"))
+    b.append(Block("table", widths=[1.4, 2.6, 4.0], header=["Feature", "Prototype", "Production (please confirm or propose better)"],
+                   rows=[[x["feature"], x["prototype"], x["production"]] for x in faro.PRODUCTION_CHANGES]))
 
     b.append(Block("h2", "2. Design constraint: visible metal must be solid metal"))
     b.append(Block("warn", "Every visible or touchable part must be solid metal (or glass for the lantern). No plastic, "
@@ -213,20 +230,23 @@ def rfq_blocks(c: dict[str, Any]) -> list[Block]:
                    rows=[[it["name"], f"{it['quantity']:g}",
                           "COMPLIANCE: certified for UK/EU sale" if it["electronics"] else ""] for it in c["bought_in"]]))
 
-    b.append(Block("h2", "6. Electronics: please quote both power options and the dimmer"))
+    b.append(Block("h2", "6. Electronics: please quote the cordless baseline and option B"))
+    runtime_line = (f"Runtime target: at least {rt['target_h']:g} h at full brightness with both lights on (our estimate "
+                    f"{rt['hours']:.1f} h from {rt['battery_wh']:.1f} Wh and {rt['load_w']:.1f} W; UNVERIFIED)."
+                    if rt.get("applicable") and rt.get("hours") and rt.get("target_h") else "Runtime target: to be agreed.")
     b.append(Block("bullets", items=[
-        "LED: 2700 K, CRI ≥ 90, dimmable, about 8–10 W (e.g. a Bridgelux Vero 10 class COB or a ring module around the tube).",
-        "Option A: internal certified dimmable constant-current mains driver (3-in-1 dimming for the in-base dimmer; "
-        "triac-dimmable if an inline mains dimmer is used) with a mains cable and UK/EU plugs.",
-        "Option B: certified external 12 V adapter with UK and EU plugs, low-voltage cable, and an internal step-up "
-        "DC-DC constant-current driver with a dim input.",
-        "Dimmer: in-base rotary dimmer (potentiometer on the driver's dim input) with a solid aluminium or brass knob "
-        "(default); please also quote a capacitive touch dimmer, and an inline cable dimmer for each option.",
-        "COMPLIANCE: all electronics must be certified for UK and EU sale (UKCA / CE: electrical safety (LVD), EMC, "
-        "RoHS, ecodesign / energy labelling for light sources). Send certificates and test reports; we will verify them "
-        "with an accredited test lab.",
-        "SAFETY: Option A puts mains inside a metal lamp: tell us whether you propose Class I (earthed) or Class II "
-        "(double insulated) construction.",
+        "Lantern LED: 2700 K, CRI ≥ 90, about 1.5 W, on a Ø38 mm board resting on the gallery ledge.",
+        "Tower light: warm white LED filament strips (about 0.8 W) on a central spine behind the windows.",
+        "Battery: 2 x 18650 Li-ion (about 3,350 mAh branded cells) with a protection circuit, user-replaceable.",
+        "Control board: USB-C charging, 2-cell charger, 2-channel constant-current LED driver, input for the rotary "
+        "dimmer (slim 9 mm pot with switch, D-shaft).",
+        runtime_line,
+        "Option B (please also quote): certified external 12 V adapter (UK and EU plugs), low-voltage cable and an internal "
+        "DC-DC constant-current driver for both channels; no battery.",
+        "Alternative to quote: capacitive touch dimming on the brass finial instead of the knob.",
+        "COMPLIANCE: electronics certified for UK and EU sale (UKCA / CE: electrical safety, EMC, RoHS, ecodesign for light "
+        "sources). Send certificates and test reports; we will verify them with an accredited test lab.",
+        *[f"COMPLIANCE (battery): {x}" for x in rt.get("compliance", [])],
     ]))
 
     b.append(Block("h2", "7. Price breakdown requested"))
@@ -256,9 +276,11 @@ def rfq_blocks(c: dict[str, Any]) -> list[Block]:
         "inspected at 50 cm under daylight.",
         "Gloss and colour match: to be agreed against an approved sample (and between parts of the same colour).",
         f"Minimum wall thickness {p['wall_thickness']:g} mm on spun parts after forming, for a solid feel (UNVERIFIED).",
-        "Weight plate fixed so nothing rattles: clamped by the lamp nut and screwed to the rivet nuts; shake test.",
+        "Weight plate clamped by the three band screws so nothing rattles; shake test.",
+        "Windows: clean laser-cut edges, deburred, masked so the lacquer line is crisp; even glow through every window.",
         f"Target total lamp mass {target_mass:g} kg ± 10%." if target_mass else "Target total lamp mass: to be agreed.",
-        "Band seats level with an even shadow line; lantern glass sits square with no rattle.",
+        "Masked two-tone line level all round; lantern glass sits square with no rattle; cap twists on smoothly to a "
+        "positive stop.",
         "Golden sample approval before production; production inspected against the approved golden sample "
         "(AQL to be agreed).",
     ]))
@@ -412,8 +434,11 @@ def pack_summary(project: Project) -> dict[str, Any]:
         "bought_in": c["bought_in"], "quantity_tiers": QUANTITY_TIERS, "mass": c["mass"],
         "unverified": unverified,
         "safety": sorted({f"{f['part']}: {f['text']}" for f in c["flags"]}),
-        "compliance": ["All electronics (LED, driver or adapter, DC-DC driver, dimmer, cable) certified for UK/EU sale; "
-                       "certificates to be verified by an accredited test lab."],
+        "compliance": ["All electronics (LEDs, control board, battery, dimmer; adapter and driver for option B) certified "
+                       "for UK/EU sale; certificates to be verified by an accredited test lab.",
+                       *[f"Battery: {x}" for x in (c.get("runtime") or {}).get("compliance", [])]],
+        "runtime": c.get("runtime"),
+        "production_changes": faro.PRODUCTION_CHANGES,
         "rfq_markdown": rfq_markdown(blocks),
         "notes": ["Our cost estimates and targets are not included in anything sent to suppliers.",
                   "Drawings are generated from the current CAD parameters; generate CAD so the STEP files match."],

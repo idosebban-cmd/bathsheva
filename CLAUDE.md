@@ -1,6 +1,8 @@
 # Product Workbench
 
-A local web app for AI-assisted product engineering of physical consumer products. The first product is Faro, a lighthouse table lamp. `SPEC.md` has the full vision. **Only Milestone 1 (SPEC §12) is built.** Later sections shape the data model, but nothing outside M1 is implemented.
+A local web app for AI-assisted product engineering of physical consumer products. The first product is Faro, a cordless lighthouse table lamp. `SPEC.md` has the full vision.
+
+**Faro's design source of truth** is the approved prototype on branch `claude/rocket-speaker-3d-model-xav3pn` (`faro/lamp.py`, `faro/params.py`, renders and build manual). Never modify that branch. The workbench generator ports its form, proportions and features (spiral windows, frosted diffusers, gallery and railing, twist-lock cap), adapted for production in metal. Every departure from the prototype is listed in `faro.PRODUCTION_CHANGES` (shown in the CAD tab and the RFQ). Don't change the design silently: add a row there. **Only Milestone 1 (SPEC §12) is built.** Later sections shape the data model, but nothing outside M1 is implemented.
 
 ## Run
 
@@ -9,12 +11,12 @@ A local web app for AI-assisted product engineering of physical consumer product
 ./run.sh test     # backend pytest + front-end typecheck
 ```
 
-On a Mac, `bash scripts/setup_mac.sh` does the whole setup. It asks before installing the Xcode command line tools, Homebrew, uv or Node.js LTS, and it supports `--dry-run` and `--yes`. It builds the venv with uv on pinned Python 3.12, which has CadQuery wheels for both Apple Silicon and Intel. It then migrates the database (backing it up first if a migration is pending) and runs a CAD self-test in a temporary folder (`scripts/workbench_check.py`). It is safe to re-run. After that, double-click `Start Workbench.command`. README.md has the user-facing steps. `WORKBENCH_SETUP_ALLOW_NON_MAC=1` runs the non-macOS parts on Linux for testing.
+On a Mac, `bash scripts/setup_mac.sh` does the whole setup. It asks before installing the Xcode command line tools, Homebrew, uv or Node.js LTS, and it supports `--dry-run` and `--yes`. It builds the venv with uv on pinned Python 3.12, which has build123d/OpenCASCADE wheels for both Apple Silicon and Intel (macOS 12+). It removes CadQuery from an older venv and reinstalls build123d's OCP package, because both ship an `OCP` module. It then migrates the database (backing it up first if a migration is pending) and runs a CAD self-test in a temporary folder (`scripts/workbench_check.py`). It is safe to re-run. After that, double-click `Start Workbench.command`. README.md has the user-facing steps. `WORKBENCH_SETUP_ALLOW_NON_MAC=1` runs the non-macOS parts on Linux for testing.
 
 - Front end: http://127.0.0.1:5173. Vite proxies `/api` and `/files` to the backend on :8000.
 - The LLM is optional. Set `ANTHROPIC_API_KEY` to enable the Anthropic provider. `WORKBENCH_LLM_PROVIDER=mock|anthropic|none` overrides the choice. With no key the provider is `none` and everything except "Explain with AI" works.
 - Other environment variables: `WORKBENCH_DATA_DIR` (default `~/Bathsheva Workbench/data`, outside the repo; `app/datadir.py` moves a legacy in-repo `data/` there once, when the default is used and the target is empty), `WORKBENCH_DATABASE_URL`, `WORKBENCH_ANTHROPIC_MODEL` (default `claude-opus-5-5`; explanations use low effort plus server-side refusal fallback).
-- Requirements: Python 3.10–3.13 (for CadQuery wheels; `run.sh` and the Mac setup create the venv on 3.12) and Node 18+.
+- Requirements: Python 3.10–3.13 (for the OpenCASCADE wheels; `run.sh` and the Mac setup create the venv on 3.12) and Node 18+.
 
 ## Architecture
 
@@ -30,10 +32,11 @@ backend/app/
   schemas.py         Pydantic API schemas (Requirements etc.)
   api/               Thin HTTP routers, one per area
   services/          Orchestration: projects, BOM, DFM, revisions, decisions (template-accepted
-                     decisions), factory_pack (RFQ pack)
-  factory/           drawings.py: 2D quotation drawings (reportlab -> SVG + PDF) from faro.section_profiles
+                     decisions), factory_pack (RFQ pack), electrical (runtime), template_upgrade
+  factory/           drawings.py: 2D quotation drawings (reportlab -> SVG + PDF), sectioned from the built solids
   rules/             Rules engine: loads seed YAML, produces recommendations
-  cad/               CadQuery generators, parameter validation, export
+  cad/               build123d generators (faro.py), parameter validation, export (STEP/STL/GLB)
+  electrical.py      Battery runtime from the battery spec and LED loads (pure)
   ai/                LLM provider abstraction (anthropic | mock | none)
   costing/           Cost model: data.py (seed loader), model.py (pure calculation),
                      assemble.py (snapshot + config -> inputs), pricing.py (retail -> target factory cost)
@@ -79,12 +82,12 @@ Other useful commands, run from `backend/`: `.venv/bin/alembic current` and `.ve
 | Tab | Endpoints (`/api/projects/{id}/…`) |
 |---|---|
 | Projects | `GET/POST /api/projects` (template `faro` seeds parts, requirements and CAD defaults) |
-| Overview | `PATCH /api/projects/{id}`, `POST /images` |
+| Overview | `PATCH /api/projects/{id}`, `POST /images`, `GET /runtime`, `GET/POST /template-upgrade` |
 | Parts | `GET/POST/PATCH/DELETE /parts`; quotes `GET/POST /parts/{part}/quotes`, `DELETE /quotes/{id}`; `GET /quote-pack.zip` |
 | CAD | `GET /cad`, `POST /cad/validate`, `POST /cad/generate`, `GET /cad/models/{v}/download.zip`; files under `/files/projects/...` |
 | Engineering | `GET /recommendations`, `POST /recommendations/{part}/explain` (LLM), `POST /decisions` |
 | BOM | `GET /bom`, `GET /bom.csv` |
-| Manufacturing | `GET /costs`; `GET/POST /cost-items`, `PATCH/DELETE /cost-items/{id}`, `POST /cost-items/reset`; `GET/PUT /cost-settings` (volume discounts); `GET /cost-audit` (+ `.md`, `.csv`) |
+| Manufacturing | `GET /costs`; `GET/POST /cost-items`, `PATCH/DELETE /cost-items/{id}`, `POST /cost-items/reset`; `GET/PUT /cost-settings` (volume discounts); `GET /cost-audit?quantity=500` (+ `.md`, `.csv`) |
 | Cost-down | `GET/PUT /pricing`; `GET /routes`, `POST /parts/{part}/route`; `GET /scenarios`, `POST /scenarios/evaluate`; `GET /cost-down/summary`; `GET/POST /scenario-sets`, `DELETE /scenario-sets/{id}` |
 | DFM report | `GET /dfm`, `GET /dfm.md` |
 | Factory Pack | `GET /factory-pack`, `GET /factory-pack.zip`, `GET /drawings/{cad_key}.svg\|.pdf`, `GET /rfq.md\|.pdf` |
@@ -96,7 +99,7 @@ The Factory Pack tab has the first part of SPEC §5 (the RFQ pack). Compliance a
 
 For each candidate process in the part's material family, the engine applies hard exclusions first: missing required traits, excluded traits, or a wall thickness the process can't make. It then scores what's left on trait fit, volume fit, tooling cost, cosmetic finish need and finish compatibility. The best material is the one most often paired with the process that suits the target finish. Confidence comes from the score margin. It drops to low when volume is assumed and the answer changes between 100, 1,000 and 10,000 units, and it is capped at medium while the data is unverified. Traits come from the part plus CAD-derived traits (`faro.derived_traits`, for example tapered vs constant_section).
 
-Design constraints (`seed/rules/constraints.yaml`): "visible parts must be solid metal" restricts the material kinds (metal, or glass for transparent parts) for parts with `cosmetic`/`transparent` traits; `hidden` parts and certified electrical / bought-in parts are exempt, and `visible_trim` bought-in parts (dimmer knob, cap nut) get a supplier requirement. A process whose materials all break it appears in `excluded` with `constraint` set; metal-effect finishes are reported as violations. The cost-down optimiser never chooses a scenario option that breaks it (`costdown.option_allowed`).
+Design constraints (`seed/rules/constraints.yaml`): "visible parts must be solid metal" restricts the material kinds (metal, or glass for transparent parts) for parts with `cosmetic`/`transparent` traits; `hidden` parts and certified electrical / bought-in parts are exempt, and `visible_trim` bought-in parts get a supplier requirement (Faro's knob and finial are made in solid brass, so none by default). A process whose materials all break it appears in `excluded` with `constraint` set; metal-effect finishes are reported as violations. The cost-down optimiser never chooses a scenario option that breaks it (`costdown.option_allowed`).
 
 ## Cost model in brief
 
@@ -112,9 +115,19 @@ Ranges: each input is widened by its confidence (`seed/cost/general.yaml` `confi
 
 - **Routes:** every `viable` process from the rules engine is costed per part. `seed/cost/route_changes.yaml` adds the design changes and extra parts a route needs; these are costed wherever that route is used (current configuration, route table, scenarios). Selecting a route records a `process_route` decision and sets the part's process and material. CAD is never changed. `costdown.cad_mismatches()` drives the "CAD no longer matches" flags in the BOM and DFM.
 - **Sheet-formed parts** (spun, pressed, rolled) are costed as a shell of the CAD wall thickness when the CAD body is solid.
-- **Accepted decisions** in `faro.yaml` `decisions` are recorded on new projects (`services/decisions.py`, idempotent): spun base shell with weight plate and rivet nuts, band cut from stock tube, borosilicate lantern, central lamp tube. They are the baseline, not scenarios.
+- **Accepted decisions** in `faro.yaml` `decisions` are recorded on new projects (`services/decisions.py`, idempotent). They cover:
+  - spun base, tower and cap;
+  - turned brass gallery, frame, spigot, finial and knob;
+  - photo-etched railing and nameplate;
+  - turned cream band;
+  - borosilicate lantern and opal diffuser;
+  - cordless power;
+  - bonded-and-screwed construction (no central rod).
+
+  They are the baseline, not scenarios.
 - **CAD mismatch** is computed at read time: a route decision's `design_change_keys` are checked against `faro.IMPLEMENTED_CHANGES` and the bodies in the latest generated model.
-- **Power options** (`faro.yaml` `power_options`): A (internal mains driver) and B (scenario g: external adapter + DC-DC driver). The product summary optimises each separately; B always includes g. The inline dimmer (scenario j) swaps to the low-voltage dimmer under B via `replace_items`.
+- **Power options** (`faro.yaml` `power_options`): A (cordless, 2 x 18650, USB-C) and B (scenario g: external adapter + DC-DC driver, no battery). The product summary optimises each separately; B always includes g.
+- **Price points** (`faro.yaml` `pricing.price_points`, plus the planned retail price): the summary's `price_points` table shows the DTC and retail-channel factory targets at each retail price and how the current and best configurations (power A, 500 and 2,000) compare.
 - **Scenarios** live in `faro.yaml` `scenarios`. The optimiser searches every non-conflicting subset and every region exhaustively. Each multi-option change uses its cheapest option on its own, which is valid because options touch only their own part (a test checks this against brute force). There are three tiers by `premium_impact`: strict (none), premium (none or slight) and any.
 - **Pricing:** `projects.pricing` overlays defaults from `seed/cost/pricing.yaml` plus the template. DTC target = ex-VAT × dtc share. Retail-channel target = ex-VAT × (1 − retailer margin) × wholesale share. Status: pass ≤ target, close ≤ target × (1 + close band), otherwise fail.
 - **Migrations on SQLite** run with foreign keys off (`app/migrate.py`), because batch rebuilds would otherwise cascade-delete child rows.
@@ -126,7 +139,9 @@ Ranges: each input is widened by its confidence (`seed/cost/general.yaml` `confi
 - **Assumptions:** placeholder requirements are listed in `project.assumed_fields` and shown with an Assumption badge. When an inferred value feeds the rules (for example, assumed volume when volume is TBD), it appears in the recommendation's `assumptions`.
 - **Plain language first:** each recommendation leads with a non-engineer explanation, with technical detail underneath.
 - **Units:** millimetres, degrees, GBP.
-- **CAD:** one body per part. A part's `cad_key` equals the generator's body name. Faro has 14 bodies (shells, weight plate, lamp tube, nuts, gaskets, dimmer). `overall_height` includes the cap nut. Old saved parameters are upgraded with new defaults (`faro.upgrade`). `section_profiles()` feeds the 2D drawings and must match `build()`. Every regeneration creates a new immutable `CadModel` version under `data/projects/<id>/cad/v<n>/`.
+- **CAD:** one body per part. A part's `cad_key` equals the generator's body name. Faro has 21 bodies (spun base/tower/cap, turned brass gallery/frame/spigot/finial/knob, photo-etched railing and nameplate, glass lantern and diffuser, plates, felt, and placeholder electronics). `overall_height` runs from the base underside to the finial top; the felt adds 1.9 mm below. Revolved parts are built from 2D half-sections (`faro._sections`), and shells are an offset of the outer profile. Offset curves are converted to B-splines, because a revolved offset curve doesn't survive STEP. `faro.model()` caches one build per parameter set. Old saved parameters are upgraded with new defaults (`faro.upgrade`). Pre-prototype parameters (no `tower_bottom_diameter`) are replaced by the defaults. The tower's red section is the same part in two-tone lacquer. The GLB splits it into `tower` and `tower_lower` for the preview only. Every regeneration creates a new immutable `CadModel` version under `data/projects/<id>/cad/v<n>/`.
+- **Cordless power:** baseline 2 x 18650 + USB-C (`requirements.power_type: battery`); option B (external adapter) is scenario g. `requirements.battery_runtime_h` is the editable runtime target; `faro.yaml` `electrical` holds the battery spec, LED loads (with provenance) and battery compliance flags shown in the Overview, DFM and RFQ.
+- **Template upgrades:** projects created from an older template version keep their old parts until the user presses "Update to the current design" (Overview). `services/template_upgrade.py` removes old parts (with their quotes and decisions), adds new ones, updates the requirements the template now fixes, re-applies decisions and resets cost items.
 - **Revisions:** an immutable JSON snapshot (requirements, parameters, parts, decisions, recommendations, CAD version and its file paths). No branching.
 - **External quotes:** real supplier quotes and DFM feedback (`ExternalQuote`) are for the user to review against the part's estimated unit-cost range. They never change the rules engine, seed data or part fields automatically. Seed data is updated by hand. The comparison doesn't convert currencies. The quote pack includes only manufactured parts; bought-in parts and hardware are listed in its README.
 - **Decisions:** `EngineeringDecision.status` is one of proposed / accepted / rejected / edited.

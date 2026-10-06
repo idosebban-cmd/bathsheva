@@ -56,7 +56,24 @@ interface SummaryRow {
   power?: string;
   power_label?: string;
 }
+interface PricePoint {
+  retail_inc_vat: number;
+  retail_ex_vat: number;
+  wholesale: number;
+  dtc: number;
+  retail: number;
+}
+interface PricePointRow {
+  quantity: number;
+  label: string;
+  tier: string;
+  region_name: string;
+  selection: string[];
+  cost: { low: number; mid: number; high: number };
+  by_price: Record<string, Record<"dtc" | "retail", TargetAssess>>;
+}
 interface Summary {
+  price_points?: { points: PricePoint[]; rows: PricePointRow[]; power_label: string; notes: string[] };
   rows: SummaryRow[];
   power_options?: { key: string; label: string; scenario: string | null }[];
   premium: { label: string; retail: number; targets: Record<string, number>; rows: SummaryRow[] };
@@ -367,8 +384,79 @@ function SummaryTable({ rows, targetLabel }: { rows: SummaryRow[]; targetLabel: 
   );
 }
 
+function PricePointsCard({ pp }: { pp: NonNullable<Summary["price_points"]> }) {
+  return (
+    <section className="card">
+      <h2>Retail price points: DTC and retail-channel targets</h2>
+      <table className="small">
+        <thead>
+          <tr>
+            <th>Retail inc. VAT</th>
+            <th>Ex VAT</th>
+            <th>DTC factory target</th>
+            <th>Wholesale</th>
+            <th>Retail-channel factory target</th>
+          </tr>
+        </thead>
+        <tbody>
+          {pp.points.map((p) => (
+            <tr key={p.retail_inc_vat}>
+              <td><strong>{gbp(p.retail_inc_vat)}</strong></td>
+              <td>{gbp(p.retail_ex_vat)}</td>
+              <td>{gbp(p.dtc)}</td>
+              <td>{gbp(p.wholesale)}</td>
+              <td>{gbp(p.retail)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <h3 style={{ marginTop: "0.8rem" }}>Current and best configurations against each price ({pp.power_label})</h3>
+      <table className="small">
+        <thead>
+          <tr>
+            <th>Qty</th>
+            <th>Configuration</th>
+            <th>Unit cost</th>
+            {pp.points.map((p) => (
+              <th key={p.retail_inc_vat}>{gbp(p.retail_inc_vat)}: DTC / retail</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {pp.rows.map((r, i) => (
+            <tr key={i}>
+              <td>{r.quantity.toLocaleString()}</td>
+              <td>
+                {r.label}
+                <div className="muted">{r.region_name}{r.selection.length ? ` · ${r.selection.join(" · ")}` : ""}</div>
+              </td>
+              <td className="nowrap-cell">
+                <strong>{gbp(r.cost.mid)}</strong>
+                <div className="muted">{gbp(r.cost.low)} – {gbp(r.cost.high)}</div>
+              </td>
+              {pp.points.map((p) => {
+                const a = r.by_price[String(p.retail_inc_vat)];
+                return (
+                  <td key={p.retail_inc_vat}>
+                    <StatusChip a={a.dtc} name="DTC" /> <StatusChip a={a.retail} name="Retail" />
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <ul className="small muted">
+        {pp.notes.map((n, i) => <li key={i}>{n}</li>)}
+      </ul>
+    </section>
+  );
+}
+
 function SummaryCard({ summary }: { summary: Summary }) {
   return (
+    <>
+    {summary.price_points && <PricePointsCard pp={summary.price_points} />}
     <section className="card">
       <h2>Product view: current vs best combination</h2>
       {(summary.power_options ?? [{ key: "A", label: "", scenario: null }]).map((p) => (
@@ -381,8 +469,8 @@ function SummaryCard({ summary }: { summary: Summary }) {
         {summary.premium.label} at {gbp(summary.premium.retail)}
       </h3>
       <p className="small muted">
-        Band and top cap in brass, either plated or solid (polished, clear lacquer), compared with the premium edition's own targets. The
-        painted-stripe change is excluded because brass needs a separate band.
+        Cream band and cap in brass, either plated or solid (polished, clear lacquer), compared with the premium edition's own
+        targets.
       </p>
       {(summary.power_options ?? [{ key: "A", label: "", scenario: null }]).map((p) => (
         <div key={p.key}>
@@ -396,6 +484,7 @@ function SummaryCard({ summary }: { summary: Summary }) {
         ))}
       </ul>
     </section>
+    </>
   );
 }
 

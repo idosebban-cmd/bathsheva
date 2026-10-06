@@ -12,22 +12,20 @@ def test_bom_rows_and_csv(client, faro_project):
     rows = bom["rows"]
     named = {r["name"]: r for r in rows}
     assert named["Base"]["status"] == "decided"
-    assert named["Main body"]["status"] == "recommended" and named["Main body"]["process"] == "Metal spinning"
-    assert "unverified rule data" in named["Main body"]["flags"]
+    assert named["Tower"]["status"] == "decided" and named["Tower"]["process"] == "Metal spinning"  # accepted decision
+    assert named["Lantern LED"]["status"] == "recommended" and "unverified rule data" in named["Lantern LED"]["flags"]
     assert bom["cad_version"] is None and named["Base"]["size_mm"] == ""
-    # Hardware derived from joints: weight-plate screws, one per rivet nut.
-    screws = next(r for r in rows if "weight plate to rivet nuts" in r["name"])
-    assert screws["name"].startswith("M4") and screws["quantity"] == 3 and screws["derived"]
-    # New construction parts are their own BOM rows; gaskets are not duplicated as hardware.
-    assert {"Weight plate", "Lamp tube", "Lamp nut and washer", "Cap nut (finial)", "Dimmer (in base)"} <= set(named)
-    assert not any("Silicone gasket ring" in r["name"] for r in rows)
+    # Hardware listed on the joints: band screws, bottom-plate screws, standoffs, magnets, diffuser rings.
+    screws = next(r for r in rows if r["name"].startswith("M3 x 25"))
+    assert screws["quantity"] == 3 and screws["derived"] and "assumption" in screws["flags"]
+    assert {"M2.5 hex standoff, aluminium", "N52 magnet 6 x 2 mm", "Silicone ring, diffuser"} <= set(named)
+    assert {"Weight plate", "Battery pack", "Control board", "Cap bayonet spigot", "Gallery railing"} <= set(named)
     assert bom["total"]["low"] == 10 and not bom["total"]["complete"]
 
-    client.post(f"/api/projects/{pid}/cad/generate", json={"parameters": {**client.get(f"/api/projects/{pid}/cad").json()["parameters"], "mounting_hole_count": 4}})
+    client.post(f"/api/projects/{pid}/cad/generate", json={"parameters": client.get(f"/api/projects/{pid}/cad").json()["parameters"]})
     bom = client.get(f"/api/projects/{pid}/bom").json()
     assert bom["cad_version"] == 1
-    assert next(r for r in bom["rows"] if r["name"] == "Base")["size_mm"].startswith("180")
-    assert next(r for r in bom["rows"] if "weight plate to rivet nuts" in r["name"])["quantity"] == 4
+    assert next(r for r in bom["rows"] if r["name"] == "Base")["size_mm"].startswith("113")
 
     r = client.get(f"/api/projects/{pid}/bom.csv")
     assert r.status_code == 200 and r.headers["content-type"].startswith("text/csv")

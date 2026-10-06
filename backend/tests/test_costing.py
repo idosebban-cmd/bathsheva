@@ -208,17 +208,20 @@ def test_faro_cost_report(client, faro_project):
     mids = [v["mid"] for v in r["volumes"]]
     assert mids[0] > mids[1] > mids[2]
     assert all(v["low"] < v["mid"] < v["high"] for v in r["volumes"])
-    assert {p["name"] for p in r["parts"]} == {"Base", "Main body", "Decorative band", "Lantern", "Top cap"}
-    assert {"LED module and mounting", "Cable / power entry", "Weight plate", "Lamp tube"} <= {s["name"] for s in r["skipped"]}
+    assert {p["name"] for p in r["parts"]} == {"Base", "Nameplate", "Cream band", "Tower", "Window diffuser", "Dimmer knob",
+                                               "Gallery", "Gallery railing", "Lantern frame", "Lantern glass", "Cap",
+                                               "Cap bayonet spigot", "Finial"}
+    assert {"Lantern LED", "Battery pack", "Weight plate", "Tower light"} <= {s["name"] for s in r["skipped"]}
     assert len(r["sensitivity"]["top"]) == 5
     assert r["uses_unverified_data"] and all(not a["verified"] for a in r["assumptions"])
     for p in r["parts"]:
-        assert {ln["category"] for ln in p["lines"]} >= {"material", "process", "setup", "tooling"}
+        assert {ln["category"] for ln in p["lines"]} >= {"material", "process", "setup"}
         assert all(ln["explanation"] and ln["unverified"] for ln in p["lines"])
     names = {ln["label"] for ln in r["product_lines"]}
-    assert any("driver (mains)" in n for n in names)  # undecided power -> mains set (option A)
-    assert any("dimmer" in n.lower() for n in names)  # dimming is required
-    assert not any("battery" in n.lower() for n in names)
+    assert any("18650" in n for n in names)  # cordless baseline
+    assert any("potentiometer" in n.lower() for n in names)  # dimming is required
+    assert not any("driver (mains)" in n for n in names)
+    assert any("windows" in n.lower() for n in names)  # window laser-cutting
     assert {"assembly", "packaging", "bought_in"} <= {ln["category"] for ln in r["product_lines"]}
 
 
@@ -235,14 +238,14 @@ def test_project_volume_added_to_table(client, faro_project):
 def test_cost_items_crud_and_reset(client, faro_project):
     pid = faro_project["id"]
     items = client.get(f"/api/projects/{pid}/cost-items").json()
-    led = next(i for i in items if i["price_key"] == "led_module")
+    led = next(i for i in items if i["price_key"] == "led_module_lantern")
     before = client.get(f"/api/projects/{pid}/costs").json()["unit_cost"]["mid"]
 
     r = client.patch(f"/api/projects/{pid}/cost-items/{led['id']}", json={"unit_cost_low": 20, "unit_cost_high": 20})
     assert r.json()["source"] == "user"
     after = client.get(f"/api/projects/{pid}/costs").json()["unit_cost"]["mid"]
-    # The seeded LED price is a distributor price, discounted to 40–60% at 500; a typed price is not.
-    assert after - before == pytest.approx(20 - (2.53 + 3.74) / 2 * 0.5, abs=0.02)
+    # The seeded LED price is a model estimate (no volume discount); the typed price replaces its midpoint.
+    assert after - before == pytest.approx(20 - (1.5 + 4.0) / 2, abs=0.02)
 
     assert client.patch(f"/api/projects/{pid}/cost-items/{led['id']}", json={"unit_cost_high": 1}).status_code == 422
     r = client.post(f"/api/projects/{pid}/cost-items", json={"name": "Brass finial", "quantity": 1, "unit_cost_low": 3, "unit_cost_high": 5})
@@ -250,16 +253,18 @@ def test_cost_items_crud_and_reset(client, faro_project):
     assert client.post(f"/api/projects/{pid}/cost-items", json={"name": "No price"}).status_code == 422
     assert client.delete(f"/api/projects/{pid}/cost-items/{r.json()['id']}").status_code == 204
 
-    # Battery power: reset loads the battery set instead of the mains set.
-    req = client.get(f"/api/projects/{pid}").json()["requirements"]
-    client.patch(f"/api/projects/{pid}", json={"requirements": {**req, "power_type": "battery"}})
+    # Mains power: reset drops the battery set (the template has no internal mains driver any more).
     keys = {i["price_key"] for i in client.post(f"/api/projects/{pid}/cost-items/reset").json()}
-    assert {"battery_pack", "charge_control_board"} <= keys and "led_driver_mains" not in keys
+    assert {"battery_pack", "charge_control_board"} <= keys
+    req = client.get(f"/api/projects/{pid}").json()["requirements"]
+    client.patch(f"/api/projects/{pid}", json={"requirements": {**req, "power_type": "mains"}})
+    keys = {i["price_key"] for i in client.post(f"/api/projects/{pid}/cost-items/reset").json()}
+    assert "battery_pack" not in keys and "led_module_lantern" in keys
 
 
 def test_quote_comparison_uses_model_when_manual_blank(client, faro_project):
     pid = faro_project["id"]
-    body = next(p for p in client.get(f"/api/projects/{pid}/parts").json() if p["cad_key"] == "main_body")
+    body = next(p for p in client.get(f"/api/projects/{pid}/parts").json() if p["cad_key"] == "tower")
 
     def add(qty, price):
         return client.post(f"/api/projects/{pid}/parts/{body['id']}/quotes", data={
@@ -289,7 +294,7 @@ def test_model_part_estimate_falls_with_quantity(client, faro_project):
     session = new_session()
     project = session.get(Project, faro_project["id"])
     inputs, _ = build_inputs(session, project)
-    cap = next(p for p in project.parts if p.cad_key == "top_cap")
+    cap = next(p for p in project.parts if p.cad_key == "cap")
     e10, e5000 = model_part_estimate(inputs, cap, 10), model_part_estimate(inputs, cap, 5000)
     assert e10["low"] > e5000["low"] and e10["high"] > e5000["high"]
     session.close()

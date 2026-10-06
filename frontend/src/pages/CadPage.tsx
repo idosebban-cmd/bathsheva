@@ -75,6 +75,7 @@ export default function CadPage() {
   const glb = latest?.outputs.find((o) => o.part_key === null && o.format === "glb");
   const dirty = latest ? state.param_defs.some((d) => Number(params[d.key]) !== latest.parameters[d.key]) : true;
   const dimsAssumed = project.assumed_fields.includes("approx_dimensions");
+  const changes = state.production_changes ?? [];
 
   return (
     <div className="cad-layout">
@@ -149,8 +150,9 @@ export default function CadPage() {
           <div className="viewer empty">No CAD generated yet. Check the parameters and press "Regenerate CAD".</div>
         )}
         <p className="small muted">
-          Concept geometry, one body per part: spun shells, steel weight plate, tube-cut band on the body step, glass lantern between gaskets
-          and the central lamp tube. The LED module, dimmer and cable are placeholders showing space and position.
+          Faro as approved in the prototype, adapted for production in metal: spun aluminium base, tower and cap; turned brass gallery,
+          frame, finial and knob; photo-etched railing; frosted borosilicate lantern and an opal glass tube behind the windows. One body
+          per part. The battery, boards, LEDs and dimmer are placeholders showing space and position. Tick "Lights on" to see it lit.
         </p>
         {state.mass && (
           <p className={state.mass.status === "ok" ? "small" : "small warning-text"}>
@@ -162,6 +164,19 @@ export default function CadPage() {
           </p>
         )}
         {latest && <CadDownloads model={latest} projectId={project.id} />}
+        {changes.length > 0 && (
+          <details>
+            <summary><strong>Where production differs from the 3D-printed prototype ({changes.length})</strong></summary>
+            <table className="small changes">
+              <thead><tr><th>Feature</th><th>Prototype</th><th>Production (proposed)</th></tr></thead>
+              <tbody>
+                {changes.map((c) => (
+                  <tr key={c.feature}><td>{c.feature}</td><td>{c.prototype}</td><td>{c.production}</td></tr>
+                ))}
+              </tbody>
+            </table>
+          </details>
+        )}
       </section>
     </div>
   );

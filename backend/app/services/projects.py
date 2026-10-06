@@ -24,6 +24,15 @@ def unique_slug(session: Session, name: str) -> str:
     return slug
 
 
+# Template part keys that are not Part columns (template-only metadata).
+TEMPLATE_ONLY_PART_KEYS = {"quantity", "made_to_drawing"}
+
+
+def template_part(spec: dict, sort_order: int) -> Part:
+    return Part(sort_order=sort_order, quantity=spec.get("quantity", 1),
+                **{k: v for k, v in spec.items() if k not in TEMPLATE_ONLY_PART_KEYS})
+
+
 def create_project(session: Session, name: str, description: str = "", template: str | None = None) -> Project:
     requirements = Requirements()
     assumed: list[str] = []
@@ -35,7 +44,7 @@ def create_project(session: Session, name: str, description: str = "", template:
         requirements = Requirements.model_validate(tpl["requirements"])
         assumed = list(tpl.get("assumed_fields", []))
         for i, p in enumerate(tpl["parts"]):
-            parts.append(Part(sort_order=i, quantity=p.get("quantity", 1), **{k: v for k, v in p.items() if k != "quantity"}))
+            parts.append(template_part(p, i))
 
     project = Project(
         name=name,

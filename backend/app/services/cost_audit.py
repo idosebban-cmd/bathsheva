@@ -195,11 +195,11 @@ def _density_swing(inputs: CostInputs, material_key: str, q: float) -> tuple[flo
     return down, up, (up - down) / 2
 
 
-def cost_audit(session: Session, project: Project) -> dict[str, Any]:
+def cost_audit(session: Session, project: Project, quantity: int = AUDIT_QUANTITY) -> dict[str, Any]:
     rules, cost = load_rules(), load_cost_data()
     snap = snapshot(session, project)
     defs = {d["key"]: d for d in costdown.scenario_defs(project)}
-    q = AUDIT_QUANTITY
+    q = quantity
     power = costdown.power_options(project, defs)[0] if defs else None
     if defs:
         # Audit the first power option (A); option B is costed alongside it on the Cost-down tab.

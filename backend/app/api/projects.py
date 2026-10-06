@@ -95,3 +95,27 @@ def delete_image(image_id: int, project: Project = Depends(get_project), session
     (settings.data_dir / image.path).unlink(missing_ok=True)
     session.delete(image)
     session.commit()
+
+
+@router.get("/{project_id}/runtime")
+def get_runtime(project: Project = Depends(get_project)):
+    """Estimated battery runtime at full brightness vs the runtime requirement."""
+    from app.services.electrical import project_runtime
+
+    return project_runtime(project)
+
+
+@router.get("/{project_id}/template-upgrade")
+def get_template_upgrade(project: Project = Depends(get_project)):
+    """What updating the project to its template's current parts would change (nothing is changed)."""
+    from app.services.template_upgrade import plan
+
+    return plan(project)
+
+
+@router.post("/{project_id}/template-upgrade")
+def post_template_upgrade(project: Project = Depends(get_project), session: Session = Depends(get_session)):
+    """Update the project's parts, fixed requirements, decisions and cost items to the current template."""
+    from app.services.template_upgrade import upgrade
+
+    return upgrade(session, project)

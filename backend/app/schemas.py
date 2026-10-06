@@ -30,6 +30,7 @@ class Requirements(BaseModel):
     target_unit_cost: Money = Field(default_factory=Money)
     intended_markets: list[str] = Field(default_factory=list)
     power_type: PowerType = "undecided"
+    battery_runtime_h: float | None = Field(default=None, description="Target runtime at full brightness (hours)")
     preferred_materials: list[str] = Field(default_factory=list)
     preferred_finishes: list[str] = Field(default_factory=list)
     functional_requirements: list[str] = Field(default_factory=list)
