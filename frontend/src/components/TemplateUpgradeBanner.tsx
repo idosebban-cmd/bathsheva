@@ -21,7 +21,7 @@ export default function TemplateUpgradeBanner() {
   async function upgrade() {
     const what = partsChange
       ? `This removes ${plan!.remove.length} old parts` + (quotes ? ` (and their ${quotes} supplier quotes)` : "") + ", adds the new parts"
-      : `This records ${plan!.decisions.length} new accepted decisions`;
+      : `This records ${plan!.decisions.length} new accepted decisions, updates ${(plan!.finishes ?? []).length} part finishes`;
     if (!window.confirm(`Update this project to the current ${project.template} design? ${what} and resets the cost line items.`)) return;
     setBusy(true);
     setError("");
@@ -39,10 +39,13 @@ export default function TemplateUpgradeBanner() {
   if (!partsChange) {
     return (
       <section className="card notice">
-        <h2>The Faro design has new accepted decisions</h2>
+        <h2>The Faro design has been updated</h2>
         <p className="small">
-          Updating records them ({plan.decisions.join("; ")}) and resets the cost line items to the template defaults
-          (your edits to cost items are lost). Parts, quotes, CAD history and revisions are kept.
+          Updating
+          {plan.decisions.length > 0 && <> records the new accepted decisions ({plan.decisions.join("; ")}),</>}
+          {(plan.finishes ?? []).length > 0 && <> sets the new finishes ({(plan.finishes ?? []).map((f) => `${f.name}: ${f.to}`).join("; ")}),</>}
+          {" "}and resets the cost line items to the template defaults (your edits to cost items are lost). Parts, quotes, CAD
+          history and revisions are kept.
         </p>
         <button className="primary" disabled={busy} onClick={upgrade}>{busy ? "Updating…" : "Update to the current design"}</button>
         {error && <p className="error">{error}</p>}

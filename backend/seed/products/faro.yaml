@@ -27,9 +27,9 @@ requirements:
     - Solid brass gallery, railing, lantern frame, finial, knob and nameplate
     - Borosilicate glass lantern and window diffuser (no plastic on visible parts)
   preferred_finishes:
-    - Gloss black lacquer base, clear-coated
-    - Cream and red lacquer on aluminium (two-tone tower, masked line)
-    - Polished brass, clear lacquer
+    - Satin black lacquer base (30–50 GU), clear-coated
+    - Cream and oxblood red gloss lacquer (80+ GU) on aluminium (two-tone tower, masked line)
+    - Brushed (satin) brass, clear lacquer, matching Atelier
   functional_requirements:
     - Cordless decorative table lamp, rechargeable over USB-C (2 x 18650 cells)
     - User-replaceable battery (bottom plate on standard screws)
@@ -55,7 +55,7 @@ parts:
       Spun aluminium shell with a generous rounded top edge. Houses the battery, the
       control board (USB-C port at the rear) and the steel weight plate.
     material_category: aluminium
-    finish: Gloss black lacquer, clear-coated
+    finish: Satin black lacquer (30–50 GU), clear-coated
     traits: [axisymmetric, cosmetic, closed_top, thin_wall, needs_mass, side_hole]
   - cad_key: base_plate
     name: Bottom plate
@@ -85,13 +85,13 @@ parts:
     name: Nameplate
     function: Curved brass plate with "FARO" etched in, bonded on the front of the base.
     material_category: brass
-    finish: Tumble-polished, etched lettering filled black, clear lacquer
+    finish: Brushed (satin), etched lettering filled black, clear lacquer
     traits: [cosmetic, fine_detail, flat_pattern, thin_wall]
   - cad_key: band_cream
     name: Cream band
     function: Turned aluminium ring between base and tower; the base screws into it and the tower is bonded on its spigot.
     material_category: aluminium
-    finish: Cream lacquer, clear-coated
+    finish: Cream lacquer, gloss (80+ GU), clear-coated
     traits: [axisymmetric, cosmetic, ring, short, open_both_ends, mounting_holes]
   - cad_key: tower
     name: Tower
@@ -99,7 +99,7 @@ parts:
       Spun tapered cone, lacquered cream with a red lower section (masked line),
       with five arched windows spiralling up it and the dimmer knob on the front.
     material_category: aluminium
-    finish: Two-tone lacquer (cream, red lower section, masked line), clear-coated
+    finish: Two-tone lacquer (cream, oxblood red lower section, masked line), gloss (80+ GU), clear-coated
     traits: [axisymmetric, cosmetic, thin_wall, open_both_ends]
   - cad_key: diffuser
     name: Window diffuser
@@ -125,7 +125,7 @@ parts:
     name: Dimmer knob
     function: Solid turned brass knob on the front of the red section (on/off and dimming).
     material_category: brass
-    finish: Tumble-polished, clear lacquer
+    finish: Brushed (satin), clear lacquer
     traits: [axisymmetric, cosmetic, short, user_accessible]
   - cad_key: gallery
     name: Gallery
@@ -133,13 +133,13 @@ parts:
       Spun brass platform ring (1 mm sheet) on the tower top: flat top with a ledge for the lantern
       LED and a rounded rim, open underneath, with a soldered brass locating ring bonded into the tower.
     material_category: brass
-    finish: Tumble-polished, clear lacquer
+    finish: Brushed (satin), clear lacquer
     traits: [axisymmetric, cosmetic, ring, short, open_both_ends, thin_wall]
   - cad_key: railing
     name: Gallery railing
     function: Photo-etched brass strip (posts and two rails) rolled into a ring, soldered at the seam and onto the gallery.
     material_category: brass
-    finish: Tumble-polished, clear lacquer
+    finish: Brushed (satin), clear lacquer
     traits: [axisymmetric, cosmetic, fine_detail, thin_wall, ring, open_both_ends]
   - cad_key: lantern_frame
     name: Lantern frame
@@ -147,7 +147,7 @@ parts:
       Turned brass bottom ring and top band (bayonet lip and slots) with eight mullion bars
       soldered between them; lowered over the glass and bonded to the gallery.
     material_category: brass
-    finish: Tumble-polished, clear lacquer
+    finish: Brushed (satin), clear lacquer
     traits: [axisymmetric, cosmetic, ring, open_both_ends, user_accessible]
   - cad_key: lantern_glass
     name: Lantern glass
@@ -165,7 +165,7 @@ parts:
     name: Cap
     function: Spun domed cap with a rim and a small neck for the finial; twist-locks onto the lantern frame.
     material_category: aluminium
-    finish: Red lacquer, clear-coated
+    finish: Oxblood red lacquer, gloss (80+ GU), clear-coated
     traits: [axisymmetric, cosmetic, closed_top, domed, thin_wall, user_accessible]
   - cad_key: cap_spigot
     name: Cap bayonet spigot
@@ -177,7 +177,7 @@ parts:
     name: Finial
     function: Turned brass ball on a neck, with an M4 stud through the cap (nut inside).
     material_category: brass
-    finish: Tumble-polished, clear lacquer
+    finish: Brushed (satin), clear lacquer
     traits: [axisymmetric, cosmetic, short, user_accessible]
   - cad_key: battery
     name: Battery pack
@@ -560,7 +560,7 @@ scenarios:
     # Costed as its own edition next to the full-detail lamp, never picked by the optimiser.
     edition: true
     tradeoffs:
-      finish: Colour-matched lacquer instead of polished brass on the gallery, railing and frame.
+      finish: Colour-matched lacquer instead of brushed brass on the gallery, railing and frame.
       weight: About 0.1 kg lighter.
       premium: Less jewellery-like; the brass is reduced to the finial, knob and nameplate.
       lead_time: Same suppliers; lacquer instead of polishing.
@@ -629,7 +629,7 @@ rfq_open_questions:
     question: Exact colours and gloss for the black, cream and red lacquer, and the brass finish.
     why: Finishers need colour references and gloss levels to quote and match.
     proposed: "Send physical colour samples or RAL references; brass polished and clear-lacquered."
-    answer: "Hex values from the prototype (black, cream) and Atelier (oxblood red), each with the nearest RAL marked approximate; physical colour samples will be supplied. Brass polished and clear-lacquered."
+    answer: "Hex values from the prototype (black #121212, cream #F9F2E1) and Atelier (oxblood red #8A1C15), with the nearest RAL marked approximate (red: RAL 3011 and RAL 3002); physical colour samples are the master. Gloss: base satin 30–50 GU, cream and red 80+ GU. Brass brushed and clear-lacquered, matching Atelier."
   - id: artwork
     topic: Nameplate
     question: Nameplate artwork (FARO lettering, font, fill colour).
@@ -694,13 +694,15 @@ rfq:
   currencies: [GBP, USD]
   tolerances: "General tolerances ISO 2768-m on metal parts unless a drawing states otherwise; glass ±0.5 mm on length and ±0.3 mm on OD; fits (bayonet, spigots) as dimensioned."
   aql: "AQL 1.0 for major and 2.5 for minor cosmetic defects; Bathsheva London approves the golden sample before production."
-  colour_note: "Physical colour samples will be supplied. The hex values are the design reference; RAL references are approximate (nearest RAL Classic)."
+  colour_note: "Physical colour samples will be supplied and are the master. The hex values are the design reference; the RAL references are approximate (nearest RAL Classic) and for guidance only."
   colours:
-    - {name: Gloss black lacquer, parts: [base], hex: "#121212", ral: "RAL 9005 Jet black", gloss: "high gloss (90+ GU), clear-coated",
+    - {name: Satin black lacquer, parts: [base], hex: "#121212", ral: ["RAL 9005 Jet black"], gloss: "satin, 30–50 GU (60°), clear-coated",
        source: "prototype faro/params.py BASE_HEX"}
-    - {name: Cream lacquer, parts: [band_cream, tower], hex: "#F9F2E1", ral: "RAL 9001 Cream", gloss: "gloss, clear-coated",
+    - {name: Cream lacquer, parts: [band_cream, tower], hex: "#F9F2E1", ral: ["RAL 9001 Cream"], gloss: "gloss, 80+ GU (60°), clear-coated",
        source: "prototype faro/params.py CREAM_HEX"}
-    - {name: Oxblood red lacquer, parts: [tower, cap], hex: "#8A1C15", ral: "RAL 3002 Carmine red", gloss: "gloss, clear-coated",
+    - {name: Oxblood red lacquer, parts: [tower, cap], hex: "#8A1C15", ral: ["RAL 3011 Brown red", "RAL 3002 Carmine red"],
+       gloss: "gloss, 80+ GU (60°), clear-coated",
        source: "Atelier params.py RED_HEX (warm deep oxblood lacquer); prototype faro/params.py uses the same value"}
-    - {name: "Polished brass, clear lacquer", parts: [gallery, railing, lantern_frame, finial, knob, nameplate], hex: "#C4A15A",
-       ral: "n/a (natural brass)", gloss: "polished", source: "prototype faro/params.py BRASS_HEX (render reference only)"}
+    - {name: "Brushed brass, clear lacquer", parts: [gallery, railing, lantern_frame, finial, knob, nameplate], hex: "#C4A15A",
+       ral: [], gloss: "brushed satin grain, clear lacquer (matching Atelier)",
+       source: "prototype faro/params.py BRASS_HEX (render reference only); finish as Atelier's brushed brass"}

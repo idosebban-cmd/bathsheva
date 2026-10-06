@@ -107,7 +107,7 @@ materials:
       Solid brass: machines beautifully, takes a high polish and ages to a warm
       patina (or stays bright under clear lacquer). Heavy and dearer than
       aluminium, so it is used for small visible details.
-    finish_compat: {tumble_polish: good, polish: good, clear: good, wet_lacquer: fair, powder_coat: poor, anodise: poor}
+    finish_compat: {brushed_lacquer: good, tumble_polish: good, polish: good, clear: good, wet_lacquer: fair, powder_coat: poor, anodise: poor}
     density_g_cm3: 8.5
     source: model-generated
     confidence: medium

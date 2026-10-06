@@ -6,6 +6,7 @@ truth), so projects created before then carry the old parts. The upgrade:
 * removes parts the template no longer has (with their quotes and decisions),
 * adds the template's new parts,
 * updates requirements the template now fixes (dimensions, power, runtime),
+* updates part finishes the template now specifies (Oct 2026: brushed brass, satin black base, gloss levels),
 * records the template's accepted decisions (also offered when only the decisions changed,
   e.g. Oct 2026: near-net turning, the spun gallery),
 * resets the cost line items to the template defaults,
@@ -25,6 +26,14 @@ from app.models import ExternalQuote, Project
 from app.services.templates import load_template
 
 # Requirements the template now fixes; other requirements (prices, markets...) are the user's.
+# Finishes earlier Faro templates set. Only parts still carrying one of these are updated, so a finish you
+# chose yourself is never overwritten.
+OLD_TEMPLATE_FINISHES = {
+    "Tumble-polished, clear lacquer", "Tumble-polished, etched lettering filled black, clear lacquer",
+    "Gloss black lacquer, clear-coated", "Cream lacquer, clear-coated", "Red lacquer, clear-coated",
+    "Two-tone lacquer (cream, red lower section, masked line), clear-coated",
+}
+
 UPDATED_REQUIREMENTS = ["approx_dimensions", "power_type", "battery_runtime_h", "preferred_materials",
                         "preferred_finishes", "functional_requirements"]
 
@@ -51,8 +60,12 @@ def plan(project: Project) -> dict[str, Any]:
     names = {p["cad_key"]: p["name"] for p in tpl["parts"]}
     decisions = [f"{names.get(d['part'], d['part'])}: {d['process'].replace('_', ' ')} ({d['material'].replace('_', ' ')})"
                  if "part" in d else d["topic"].replace("_", " ") for d in missing_template_decisions(project)]
-    return {"needed": bool(remove or add or decisions), "remove": remove, "add": add, "requirements": changed,
-            "decisions": decisions}
+    tpl_finish = {p["cad_key"]: p.get("finish", "") for p in tpl["parts"]}
+    finishes = [{"cad_key": k, "name": pt.name, "from": pt.finish or "", "to": tpl_finish[k]}
+                for k, pt in have.items() if k in tpl_finish and (pt.finish or "") in OLD_TEMPLATE_FINISHES
+                and pt.finish != tpl_finish[k]]
+    return {"needed": bool(remove or add or decisions or finishes), "remove": remove, "add": add, "requirements": changed,
+            "decisions": decisions, "finishes": finishes}
 
 
 def upgrade(session: Session, project: Project) -> dict[str, Any]:
@@ -73,9 +86,12 @@ def upgrade(session: Session, project: Project) -> dict[str, Any]:
     for spec in tpl["parts"]:
         if spec["cad_key"] not in have:
             project.parts.append(template_part(spec, order[spec["cad_key"]]))
+    tpl_finish = {spec["cad_key"]: spec.get("finish", "") for spec in tpl["parts"]}
     for part in project.parts:
         if part.cad_key in order:
             part.sort_order = order[part.cad_key]
+            if part.finish in OLD_TEMPLATE_FINISHES:  # an old template default, never one you chose
+                part.finish = tpl_finish[part.cad_key]
     req = dict(project.requirements or {})
     for k in UPDATED_REQUIREMENTS:
         if k in tpl["requirements"]:

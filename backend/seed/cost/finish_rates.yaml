@@ -3,6 +3,12 @@
 # PROVENANCE: rough UK small-batch figures written by an AI model. Get real quotes.
 
 finish_rates:
+  - finish: brushed_lacquer
+    gbp_per_m2: {low: 35, high: 90}
+    min_per_part: {low: 1.5, high: 4.0}
+    source: model-generated
+    confidence: low
+    verified: false
   - finish: tumble_polish
     gbp_per_m2: {low: 20, high: 60}
     min_per_part: {low: 0.8, high: 2.5}

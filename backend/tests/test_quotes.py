@@ -164,6 +164,6 @@ def test_quote_pack_zip(client, faro_project):
     assert "CAD version v1" in readme
     assert "| 07_tower.step | Tower | 2 | Aluminium 3003 (H14) | Metal spinning | Two-tone lacquer" in readme
     base_line = next(line for line in readme.splitlines() if line.startswith("| 01_base.step"))
-    assert "Metal spinning" in base_line and "(recommended)" not in base_line and "Gloss black lacquer" in base_line
+    assert "Metal spinning" in base_line and "(recommended)" not in base_line and "Satin black lacquer" in base_line
     assert "- Battery pack × 1: bought-in component" in readme
     assert "M3 x 25 socket screw" in readme  # hardware listed as not included

@@ -113,3 +113,37 @@ def test_template_upgrade_offered_when_only_decisions_changed(client, faro_proje
     assert [d.chosen["process_key"] for d in ds] == ["metal_spinning"]
     session.close()
     assert any(i["price_key"] == "lamp_safety_emc_testing" for i in client.get(f"/api/projects/{pid}/cost-items").json())
+
+
+def test_template_upgrade_updates_old_default_finishes_only(client, faro_project):
+    from app.db import new_session
+
+    pid = faro_project["id"]
+    session = new_session()
+    project = session.get(Project, pid)
+    by = {p.cad_key: p for p in project.parts}
+    by["finial"].finish = "Tumble-polished, clear lacquer"  # an old template default
+    by["base"].finish = "Gloss black lacquer, clear-coated"
+    by["knob"].finish = "Hand-polished mirror, clear lacquer"  # the user's own choice: never overwritten
+    session.commit()
+    session.close()
+    plan = client.get(f"/api/projects/{pid}/template-upgrade").json()
+    assert plan["needed"] and {f["cad_key"] for f in plan["finishes"]} == {"finial", "base"}
+    assert client.post(f"/api/projects/{pid}/template-upgrade").json()["done"]
+    parts = {p["cad_key"]: p for p in client.get(f"/api/projects/{pid}/parts").json()}
+    assert parts["finial"]["finish"] == "Brushed (satin), clear lacquer"
+    assert parts["base"]["finish"].startswith("Satin black lacquer")
+    assert parts["knob"]["finish"] == "Hand-polished mirror, clear lacquer"
+    assert client.get(f"/api/projects/{pid}/template-upgrade").json()["needed"] is False
+
+
+def test_brushed_brass_matches_its_own_finish_and_cost():
+    from app.costing.data import load_cost_data
+    from app.rules.data import load_rules
+    from app.rules.match import match_finishes
+
+    rules = load_rules()
+    assert match_finishes(rules, "Brushed (satin), clear lacquer")[0] == "brushed_lacquer"
+    assert match_finishes(rules, "Satin black lacquer (30–50 GU), clear-coated")[0] == "wet_lacquer"
+    assert "brushed_lacquer" in load_cost_data().finish_rates
+    assert rules.materials["brass"].finish_compat["brushed_lacquer"] == "good"

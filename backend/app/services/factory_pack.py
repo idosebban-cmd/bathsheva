@@ -271,14 +271,19 @@ def _part_names(c: dict[str, Any], keys: list[str]) -> list[str]:
     return [f"{by_key[k]['part_no']} {by_key[k]['name']}" for k in keys if k in by_key]
 
 
-def _colour_refs(c: dict[str, Any]) -> dict[str, str]:
-    """cad_key -> colour reference text (name, hex, approximate RAL) for the supplier BOM."""
-    out: dict[str, list[str]] = {}
+def _ral_text(col: dict[str, Any]) -> str:
+    rals = col.get("ral") or []
+    return " / ".join(f"{r} (approx.)" for r in rals) if rals else "n/a (natural metal)"
+
+
+def _colour_refs(c: dict[str, Any]) -> dict[str, tuple[str, str]]:
+    """cad_key -> (colour reference: name, hex, approximate RALs; gloss) for the supplier BOM."""
+    out: dict[str, list[tuple[str, str]]] = {}
     for col in _rfq_settings(c["project"]).get("colours", []):
-        ral = f", {col['ral']} (approx.)" if col["ral"].startswith("RAL") else ""
+        ral = f", {_ral_text(col)}" if col.get("ral") else ""
         for k in col["parts"]:
-            out.setdefault(k, []).append(f"{col['name']} {col['hex']}{ral}")
-    return {k: " + ".join(v) for k, v in out.items()}
+            out.setdefault(k, []).append((f"{col['name']} {col['hex']}{ral}", col["gloss"]))
+    return {k: (" + ".join(x[0] for x in v), " + ".join(x[1] for x in v)) for k, v in out.items()}
 
 
 def _commercial(c: dict[str, Any]) -> list[Block]:
@@ -314,7 +319,7 @@ def rfq_blocks(c: dict[str, Any]) -> list[Block]:
         f"Overall height {p['overall_height']:g} mm (plus a {abs(d['felt_bottom_z']):g} mm felt pad), base Ø{p['base_diameter']:g} mm, "
         f"tower Ø{p['tower_bottom_diameter']:g}→{p['tower_top_diameter']:g} mm, lantern Ø{p['lantern_diameter']:g} mm. "
         "Form and proportions follow our approved prototype.",
-        "Base: spun aluminium shell, gloss black, with a laser-cut steel weight plate round the battery; aluminium bottom "
+        "Base: spun aluminium shell, satin black (30–50 GU), with a laser-cut steel weight plate round the battery; aluminium bottom "
         "plate on four M2.5 screws so the user can replace the battery; felt pad on magnets.",
         "Cream band: turned aluminium ring; the base screws into it (three M3) and the tower is bonded on its spigot.",
         f"Tower: spun aluminium cone, two-tone lacquer (red lower section, masked line), {int(p['window_count'])} arched windows "
@@ -342,11 +347,14 @@ def rfq_blocks(c: dict[str, Any]) -> list[Block]:
     if r.get("colours"):
         b.append(Block("h2", "Colours and finishes"))
         b.append(Block("warn", r.get("colour_note", "Physical colour samples will be supplied.")))
-        b.append(Block("table", widths=[1.8, 2.6, 1.0, 2.0, 2.0], header=["Finish", "Parts", "Hex", "Nearest RAL (approximate)", "Gloss"],
-                       rows=[[col["name"], ", ".join(_part_names(c, col["parts"])), col["hex"], col["ral"], col["gloss"]]
+        b.append(Block("table", widths=[1.7, 2.5, 0.9, 2.2, 2.1],
+                       header=["Finish", "Parts", "Hex (design reference)", "Nearest RAL (approximate)", "Gloss"],
+                       rows=[[col["name"], ", ".join(_part_names(c, col["parts"])), col["hex"], _ral_text(col), col["gloss"]]
                              for col in r["colours"]]))
-        b.append(Block("p", "The tower is two-tone: oxblood red from the foot to the masked line, cream above it. Brass is natural "
-                            "metal, polished and clear-lacquered: its hex is a reference only, never a paint colour."))
+        b.append(Block("p", "The tower is two-tone: oxblood red from the foot to the masked line, cream above it. Gloss is measured "
+                            "at 60° on the finished part. All visible brass is brushed to an even satin grain (matching our Atelier "
+                            "speaker) and clear-lacquered; brass is natural metal, so its hex is a reference only, never a paint "
+                            "colour. Keep the brush direction consistent between parts (horizontal as fitted)."))
 
     b.append(Block("h2", "Quantities"))
     b.append(Block("p", "Please quote each of these order quantities: " + ", ".join(f"{q:,}" for q in QUANTITY_TIERS)
@@ -611,8 +619,8 @@ def supplier_bom_csv(c: dict[str, Any]) -> str:
     buf = io.StringIO()
     w = csv.writer(buf)
     colours = _colour_refs(c)
-    w.writerow(["Part no.", "Part", "Qty/lamp", "Material", "Process", "Finish", "Colour reference", "Size (mm)", "Supply",
-                "Drawing / STEP", "Notes"])
+    w.writerow(["Part no.", "Part", "Qty/lamp", "Material", "Process", "Finish", "Colour reference", "Gloss", "Size (mm)",
+                "Supply", "Drawing / STEP", "Notes"])
     for r in c["bom"]["rows"]:
         key = r.get("cad_key")
         item = str(r["item"])
@@ -627,8 +635,9 @@ def supplier_bom_csv(c: dict[str, Any]) -> str:
         else:
             supply, files, notes = "Bought-in", "", r.get("supplier_notes") or ""
         part_no = f"F-{int(item):02d}" if item.isdigit() else item
+        colour, gloss = colours.get(key or "", ("", ""))
         w.writerow([part_no, r["name"], f"{r['quantity']:g}", r["material"], r["process"], r["finish"],
-                    colours.get(key or "", ""), r["size_mm"], supply, files, notes])
+                    colour, gloss, r["size_mm"], supply, files, notes])
     return buf.getvalue()
 
 

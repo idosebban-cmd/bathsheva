@@ -60,8 +60,9 @@ lines += ["## Still open", ""]
 lines += ([f"- **{q['topic']}: {q['question']}** Proposed: {q['proposed']}" for q in open_q] or ["None."]) + [""]
 lines += ["## Resolved (in the RFQs)", "", "| # | Topic | Question | Answer |", "|---|---|---|---|"]
 lines += [f"| {i} | {q['topic']} | {q['question']} | {q['answer']} |" for i, q in enumerate(done, start=1)]
-lines += ["", "## Colour references used", "", "| Finish | Hex | Nearest RAL (approximate) | Source |", "|---|---|---|---|"]
-lines += [f"| {col['name']} | {col['hex']} | {col['ral']} | {col['source']} |"
+lines += ["", "## Colour references used", "", "Physical colour samples are the master.", "",
+          "| Finish | Hex | Nearest RAL (approximate) | Gloss | Source |", "|---|---|---|---|---|"]
+lines += [f"| {col['name']} | {col['hex']} | {fp._ral_text(col)} | {col['gloss']} | {col['source']} |"
           for col in fp._rfq_settings(project).get("colours", [])]
 lines.append("")
 (out_dir / "open-questions.md").write_text("\n".join(lines))

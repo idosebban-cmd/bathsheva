@@ -212,6 +212,7 @@ export interface TemplateUpgradePlan {
   add: { cad_key: string; name: string }[];
   requirements: string[];
   decisions: string[];
+  finishes?: { cad_key: string; name: string; from: string; to: string }[];
   done?: boolean;
 }
 

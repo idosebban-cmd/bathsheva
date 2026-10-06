@@ -2,6 +2,18 @@
 # PROVENANCE: general knowledge written by an AI model. Not authoritative.
 
 finishes:
+  - key: brushed_lacquer
+    name: Brushed (satin), clear lacquered
+    keywords: [brushed]
+    plain_language: >-
+      Solid brass brushed to a fine, even satin grain (abrasive belt, wheel or
+      pad), then clear lacquered so it keeps its colour. Hides small marks and
+      fingerprints better than a mirror polish; the grain direction must be
+      consistent across parts.
+    min_process_finish: fair
+    source: model-generated
+    confidence: low
+    verified: false
   - key: tumble_polish
     name: Tumble (barrel) polished, clear lacquered
     keywords: [tumble, barrel polish, vibratory]
