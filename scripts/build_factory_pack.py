@@ -47,15 +47,26 @@ lines = [f"# Factory Pack consistency: {project.name}, CAD v{model.version}", ""
 lines += [f"| {x['check']} | {'OK' if x['ok'] else 'FIX'} | {x['detail']} |" for x in checks]
 (out_dir / "consistency.md").write_text("\n".join(lines) + "\n")
 
+open_q = [q for q in questions if q["status"] == "open"]
+done = [q for q in questions if q["status"] == "resolved"]
 lines = [f"# Open questions before sending the {project.name} RFQ", "",
-         "Internal. Suppliers will ask these; each has a proposed answer. Resolve them, then send the zip.", ""]
-for i, q in enumerate(questions, start=1):
-    lines += [f"{i}. **{q['topic']}: {q['question']}**", f"   - Why: {q['why']}", f"   - Proposed: {q['proposed']}", ""]
+         "Internal. Do not send. Answers marked resolved are already written into the RFQs.", "",
+         "## Fill in before sending", "",
+         "These placeholders are in both RFQs (mechanical/rfq and electronics/rfq_electronics):", ""]
+lines += [f"- [ ] `{ph}`" for ph in fp.placeholders(project)] + [""]
+lines += ["## Still open", ""]
+lines += ([f"- **{q['topic']}: {q['question']}** Proposed: {q['proposed']}" for q in open_q] or ["None."]) + [""]
+lines += ["## Resolved (in the RFQs)", "", "| # | Topic | Question | Answer |", "|---|---|---|---|"]
+lines += [f"| {i} | {q['topic']} | {q['question']} | {q['answer']} |" for i, q in enumerate(done, start=1)]
+lines += ["", "## Colour references used", "", "| Finish | Hex | Nearest RAL (approximate) | Source |", "|---|---|---|---|"]
+lines += [f"| {col['name']} | {col['hex']} | {col['ral']} | {col['source']} |"
+          for col in fp._rfq_settings(project).get("colours", [])]
+lines.append("")
 (out_dir / "open-questions.md").write_text("\n".join(lines))
 
 failed = [x for x in checks if not x["ok"]]
 print(f"Wrote {(out_dir / name).relative_to(ROOT)} ({len(data) / 1e6:.2f} MB), {len(checks) - len(failed)}/{len(checks)} "
-      f"checks OK, {len(questions)} open questions")
+      f"checks OK, {len(open_q)} open questions, {len(fp.placeholders(project))} placeholders to fill in")
 for x in failed:
     print(f"  FIX: {x['check']}: {x['detail']}")
 sys.exit(1 if failed else 0)

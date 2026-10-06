@@ -75,6 +75,8 @@ def test_pack_contents(client, faro_project):
     zf = zipfile.ZipFile(io.BytesIO(r.content))
     names = set(zf.namelist())
     root, mech, elec = "faro_rfq_pack_v1/", "faro_rfq_pack_v1/mechanical/", "faro_rfq_pack_v1/electronics/"
+    assert {mech + "artwork/F-05_nameplate_lettering.svg", mech + "artwork/F-05_nameplate_lettering.dxf"} <= names
+    assert zf.read(mech + "artwork/F-05_nameplate_lettering.svg").startswith(b"<?xml")
     assert {root + "README.txt", mech + "rfq.md", mech + "rfq.pdf", mech + "bom.csv", mech + "step/faro_assembly.step",
             elec + "rfq_electronics.md", elec + "rfq_electronics.pdf"} <= names
     for stem in ("F-01_base", "F-07_tower", "F-06_cream_band", "F-12_gallery", "F-13_gallery_railing", "F-14_lantern_frame",
@@ -89,14 +91,19 @@ def test_pack_contents(client, faro_project):
                  "Material (£)", "Cycle time (min)", "Finishing (£)", "Tooling one-off (£)", "Method",
                  "cordless", "photo-etched", "twist-lock", "Where production departs",
                  "visible metal must be solid metal", "metal-effect paint",
-                 "Class A", "orange peel", "approved sample", "Minimum wall thickness", "rattle", "Target total lamp mass",
-                 "Golden sample", "UNVERIFIED", "SAFETY", "tolerances to be agreed",
+                 "Class A", "orange peel", "colour samples we supply", "Minimum wall thickness", "rattle", "Target total lamp mass",
+                 "Golden sample", "UNVERIFIED", "SAFETY", "ISO 2768-m", "AQL 1.0",
+                 "[COMPANY NAME]", "[CONTACT NAME, ROLE]", "[QUOTE DEADLINE]", "Colours and finishes", "#121212", "#F9F2E1",
+                 "#8A1C15", "RAL 9005", "RAL 9001", "RAL 3002", "approximate", "Physical colour samples will be supplied",
+                 "300 to 500 lamps", "UKCA", "CE marking for the EU may follow", "FOB (port of loading)", "DDP to our UK address",
+                 "[DELIVERY ADDRESS, to be filled in]", "GBP or USD", "final assembly", "protective packing", "pull-test",
+                 "artwork/",
                  "Brass parts: please quote two ways", "your preferred method", "near-net basis",
                  "Spun from a 1.0 mm CZ108 brass disc", "separate RFQ", "Battery bay"):
         assert text in md, text
     # Not components: our one-off testing cost, and electronics (separate RFQ) aren't priced here.
     assert "EMC testing" not in md and "| Pre-certified Li-ion battery pack" not in md
-    brass_rows = md.split("## 5. Brass parts")[1].split("## 6.")[0]
+    brass_rows = md.split("Brass parts: please quote two ways")[1].split("\n## ")[0]
     for name in ("Gallery", "Lantern frame", "Cap bayonet spigot", "Finial", "Dimmer knob", "Gallery railing", "Nameplate"):
         assert f"| {name} |" in brass_rows, name
     assert "| F-12 | B | 2,000 |" in md  # breakdown rows for both methods
@@ -104,7 +111,8 @@ def test_pack_contents(client, faro_project):
     emd = zf.read(elec + "rfq_electronics.md").decode()
     for text in ("300, 500, 2,000", "pre-certified 2 x 18650", "Pass-through charging", "UN38.3", "62133-2", "2023/1542",
                  "protection", "1S2P", "Two constant-current LED channels", "Dimming", "flicker", "2700 K", "CRI 90",
-                 "filament", "Option B", "DC-DC", "Runtime", "70 × 38 × 19.5", "Space available"):
+                 "filament", "Option B", "DC-DC", "Runtime", "70 × 38 × 19.5", "Space available", "[COMPANY NAME]",
+                 "UKCA", "UK plug", "FOB (port of loading)", "GBP or USD", "300 to 500 sets", "charging indicator LED"):
         assert text in emd, text
     # Our own cost estimates and targets never go to suppliers.
     for doc in (md, emd):
@@ -113,6 +121,9 @@ def test_pack_contents(client, faro_project):
     bom = zf.read(mech + "bom.csv").decode()
     assert "Weight plate" in bom and "Battery pack" in bom and "Electronics (separate RFQ)" in bom
     assert "cost" not in bom.lower() and "GBP" not in bom
+    assert "Colour reference" in bom and "Oxblood red lacquer #8A1C15, RAL 3002 Carmine red (approx.)" in bom
+    assert "artwork/F-05_nameplate_lettering.svg" in bom
+    assert "UK and EU" not in md and "UNVERIFIED)" not in emd.split("charging indicator")[1].split("\n")[0]
     assert bom.splitlines()[1].startswith("F-01,Base")
 def test_drawing_and_rfq_endpoints(client, faro_project):
     pid = faro_project["id"]
@@ -143,8 +154,11 @@ def test_consistency_checks_and_open_questions(client, faro_project):
         assert name in checks, name
     assert s["quantity_tiers"] == [300, 500, 2000]
     assert {q["id"] for q in s["open_questions"]} >= {"battery_config", "tolerances", "colours", "artwork", "incoterms",
-                                                       "production_volume", "electrical_data"}
-    assert all(q["proposed"] for q in s["open_questions"])
+                                                       "production_volume", "electrical_data", "intended_markets"}
+    assert all(q["status"] == "resolved" and q["answer"] for q in s["open_questions"])
+    assert "[DELIVERY ADDRESS, to be filled in]" in s["placeholders"] and "[COMPANY NAME]" in s["placeholders"]
+    for name in ("Only your placeholders left in the RFQs", "Nameplate artwork in the pack", "Supplier questions answered"):
+        assert checks[name]["ok"], name
     assert len(s["brass_parts"]) == 7 and s["electronics_rfq_markdown"].startswith("# Request for quotation")
     assert client.get(f"/api/projects/{pid}/rfq-electronics.pdf").content.startswith(b"%PDF")
     assert client.get(f"/api/projects/{pid}/rfq-electronics.md").text.startswith("# Request for quotation")
@@ -180,3 +194,17 @@ def test_production_change_checks_follow_geometry():
     checks = {c["feature"]: c for c in faro.production_change_checks(DEFAULTS)}
     assert all(c["ok"] for c in checks.values()), checks
     assert {"Shell walls", "Window diffusers", "Gallery", "Cap twist-lock", "Lantern glass"} <= set(checks)
+
+
+def test_nameplate_artwork_is_the_prototype_lettering():
+    from app.factory import nameplate
+
+    files = nameplate.artwork_files()
+    assert set(files) == {"F-05_nameplate_lettering.svg", "F-05_nameplate_lettering.dxf"}
+    svg = files["F-05_nameplate_lettering.svg"].decode()
+    assert 'width="37.05mm"' in svg and 'id="lettering_etch"' in svg and 'fill="rgb(0,0,0)"' in svg
+    plate, letters = nameplate.shapes()
+    assert len(letters.faces()) == 4  # F, A, R, O
+    bb = letters.bounding_box()
+    assert 15 < bb.size.X < 20 and 4.5 < bb.size.Y < 5.5  # 6.5 mm bold, as on the prototype
+    assert abs(bb.center().X) < 0.5 and abs(bb.center().Y) < 1.0  # centred on the em box, as on the prototype

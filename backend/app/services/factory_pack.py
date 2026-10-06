@@ -21,6 +21,7 @@ from app.cad import faro
 from app.config import settings
 from app.costing.data import load_cost_data
 from app.factory import drawings as dr
+from app.factory import nameplate
 from app.models import Project
 from app.rules.data import load_rules
 from app.services.bom import bom_csv, build_bom
@@ -195,15 +196,71 @@ def _bought_in_lines(project: Project, cost) -> list[dict[str, Any]]:
 # ---------------------------------------------------------------------------
 
 
+def _rfq_settings(project: Project) -> dict[str, Any]:
+    return (load_template(project.template).get("rfq") or {}) if project.template else {}
+
+
+def _numbered(blocks: list[Block]) -> list[Block]:
+    """Number the section headings 1, 2, 3... in order."""
+    n = 0
+    for blk in blocks:
+        if blk.kind == "h2":
+            n += 1
+            blk.text = f"{n}. " + re.sub(r"^\d+\.\s*", "", blk.text)
+    return blocks
+
+
+def _header(c: dict[str, Any], title: str) -> list[Block]:
+    """Title, our contact details (placeholders to fill in before sending) and the document line."""
+    project: Project = c["project"]
+    cad = f"v{c['cad_version']}" if c["cad_version"] else "(not generated)"
+    return [
+        Block("h1", title),
+        Block("table", widths=[1.6, 6.4], header=["From", "[COMPANY NAME]"], rows=[
+            ["Contact", "[CONTACT NAME, ROLE]"], ["Email", "[EMAIL]"], ["Phone", "[PHONE]"], ["Address", "[COMPANY ADDRESS]"],
+            ["Quote deadline", "[QUOTE DEADLINE]"],
+            ["Reference", f"{project.name.upper()}-RFQ, CAD {cad}, {c['date']}"],
+        ]),
+        Block("p", f"{project.name} table lamp · CAD version {cad} · units: millimetres"),
+    ]
+
+
+def _part_names(c: dict[str, Any], keys: list[str]) -> list[str]:
+    by_key = {pt["cad_key"]: pt for pt in c["parts"]}
+    return [f"{by_key[k]['part_no']} {by_key[k]['name']}" for k in keys if k in by_key]
+
+
+def _colour_refs(c: dict[str, Any]) -> dict[str, str]:
+    """cad_key -> colour reference text (name, hex, approximate RAL) for the supplier BOM."""
+    out: dict[str, list[str]] = {}
+    for col in _rfq_settings(c["project"]).get("colours", []):
+        ral = f", {col['ral']} (approx.)" if col["ral"].startswith("RAL") else ""
+        for k in col["parts"]:
+            out.setdefault(k, []).append(f"{col['name']} {col['hex']}{ral}")
+    return {k: " + ".join(v) for k, v in out.items()}
+
+
+def _commercial(c: dict[str, Any]) -> list[Block]:
+    r = _rfq_settings(c["project"])
+    terms = r.get("incoterms") or ["FOB (port of loading)", "DDP to our UK address"]
+    cur = " or ".join(r.get("currencies") or ["GBP"])
+    return [
+        Block("h2", "Commercial terms"),
+        Block("bullets", items=[
+            "Please quote both: " + "; and ".join(terms) + ".",
+            f"Currency: {cur}. State which, and keep it the same across the quote.",
+            "Prices valid for at least 90 days; state payment terms and any tooling deposit.",
+        ]),
+    ]
+
+
 def rfq_blocks(c: dict[str, Any]) -> list[Block]:
     project: Project = c["project"]
     p = c["params"]
     mass = c["mass"] or {}
     target_mass = p.get("target_mass_kg")
-    b: list[Block] = []
-    b.append(Block("h1", f"Request for quotation: {project.name} table lamp (metalwork, glass and finishing)"))
-    b.append(Block("p", f"Bathsheva London · {c['date']} · CAD version "
-                        f"{'v' + str(c['cad_version']) if c['cad_version'] else '(not generated)'} · units: millimetres"))
+    r = _rfq_settings(project)
+    b: list[Block] = _header(c, f"Request for quotation: {project.name} table lamp (metalwork, glass and finishing)")
     b.append(Block("warn", "Values marked UNVERIFIED are design placeholders or unverified data. Items marked SAFETY or "
                            "COMPLIANCE must be verified with a qualified engineer or accredited test lab before production."))
 
@@ -226,7 +283,7 @@ def rfq_blocks(c: dict[str, Any]) -> list[Block]:
         "twist-locks onto the frame with a turned brass bayonet spigot (four lugs, 20° turn) and a brass ball finial.",
         "Construction: bonded and screwed, no central rod; no visible fixings.",
         "Cordless: 2 x 18650 Li-ion pack, USB-C charging, rotary dimmer with a solid brass knob on the tower. The "
-        "electronics are quoted separately by electronics suppliers (section 6).",
+        "electronics are quoted separately by electronics suppliers.",
         f"Target total lamp mass {target_mass:g} kg (estimate from CAD {mass.get('total_kg', 0):.2f} kg; UNVERIFIED)."
         if target_mass else "Target mass: to be agreed.",
     ]))
@@ -240,9 +297,20 @@ def rfq_blocks(c: dict[str, Any]) -> list[Block]:
                            "brass or real plating on the metal part; no brass-look coatings. Hidden functional parts "
                            "(gaskets, grommets, insulators, strain relief) may be plastic or rubber."))
 
-    b.append(Block("h2", "3. Quantities"))
+    if r.get("colours"):
+        b.append(Block("h2", "Colours and finishes"))
+        b.append(Block("warn", r.get("colour_note", "Physical colour samples will be supplied.")))
+        b.append(Block("table", widths=[1.8, 2.6, 1.0, 2.0, 2.0], header=["Finish", "Parts", "Hex", "Nearest RAL (approximate)", "Gloss"],
+                       rows=[[col["name"], ", ".join(_part_names(c, col["parts"])), col["hex"], col["ral"], col["gloss"]]
+                             for col in r["colours"]]))
+        b.append(Block("p", "The tower is two-tone: oxblood red from the foot to the masked line, cream above it. Brass is natural "
+                            "metal, polished and clear-lacquered: its hex is a reference only, never a paint colour."))
+
+    b.append(Block("h2", "Quantities"))
     b.append(Block("p", "Please quote each of these order quantities: " + ", ".join(f"{q:,}" for q in QUANTITY_TIERS)
                         + " lamps (one order of each size, not cumulative). Tell us your MOQ if it is above any of them."))
+    if r.get("first_order"):
+        b.append(Block("p", r["first_order"]))
 
     b.append(Block("h2", "4. Parts made to drawing"))
     b.append(Block("table", widths=[1.1, 1.4, 0.8, 1.6, 1.6, 1.5, 2.2, 3.2],
@@ -253,6 +321,7 @@ def rfq_blocks(c: dict[str, Any]) -> list[Block]:
                          for pt in c["parts"]]))
     b.append(Block("p", "Material and process are our current choice; please propose alternatives if they would be "
                         "better or cheaper without breaking the design constraint."))
+    b.append(Block("p", "Tolerances: " + r.get("tolerances", "to be agreed.")))
 
     brass = [pt for pt in c["parts"] if (pt["material"] or "").lower().startswith("brass")]
     if brass:
@@ -288,7 +357,7 @@ def rfq_blocks(c: dict[str, Any]) -> list[Block]:
 
     b.append(Block("h2", "7. Price breakdown requested"))
     b.append(Block("p", "For each part and each quantity, please break the unit price down as below so we can compare it "
-                        "line by line between suppliers. State the currency and the Incoterm. Brass parts: one row for "
+                        "line by line between suppliers, in the currency and on the Incoterms of the commercial terms section. Brass parts: one row for "
                         "method A and one for method B."))
     first = next((pt for pt in c["parts"] if pt not in brass), c["parts"][0] if c["parts"] else None)
     example = []
@@ -311,25 +380,33 @@ def rfq_blocks(c: dict[str, Any]) -> list[Block]:
         "Samples: cost and timing for first-off samples and for the golden sample.",
         "Suggested design changes that would cut cost or risk without changing the look (DFM feedback).",
         "Finishing: lacquer / plating process, colour matching method and the minimum charge per part and per batch.",
-        "Packing and shipping: cartons per pallet and how the glass is protected.",
+        "Packing and shipping: please quote your standard protective packing (cartons per pallet, how the glass is "
+        "protected). The retail box is briefed separately.",
+        "Final assembly: can you offer final assembly, the electronics fitting, the light-up / charge / dimming test and "
+        "packing? If so, please quote it separately.",
+        "Adhesive: please propose the structural adhesive for the tower, gallery, frame and spigot bonds (for example a "
+        "two-part methacrylate or epoxy), to be proven by a pull-test on samples.",
+        "Marking: " + r.get("marking", "to be agreed."),
     ]))
 
     b.append(Block("h2", "9. Premium quality requirements"))
     b.append(Block("bullets", items=[
         "Class A cosmetic surfaces on all visible parts: no spinning marks, dents, scratches, inclusions or orange peel, "
         "inspected at 50 cm under daylight.",
-        "Gloss and colour match: to be agreed against an approved sample (and between parts of the same colour).",
+        "Gloss and colour match: against the physical colour samples we supply (and between parts of the same colour).",
         f"Minimum wall thickness {p['wall_thickness']:g} mm on spun parts after forming, for a solid feel (UNVERIFIED).",
         "Weight plate clamped by the three band screws so nothing rattles; shake test.",
         "Windows: clean laser-cut edges, deburred, masked so the lacquer line is crisp; even glow through every window.",
         f"Target total lamp mass {target_mass:g} kg ± 10%." if target_mass else "Target total lamp mass: to be agreed.",
         "Masked two-tone line level all round; lantern glass sits square with no rattle; cap twists on smoothly to a "
         "positive stop.",
-        "Golden sample approval before production; production inspected against the approved golden sample "
-        "(AQL to be agreed).",
+        "Golden sample approval before production; production inspected against the approved golden sample. "
+        + r.get("aql", "AQL to be agreed."),
     ]))
 
-    b.append(Block("h2", "10. Unverified values and safety items"))
+    b += _commercial(c)
+
+    b.append(Block("h2", "Unverified values and safety items"))
     unv = [f"{pt['part_no']} {pt['name']}: {u}" for pt in c["parts"] for u in pt["unverified"]]
     b.append(Block("bullets", items=[f"UNVERIFIED: {u}" for u in unv] or ["None listed."]))
     seen = set()
@@ -343,12 +420,13 @@ def rfq_blocks(c: dict[str, Any]) -> list[Block]:
 
     b.append(Block("h2", "11. Attachments"))
     b.append(Block("bullets", items=[
-        "drawings/: one PDF and one SVG per made-to-drawing part (dimensions for quotation, tolerances to be agreed).",
+        "drawings/: one PDF and one SVG per made-to-drawing part (general tolerance ISO 2768-m unless stated).",
+        "artwork/: FARO nameplate lettering, 1:1 vector (SVG and DXF; layer LETTERING_ETCH, plate outline for reference).",
         "step/: one STEP file per made-to-drawing part, plus the full assembly.",
         "bom.csv: full bill of materials (part numbers, materials, processes; electronics marked as a separate RFQ).",
         "rfq.md / rfq.pdf: this document.",
     ]))
-    return b
+    return _numbered(b)
 
 
 def electronics_rfq_blocks(c: dict[str, Any]) -> list[Block]:
@@ -361,10 +439,8 @@ def electronics_rfq_blocks(c: dict[str, Any]) -> list[Block]:
     bat = spec.get("battery", {})
     loads = {ld["part"]: ld["watts"] for ld in spec.get("loads", [])}
     bl, bw, bt = faro.BATTERY
-    b: list[Block] = []
-    b.append(Block("h1", f"Request for quotation: {project.name} table lamp (battery pack, control board and LEDs)"))
-    b.append(Block("p", f"Bathsheva London · {c['date']} · CAD version "
-                        f"{'v' + str(c['cad_version']) if c['cad_version'] else '(not generated)'} · units: millimetres"))
+    r = _rfq_settings(project)
+    b: list[Block] = _header(c, f"Request for quotation: {project.name} table lamp (battery pack, control board and LEDs)")
     b.append(Block("warn", "Values marked UNVERIFIED are our working assumptions: confirm them or propose better. Items "
                            "marked COMPLIANCE or SAFETY must be backed by certificates and test reports for the exact part."))
 
@@ -378,14 +454,15 @@ def electronics_rfq_blocks(c: dict[str, Any]) -> list[Block]:
         "Please quote each of these order quantities: " + ", ".join(f"{q:,}" for q in QUANTITY_TIERS) + " sets "
         "(one set = one battery pack, one control board, one lantern LED module, one tower light). Tell us your MOQ.",
         "Samples: please quote 5 sample sets and the lead time.",
+        *([r["first_order"].replace("lamps", "sets")] if r.get("first_order") else []),
     ]))
 
     b.append(Block("h2", "3. Battery pack: pre-certified 2 x 18650"))
     cap = bat.get("cell_capacity_mah", 3350)
     b.append(Block("bullets", items=[
         f"Two branded 18650 Li-ion cells, about {cap:,} mAh class (name the cell brand and model).",
-        "Configuration: we prefer 1S2P (3.6 V nominal), so USB-C charging stays simple. Confirm, or propose 2S (7.2 V) "
-        "with your reasons (UNVERIFIED).",
+        "Configuration: 1S2P (3.6 V nominal), so USB-C charging stays simple. If you strongly prefer 2S (7.2 V), quote it "
+        "as an alternative with your reasons.",
         "Protection circuit in the pack: over-charge, over-discharge, over-current and short circuit, plus an NTC "
         "thermistor so charging stops outside a safe temperature range.",
         "Pass-through charging: the lamp must work normally while it charges from USB-C. Charging with the lamp on must "
@@ -395,7 +472,8 @@ def electronics_rfq_blocks(c: dict[str, Any]) -> list[Block]:
         "The end user must be able to replace the pack with ordinary tools.",
         "COMPLIANCE: the pack must be pre-certified. Send the UN38.3 test summary and the IEC 62133-2 test report for this "
         "exact pack (cells, configuration and protection board), plus the safety data sheet. Pack labelling must follow "
-        "EU Batteries Regulation 2023/1542 (CE, crossed-out wheelie bin, capacity in mAh/Wh).",
+        "UK requirements (crossed-out wheelie bin, capacity in mAh/Wh); if CE for the EU follows, EU Batteries Regulation "
+        "2023/1542 labelling too.",
     ]))
 
     b.append(Block("h2", "4. Control board"))
@@ -414,12 +492,12 @@ def electronics_rfq_blocks(c: dict[str, Any]) -> list[Block]:
         "Please quote the potentiometer and its harness too.",
         "Low battery: the lantern blinks twice, then the lamp dims and switches off before the cells are deeply "
         "discharged. Standby current 50 µA or less (UNVERIFIED).",
-        "A small charging indicator LED next to the USB-C port (UNVERIFIED).",
+        "A small charging indicator LED next to the USB-C port. No other indicator on the lamp.",
         "Wiring harness: about 250 mm from the base to the lantern LED through the tower, plus leads to the tower light "
         "and the potentiometer, with connectors.",
-        "COMPLIANCE: please quote USB-C charging and the board tested and documented for UK and EU sale. This means EMC "
-        "(EN IEC 55015 and EN 61547), safety (EN IEC 62368-1 or EN 60598-1 as applicable) and RoHS. Send the test "
-        "reports; we will check them with an accredited test lab.",
+        "COMPLIANCE: please quote USB-C charging and the board tested and documented for UKCA marking (UK launch): EMC "
+        "(BS EN IEC 55015 and BS EN 61547), safety (BS EN IEC 62368-1 or BS EN 60598-1 as applicable) and RoHS. CE for the "
+        "EU may follow: tell us what it would add. Send the test reports; we will check them with an accredited test lab.",
     ]))
 
     b.append(Block("h2", "5. LEDs"))
@@ -432,8 +510,8 @@ def electronics_rfq_blocks(c: dict[str, Any]) -> list[Block]:
         f"{tl:.0f} mm of light along a Ø{faro.SPINE_D:g} mm aluminium spine. The tube behind the windows is "
         f"{d['diffuser_length']:.0f} mm long. Please quote with and without the spine.",
         "Colour consistency: 3-step MacAdam binning. Please send datasheets, and LM-80 reports if you have them.",
-        "COMPLIANCE: light sources must meet EU ecodesign (EU 2019/2020) and energy labelling (EU 2019/2015) requirements "
-        "where they apply; please confirm.",
+        "COMPLIANCE: light sources must meet the UK ecodesign and energy labelling rules for light sources (the GB versions "
+        "of EU 2019/2020 and 2019/2015) where they apply; please confirm.",
     ]))
 
     b.append(Block("h2", "6. Runtime"))
@@ -444,7 +522,7 @@ def electronics_rfq_blocks(c: dict[str, Any]) -> list[Block]:
 
     b.append(Block("h2", "7. Alternatives to quote"))
     b.append(Block("bullets", items=[
-        "Option B (mains, no battery): a certified external 12 V adapter (UK and EU plugs), a low-voltage cable and an "
+        "Option B (mains, no battery): a certified external 12 V adapter (UK plug; EU plug may follow), a low-voltage cable and an "
         "internal DC-DC constant-current driver for both channels, with the same dimming.",
         "Capacitive touch dimming on the brass finial instead of the knob.",
     ]))
@@ -455,7 +533,7 @@ def electronics_rfq_blocks(c: dict[str, Any]) -> list[Block]:
                    rows=[[item, f"{q:,}", "", "", "", "", ""]
                          for item in ("Battery pack", "Control board + potentiometer + harness", "Lantern LED module",
                                       "Tower light") for q in QUANTITY_TIERS]))
-    b.append(Block("p", "State the currency and the Incoterm."))
+    b += _commercial(c)
 
     b.append(Block("h2", "9. Questions for the supplier"))
     b.append(Block("bullets", items=[
@@ -480,7 +558,7 @@ def electronics_rfq_blocks(c: dict[str, Any]) -> list[Block]:
 
     b.append(Block("h2", "11. Battery compliance (for your information)"))
     b.append(Block("bullets", items=[f"COMPLIANCE: {x}" for x in rt.get("compliance", [])] or ["None listed."]))
-    return b
+    return _numbered(b)
 
 
 def supplier_bom_csv(c: dict[str, Any]) -> str:
@@ -490,22 +568,25 @@ def supplier_bom_csv(c: dict[str, Any]) -> str:
     drawn = {pt["cad_key"]: pt for pt in c["parts"]}
     buf = io.StringIO()
     w = csv.writer(buf)
-    w.writerow(["Part no.", "Part", "Qty/lamp", "Material", "Process", "Finish", "Size (mm)", "Supply", "Drawing / STEP",
-                "Notes"])
+    colours = _colour_refs(c)
+    w.writerow(["Part no.", "Part", "Qty/lamp", "Material", "Process", "Finish", "Colour reference", "Size (mm)", "Supply",
+                "Drawing / STEP", "Notes"])
     for r in c["bom"]["rows"]:
         key = r.get("cad_key")
         item = str(r["item"])
         if key in drawn:
             pt = drawn[key]
             supply, files = "Made to drawing", f"{pt['drawing'].split('/')[-1]}.pdf; {pt['step'].split('/')[-1]}"
+            if key == "nameplate":
+                files += f"; artwork/{nameplate.STEM}.svg / .dxf"
             notes = "; ".join(["UNVERIFIED: " + u for u in pt["unverified"]] + ["SAFETY: " + x for x in pt["safety"]])
         elif key in ELECTRONIC_PARTS:
-            supply, files, notes = "Electronics (separate RFQ)", "", "COMPLIANCE: certified for UK/EU sale"
+            supply, files, notes = "Electronics (separate RFQ)", "", "COMPLIANCE: certified for UK sale (UKCA)"
         else:
             supply, files, notes = "Bought-in", "", r.get("supplier_notes") or ""
         part_no = f"F-{int(item):02d}" if item.isdigit() else item
-        w.writerow([part_no, r["name"], f"{r['quantity']:g}", r["material"], r["process"], r["finish"], r["size_mm"],
-                    supply, files, notes])
+        w.writerow([part_no, r["name"], f"{r['quantity']:g}", r["material"], r["process"], r["finish"],
+                    colours.get(key or "", ""), r["size_mm"], supply, files, notes])
     return buf.getvalue()
 
 
@@ -567,34 +648,52 @@ def consistency_checks(project: Project, c: dict[str, Any] | None = None) -> lis
              "bom.csv": supplier_bom_csv(c)}
     leaks = [name for name, t in texts.items() if _MONEY.search(t)]
     check("No prices or cost targets in supplier documents", not leaks, "clean" if not leaks else f"£ amounts in {leaks}")
+    allowed = set(placeholders(project))
+    found = sorted({m for t in texts.values() for m in re.findall(r"\[[A-Z][A-Z ,]+[^\]]*\]", t)})
+    stray = [m for m in found if m not in allowed]
+    check("Only your placeholders left in the RFQs", not stray,
+          f"to fill in: {', '.join(found)}" if not stray else f"unexpected: {', '.join(stray)}")
+    art = nameplate.artwork_files()
+    plate, letters = nameplate.shapes()
+    lb = letters.bounding_box()
+    fits = lb.size.X < faro.NAMEPLATE_W - 4 and lb.size.Y < faro.NAMEPLATE_H - 4
+    check("Nameplate artwork in the pack", len(art) == 2 and fits,
+          f"{', '.join(art)}; lettering {lb.size.X:.1f} × {lb.size.Y:.1f} mm on a {faro.NAMEPLATE_W:g} × {faro.NAMEPLATE_H:g} mm plate")
+    open_q = [q["question"] for q in open_questions(project, c) if q["status"] == "open"]
+    check("Supplier questions answered", not open_q, "all answered" if not open_q else "; ".join(open_q))
     return out
 
 
 def open_questions(project: Project, c: dict[str, Any]) -> list[dict[str, str]]:
-    """What a supplier would ask that isn't answered yet: the template's list plus project assumptions."""
+    """Supplier questions: the template's list (resolved once it has an `answer`) plus project assumptions."""
     tpl = load_template(project.template) if project.template else {}
-    out = [{k: q[k] for k in ("id", "topic", "question", "why", "proposed")} for q in tpl.get("rfq_open_questions", [])]
+    out = []
+    for q in tpl.get("rfq_open_questions", []):
+        item = {k: q[k] for k in ("id", "topic", "question", "why", "proposed")}
+        item["answer"] = q.get("answer", "")
+        item["status"] = "resolved" if q.get("answer") else "open"
+        out.append(item)
     labels = {
         "production_volume": ("Commercial", "Production volume is still TBD.",
                               "The RFQ asks for 300 / 500 / 2,000; suppliers will ask which you expect to order first.",
                               "Say which quantity is the likely first order."),
-        "intended_markets": ("Compliance", "Intended markets are an assumption (UK, EU).",
-                             "Sets UKCA/CE marking, plug types and the battery rules.", "Confirm UK and EU."),
+        "intended_markets": ("Compliance", "Intended markets are an assumption.",
+                             "Sets the marking, plug types and the battery rules.", "Confirm the launch markets."),
         "approx_dimensions": ("Drawings", "Overall dimensions are a placeholder.", "Every drawing scales from them.",
                               "Confirm the dimensions on the Overview tab."),
     }
+    have = {q["id"] for q in out}
     for f in c.get("assumed", []):
-        if f in labels and not any(q["id"] == "markets" and f == "intended_markets" for q in out):
+        if f in labels and f not in have:
             topic, question, why, proposed = labels[f]
-            out.append({"id": f, "topic": topic, "question": question, "why": why, "proposed": proposed})
-    spec = (tpl.get("electrical") or {})
-    unv = [ld["name"] for ld in spec.get("loads", []) if not ld.get("verified")]
-    if unv or not (spec.get("battery") or {}).get("verified", True):
-        out.append({"id": "electrical_data", "topic": "Electronics",
-                    "question": "LED wattages, cell capacity and the runtime estimate are model-generated.",
-                    "why": "The runtime target (and the pack choice) depend on them.",
-                    "proposed": "Keep them as UNVERIFIED targets in the RFQ; check against the suppliers' datasheets."})
+            out.append({"id": f, "topic": topic, "question": question, "why": why, "proposed": proposed, "answer": "",
+                        "status": "open"})
     return out
+
+
+def placeholders(project: Project) -> list[str]:
+    """Bracketed fields left in the RFQs for you to fill in before sending."""
+    return list(_rfq_settings(project).get("placeholders", []))
 
 
 def rfq_markdown(blocks: list[Block]) -> str:
@@ -693,7 +792,8 @@ def readme(c: dict[str, Any], folder: str) -> str:
         f"{c['project'].name} table lamp: request for quotation pack ({c['date']}, CAD v{c['cad_version']})",
         "",
         "mechanical/   for metalwork, glass and finishing suppliers:",
-        "              rfq.pdf (and rfq.md), drawings/ (PDF + SVG per part), step/ (STEP per part + assembly), bom.csv",
+        "              rfq.pdf (and rfq.md), drawings/ (PDF + SVG per part), step/ (STEP per part + assembly), bom.csv,",
+        "              artwork/ (FARO nameplate lettering, 1:1 SVG and DXF)",
         "electronics/  for battery and electronics suppliers:",
         "              rfq_electronics.pdf (and .md): pre-certified 2 x 18650 pack, control board with dimming, LEDs",
         "",
@@ -728,6 +828,8 @@ def build_factory_pack(project: Project) -> tuple[str, bytes]:
                 zf.write(settings.data_dir / steps[pt["cad_key"]], f"{mech}/{pt['step']}")
         if assembly:
             zf.write(settings.data_dir / assembly, f"{mech}/step/{project.slug}_assembly.step")
+        for fname, data in nameplate.artwork_files().items():
+            zf.writestr(f"{mech}/artwork/{fname}", data)
         zf.writestr(f"{elec}/rfq_electronics.md", rfq_markdown(eblocks))
         zf.writestr(f"{elec}/rfq_electronics.pdf", rfq_pdf(eblocks, "Request for quotation: battery, control board and LEDs"))
     return f"{folder}.zip", buf.getvalue()
@@ -747,12 +849,13 @@ def pack_summary(project: Project) -> dict[str, Any]:
         "unverified": unverified,
         "safety": sorted({f"{f['part']}: {f['text']}" for f in c["flags"]}),
         "compliance": ["All electronics (LEDs, control board, battery, dimmer; adapter and driver for option B) certified "
-                       "for UK/EU sale; certificates to be verified by an accredited test lab.",
+                       "for UK sale (UKCA; CE may follow); certificates to be verified by an accredited test lab.",
                        *[f"Battery: {x}" for x in (c.get("runtime") or {}).get("compliance", [])]],
         "runtime": c.get("runtime"),
         "production_changes": faro.PRODUCTION_CHANGES,
         "consistency": consistency_checks(project, c) if c["cad_version"] is not None else [],
         "open_questions": open_questions(project, c),
+        "placeholders": placeholders(project),
         "rfq_markdown": rfq_markdown(blocks),
         "electronics_rfq_markdown": rfq_markdown(electronics_rfq_blocks(c)),
         "notes": ["Our cost estimates and targets are not included in anything sent to suppliers.",

@@ -28,7 +28,7 @@ PAGE_W, PAGE_H = 842.0, 595.0  # A4 landscape, points
 MARGIN = 18.0
 TITLE_W, TITLE_H = 330.0, 128.0
 STANDARD_SCALES = [0.5, 1, 1.5, 2, 2.5, 3, 4, 5, 10]
-TOLERANCE_NOTE = "Dimensions for quotation, tolerances to be agreed"
+TOLERANCE_NOTE = "General tolerance ISO 2768-m unless stated"
 INK = colors.HexColor("#1a1a1a")
 DIM = colors.HexColor("#1f4e9c")
 SECTION_FILL = colors.HexColor("#d9dde3")
@@ -401,6 +401,7 @@ def _part_notes(key: str, p: dict[str, float], d: dict[str, Any]) -> list[tuple[
         n.append((f"Etched brass t = {_fmt(faro.NAMEPLATE_T)}, {_fmt(faro.NAMEPLATE_W)} × {_fmt(faro.NAMEPLATE_H)}, corner R1.2, "
                   f"formed to R{_fmt(p['base_diameter'] / 2)} (the base). \"FARO\" etched, filled black.", INK))
         n.append(("Bonded on the base front, centred {0} above the underside.".format(_fmt(faro.NAMEPLATE_Z)), INK))
+        n.append(("Lettering artwork: artwork/F-05_nameplate_lettering.svg / .dxf (1:1, prototype lettering).", INK))
     elif key == "weight_plate":
         n.append((f"Laser-cut mild steel S275, t = {_fmt(p['weight_plate_thickness'])}, zinc plated. Hidden; no cosmetic requirement.", INK))
         n.append((f"Battery cut-out {_fmt(faro.BATTERY[0] + 2)} × {_fmt(faro.BATTERY[1] + 2)} R3; {faro.STANDOFFS} × M2.5 tapped "

@@ -89,14 +89,21 @@ export default function FactoryPackPage() {
       )}
 
       <section className="card">
-        <h2>Open questions to resolve before sending ({pack.open_questions.length})</h2>
-        <p className="small muted">Suppliers will ask these. They are not in the pack; each has a proposed answer.</p>
+        <h2>
+          Supplier questions ({pack.open_questions.filter((q) => q.status === "open").length} open of {pack.open_questions.length})
+        </h2>
+        <p className="small muted">Answers go into the RFQs. This list itself is never sent.</p>
+        {pack.placeholders.length > 0 && (
+          <p className="notice small">
+            Fill in before sending (in both RFQs): {pack.placeholders.join(", ")}
+          </p>
+        )}
         <table>
           <thead>
             <tr>
               <th>Topic</th>
               <th>Question</th>
-              <th>Proposed answer</th>
+              <th>Answer in the RFQ</th>
             </tr>
           </thead>
           <tbody>
@@ -107,7 +114,13 @@ export default function FactoryPackPage() {
                   {q.question}
                   <div className="small muted">{q.why}</div>
                 </td>
-                <td className="small">{q.proposed}</td>
+                <td className="small">
+                  {q.status === "resolved" ? (
+                    <><span className="status status-pass">✓</span> {q.answer}</>
+                  ) : (
+                    <><span className="status status-close">Open</span> Proposed: {q.proposed}</>
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>

@@ -557,6 +557,8 @@ export interface OpenQuestion {
   question: string;
   why: string;
   proposed: string;
+  answer: string;
+  status: "open" | "resolved";
 }
 
 export interface FactoryPackSummary {
@@ -568,6 +570,7 @@ export interface FactoryPackSummary {
   brass_parts: { part_no: string; name: string; near_net: string }[];
   consistency: FactoryPackCheck[];
   open_questions: OpenQuestion[];
+  placeholders: string[];
   electronics_rfq_markdown: string;
   quantity_tiers: number[];
   mass: { total_kg: number; target_kg: number | null; status: string; note: string; parts_kg: Record<string, number> } | null;
