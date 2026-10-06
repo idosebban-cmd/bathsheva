@@ -200,8 +200,11 @@ def cost_audit(session: Session, project: Project) -> dict[str, Any]:
     snap = snapshot(session, project)
     defs = {d["key"]: d for d in costdown.scenario_defs(project)}
     q = AUDIT_QUANTITY
+    power = costdown.power_options(project, defs)[0] if defs else None
     if defs:
-        best = costdown.optimise(snap, defs, q, rules, cost, tier="strict")
+        # Audit the first power option (A); option B is costed alongside it on the Cost-down tab.
+        forbid = {p["scenario"] for p in costdown.power_options(project, defs) if p["scenario"]}
+        best = costdown.optimise(snap, defs, q, rules, cost, tier="strict", forbid=forbid)
         selection, region = best["selection"], best["region"]
         cfg = costdown.selection_config(defs, selection, region, snap.params)
     else:
@@ -276,7 +279,7 @@ def cost_audit(session: Session, project: Project) -> dict[str, Any]:
         "quantity": q,
         "step": STEP,
         "configuration": {
-            "label": "Best with no compromise to look and feel",
+            "label": "Best with no compromise to look and feel" + (f", power option {power['label']}" if power and power.get("label") else ""),
             "changes": costdown.describe_selection(defs, selection) if defs else [],
             "region": region, "region_name": cost.regions[region].name,
         },
@@ -364,7 +367,7 @@ def _fmt_used(row: dict[str, Any]) -> str:
 def audit_markdown(a: dict[str, Any]) -> str:
     cfg = a["configuration"]
     changes = ", ".join(f"{c['letter']}. {c['label']}" + (f" ({c['option_label']})" if c["option_label"] else "")
-                        for c in cfg["changes"]) or "no design changes"
+                        for c in cfg["changes"]) or "no further design changes beyond the accepted decisions"
     lines = [
         f"# Cost assumptions audit: {a['project']}",
         "",

@@ -443,7 +443,16 @@ function ItemsEditor({
                     <span className="muted">—</span>
                   )}
                 </td>
-                <td className="source-cell">{it.source}</td>
+                <td className="source-cell" title={it.source}>
+                  {it.source.length > 70 ? (
+                    <details>
+                      <summary>{it.source.slice(0, 60)}…</summary>
+                      <span className="muted">{it.source}</span>
+                    </details>
+                  ) : (
+                    it.source
+                  )}
+                </td>
                 <td>
                   <select value={it.confidence} onChange={(e) => patch(it, { confidence: e.target.value as CostItem["confidence"] })}>
                     <option value="low">low</option>

@@ -79,7 +79,7 @@ PARAMS: list[ParamDef] = [
     ParamDef("cable_hole_diameter", "Cable hole diameter", "Construction", 3, 20, step=0.5),
     ParamDef("dimmer_hole_diameter", "Dimmer hole diameter (0 = no in-base dimmer)", "Construction", 0, 12, step=0.5,
              help="Hole in the base side for the rotary dimmer bushing; 0 for a touch or inline dimmer."),
-    ParamDef("mounting_hole_count", "Rivet-nut count (weight plate fixing)", "Construction", 2, 8, integer=True),
+    ParamDef("mounting_hole_count", "Rivet-nut count (weight plate fixing)", "Construction", 2, 8, unit="", integer=True),
     ParamDef("mounting_hole_diameter", "Rivet-nut hole diameter", "Construction", 2, 10, step=0.1,
              help="M4 aluminium rivet nuts usually need a 6.0 mm hole."),
     ParamDef("mounting_hole_pcd", "Rivet-nut pitch-circle diameter", "Construction", 20, 300,

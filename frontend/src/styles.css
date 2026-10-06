@@ -223,5 +223,5 @@ tr.row-current td { background: #f7f5f1; }
 .rfq-text { white-space: pre-wrap; font-size: 12px; max-height: 600px; overflow: auto; }
 
 .badge-constraint { background: #efe7fb; color: #4a2a8a; border: 1px solid #cdb8f0; }
-.source-cell { max-width: 320px; word-break: break-word; }
+.source-cell { min-width: 220px; max-width: 360px; word-break: break-word; }
 .warning-text { color: #8a5a00; }

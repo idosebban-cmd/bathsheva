@@ -202,7 +202,7 @@ export default function CostDownPage() {
           here changes the design until you select a route; scenarios are what-ifs.
         </p>
         <p className="notice small">
-          <UnverifiedBadge /> All rates, regional multipliers and channel economics are <strong>model-generated and unverified</strong>. Use
+          <UnverifiedBadge /> Most rates, the regional multipliers and channel economics are <strong>model-generated</strong>; some prices are researched distributor or retail prices adjusted for volume. All are <strong>unverified</strong>. Use
           this to decide which quotes to get first, not as a price.
         </p>
       </section>
