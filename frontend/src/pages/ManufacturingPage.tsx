@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { api, errorText, type CostItem, type CostLine, type CostReport } from "../api";
+import { api, errorText, type CostItem, type CostLine, type CostReport, type CostSettings } from "../api";
 import { AssumptionBadge, UnverifiedBadge } from "../components/Badges";
 import CostAudit from "../components/CostAudit";
 import { CategoryBars, SensitivityBars, VolumeRanges, gbp } from "../components/CostCharts";
@@ -20,16 +20,19 @@ export default function ManufacturingPage() {
   const { project } = useProject();
   const [report, setReport] = useState<CostReport | null>(null);
   const [items, setItems] = useState<CostItem[]>([]);
+  const [settings, setSettings] = useState<CostSettings | null>(null);
   const [error, setError] = useState("");
 
   const load = useCallback(async () => {
     try {
-      const [r, its] = await Promise.all([
+      const [r, its, st] = await Promise.all([
         api.get<CostReport>(`/api/projects/${project.id}/costs`),
         api.get<CostItem[]>(`/api/projects/${project.id}/cost-items`),
+        api.get<CostSettings>(`/api/projects/${project.id}/cost-settings`),
       ]);
       setReport(r);
       setItems(its);
+      setSettings(st);
     } catch (e) {
       setError(errorText(e));
     }
@@ -126,7 +129,9 @@ export default function ManufacturingPage() {
         <LinesTable lines={report.product_lines} />
       </section>
 
-      <ItemsEditor projectId={project.id} items={items} canLoadDefaults={report.can_load_defaults} onChanged={load} />
+      {settings && <VolumeDiscounts projectId={project.id} settings={settings} onChanged={load} />}
+
+      <ItemsEditor projectId={project.id} items={items} settings={settings} canLoadDefaults={report.can_load_defaults} onChanged={load} />
 
       {project.template && <CostAudit projectId={project.id} />}
 
@@ -218,14 +223,105 @@ function priceChange(it: CostItem, end: "low" | "high", value: number | null): P
 
 const KIND_LABEL = { bought_in: "Bought-in", assembly: "Assembly", packaging: "Packaging", other: "Other" };
 
+const BASIS_LABEL: Record<CostItem["price_basis"], string> = {
+  trade_volume: "trade / volume",
+  distributor_small_qty: "distributor, small qty",
+  retail: "retail",
+  model_estimate: "model estimate",
+};
+
+function adjustedAt(it: CostItem, settings: CostSettings | null, q: number): number | null {
+  if (it.unit_cost_low === null && it.unit_cost_high === null) return null;
+  const mid = ((it.unit_cost_low ?? it.unit_cost_high ?? 0) + (it.unit_cost_high ?? it.unit_cost_low ?? 0)) / 2;
+  const d = it.discount_class && settings?.volume_discounts[it.discount_class];
+  const discounted = it.price_basis === "distributor_small_qty" || it.price_basis === "retail";
+  if (!d || !discounted || q < d.from_quantity) return mid;
+  return mid * ((d.low + d.high) / 2);
+}
+
+function VolumeDiscounts({ projectId, settings, onChanged }: { projectId: number; settings: CostSettings; onChanged: () => Promise<void> }) {
+  const [error, setError] = useState("");
+  async function save(cls: string, low: number, high: number) {
+    setError("");
+    try {
+      await api.put(`/api/projects/${projectId}/cost-settings`, { volume_discounts: { [cls]: { low: low / 100, high: high / 100 } } });
+      await onChanged();
+    } catch (e) {
+      setError(errorText(e));
+    }
+  }
+  async function reset(cls: string) {
+    await api.put(`/api/projects/${projectId}/cost-settings`, { volume_discounts: { [cls]: null } });
+    await onChanged();
+  }
+  return (
+    <section className="card">
+      <h2>Volume discounts on researched prices</h2>
+      <p className="small muted">
+        Distributor and retail prices are per piece at small quantities. From the quantity shown, the model uses this share of the researched
+        price. The raw researched price and the adjusted price are shown side by side below.
+      </p>
+      {error && <p className="error">{error}</p>}
+      <table className="small">
+        <thead>
+          <tr>
+            <th>Applies to</th>
+            <th>Share of small-quantity price (low – high %)</th>
+            <th>From qty</th>
+            <th>Source</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {Object.entries(settings.volume_discounts).map(([cls, d]) => (
+            <tr key={`${cls}-${d.low}-${d.high}`}>
+              <td>
+                <strong>{cls.replace(/_/g, " ")}</strong>
+                <div className="muted">{d.plain_language}</div>
+              </td>
+              <td className="nowrap-cell">
+                <input
+                  className="cell"
+                  type="number"
+                  min={1}
+                  max={100}
+                  defaultValue={Math.round(d.low * 100)}
+                  onBlur={(e) => Number(e.target.value) / 100 !== d.low && save(cls, Number(e.target.value), d.high * 100)}
+                />{" "}
+                –{" "}
+                <input
+                  className="cell"
+                  type="number"
+                  min={1}
+                  max={100}
+                  defaultValue={Math.round(d.high * 100)}
+                  onBlur={(e) => Number(e.target.value) / 100 !== d.high && save(cls, d.low * 100, Number(e.target.value))}
+                />{" "}
+                %
+              </td>
+              <td>{d.from_quantity.toLocaleString()}</td>
+              <td>
+                {d.source} · {d.confidence} {!d.verified && <UnverifiedBadge />}
+              </td>
+              <td>{d.edited && <button className="link" onClick={() => reset(cls)}>reset</button>}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </section>
+  );
+}
+
 function ItemsEditor({
   projectId,
   items,
+  settings,
   canLoadDefaults,
   onChanged,
 }: {
   projectId: number;
   items: CostItem[];
+  settings: CostSettings | null;
   canLoadDefaults: boolean;
   onChanged: () => Promise<void>;
 }) {
@@ -270,8 +366,8 @@ function ItemsEditor({
         </div>
       </div>
       <p className="small muted">
-        Editable assumptions. Changing a price marks it as your figure (source "user"). Tick verified once it comes from a real quote:
-        verified values are not widened. Minute-based items use the seeded labour rate.
+        Editable assumptions. Changing a price marks it as your figure (source "user", basis trade / volume, no volume discount). Tick
+        verified once it comes from a real quote: verified values are not widened. Minute-based items use the seeded labour rate.
       </p>
       {error && <p className="error">{error}</p>}
       <div className="table-wrap">
@@ -281,7 +377,9 @@ function ItemsEditor({
               <th>Type</th>
               <th>Item</th>
               <th>Qty</th>
-              <th>Unit cost £ (low – high)</th>
+              <th>Researched unit cost £ (low – high)</th>
+              <th>Basis</th>
+              <th>Used at 500 / 2,000</th>
               <th>Source</th>
               <th>Confidence</th>
               <th>Verified</th>
@@ -332,7 +430,20 @@ function ItemsEditor({
                     </>
                   )}
                 </td>
-                <td>{it.source}</td>
+                <td>
+                  {BASIS_LABEL[it.price_basis]}
+                  {it.basis_quantity ? <div className="muted">@ {it.basis_quantity.toLocaleString()} pcs</div> : null}
+                </td>
+                <td className="nowrap-cell">
+                  {it.unit === "pcs" ? (
+                    <>
+                      {gbp(adjustedAt(it, settings, 500) ?? 0)} / {gbp(adjustedAt(it, settings, 2000) ?? 0)}
+                    </>
+                  ) : (
+                    <span className="muted">—</span>
+                  )}
+                </td>
+                <td className="source-cell">{it.source}</td>
                 <td>
                   <select value={it.confidence} onChange={(e) => patch(it, { confidence: e.target.value as CostItem["confidence"] })}>
                     <option value="low">low</option>
@@ -355,7 +466,7 @@ function ItemsEditor({
             ))}
             {items.length === 0 && (
               <tr>
-                <td colSpan={8} className="muted">
+                <td colSpan={10} className="muted">
                   No items yet.
                 </td>
               </tr>

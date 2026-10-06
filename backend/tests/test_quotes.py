@@ -146,7 +146,8 @@ def test_quote_pack_zip(client, faro_project):
     folder = "faro_quote_pack_v1/"
     assert names == sorted(folder + n for n in [
         "README.md", "01_base.step", "02_main_body.step", "03_decorative_band.step", "04_lantern.step", "05_top_cap.step",
-    ])  # bought-in LED module and cable are not sent for quoting
+        "09_weight_plate.step",
+    ])  # bought-in LED module, cable, lamp tube, nuts and gaskets are not sent; the weight plate is made to drawing
 
     for n in names:
         if n.endswith(".step"):

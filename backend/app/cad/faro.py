@@ -535,6 +535,59 @@ def build(params: dict[str, Any]) -> dict[str, cq.Workplane]:
     return {k: parts[k] for k in PART_KEYS}
 
 
+def _arc(cx: float, cz: float, r: float, a0: float, a1: float, n: int = 12) -> list[tuple[float, float]]:
+    return [(cx + r * math.cos(math.radians(a0 + (a1 - a0) * i / n)), cz + r * math.sin(math.radians(a0 + (a1 - a0) * i / n)))
+            for i in range(n + 1)]
+
+
+def section_profiles(params: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    """Half-section outlines (r, z) of the made-to-drawing revolved parts, z from each part's bottom.
+
+    Used for 2D quotation drawings; matches `build()` (fillets approximated by arcs).
+    """
+    p = {k: float(v) for k, v in params.items()}
+    d = derived(p)
+    w, s = p["wall_thickness"], p["step_depth"]
+    rb, bh = p["base_diameter"] / 2, p["base_height"]
+    bore = d["central_hole_diameter"] / 2
+    out: dict[str, dict[str, Any]] = {}
+
+    fb = _base_fillet(p)
+    fi = fb - w if fb - w > 0.3 else 0.0
+    base = [(rb - w, 0.0), (rb, 0.0), (rb, bh - fb)] + _arc(rb - fb, bh - fb, fb, 0, 90)[1:] + [(bore, bh), (bore, bh - w)]
+    base += (_arc(rb - w - fi, bh - w - fi, fi, 90, 0)[:-1] if fi else [(rb - w, bh - w)]) + [(rb - w, bh - w - fi)]
+    out["base"] = {"outline": base, "height": bh, "diameter": 2 * rb}
+
+    H = d["body_height"]
+    r_bot, r_top = p["body_diameter"] / 2, p["body_top_diameter"] / 2
+    z1 = d["band_bottom_local_z"]
+    r_nom_top = r_top + s
+    r_n = lambda z: r_bot + (r_nom_top - r_bot) * z / H  # noqa: E731
+    out["main_body"] = {"outline": [
+        (r_bot - w, 0), (r_bot, 0), (r_n(z1), z1), (r_n(z1) - s, z1), (r_top, H), (r_top - w, H),
+        (r_n(z1 - w) - s - w, z1 - w), (r_n(z1 - w) - w, z1 - w),
+    ], "height": H, "diameter": 2 * r_bot, "step_z": z1}
+
+    r_in = d["band_inner_diameter"] / 2
+    bw, bhh = p["band_wall_thickness"], p["band_height"]
+    out["band"] = {"outline": [(r_in, 0), (r_in + bw, 0), (r_in + bw, bhh), (r_in, bhh)], "height": bhh,
+                   "diameter": 2 * (r_in + bw)}
+
+    rl, lw = p["lantern_diameter"] / 2, p["lantern_wall_thickness"]
+    L = d["glass_length"]
+    out["lantern"] = {"outline": [(rl - lw, 0), (rl, 0), (rl, L), (rl - lw, L)], "height": L, "diameter": 2 * rl}
+
+    rc, ch = p["top_cap_diameter"] / 2, p["top_cap_height"]
+    fo, fi_c = _cap_fillets(p)
+    cap = [(rc - w, 0.0), (rc, 0.0), (rc, ch - fo)] + _arc(rc - fo, ch - fo, fo, 0, 90)[1:] + [(bore, ch), (bore, ch - w)]
+    cap += (_arc(rc - w - fi_c, ch - w - fi_c, fi_c, 90, 0)[:-1] if fi_c else [(rc - w, ch - w)]) + [(rc - w, ch - w - fi_c)]
+    out["top_cap"] = {"outline": cap, "height": ch, "diameter": 2 * rc}
+
+    wpr, wpt = p["weight_plate_diameter"] / 2, p["weight_plate_thickness"]
+    out["weight_plate"] = {"outline": [(bore, 0), (wpr, 0), (wpr, wpt), (bore, wpt)], "height": wpt, "diameter": 2 * wpr}
+    return out
+
+
 def assembly(parts: dict[str, cq.Workplane], name: str = "faro") -> cq.Assembly:
     asm = cq.Assembly(name=name)
     for key, shape in parts.items():

@@ -11,6 +11,7 @@ const TABS = [
   ["manufacturing", "Manufacturing"],
   ["cost-down", "Cost-down"],
   ["dfm", "DFM report"],
+  ["factory-pack", "Factory Pack"],
   ["revisions", "Revisions"],
 ] as const;
 

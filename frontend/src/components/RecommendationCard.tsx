@@ -199,13 +199,24 @@ export default function RecommendationCard({ rec, projectId, llmEnabled, onChang
             </ul>
           </>
         )}
+        {(rec.constraints ?? []).map((c) => (
+          <div key={c.key} className="notice small">
+            <strong>{c.name}.</strong> {c.requirement || c.message}
+            {c.excluded_processes.length > 0 && <> Excludes: {c.excluded_processes.join(", ")}.</>}
+            {c.violations.map((v) => (
+              <div key={v} className="error">
+                {v}
+              </div>
+            ))}
+          </div>
+        ))}
         {rec.excluded.length > 0 && (
           <>
             <h4>Ruled out</h4>
             <ul className="small">
               {rec.excluded.map((e) => (
                 <li key={e.process_key}>
-                  {e.process_name}: {e.reason}
+                  {e.constraint && <span className="badge badge-constraint">design constraint</span>} {e.process_name}: {e.reason}
                 </li>
               ))}
             </ul>

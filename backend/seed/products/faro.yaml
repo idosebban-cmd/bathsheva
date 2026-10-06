@@ -102,6 +102,7 @@ parts:
     function: Laser-cut steel plate inside the base for stability; clamped by the lamp nut and screwed to rivet nuts so it can't rattle.
     material_category: bought_in
     material: Mild steel S275 (zinc plated)
+    process: Laser cut and zinc plated (made to drawing)
     finish: Zinc plated
     traits: [hidden, needs_mass]
   - cad_key: lamp_tube
