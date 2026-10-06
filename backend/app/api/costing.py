@@ -19,7 +19,7 @@ router = APIRouter(prefix="/api/projects/{project_id}", tags=["costing"])
 
 
 class CostItemIn(BaseModel):
-    kind: Literal["bought_in", "assembly", "packaging", "other"] = "bought_in"
+    kind: Literal["bought_in", "assembly", "packaging", "finishing", "one_off", "other"] = "bought_in"
     name: str = Field(min_length=1)
     quantity: float = Field(default=1.0, gt=0)
     unit: Literal["pcs", "min"] = "pcs"

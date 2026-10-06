@@ -17,7 +17,7 @@ from sqlalchemy.orm import Session
 from app.costing.assemble import CostConfig, ExtraItem, RouteChoice, Snapshot, assemble, route_changes_for
 from app.costing.data import CostData, load_cost_data
 from app.costing.model import CostInputs, crossover, evaluate, fixed_and_variable, part_quantities, total, unit_cost_range
-from app.costing.pricing import PRICING_KEYS, assess, factory_targets, targets
+from app.costing.pricing import PRICING_KEYS, STACK_KEYS, STACK_PCT_KEYS, assess, factory_targets, price_stack, targets
 from app.models import EngineeringDecision, Part, Project
 from app.rules.data import RuleSet, load_rules
 from app.services.costing import reference_quantity, snapshot
@@ -75,6 +75,14 @@ def update_pricing(session: Session, project: Project, changes: dict[str, float]
             raise HTTPException(422, f"{k} must be between 0 and 1")
     if not 0 < new["retail_low"] <= new["retail_price"] <= new["retail_high"]:
         raise HTTPException(422, "Retail price must sit within its low–high range")
+    for k in STACK_PCT_KEYS:
+        if not 0 <= new[k] < 1:
+            raise HTTPException(422, f"{k} must be between 0 and 1")
+    for k in set(STACK_KEYS) - set(STACK_PCT_KEYS):
+        if new[k] < 0:
+            raise HTTPException(422, f"{k} can't be negative")
+    if new["stack_returns_pct"] + new["stack_payment_pct"] * (1 + new["vat_rate"]) + new["stack_profit_pct"] >= 0.9:
+        raise HTTPException(422, "Payment fees, returns and profit take 90% or more of the price")
     if new["premium_retail"] <= 0:
         raise HTTPException(422, "Premium retail price must be positive")
     project.pricing = {**(project.pricing or {}), **{k: float(v) for k, v in changes.items()}}
@@ -313,6 +321,9 @@ def change_config(defn: dict[str, Any], option: int, params: dict[str, Any]) -> 
     if "reroute" in eff:
         opt = eff["reroute"]["options"][option]
         cfg.routes[eff["reroute"]["part"]] = RouteChoice(opt["process"], opt["material"], opt.get("tooling"), opt.get("label", ""))
+    for rr in eff.get("reroutes", []):
+        cfg.routes[rr["part"]] = RouteChoice(rr["process"], rr["material"], rr.get("tooling"), defn.get("label", ""))
+    cfg.finish_overrides.update(eff.get("finishes", {}))
     if "remove_part" in eff:
         rp = eff["remove_part"]
         cfg.removed_parts |= set(rp if isinstance(rp, list) else [rp])
@@ -333,19 +344,22 @@ def option_allowed(defn: dict[str, Any], option: int, snap: Snapshot, rules: Rul
     from app.rules.engine import material_allowed
     from app.rules.match import match_finishes
 
-    reroute = defn.get("effect", {}).get("reroute")
-    if not reroute:
-        return True, ""
-    opt = reroute["options"][option]
-    sp = next((s for s in snap.parts if s.cad_key == reroute["part"]), None)
-    if sp is None:
-        return True, ""
-    traits = set(sp.traits) | set(sp.derived_traits)
-    finishes = match_finishes(rules, sp.finish_text)
-    for fk in finishes or [None]:
-        ok, why = material_allowed(rules, traits, sp.material_category, opt["material"], fk)
-        if not ok:
-            return False, why
+    eff = defn.get("effect", {})
+    checks: list[tuple[str, str]] = []
+    if eff.get("reroute"):
+        checks.append((eff["reroute"]["part"], eff["reroute"]["options"][option]["material"]))
+    checks += [(rr["part"], rr["material"]) for rr in eff.get("reroutes", [])]
+    for cad_key, material in checks:
+        sp = next((s for s in snap.parts if s.cad_key == cad_key), None)
+        if sp is None:
+            continue
+        traits = set(sp.traits) | set(sp.derived_traits)
+        override = eff.get("finishes", {}).get(cad_key)
+        finishes = [override] if override else match_finishes(rules, sp.finish_text)
+        for fk in finishes or [None]:
+            ok, why = material_allowed(rules, traits, sp.material_category, material, fk)
+            if not ok:
+                return False, why
     return True, ""
 
 
@@ -424,7 +438,8 @@ def optimise(snap: Snapshot, defs: dict[str, dict[str, Any]], q: float, rules: R
     """Cheapest combination of changes and region at quantity q (exhaustive over subsets and regions)."""
     forbid = forbid or set()
     allowed = TIERS[tier]
-    keys = [k for k, d in defs.items() if k not in forbid and d.get("premium_impact", "none") in allowed]
+    keys = [k for k, d in defs.items()
+            if k not in forbid and not d.get("edition") and d.get("premium_impact", "none") in allowed]
     best: dict[str, Any] | None = None
     for region in cost.regions:
         options = _cheapest_options(snap, {k: defs[k] for k in keys}, region, q, rules, cost)
@@ -445,6 +460,11 @@ def optimise(snap: Snapshot, defs: dict[str, dict[str, Any]], q: float, rules: R
     return best
 
 
+def _rerouted_parts(defn: dict[str, Any]) -> list[str]:
+    eff = defn.get("effect", {})
+    return ([eff["reroute"]["part"]] if "reroute" in eff else []) + [rr["part"] for rr in eff.get("reroutes", [])]
+
+
 def describe_selection(defs: dict[str, dict[str, Any]], selection: list[tuple[str, int]]) -> list[dict[str, Any]]:
     out = []
     for key, opt in selection:
@@ -460,8 +480,8 @@ def _config_flags(defs: dict[str, dict[str, Any]], selection: list[tuple[str, in
     # A scenario that reroutes a part and carries its own safety flag already covers the
     # route-change safety flag for that part, so don't repeat it.
     covered = {
-        defs[k]["effect"]["reroute"]["part"] for k, _ in selection
-        if "reroute" in defs[k].get("effect", {}) and any(f.get("kind") == "safety" for f in defs[k].get("flags", []))
+        part for k, _ in selection if any(f.get("kind") == "safety" for f in defs[k].get("flags", []))
+        for part in _rerouted_parts(defs[k])
     }
     for fl in ctx["flags"]:
         if fl["kind"] == "safety" and ctx["part_keys"].get(fl.get("part")) in covered:
@@ -642,6 +662,8 @@ def product_summary(session: Session, project: Project) -> dict[str, Any]:
 
     rows = []
     premium_rows = []
+    editions: list[dict[str, Any]] = []
+    simplified = next((k for k, d in defs.items() if d.get("edition")), None)
     tier_labels = [
         ("strict", "Best with no compromise to look and feel"),
         ("premium", "Best allowing slight compromises"),
@@ -664,6 +686,20 @@ def product_summary(session: Session, project: Project) -> dict[str, Any]:
                 seen.append((key, label))
                 rows.append(row(label, sel, best["region"], q) | {"tier": tier, "same_as": same_as, "power": power["key"],
                                                                  "power_label": power["label"]})
+            if simplified:
+                s_forced = forced + [(simplified, 0)]
+                s_extra = selection_config(defs, s_forced, "uk", snap.params)
+                best = optimise(snap, defs, q, rules, cost, tier="strict", forbid=forbid | {simplified}, extra=s_extra)
+                full = next(r for r in rows if r["tier"] == "strict" and r["power"] == power["key"] and r["quantity"] == q)
+                simple = row(defs[simplified]["label"], s_forced + best["selection"], best["region"], q)
+                for label, r in (("Full detail", full), ("Simplified premium", simple)):
+                    editions.append({
+                        "edition": label, "power": power["key"], "power_label": power["label"], "quantity": q,
+                        "region_name": r["region_name"], "cost": r["cost"], "targets": r["targets"],
+                        "selection": [x["label"] + (f" ({x['option_label']})" if x["option_label"] else "")
+                                      for x in r["selection"]],
+                        "price_stack": price_stack(r["cost"]["mid"], q, values),
+                    })
             for opt in ("plated", "solid"):
                 ed_cur = edition_config(project, opt, set())
                 ed_extra = ed_cur.merged(extra) if extra is not None else ed_cur
@@ -677,6 +713,16 @@ def product_summary(session: Session, project: Project) -> dict[str, Any]:
     return {
         "targets": tg, "close_band": close, "rows": rows, "power_options": powers,
         "price_points": price_point_table(project, rows, values),
+        "editions": {
+            "rows": editions,
+            "label": defs[simplified]["label"] if simplified else None,
+            "notes": [
+                "Full detail is the best configuration with no compromise to look and feel; simplified premium is the same "
+                "search with the gallery, railing and lantern frame in colour-matched lacquered aluminium.",
+                "Break-even retail covers factory cost and every DTC line with no profit; target retail adds the profit "
+                "target. Both include VAT. Edit the lines in the Price stack card.",
+            ],
+        },
         "premium": {"label": ed.get("label", "Premium edition"), "retail": values["premium_retail"],
                     "targets": tg["premium"], "rows": premium_rows,
                     "options": {o["key"]: o["label"] for o in ed.get("options", [])}},

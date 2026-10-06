@@ -211,6 +211,7 @@ export interface TemplateUpgradePlan {
   remove: { cad_key: string; name: string; quotes: number }[];
   add: { cad_key: string; name: string }[];
   requirements: string[];
+  decisions: string[];
   done?: boolean;
 }
 
@@ -493,7 +494,7 @@ export interface CostReport {
 
 export interface CostItem {
   id: number;
-  kind: "bought_in" | "assembly" | "packaging" | "other";
+  kind: "bought_in" | "assembly" | "packaging" | "finishing" | "one_off" | "other";
   name: string;
   quantity: number;
   unit: "pcs" | "min";

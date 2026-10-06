@@ -233,6 +233,7 @@ def assemble(snapshot: Snapshot, config: CostConfig, rules: RuleSet, cost: CostD
             geometry=PartGeometry(geo["volume_mm3"], tuple(geo["size_mm"]), "axisymmetric" in sp.traits),
             finish_key=finish_key, finish_name=rules.finishes[finish_key].name if finish_key else None, basis=basis,
             cnc_allowance_mm=rate.stock_allowance_mm if is_cnc else None, tooling_band=band_key,
+            cnc_stock_factor=rate.stock_factor if is_cnc else None,
             formed_shell_mm=(float(snapshot.params.get("wall_thickness") or 0) or None) if proc_key in SHEET_FORMED else None,
         )
         parts.append(spec)

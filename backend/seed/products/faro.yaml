@@ -104,7 +104,9 @@ parts:
     traits: [axisymmetric, cosmetic, thin_wall, open_both_ends]
   - cad_key: diffuser
     name: Window diffuser
-    function: Opal borosilicate tube inside the tower behind all five windows, so they glow evenly and hide the internals.
+    function: >-
+      Opal borosilicate tube inside the tower, only as long as the window zone, behind all five
+      windows so they glow evenly and hide the internals; carried on a spider on the tower-light spine.
     material_category: clear_polymer_or_glass
     finish: Opal (acid-etched) glass
     traits: [axisymmetric, transparent, thin_wall, open_both_ends, near_heat_source]
@@ -128,10 +130,12 @@ parts:
     traits: [axisymmetric, cosmetic, short, user_accessible]
   - cad_key: gallery
     name: Gallery
-    function: Turned brass platform ring on the tower top, with a ledge for the lantern LED and a spigot bonded into the tower.
+    function: >-
+      Spun brass platform ring (1 mm sheet) on the tower top: flat top with a ledge for the lantern
+      LED and a rounded rim, open underneath, with a soldered brass locating ring bonded into the tower.
     material_category: brass
     finish: Tumble-polished, clear lacquer
-    traits: [axisymmetric, cosmetic, ring, short, open_both_ends]
+    traits: [axisymmetric, cosmetic, ring, short, open_both_ends, thin_wall]
   - cad_key: railing
     name: Gallery railing
     function: Photo-etched brass strip (posts and two rails) rolled into a ring, soldered at the seam and onto the gallery.
@@ -227,7 +231,7 @@ joints:
       - {name: "N52 magnet 6 x 2 mm", quantity: 4, material: "NdFeB, nickel plated", notes: "Bonded into the bottom plate; hold the felt disc."}
   - between: [diffuser, tower]
     method: clamp_with_gasket
-    note: Diffuser stands on a silicone ring on the base top; a second ring centres its top inside the tower.
+    note: Diffuser sits on a spider on the tower-light spine (silicone ring); a second ring centres its top inside the tower.
     hardware:
       - {name: "Silicone ring, diffuser", quantity: 2, material: "Silicone", notes: "Sized for the diffuser tube; section TBD."}
 
@@ -244,9 +248,11 @@ decisions:
       the prototype's form with real metal and real weight. Tip-over stability stays an
       open safety check.
   - part: band_cream
-    process: cnc_machining
+    process: cnc_turning_near_net
     material: al_6061
-    reason: Turned aluminium ring; it carries the tapped holes for the base screws and the spigot that locates the tower.
+    reason: >-
+      Turned from aluminium tube or a ring blank (not solid bar); it carries the tapped holes for the
+      base screws and the spigot that locates the tower.
   - part: tower
     process: metal_spinning
     material: al_1050
@@ -258,17 +264,21 @@ decisions:
     material: borosilicate
     reason: One opal borosilicate tube behind all five windows replaces five resin diffusers (glass, not plastic, on view).
   - part: gallery
-    process: cnc_machining
+    process: metal_spinning
     material: brass
-    reason: Turned solid brass, as the prototype's brass gallery.
+    reason: >-
+      Spun brass ring (about 0.1 kg instead of 0.4 kg of solid brass) with the photo-etched railing on
+      top: the same brass gallery from every normal viewing angle; open underneath.
   - part: railing
     process: photo_etching
     material: brass
     reason: Photo-etched brass rolled into a ring (default); soldered wire and lost-wax casting stay as alternatives.
   - part: lantern_frame
-    process: cnc_machining
+    process: cnc_turning_near_net
     material: brass
-    reason: Turned brass rings with soldered mullion bars; the bayonet lip and slots are machined in the top band.
+    reason: >-
+      Rings turned from brass tube with drawn brass mullion bars soldered between them; the bayonet
+      lip and slots are machined in the top band. Not machined from solid bar.
   - part: lantern_glass
     process: glass_tube_cut
     material: borosilicate
@@ -278,17 +288,17 @@ decisions:
     material: al_1050
     reason: Spun cap with the neck spun in; a turned brass spigot carries the bayonet lugs.
   - part: cap_spigot
-    process: cnc_machining
+    process: cnc_turning_near_net
     material: brass
-    reason: Lugs can't be spun, so they are turned on a brass ring bonded inside the cap.
+    reason: Lugs can't be spun, so they are turned on a brass ring (from tube) bonded inside the cap.
   - part: finial
-    process: cnc_machining
+    process: cnc_turning_near_net
     material: brass
-    reason: Turned brass ball and neck with an M4 stud.
+    reason: "Turned from close-fitting brass bar: ball and neck with an M4 stud."
   - part: knob
-    process: cnc_machining
+    process: cnc_turning_near_net
     material: brass
-    reason: Solid turned brass knob on a D-shaft rotary pot.
+    reason: Solid brass knob turned from close-fitting bar, on a D-shaft rotary pot.
   - part: nameplate
     process: photo_etching
     material: brass
@@ -318,8 +328,8 @@ electrical:
     - {part: tower_light, name: Tower light, watts: 0.8, source: model-generated, confidence: low, verified: false}
   compliance:
     - "Li-ion cells must have a protection circuit (over-charge, over-discharge, over-current and short circuit) with thermal protection for charging."
-    - "UN38.3 test summary needed for the cells and pack before shipping (air and sea transport rules for lithium batteries)."
-    - "IEC 62133-2 certification for the cells and pack (UK and EU market expectation)."
+    - "UN38.3 test summary needed for the cells and pack before shipping (air and sea transport rules for lithium batteries). Baseline: a pre-certified pack whose supplier provides the UN38.3 summary; check it covers the exact pack (cells, configuration, protection board) and is current. A custom pack needs its own testing (scenario c)."
+    - "IEC 62133-2 certification for the cells and pack (UK and EU market expectation): supplied with the pre-certified pack; a custom pack needs its own report."
     - "EU Batteries Regulation (EU) 2023/1542: from 18 Feb 2027 portable batteries in appliances must be readily removable and replaceable by the end user with commonly available tools; plus labelling (CE, separate collection symbol, capacity) and producer registration. The screwed bottom plate (M2.5, standard hex key) is designed for this."
     - "UK: Waste Batteries and Accumulators Regulations 2009 (producer registration and take-back; UK rules are being revised). Verify with a compliance consultant."
     - "USB-C charging: confirm charging safety and EMC with the control-board supplier (e.g. IEC 62368-1 / EN 55015 as applicable)."
@@ -382,6 +392,7 @@ cost_items:
   - {kind: bought_in, price_key: silicone_gasket, quantity: 2}
   - {kind: bought_in, price_key: structural_adhesive, quantity: 1}
   - {kind: packaging, price_key: retail_packaging, quantity: 1}
+  - {kind: one_off, price_key: lamp_safety_emc_testing, quantity: 1}
   - {kind: assembly, name: "Final assembly, bonding, wiring and test", quantity: 24, unit: min, confidence: low}
 
 # Retail pricing (user-stated). Channel economics come from seed/cost/pricing.yaml.
@@ -397,6 +408,10 @@ pricing:
 # Design-change scenarios for the Cost-down tab. Each is toggleable; `options`
 # are alternatives the optimiser can choose between. Effects:
 #   reroute:      {part, options: [{process, material, tooling?, label}]}  (tooling: override band, e.g. none for stock tube)
+#   reroutes:     [{part, process, material}] several parts rerouted together (one option)
+#   finishes:     {cad_key: finish key} finish overrides
+#   add_items kind one_off: a one-off total (e.g. testing) shared over the batch
+# edition: true  costed as its own edition next to the full-detail lamp; the optimiser never picks it
 #   remove_part:  cad_key (or list) of parts removed from the product
 #   add_items / remove_items: bought-in lines by price_key (quantity or quantity_param)
 #   assembly_min: change to assembly minutes {low, high}
@@ -506,6 +521,50 @@ scenarios:
       weight: No change.
       premium: Loses the tactile brass knob from the prototype; touch dimming is less obvious to a new user.
       lead_time: Off-the-shelf sensor.
+      tooling: None.
+  - key: custom_battery_pack
+    letter: c
+    label: Custom battery pack with its own certification testing
+    design_change: >-
+      Buy a custom 2 x 18650 pack (cheaper per unit, no test reports) instead of a pre-certified
+      pack, and pay for UN38.3 and IEC 62133-2 testing once.
+    effect:
+      add_items:
+        - {price_key: battery_pack_custom, quantity: 1}
+        - {price_key: battery_pack_testing, quantity: 1, kind: one_off}
+      remove_items: [battery_pack]
+    premium_impact: none
+    flags:
+      - {kind: compliance, message: "Custom pack: UN38.3 and IEC 62133-2 must be passed before shipping or selling; allow 6–10 weeks for testing."}
+    tradeoffs:
+      finish: No change.
+      weight: No change.
+      premium: No change.
+      lead_time: Adds 6–10 weeks of testing before launch.
+      tooling: None; the testing is a one-off cost shared over the batch.
+  - key: simplified_premium
+    letter: s
+    label: "Simplified premium: lacquered aluminium gallery, railing and lantern frame (brass finial, knob and nameplate only)"
+    design_change: >-
+      Gallery, railing and lantern frame in aluminium, lacquered to a colour matched to the cap
+      (no brass), and the hidden cap spigot in aluminium. Only the finial, knob and nameplate stay
+      brass. Same geometry; a different look.
+    effect:
+      reroutes:
+        - {part: gallery, process: metal_spinning, material: al_1050}
+        - {part: railing, process: photo_etching, material: al_5052}
+        - {part: lantern_frame, process: cnc_turning_near_net, material: al_6061}
+        - {part: cap_spigot, process: cnc_turning_near_net, material: al_6061}
+      finishes: {gallery: wet_lacquer, railing: wet_lacquer, lantern_frame: wet_lacquer}
+    premium_impact: significant
+    conflicts: [railing_method]
+    # Costed as its own edition next to the full-detail lamp, never picked by the optimiser.
+    edition: true
+    tradeoffs:
+      finish: Colour-matched lacquer instead of polished brass on the gallery, railing and frame.
+      weight: About 0.1 kg lighter.
+      premium: Less jewellery-like; the brass is reduced to the finial, knob and nameplate.
+      lead_time: Same suppliers; lacquer instead of polishing.
       tooling: None.
   - key: railing_method
     letter: k

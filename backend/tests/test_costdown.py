@@ -154,8 +154,8 @@ def test_template_decisions_recorded_and_cad_matches(ctx):
     session = new_session()
     ds = session.query(EngineeringDecision).filter_by(project_id=pid).all()
     by_part = {d.part_id: d for d in ds if d.topic == "process_route"}
-    assert {d.chosen["process_key"] for d in by_part.values()} == {"metal_spinning", "cnc_machining", "glass_tube_cut",
-                                                                    "photo_etching"}
+    assert {d.chosen["process_key"] for d in by_part.values()} == {"metal_spinning", "cnc_turning_near_net",
+                                                                    "glass_tube_cut", "photo_etching"}
     assert all(d.status == "accepted" and d.note for d in ds)
     base = by_part[parts["base"]["id"]]
     assert "tip-over" in base.note.lower()
@@ -327,7 +327,7 @@ def test_evaluate_selection_reports_marginal_savings_and_targets(ctx):
 
 def test_scenario_catalog(ctx):
     cat = ctx["client"].get(f"/api/projects/{ctx['pid']}/scenarios").json()
-    assert [s["letter"] for s in cat["scenarios"]] == list("abegjk")
+    assert [s["letter"] for s in cat["scenarios"]] == list("abegjcsk")
     assert all(o["allowed"] for s in cat["scenarios"] for o in s["options"])
     assert {r["key"] for r in cat["regions"]} == {"uk", "portugal", "turkey", "china"}
     assert all(not r["verified"] for r in cat["regions"])
@@ -428,3 +428,94 @@ def test_safety_flag_not_duplicated_for_rerouted_base(ctx):
     ev = costdown.evaluate_selection(ctx["session"], ctx["project"], [{"key": "base_pressed", "option": 0}], "uk")
     safety = [f for f in ev["flags"] if f["kind"] == "safety"]
     assert len(safety) == 1 and "tip-over" in safety[0]["message"]
+
+
+# --- price stack, custom pack, simplified premium -------------------------------------
+
+
+def _stack_values(**kw):
+    p = {"vat_rate": 0.2, "stack_freight": 2.5, "stack_delivery": 7.5, "stack_payment_pct": 0.019,
+         "stack_payment_fixed": 0.2, "stack_returns_pct": 0.05, "stack_marketing": 30.0, "stack_one_off": 5000.0,
+         "stack_profit_pct": 0.15, "retail_price": 275.0}
+    return {**p, **kw}
+
+
+def test_price_stack_by_hand():
+    from app.costing.pricing import price_stack
+
+    p = _stack_values()
+    ps = price_stack(150.0, 500, p)
+    per_unit = 150 + 2.5 + 7.5 + 0.2 + 30 + 5000 / 500
+    be_ex = per_unit / (1 - 0.05 - 0.019 * 1.2)
+    assert ps["break_even_retail"] == pytest.approx(be_ex * 1.2, abs=0.01)
+    assert ps["target_retail"] == pytest.approx(per_unit / (1 - 0.05 - 0.019 * 1.2 - 0.15) * 1.2, abs=0.01)
+    lines = {ln["key"]: ln["amount"] for ln in ps["lines"]}
+    assert sum(lines.values()) == pytest.approx(ps["target_retail"], abs=0.05)  # the stack adds up to the price
+    assert lines["profit"] == pytest.approx(ps["target_retail"] / 1.2 * 0.15, abs=0.02)
+    # At break-even, profit is zero; more units share the one-off costs, so the price falls.
+    be_lines = {ln["key"]: ln["amount"] for ln in __import__("app.costing.pricing", fromlist=["x"]).stack_lines(
+        150.0, 500, ps["break_even_retail"], p)}
+    assert be_lines["profit"] == pytest.approx(0, abs=0.02)
+    assert price_stack(150.0, 2000, p)["target_retail"] < ps["target_retail"]
+    assert ps["at_planned"]["retail"] == 275
+
+
+def test_price_stack_api_and_validation(ctx):
+    c, pid = ctx["client"], ctx["pid"]
+    meta = c.get(f"/api/projects/{pid}/pricing").json()["meta"]
+    assert meta["stack_marketing"]["source"] == "model-generated" and not meta["stack_marketing"]["verified"]
+    r = c.put(f"/api/projects/{pid}/pricing", json={"stack_marketing": 20, "stack_profit_pct": 0.2})
+    assert r.status_code == 200 and r.json()["values"]["stack_marketing"] == 20
+    assert c.put(f"/api/projects/{pid}/pricing", json={"stack_delivery": -1}).status_code == 422
+    assert c.put(f"/api/projects/{pid}/pricing", json={"stack_returns_pct": 1.2}).status_code == 422
+    assert c.put(f"/api/projects/{pid}/pricing", json={"stack_returns_pct": 0.5, "stack_profit_pct": 0.45}).status_code == 422
+
+
+def test_custom_battery_pack_scenario(ctx):
+    d = ctx["defs"]["custom_battery_pack"]
+    assert d["letter"] == "c" and d["premium_impact"] == "none"
+    cfg = costdown.change_config(d, 0, ctx["snap"].params)
+    base = {q: mid(ctx, CostConfig(), q) for q in (500, 2000)}
+    custom = {q: mid(ctx, cfg, q) for q in (500, 2000)}
+    # Cheaper pack, but the one-off testing is shared over the batch: it pays only at volume.
+    assert custom[500] > base[500]
+    assert custom[2000] - base[2000] < custom[500] - base[500]
+    cost = ctx["cost"]
+    t = cost.bought_in["battery_pack_testing"].gbp
+    pk, ck = cost.bought_in["battery_pack"].gbp, cost.bought_in["battery_pack_custom"].gbp
+    expected = (t.low + t.high) / 2 * (1 / 500 - 1 / 2000)
+    assert (custom[500] - base[500]) - (custom[2000] - base[2000]) == pytest.approx(expected, rel=0.05)
+    assert (ck.low + ck.high) < (pk.low + pk.high)
+    assert any(f["kind"] == "compliance" for f in d["flags"])
+
+
+def test_simplified_premium_reroutes_and_finishes(ctx):
+    d = ctx["defs"]["simplified_premium"]
+    cfg = costdown.change_config(d, 0, ctx["snap"].params)
+    assert {k: r.material_key for k, r in cfg.routes.items()} == {
+        "gallery": "al_1050", "railing": "al_5052", "lantern_frame": "al_6061", "cap_spigot": "al_6061"}
+    assert cfg.finish_overrides == {"gallery": "wet_lacquer", "railing": "wet_lacquer", "lantern_frame": "wet_lacquer"}
+    assert costdown.option_allowed(d, 0, ctx["snap"], ctx["rules"]) == (True, "")  # aluminium is still solid metal
+    inputs, _ = assemble(ctx["snap"], cfg, ctx["rules"], ctx["cost"])
+    by_part = {p.name: p for p in inputs.parts}
+    assert by_part["Gallery"].material_key == "al_1050" and by_part["Gallery"].finish_key == "wet_lacquer"
+    assert by_part["Finial"].material_key == "brass" and by_part["Dimmer knob"].material_key == "brass"
+    # Never picked by the optimiser, even in the 'any' tier.
+    best = costdown.optimise(ctx["snap"], ctx["defs"], 500, ctx["rules"], ctx["cost"], tier="any")
+    assert "simplified_premium" not in {k for k, _ in best["selection"]}
+
+
+def test_summary_editions_and_price_stack(ctx):
+    s = ctx["client"].get(f"/api/projects/{ctx['pid']}/cost-down/summary").json()
+    rows = s["editions"]["rows"]
+    assert {(r["edition"], r["power"], r["quantity"]) for r in rows} == {
+        (e, pw, q) for e in ("Full detail", "Simplified premium") for pw in ("A", "B") for q in (500, 2000)}
+    for r in rows:
+        strict = next(x for x in s["rows"] if x["tier"] == "strict" and x["power"] == r["power"] and x["quantity"] == r["quantity"])
+        if r["edition"] == "Full detail":
+            assert r["cost"]["mid"] == strict["cost"]["mid"]
+        else:
+            assert any("Simplified premium" in x for x in r["selection"])
+        ps = r["price_stack"]
+        assert r["cost"]["mid"] < ps["break_even_retail"] < ps["target_retail"]
+        assert ps["factory_cost"] == pytest.approx(r["cost"]["mid"], abs=0.01)

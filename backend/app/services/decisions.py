@@ -49,33 +49,41 @@ def unimplemented_changes(project: Project, cad_key: str | None, keys: list[str]
     return [k for k in keys if not faro.implements(k, cad_key, bodies)]
 
 
-def apply_template_decisions(session: Session, project: Project) -> list[EngineeringDecision]:
-    """Record the template's accepted decisions that the project doesn't have yet (idempotent)."""
+def missing_template_decisions(project: Project) -> list[dict[str, Any]]:
+    """The template's accepted decisions that the project hasn't recorded yet."""
     if not project.template:
         return []
     tpl = load_template(project.template)
     by_key = {p.cad_key: p for p in project.parts if p.cad_key}
     existing = {(d.topic, d.part_id, (d.chosen or {}).get("process_key") or (d.chosen or {}).get("value"))
                 for d in project.decisions}
-    rules = load_rules()
-    added = []
+    out = []
     for spec in tpl.get("decisions", []):
-        reason = " ".join(spec["reason"].split())
         if "part" in spec:
             part = by_key.get(spec["part"])
-            if part is None:
+            if part is None or ("process_route", part.id, spec["process"]) in existing:
                 continue
-            if ("process_route", part.id, spec["process"]) in existing:
-                continue
+        elif (spec["topic"], None, spec["chosen"].get("value")) in existing:
+            continue
+        out.append(spec)
+    return out
+
+
+def apply_template_decisions(session: Session, project: Project) -> list[EngineeringDecision]:
+    """Record the template's accepted decisions that the project doesn't have yet (idempotent)."""
+    by_key = {p.cad_key: p for p in project.parts if p.cad_key}
+    rules = load_rules()
+    added = []
+    for spec in missing_template_decisions(project):
+        reason = " ".join(spec["reason"].split())
+        if "part" in spec:
+            part = by_key[spec["part"]]
             chosen = route_decision_chosen(project, part, spec["process"], spec["material"], part.process, part.material)
             d = EngineeringDecision(project_id=project.id, part_id=part.id, topic="process_route", status="accepted",
                                     recommendation={}, chosen=chosen, note=reason)
             part.process = rules.processes[spec["process"]].name
             part.material = rules.materials[spec["material"]].name
         else:
-            value = spec["chosen"].get("value")
-            if (spec["topic"], None, value) in existing:
-                continue
             d = EngineeringDecision(project_id=project.id, part_id=None, topic=spec["topic"], status="accepted",
                                     recommendation={}, chosen=dict(spec["chosen"]), note=reason)
         session.add(d)

@@ -175,11 +175,12 @@ def test_mass_estimate_and_target(client, faro_project):
     pid = faro_project["id"]
     mass = client.get(f"/api/projects/{pid}/cad").json()["mass"]
     assert mass["target_kg"] == DEFAULTS["target_mass_kg"]
-    assert 1.2 < mass["total_kg"] < 2.0
-    assert mass["parts_kg"]["weight_plate"] > 0.3 and mass["parts_kg"]["gallery"] > 0.3  # the two heavy parts
-    assert mass["status"] == "high"  # above the 1.2 kg target: reported, not hidden
+    assert 1.1 < mass["total_kg"] < 1.4
+    assert mass["parts_kg"]["weight_plate"] > 0.3  # the heavy part, low down
+    assert 0.08 < mass["parts_kg"]["gallery"] < 0.2  # spun 1 mm brass shell + locating ring, not a solid ring
+    assert mass["status"] == "ok"  # about the 1.2 kg target
     params = client.get(f"/api/projects/{pid}/cad").json()["parameters"]
-    client.post(f"/api/projects/{pid}/cad/generate", json={"parameters": {**params, "target_mass_kg": 1.5}})
-    assert client.get(f"/api/projects/{pid}/cad").json()["mass"]["status"] == "ok"
+    client.post(f"/api/projects/{pid}/cad/generate", json={"parameters": {**params, "target_mass_kg": 0.9}})
+    assert client.get(f"/api/projects/{pid}/cad").json()["mass"]["status"] == "high"  # reported, not hidden
     client.post(f"/api/projects/{pid}/cad/generate", json={"parameters": {**params, "weight_plate_thickness": 2, "target_mass_kg": 3}})
     assert client.get(f"/api/projects/{pid}/cad").json()["mass"]["status"] == "low"

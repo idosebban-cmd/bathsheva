@@ -20,7 +20,7 @@
 processes:
   - key: metal_spinning
     name: Metal spinning
-    material_categories: [aluminium]
+    material_categories: [aluminium, brass]
     plain_language: >-
       A flat aluminium disc is spun on a lathe and pressed over a shaped form.
       Ideal for round, hollow, lamp-like shapes. Tooling is cheap (a wooden or
@@ -164,6 +164,32 @@ processes:
     confidence: low
     verified: false
 
+  - key: cnc_turning_near_net
+    name: CNC turning from near-net stock (tube, ring blank or close-fitting bar)
+    material_categories: [aluminium, brass]
+    plain_language: >-
+      The part is turned on a CNC lathe from stock that is already close to its
+      shape: tube or a ring blank for rings, bar only just bigger than the part
+      for small solid parts. Little metal is cut away, so it is much cheaper than
+      machining from a solid block, with the same finish. Ring-and-bar assemblies
+      (like a lantern frame) are turned rings with drawn bars soldered between them.
+    requires_all: [axisymmetric]
+    excludes: [transparent, electrical, domed, tapered]
+    suits: [ring, short, open_both_ends, mounting_holes, side_hole]
+    poor_fit: [thin_wall]
+    volume: {min: 1, max: 20000}
+    tooling_cost: none
+    unit_cost: medium
+    finish_quality: excellent
+    wall_mm: {min: 0.8, max: 20.0, typical_min: 1.5, typical_max: 10.0}
+    when_to_prefer: Rings, collars and small turned details, from samples to several thousand.
+    risks:
+      - Needs the right stock size (standard tube ODs and walls); ask the turner what they hold.
+      - Soldered ring-and-bar frames need a jig so the bars are evenly spaced and square.
+    source: model-generated
+    confidence: medium
+    verified: false
+
   - key: extrusion
     name: Extrusion (cut to length)
     material_categories: [aluminium]
@@ -261,7 +287,7 @@ processes:
 
   - key: photo_etching
     name: Photo-etched brass sheet (formed after etching)
-    material_categories: [brass]
+    material_categories: [brass, aluminium]
     plain_language: >-
       A pattern is printed onto thin brass sheet and the rest is chemically
       etched away, leaving very fine, crisp parts such as railings and

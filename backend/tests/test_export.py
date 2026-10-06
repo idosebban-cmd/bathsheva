@@ -4,7 +4,7 @@ import struct
 import zipfile
 
 import pytest
-from build123d import import_step
+from build123d import Cylinder, Pos, import_step
 
 from app.cad import export, faro
 from app.config import settings
@@ -174,3 +174,39 @@ def test_repeated_regeneration_in_one_session_is_stable(client, faro_project):
         for out in model["outputs"]:
             assert (settings.data_dir / out["path"]).stat().st_size > 0
     assert client.get("/api/health").status_code == 200
+
+
+def test_diffuser_covers_only_the_window_zone(parts):
+    """Option 3: the opal tube runs 5 mm past the lowest and highest window and stands on a spider."""
+    p = {k: float(v) for k, v in DEFAULTS.items()}
+    d = faro.derived(p)
+    wins = faro.windows(p)
+    lo = wins[0][0] - p["window_height"] / 2 - faro.DIFFUSER_OVERLAP
+    hi = wins[-1][0] + p["window_height"] / 2 + faro.DIFFUSER_OVERLAP
+    info = export.part_info(parts)
+    assert info["diffuser"]["z_range_mm"] == pytest.approx([lo, hi], abs=0.01)
+    assert d["diffuser_length"] < 0.6 * d["tower_height"]
+    # The spider on the tower-light spine carries it: touching, not clashing.
+    common = parts["diffuser"] & parts["tower_light"]
+    assert (0.0 if common is None else common.volume) < 0.5
+    spider_top = Pos(0, 0, lo - 0.5) * Cylinder(d["diffuser_od"] / 2 - 0.5, 0.2)
+    assert (parts["tower_light"] & spider_top).volume > 1
+    # With no windows the tube runs the full height again.
+    plain = faro.derived({**p, "window_count": 0})
+    assert plain["diffuser_length"] > d["diffuser_length"] + 50
+
+
+def test_gallery_is_a_spun_shell_open_underneath(parts):
+    """Option 2: 1 mm spun brass shell plus a locating ring, far lighter than the solid turned ring."""
+    p = {k: float(v) for k, v in DEFAULTS.items()}
+    d = faro.derived(p)
+    g = parts["gallery"]
+    zt, zg = d["tower_top_z"], d["gallery_top_z"]
+    rg = p["gallery_diameter"] / 2
+    solid_ring = 3.1416 * (rg**2 - d["gallery_bore_r"] ** 2) * p["gallery_height"]
+    assert g.volume < 0.4 * solid_ring
+    # Hollow between the locating ring and the skirt, just above the tower top.
+    probe = Pos(0, 0, (zt + zg) / 2) * Cylinder(rg - 3, 1.0) - Pos(0, 0, (zt + zg) / 2) * Cylinder(d["r_out"](zt) + 1, 1.0)
+    common = g & probe
+    assert (0.0 if common is None else common.volume) < 0.5
+    assert g.is_valid
