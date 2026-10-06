@@ -53,5 +53,9 @@ def create_project(session: Session, name: str, description: str = "", template:
 
         session.add_all(default_items(project))
         session.commit()
+        from app.services.decisions import apply_template_decisions
+
+        session.refresh(project)
+        apply_template_decisions(session, project)
     session.refresh(project)
     return project

@@ -14,9 +14,11 @@ def test_dfm_report_for_new_faro(client, faro_project):
     assert any(c["title"].startswith("Open decision") for c in r["checks"])
     assert t["No CAD generated yet"]["level"] == "info"
     assert t["Stability (heuristic)"]["unverified"]
-    assert t["Body wall too thin to tap for base screws"]["level"] == "warning"
+    assert t["Central lamp tube construction"]["level"] == "pass"
+    assert t["Lamp mass vs target"]["level"] in ("pass", "warning")
+    assert not any("CAD does not match" in c["title"] for c in r["checks"])  # accepted routes are in the CAD
     assert r["summary"]["safety_items"] > 0
-    assert len(r["parts"]) == 7
+    assert len(r["parts"]) == 14
     assert "not a substitute" in r["disclaimer"].lower()
 
 

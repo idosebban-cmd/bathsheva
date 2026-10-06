@@ -116,7 +116,9 @@ def reset_items(session: Session, project: Project) -> list[CostItem]:
 
 # Parameters that stay fixed when the lamp is scaled to a new height.
 UNSCALED_PARAMS = {"wall_thickness", "lantern_wall_thickness", "cable_hole_diameter", "mounting_hole_diameter",
-                   "mounting_hole_count", "band_position"}
+                   "mounting_hole_count", "band_position", "band_wall_thickness", "step_depth", "tube_diameter",
+                   "dimmer_hole_diameter", "weight_plate_thickness", "target_mass_kg",
+                   "base_height"}  # the base cavity must still fit the weight plate and dimmer
 
 
 def scaled_parameters(params: dict[str, Any], height_mm: float) -> dict[str, Any]:
@@ -213,6 +215,19 @@ def update_cost_settings(session: Session, project: Project, discounts: dict[str
     project.cost_settings = {**(project.cost_settings or {}), "volume_discounts": current}
     session.commit()
     return cost_settings(project)
+
+
+def snapshot_material_keys(project: Project) -> dict[str, str]:
+    """Effective material key per CAD body (decided, else recommended), without the database session."""
+    rules = load_rules()
+    recs = {r["part_id"]: r for r in project_recommendations(project)}
+    out = {}
+    for part in project.parts:
+        if part.cad_key:
+            _, mat, _ = _effective(part, recs.get(part.id, {}), rules)
+            if mat:
+                out[part.cad_key] = mat
+    return out
 
 
 def build_inputs(session: Session, project: Project, config: CostConfig | None = None,

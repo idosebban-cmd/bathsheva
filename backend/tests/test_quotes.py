@@ -115,10 +115,11 @@ def test_quotes_do_not_touch_rules_or_seed_data(client, faro_project):
     seed_hash = hashlib.sha256(b"".join(p.read_bytes() for p in sorted(SEED_DIR.rglob("*.yaml")))).hexdigest()
     before = client.get(f"/api/projects/{pid}/recommendations").json()["recommendations"]
     base = _part(client, pid, "base")
+    process_before = base["process"]  # the template's accepted decision (spun base)
     _quote(client, pid, base["id"], process="High-pressure die casting", unit_price="2.00", quantity="10000")
     after = client.get(f"/api/projects/{pid}/recommendations").json()["recommendations"]
     assert before == after
-    assert _part(client, pid, "base")["process"] == ""  # the part itself is unchanged too
+    assert _part(client, pid, "base")["process"] == process_before == "Metal spinning"  # the part itself is unchanged too
     assert hashlib.sha256(b"".join(p.read_bytes() for p in sorted(SEED_DIR.rglob("*.yaml")))).hexdigest() == seed_hash
 
 
@@ -153,12 +154,13 @@ def test_quote_pack_zip(client, faro_project):
     out = zf.extract(folder + "02_main_body.step", path=str(settings.data_dir / "unzipped"))
     body_solid = cq.importers.importStep(out)
     assert len(body_solid.solids().vals()) == 1
-    assert body_solid.val().BoundingBox().zlen == pytest.approx(450 - 30 - 80 - 45 + 3, abs=0.5)
+    # Body = overall − base − LED plate flange − visible lantern − cap − cap nut.
+    assert body_solid.val().BoundingBox().zlen == pytest.approx(450 - 30 - 1.5 - 80 - 45 - 12, abs=0.5)
 
     readme = zf.read(folder + "README.md").decode()
     assert "CAD version v1" in readme
     assert "| 02_main_body.step | Main body | 2 | Aluminium 3003 (H14) | Metal spinning | Coloured lacquer |" in readme
     base_line = next(line for line in readme.splitlines() if line.startswith("| 01_base.step"))
-    assert "(recommended)" in base_line and "Black lacquer" in base_line
+    assert "Metal spinning" in base_line and "(recommended)" not in base_line and "Black lacquer" in base_line  # accepted decision
     assert "- LED module and mounting × 1: bought-in component" in readme
     assert "M4 machine screw" in readme  # derived hardware listed as not included

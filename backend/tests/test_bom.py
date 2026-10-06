@@ -15,16 +15,19 @@ def test_bom_rows_and_csv(client, faro_project):
     assert named["Main body"]["status"] == "recommended" and named["Main body"]["process"] == "Metal spinning"
     assert "unverified rule data" in named["Main body"]["flags"]
     assert bom["cad_version"] is None and named["Base"]["size_mm"] == ""
-    # Hardware derived from joints; screw size from clearance hole.
-    screws = next(r for r in rows if "base to body" in r["name"])
+    # Hardware derived from joints: weight-plate screws, one per rivet nut.
+    screws = next(r for r in rows if "weight plate to rivet nuts" in r["name"])
     assert screws["name"].startswith("M4") and screws["quantity"] == 3 and screws["derived"]
+    # New construction parts are their own BOM rows; gaskets are not duplicated as hardware.
+    assert {"Weight plate", "Lamp tube", "Lamp nut and washer", "Cap nut (finial)", "Dimmer (in base)"} <= set(named)
+    assert not any("Silicone gasket ring" in r["name"] for r in rows)
     assert bom["total"]["low"] == 10 and not bom["total"]["complete"]
 
     client.post(f"/api/projects/{pid}/cad/generate", json={"parameters": {**client.get(f"/api/projects/{pid}/cad").json()["parameters"], "mounting_hole_count": 4}})
     bom = client.get(f"/api/projects/{pid}/bom").json()
     assert bom["cad_version"] == 1
     assert next(r for r in bom["rows"] if r["name"] == "Base")["size_mm"].startswith("180")
-    assert next(r for r in bom["rows"] if "base to body" in r["name"])["quantity"] == 4
+    assert next(r for r in bom["rows"] if "weight plate to rivet nuts" in r["name"])["quantity"] == 4
 
     r = client.get(f"/api/projects/{pid}/bom.csv")
     assert r.status_code == 200 and r.headers["content-type"].startswith("text/csv")

@@ -36,8 +36,9 @@ def test_overall_height_matches_parameter(parts):
 def test_height_change_changes_geometry():
     tall = faro.build({**DEFAULTS, "overall_height": 520})
     info = export.part_info(tall)
-    assert info["top_cap"]["z_range_mm"][1] == pytest.approx(520, abs=0.01)
-    assert info["main_body"]["size_mm"][2] == pytest.approx(368, abs=0.01)
+    assert info["cap_nut"]["z_range_mm"][1] == pytest.approx(520, abs=0.01)
+    base_info = export.part_info(faro.build(DEFAULTS))
+    assert info["main_body"]["size_mm"][2] == pytest.approx(base_info["main_body"]["size_mm"][2] + 100, abs=0.01)
 
 
 def test_part_export_step_and_stl(parts, tmp_path):
@@ -80,7 +81,7 @@ def test_generate_endpoint_creates_versions_and_downloads(client, faro_project):
     r2 = client.post(f"/api/projects/{pid}/cad/generate", json={"parameters": {**params, "overall_height": 480}})
     m1, m2 = r1.json(), r2.json()
     assert (m1["version"], m2["version"]) == (1, 2)
-    assert m2["part_info"]["top_cap"]["z_range_mm"][1] == pytest.approx(480, abs=0.5)
+    assert m2["part_info"]["cap_nut"]["z_range_mm"][1] == pytest.approx(480, abs=0.5)
 
     # Per-part STEP + STL for every part, plus assembly STEP/STL/GLB.
     outs = {(o["part_key"], o["format"]) for o in m2["outputs"]}
@@ -113,7 +114,7 @@ def test_repeated_regeneration_in_one_session_is_stable(client, faro_project):
         model = r.json()
         assert model["version"] == i + 1
         assert all(info["valid"] for info in model["part_info"].values())
-        assert model["part_info"]["top_cap"]["z_range_mm"][1] == pytest.approx(p["overall_height"], abs=0.5)
+        assert model["part_info"]["cap_nut"]["z_range_mm"][1] == pytest.approx(p["overall_height"], abs=0.5)
         for out in model["outputs"]:
             assert (settings.data_dir / out["path"]).stat().st_size > 0
     assert client.get("/api/health").status_code == 200

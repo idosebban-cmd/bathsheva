@@ -51,7 +51,8 @@ def test_unknown_parameter_rejected():
 def test_lantern_must_fit_body():
     assert "lantern_diameter" in errors_for(with_(lantern_diameter=140, top_cap_diameter=150))  # > body_diameter
     assert "lantern_diameter" in errors_for(with_(lantern_diameter=105, top_cap_diameter=120))  # > body top
-    assert faro.validate(with_(lantern_diameter=100, top_cap_diameter=110)).ok
+    assert "lantern_diameter" in errors_for(with_(lantern_diameter=100, top_cap_diameter=110))  # no room for the gasket
+    assert faro.validate(with_(lantern_diameter=96, top_cap_diameter=110)).ok
 
 
 def test_body_taper_and_base_relationships():

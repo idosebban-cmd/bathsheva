@@ -30,10 +30,55 @@ def latest_model(project: Project) -> CadModel | None:
 
 
 def current_parameters(project: Project) -> dict[str, Any]:
+    defaults = dict(load_template(project.template)["cad_parameters"])
     latest = latest_model(project)
     if latest is not None:
-        return dict(latest.parameters)
-    return dict(load_template(project.template)["cad_parameters"])
+        gen = GENERATORS.get(project.template or "")
+        params = dict(latest.parameters)
+        return gen.upgrade(params, defaults) if gen is not None and hasattr(gen, "upgrade") else params
+    return defaults
+
+
+# Rough densities (g/cm³) for bought-in bodies, used only for the lamp-mass estimate.
+BOUGHT_IN_DENSITY = {
+    "weight_plate": ("steel_s275", 7.85), "lamp_tube": ("steel_s275", 7.85), "lamp_nut": ("steel_s275", 7.85),
+    "cap_nut": ("brass", 8.5), "gasket_lower": (None, 1.2), "gasket_upper": (None, 1.2),
+    "led_module": (None, 2.7), "dimmer": (None, 2.7), "cable": (None, 1.4),
+}
+
+
+def mass_estimate(project: Project, part_info: dict[str, Any] | None = None) -> dict[str, Any] | None:
+    """Estimated lamp mass from CAD volumes vs the target mass parameter."""
+    if project.template != "faro":
+        return None
+    from app.services.costing import part_geometry, snapshot_material_keys
+
+    info = part_info or part_geometry(project)[0]
+    if not info:
+        return None
+    rules = load_rules()
+    mats = snapshot_material_keys(project)
+    densities: dict[str, float] = {}
+    for key in info:
+        mk = mats.get(key)
+        m = rules.materials.get(mk or "")
+        if m is not None and m.density_g_cm3:
+            densities[key] = m.density_g_cm3
+        elif key in BOUGHT_IN_DENSITY:
+            rk, fallback = BOUGHT_IN_DENSITY[key]
+            rm = rules.materials.get(rk or "")
+            densities[key] = rm.density_g_cm3 if rm is not None and rm.density_g_cm3 else fallback
+        elif mk == "brass":
+            densities[key] = 8.5
+    if "cable" in densities:
+        densities.pop("cable")  # the cable stub is not part of the lamp's mass
+    est = faro.estimate_mass(info, densities)
+    target = float(current_parameters(project).get("target_mass_kg") or 0) or None
+    status = "unknown"
+    if target:
+        status = "low" if est["total_kg"] < target * 0.95 else ("high" if est["total_kg"] > target * 1.25 else "ok")
+    return {**est, "target_kg": target, "status": status,
+            "note": "Estimate from CAD volumes and typical densities; electronics, cable and finish are approximate."}
 
 
 def wall_limits(project: Project) -> dict[str, faro.WallLimit]:

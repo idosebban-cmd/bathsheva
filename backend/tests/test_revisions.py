@@ -26,7 +26,7 @@ def test_revisions_are_immutable_snapshots(client, faro_project):
     assert old["requirements"]["production_volume"] is None and new["requirements"]["production_volume"] == 2000
     old_body = next(p for p in old["parts"] if p["cad_key"] == "main_body")
     assert old_body["material"] == ""
-    assert len(old["recommendations"]) == 7
+    assert len(old["recommendations"]) == 14
 
     # Old revision's CAD files are still downloadable.
     step = next(o["path"] for o in old["cad_model"]["outputs"] if o["part_key"] is None and o["format"] == "step")

@@ -35,6 +35,7 @@ def cad_state(project: Project = Depends(get_project)) -> dict[str, Any]:
         "validation": cad_service.validate(project, params).as_dict(),
         "wall_limits": {k: asdict(v) for k, v in cad_service.wall_limits(project).items()},
         "latest": CadModelOut.model_validate(latest).model_dump(mode="json") if latest else None,
+        "mass": cad_service.mass_estimate(project),
     }
 
 
