@@ -9,10 +9,12 @@ A local web app for AI-assisted product engineering of physical consumer product
 ./run.sh test     # backend pytest + front-end typecheck
 ```
 
+On a Mac, `bash scripts/setup_mac.sh` does the whole setup. It asks before installing the Xcode command line tools, Homebrew, uv or Node.js LTS, and it supports `--dry-run` and `--yes`. It builds the venv with uv on pinned Python 3.12, which has CadQuery wheels for both Apple Silicon and Intel. It then migrates the database (backing it up first if a migration is pending) and runs a CAD self-test in a temporary folder (`scripts/workbench_check.py`). It is safe to re-run. After that, double-click `Start Workbench.command`. README.md has the user-facing steps. `WORKBENCH_SETUP_ALLOW_NON_MAC=1` runs the non-macOS parts on Linux for testing.
+
 - Front end: http://127.0.0.1:5173. Vite proxies `/api` and `/files` to the backend on :8000.
 - The LLM is optional. Set `ANTHROPIC_API_KEY` to enable the Anthropic provider. `WORKBENCH_LLM_PROVIDER=mock|anthropic|none` overrides the choice. With no key the provider is `none` and everything except "Explain with AI" works.
-- Other environment variables: `WORKBENCH_DATA_DIR` (default `./data`), `WORKBENCH_DATABASE_URL`, `WORKBENCH_ANTHROPIC_MODEL` (default `claude-opus-5-5`; explanations use low effort plus server-side refusal fallback).
-- Requirements: Python 3.10–3.13 (for CadQuery wheels) and Node 18+.
+- Other environment variables: `WORKBENCH_DATA_DIR` (default `~/Bathsheva Workbench/data`, outside the repo; `app/datadir.py` moves a legacy in-repo `data/` there once, when the default is used and the target is empty), `WORKBENCH_DATABASE_URL`, `WORKBENCH_ANTHROPIC_MODEL` (default `claude-opus-5-5`; explanations use low effort plus server-side refusal fallback).
+- Requirements: Python 3.10–3.13 (for CadQuery wheels; `run.sh` and the Mac setup create the venv on 3.12) and Node 18+.
 
 ## Architecture
 
@@ -21,6 +23,7 @@ frontend/            Vite + React + TS. Pages per tab, react-three-fiber GLB vie
 backend/app/
   main.py            FastAPI app factory, mounts routers and /files/projects static
   config.py          Settings from env
+  datadir.py         Data folder location and the one-time move out of the repo
   db.py              SQLAlchemy engine/session; init_db() runs migrations
   migrate.py         Alembic upgrade at startup (+ adopts pre-migration DBs)
   models.py          ORM. M1 tables plus schema-only later entities
@@ -41,10 +44,12 @@ backend/seed/
                      regions, route design changes, channel pricing, commodities (LME, FX, premiums)
   products/faro.yaml Faro template: parts, requirements placeholders, CAD defaults
 backend/migrations/  Alembic env and versions/ (one file per schema change)
-scripts/             stress_cad.py (CAD soak test), check_run_shutdown.py (run.sh stop behaviour),
-                     cost_audit.py (regenerates docs/cost-assumptions-audit.md)
+scripts/             stress_cad.py (CAD soak test), check_run_shutdown.py (run.sh and launcher stop behaviour),
+                     cost_audit.py (regenerates docs/cost-assumptions-audit.md),
+                     setup_mac.sh + mac_env.sh + workbench_check.py (Mac setup, PATH, migrate/self-test)
+Start Workbench.command  Double-click launcher for macOS (wraps run.sh, opens the browser)
 docs/                Generated reports (cost-assumptions-audit.md) and cost-price-research.md
-data/                Runtime: SQLite DB, uploads, CAD outputs (gitignored)
+~/Bathsheva Workbench/data   Runtime: SQLite DB, uploads, CAD outputs (outside the repo)
 ```
 
 Boundaries: routers handle only HTTP. The rules engine is pure, with no DB access: it takes plain dicts and returns recommendations. The CAD module never imports the DB. The AI layer only explains recommendations the rules engine has already made, and never changes them.
@@ -65,7 +70,7 @@ Other useful commands, run from `backend/`: `.venv/bin/alembic current`, `.venv/
 
 ## Process management
 
-`run.sh` signals only its own two servers. Ctrl-C or SIGTERM is a clean stop (exit 0). If a server dies unexpectedly, `run.sh` stops the other one and exits with the dead server's status. Never use `kill 0` in a trap that also handles TERM: it re-enters itself and bash segfaults (exit 139). After changing `run.sh`, run `backend/.venv/bin/python scripts/check_run_shutdown.py`.
+`run.sh` signals only its own two servers. Ctrl-C, SIGTERM or SIGHUP (Terminal window closed) is a clean stop (exit 0). `Start Workbench.command` runs `run.sh` in the background and forwards INT, HUP and TERM to it as TERM. If a server dies unexpectedly, `run.sh` stops the other one and exits with the dead server's status. Never use `kill 0` in a trap that also handles TERM: it re-enters itself and bash segfaults (exit 139). After changing `run.sh` or the launcher, run `backend/.venv/bin/python scripts/check_run_shutdown.py`, and shellcheck the shell scripts.
 
 ## Front-end tabs and API
 
