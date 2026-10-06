@@ -88,7 +88,7 @@ Other useful commands, run from `backend/`: `.venv/bin/alembic current` and `.ve
 | Engineering | `GET /recommendations`, `POST /recommendations/{part}/explain` (LLM), `POST /decisions` |
 | BOM | `GET /bom`, `GET /bom.csv` |
 | Manufacturing | `GET /costs`; `GET/POST /cost-items`, `PATCH/DELETE /cost-items/{id}`, `POST /cost-items/reset`; `GET/PUT /cost-settings` (volume discounts); `GET /cost-audit?quantity=500` (+ `.md`, `.csv`) |
-| Cost-down | `GET/PUT /pricing`; `GET /routes`, `POST /parts/{part}/route`; `GET /scenarios`, `POST /scenarios/evaluate`; `GET /cost-down/summary`; `GET/POST /scenario-sets`, `DELETE /scenario-sets/{id}` |
+| Cost-down | `GET/PUT /pricing` (incl. the DTC price stack); `GET /routes`, `POST /parts/{part}/route`; `GET /scenarios`, `POST /scenarios/evaluate`; `GET /cost-down/summary`; `GET/POST /scenario-sets`, `DELETE /scenario-sets/{id}` |
 | DFM report | `GET /dfm`, `GET /dfm.md` |
 | Factory Pack | `GET /factory-pack`, `GET /factory-pack.zip`, `GET /drawings/{cad_key}.svg\|.pdf`, `GET /rfq.md\|.pdf` |
 | Revisions | `GET/POST /revisions`, `GET /revisions/{n}` (no update or delete) |
@@ -117,10 +117,11 @@ Ranges: each input is widened by its confidence (`seed/cost/general.yaml` `confi
 - **Sheet-formed parts** (spun, pressed, rolled) are costed as a shell of the CAD wall thickness when the CAD body is solid.
 - **Accepted decisions** in `faro.yaml` `decisions` are recorded on new projects (`services/decisions.py`, idempotent). They cover:
   - spun base, tower and cap;
-  - turned brass gallery, frame, spigot, finial and knob;
+  - spun brass gallery (1 mm shell + soldered locating ring);
+  - brass frame, spigot, finial and knob turned from near-net stock (`cnc_turning_near_net`: tube, ring blank or close bar; stock = finished volume × `stock_factor`);
   - photo-etched railing and nameplate;
-  - turned cream band;
-  - borosilicate lantern and opal diffuser;
+  - cream band turned from near-net stock;
+  - borosilicate lantern and opal diffuser (window zone only, on a spider on the tower-light spine);
   - cordless power;
   - bonded-and-screwed construction (no central rod).
 
@@ -129,6 +130,10 @@ Ranges: each input is widened by its confidence (`seed/cost/general.yaml` `confi
 - **Power options** (`faro.yaml` `power_options`): A (cordless, 2 x 18650, USB-C) and B (scenario g: external adapter + DC-DC driver, no battery). The product summary optimises each separately; B always includes g.
 - **Price points** (`faro.yaml` `pricing.price_points`, plus the planned retail price): the summary's `price_points` table shows the DTC and retail-channel factory targets at each retail price and how the current and best configurations (power A, 500 and 2,000) compare.
 - **Scenarios** live in `faro.yaml` `scenarios`. The optimiser searches every non-conflicting subset and every region exhaustively. Each multi-option change uses its cheapest option on its own, which is valid because options touch only their own part (a test checks this against brute force). There are three tiers by `premium_impact`: strict (none), premium (none or slight) and any.
+- **One-off costs:** cost items of kind `one_off` (lamp safety/EMC testing on both power options; custom-pack UN38.3/IEC 62133-2 testing in scenario c) are totals divided by the quantity, listed after freight and duty and never charged freight. The baseline battery is a pre-certified pack (supplier provides the reports).
+- **Simplified premium** (scenario s, `edition: true`): gallery, railing and lantern frame in colour-matched lacquered aluminium (`effect.reroutes` + `effect.finishes`), brass only on the finial, knob and nameplate. The optimiser never picks an edition scenario; the summary's `editions` table costs it next to full detail (best strict) for each power option at 500 and 2,000.
+- **DTC price stack:** `stack_*` pricing keys (freight/storage, delivery, payment % + fixed, returns %, marketing £/sale, other one-off £ total, profit %) plus VAT. `pricing.price_stack()` gives break-even and profit-target retail (inc. VAT): ex-VAT = per-unit costs / (1 − returns − payment × (1 + VAT) − profit).
+- **Template decisions changed** (no part change) also trigger the Overview "Update to the current design" banner (`decisions.missing_template_decisions`).
 - **Pricing:** `projects.pricing` overlays defaults from `seed/cost/pricing.yaml` plus the template. DTC target = ex-VAT × dtc share. Retail-channel target = ex-VAT × (1 − retailer margin) × wholesale share. Status: pass ≤ target, close ≤ target × (1 + close band), otherwise fail.
 - **Migrations on SQLite** run with foreign keys off (`app/migrate.py`), because batch rebuilds would otherwise cascade-delete child rows.
 
@@ -139,7 +144,7 @@ Ranges: each input is widened by its confidence (`seed/cost/general.yaml` `confi
 - **Assumptions:** placeholder requirements are listed in `project.assumed_fields` and shown with an Assumption badge. When an inferred value feeds the rules (for example, assumed volume when volume is TBD), it appears in the recommendation's `assumptions`.
 - **Plain language first:** each recommendation leads with a non-engineer explanation, with technical detail underneath.
 - **Units:** millimetres, degrees, GBP.
-- **CAD:** one body per part. A part's `cad_key` equals the generator's body name. Faro has 21 bodies (spun base/tower/cap, turned brass gallery/frame/spigot/finial/knob, photo-etched railing and nameplate, glass lantern and diffuser, plates, felt, and placeholder electronics). `overall_height` runs from the base underside to the finial top; the felt adds 1.9 mm below. Revolved parts are built from 2D half-sections (`faro._sections`), and shells are an offset of the outer profile. Offset curves are converted to B-splines, because a revolved offset curve doesn't survive STEP. `faro.model()` caches one build per parameter set. Old saved parameters are upgraded with new defaults (`faro.upgrade`). Pre-prototype parameters (no `tower_bottom_diameter`) are replaced by the defaults. The tower's red section is the same part in two-tone lacquer. The GLB splits it into `tower` and `tower_lower` for the preview only. Every regeneration creates a new immutable `CadModel` version under `data/projects/<id>/cad/v<n>/`.
+- **CAD:** one body per part. A part's `cad_key` equals the generator's body name. Faro has 21 bodies (spun base/tower/cap, spun brass gallery, turned brass frame/spigot/finial/knob, photo-etched railing and nameplate, glass lantern and diffuser, plates, felt, and placeholder electronics). `overall_height` runs from the base underside to the finial top; the felt adds 1.9 mm below. Revolved parts are built from 2D half-sections (`faro._sections`), and shells are an offset of the outer profile. Offset curves are converted to B-splines, because a revolved offset curve doesn't survive STEP. `faro.model()` caches one build per parameter set. Old saved parameters are upgraded with new defaults (`faro.upgrade`). Pre-prototype parameters (no `tower_bottom_diameter`) are replaced by the defaults. The tower's red section is the same part in two-tone lacquer. The GLB splits it into `tower` and `tower_lower` for the preview only. Every regeneration creates a new immutable `CadModel` version under `data/projects/<id>/cad/v<n>/`.
 - **Cordless power:** baseline 2 x 18650 + USB-C (`requirements.power_type: battery`); option B (external adapter) is scenario g. `requirements.battery_runtime_h` is the editable runtime target; `faro.yaml` `electrical` holds the battery spec, LED loads (with provenance) and battery compliance flags shown in the Overview, DFM and RFQ.
 - **Template upgrades:** projects created from an older template version keep their old parts until the user presses "Update to the current design" (Overview). `services/template_upgrade.py` removes old parts (with their quotes and decisions), adds new ones, updates the requirements the template now fixes, re-applies decisions and resets cost items.
 - **Revisions:** an immutable JSON snapshot (requirements, parameters, parts, decisions, recommendations, CAD version and its file paths). No branching.

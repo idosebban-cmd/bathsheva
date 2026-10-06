@@ -84,3 +84,32 @@ def test_template_upgrade_replaces_old_faro_parts(client, faro_project):
     assert "approx_dimensions" not in proj["assumed_fields"]
     assert client.get(f"/api/projects/{pid}/template-upgrade").json()["needed"] is False
     assert any(i["price_key"] == "battery_pack" for i in client.get(f"/api/projects/{pid}/cost-items").json())
+
+
+def test_template_upgrade_offered_when_only_decisions_changed(client, faro_project):
+    """A project made before the near-net and spun-gallery decisions gets them through the same upgrade."""
+    from app.db import new_session
+    from app.models import EngineeringDecision
+
+    pid = faro_project["id"]
+    session = new_session()
+    project = session.get(Project, pid)
+    gallery = next(p for p in project.parts if p.cad_key == "gallery")
+    for d in list(project.decisions):
+        if d.part_id == gallery.id:
+            session.delete(d)
+    session.commit()
+    session.close()
+    client.delete(f"/api/projects/{pid}/cost-items/" + str(next(
+        i["id"] for i in client.get(f"/api/projects/{pid}/cost-items").json() if i["price_key"] == "lamp_safety_emc_testing")))
+
+    plan = client.get(f"/api/projects/{pid}/template-upgrade").json()
+    assert plan["needed"] and not plan["remove"] and not plan["add"]
+    assert plan["decisions"] == ["Gallery: metal spinning (brass)"]
+    assert client.post(f"/api/projects/{pid}/template-upgrade").json()["done"]
+    assert client.get(f"/api/projects/{pid}/template-upgrade").json()["needed"] is False
+    session = new_session()
+    ds = session.query(EngineeringDecision).filter_by(project_id=pid, part_id=gallery.id).all()
+    assert [d.chosen["process_key"] for d in ds] == ["metal_spinning"]
+    session.close()
+    assert any(i["price_key"] == "lamp_safety_emc_testing" for i in client.get(f"/api/projects/{pid}/cost-items").json())

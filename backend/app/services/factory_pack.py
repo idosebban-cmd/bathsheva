@@ -191,10 +191,10 @@ def rfq_blocks(c: dict[str, Any]) -> list[Block]:
         "plate on four M2.5 screws so the user can replace the battery; felt pad on magnets.",
         "Cream band: turned aluminium ring; the base screws into it (three M3) and the tower is bonded on its spigot.",
         f"Tower: spun aluminium cone, two-tone lacquer (red lower section, masked line), {int(p['window_count'])} arched windows "
-        "laser-cut after spinning, an opal borosilicate diffuser tube and a tower light behind them.",
-        "Gallery and railing: turned solid brass ring; photo-etched brass railing rolled into a ring (please also quote "
+        "laser-cut after spinning, an opal borosilicate diffuser tube (window zone only) and a tower light behind them.",
+        "Gallery and railing: spun brass shell with a soldered turned locating ring; photo-etched brass railing rolled into a ring (please also quote "
         "soldered brass wire and lost-wax casting).",
-        "Lantern: frosted borosilicate tube inside a brass frame (turned rings, soldered mullions); the red spun cap "
+        "Lantern: frosted borosilicate tube inside a brass frame (rings turned from tube, soldered mullions); the red spun cap "
         "twist-locks onto the frame with a turned brass bayonet spigot (four lugs, 20° turn) and a brass ball finial.",
         "Construction: bonded and screwed, no central rod; no visible fixings.",
         "Cordless: 2 x 18650 Li-ion cells, USB-C charging, rotary dimmer with a solid brass knob on the tower.",
@@ -237,7 +237,8 @@ def rfq_blocks(c: dict[str, Any]) -> list[Block]:
     b.append(Block("bullets", items=[
         "Lantern LED: 2700 K, CRI ≥ 90, about 1.5 W, on a Ø38 mm board resting on the gallery ledge.",
         "Tower light: warm white LED filament strips (about 0.8 W) on a central spine behind the windows.",
-        "Battery: 2 x 18650 Li-ion (about 3,350 mAh branded cells) with a protection circuit, user-replaceable.",
+        "Battery: pre-certified 2 x 18650 Li-ion pack (about 3,350 mAh branded cells, protection circuit), user-replaceable; "
+        "the pack supplier provides the UN38.3 test summary and IEC 62133-2 report.",
         "Control board: USB-C charging, 2-cell charger, 2-channel constant-current LED driver, input for the rotary "
         "dimmer (slim 9 mm pot with switch, D-shaft).",
         runtime_line,

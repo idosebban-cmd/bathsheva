@@ -73,6 +73,7 @@ class ProcessRate(Priced):
     material_utilisation: Span
     min_per_cm3_removed: Span | None = None
     stock_allowance_mm: float | None = None
+    stock_factor: float | None = None  # near-net turning: stock bought = finished volume x this
     lead_time_weeks: Span | None = None
 
 

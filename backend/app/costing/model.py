@@ -28,8 +28,8 @@ from dataclasses import dataclass, field
 from typing import Any
 
 CATEGORY_ORDER = ["material", "process", "setup", "finishing", "tooling", "bought_in", "assembly", "packaging",
-                  "freight_duty"]
-ITEM_CATEGORIES = {"bought_in", "assembly", "packaging", "finishing"}
+                  "freight_duty", "one_off"]
+ITEM_CATEGORIES = {"bought_in", "assembly", "packaging", "finishing", "one_off"}
 
 
 @dataclass(frozen=True)
@@ -105,6 +105,9 @@ class PartSpec:
     finish_name: str | None
     basis: str  # "decided" | "recommended"
     cnc_allowance_mm: float | None = None  # set when the process is CNC (stock-based material)
+    # Turned from near-net stock (tube, ring blank or close-fitting bar): stock = finished volume x this
+    # factor, instead of a solid bar the size of the part's envelope plus the allowance.
+    cnc_stock_factor: float | None = None
     tooling_band: str = "none"
     # Sheet-formed parts (spun, pressed, rolled) are shells: if the CAD body is solid, cost
     # the material as a shell of this wall thickness over the visible surface instead.
@@ -190,7 +193,8 @@ def effective_volume_cm3(p: PartSpec) -> float:
 def part_quantities(p: PartSpec, keys: dict[str, str], v: dict[str, float]) -> dict[str, float]:
     finished_kg = effective_volume_cm3(p) * p.density_g_cm3 / 1000
     if p.cnc_allowance_mm is not None:
-        stock_cm3 = p.geometry.cnc_stock_cm3(p.cnc_allowance_mm)
+        stock_cm3 = (p.geometry.volume_cm3 * p.cnc_stock_factor if p.cnc_stock_factor
+                     else p.geometry.cnc_stock_cm3(p.cnc_allowance_mm))
         bought_kg = stock_cm3 * p.density_g_cm3 / 1000
         removed = max(stock_cm3 - p.geometry.volume_cm3, 0.0)
         minutes = v[keys["cycle"]] + removed * v[keys["removal"]]
@@ -241,6 +245,7 @@ def evaluate(inputs: CostInputs, values: dict[str, float], quantity: float, raw:
             per_piece = max(values[k["finish_min"]], p.geometry.visible_area_m2 * values[k["finish_m2"]])
             lines.append(Line("finishing", p.part_id, None, p.name, n * per_piece, [k["finish_m2"], k["finish_min"]]))
         lines.append(Line("tooling", p.part_id, None, p.name, values[k["tooling"]] / q, [k["tooling"]]))
+    one_off: list[Line] = []
     for it in inputs.items:
         qty_val = values[it.qty_key] if it.qty_key else it.quantity
         unit_cost = values[it.cost_key] / 60 if it.unit == "min" else values[it.cost_key]
@@ -249,12 +254,15 @@ def evaluate(inputs: CostInputs, values: dict[str, float], quantity: float, raw:
             unit_cost *= values[it.discount_key]
             keys.append(it.discount_key)
         category = it.kind if it.kind in ITEM_CATEGORIES else "bought_in"
+        if category == "one_off":  # a one-off cost (e.g. certification testing), shared over the batch
+            one_off.append(Line(category, None, it.item_id, it.name, qty_val * unit_cost / q, keys))
+            continue
         lines.append(Line(category, None, it.item_id, it.name, qty_val * unit_cost, keys))
     if inputs.overhead_key:
         factory = total(lines)
         lines.append(Line("freight_duty", None, None, "Freight and import duty",
                           factory * values[inputs.overhead_key] / 100, [inputs.overhead_key]))
-    return lines
+    return lines + one_off  # one-off costs (UK testing) carry no freight or duty
 
 
 def total(lines: list[Line]) -> float:

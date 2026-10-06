@@ -338,17 +338,20 @@ def _part_notes(key: str, p: dict[str, float], d: dict[str, Any]) -> list[tuple[
         n.append((f"Two-tone lacquer: red from the foot to {_fmt(p['red_section_height'])} (masked line, crisp and level), cream "
                   "above; clear-coated. Mask the window edges.", INK))
     elif key == "band_cream":
-        n.append((f"Turned from aluminium 6061 bar or thick tube. {faro.BAND_SCREWS} × M3 tapped blind holes from below on PCD "
+        n.append((f"Turned from aluminium 6061 thick tube or a ring blank (near-net stock). {faro.BAND_SCREWS} × M3 tapped blind holes from below on PCD "
                   f"Ø{_fmt(d['band_screw_pcd'])}, 5 deep. Spigot locates the tower (bonded).", INK))
         n.append(("Cream lacquer, clear-coated; top edge R1.", INK))
     elif key == "diffuser":
         n.append((f"Opal (acid-etched) borosilicate 3.3 tube, OD Ø{_fmt(d['diffuser_od'])}, wall {_fmt(faro.DIFFUSER_WALL)}, length "
-                  f"{_fmt(d['diffuser_length'])}. Nearest stock OD may be proposed (fit inside the tower top with a silicone ring).", INK))
+                  f"{_fmt(d['diffuser_length'])} (window zone only). Nearest stock OD may be proposed. Stands on a spider on the "
+                  "tower-light spine; a silicone ring centres the top in the tower.", INK))
         n.append(("Both ends ground. Even diffusion: no clear patches visible through the windows.", INK))
         n.append(("SAFETY: glass edge finishing and retention to be verified.", WARN))
     elif key == "gallery":
-        n.append((f"Turned solid brass (CZ121). LED ledge Ø{_fmt(faro.LEDGE_BORE)} bore × {_fmt(faro.LEDGE_T)} flush with the top; "
-                  f"spigot below fits inside the tower top (bonded). Outer edges R{_fmt(faro.GALLERY_ROUND)}.", INK))
+        n.append((f"Spun brass (CZ108) shell t = {_fmt(faro.GALLERY_SHEET)}: flat top with a Ø{_fmt(faro.LEDGE_BORE)} bore (the LED "
+                  f"rests on it), outer skirt, open underneath; top outer edge R{_fmt(faro.GALLERY_ROUND)}.", INK))
+        n.append(("Turned brass locating ring (from tube) soldered under the top: sits on the tower top, spigot fits inside it "
+                  "(bonded).", INK))
         n.append(("Tumble-polished, clear lacquer. The railing is soldered or bonded on the top face.", INK))
     elif key == "railing":
         fp = railing_flat_pattern(p)
@@ -358,7 +361,7 @@ def _part_notes(key: str, p: dict[str, float], d: dict[str, Any]) -> list[tuple[
         n.append(("Rolled to a ring, seam soldered on a post, then soldered to the gallery. Tumble-polished, clear lacquer.", INK))
         n.append(("Alternatives to quote: soldered brass wire (Ø1.6 posts and rails) or lost-wax cast brass.", INK))
     elif key == "lantern_frame":
-        n.append((f"Brass: turned bottom ring and top band; {int(p['lantern_mullions'])} mullion bars {_fmt(faro.MULLION_W)} × "
+        n.append((f"Brass: bottom ring and top band turned from tube; {int(p['lantern_mullions'])} mullion bars {_fmt(faro.MULLION_W)} × "
                   f"{_fmt(faro.MULLION_DEPTH)} soldered or brazed between them (a panel faces the front).", INK))
         n.append((f"Top band carries the bayonet: lip {_fmt(faro.LIP_H)} high, {faro.LOCK_LUGS} entry slots "
                   f"{_fmt(faro.LOCK_LUG_W + 2 * faro.FIT_CLEAR)} wide, and a stop {abs(faro.LOCK_TURN_DEG):g}° clockwise "
@@ -375,14 +378,14 @@ def _part_notes(key: str, p: dict[str, float], d: dict[str, Any]) -> list[tuple[
                   f"Ø{_fmt(faro.FINIAL_STUD_D + 0.5)}.", INK))
         n.append(("Red lacquer, clear-coated. The brass bayonet spigot is bonded under the shoulder.", INK))
     elif key == "cap_spigot":
-        n.append((f"Turned brass ring with {faro.LOCK_LUGS} lugs {_fmt(faro.LOCK_LUG_W)} × {_fmt(faro.LOCK_LUG_H)} at the foot; "
+        n.append((f"Brass ring turned from tube, with {faro.LOCK_LUGS} lugs {_fmt(faro.LOCK_LUG_W)} × {_fmt(faro.LOCK_LUG_H)} at the foot; "
                   f"fit clearance {_fmt(faro.FIT_CLEAR)} per side in the lantern lip. Flange bonded inside the cap.", INK))
         n.append(("Hidden when fitted: natural brass, no cosmetic finish.", INK))
     elif key == "finial":
-        n.append((f"Turned brass ball Ø{_fmt(p['finial_diameter'])} on a neck, M4 stud through the cap (nyloc nut inside).", INK))
+        n.append((f"Brass ball Ø{_fmt(p['finial_diameter'])}, turned from close-fitting bar, on a neck, M4 stud through the cap (nyloc nut inside).", INK))
         n.append(("Tumble-polished, clear lacquer.", INK))
     elif key == "knob":
-        n.append((f"Turned solid brass knob Ø{_fmt(p['knob_diameter'])} × {_fmt(faro.KNOB_PROUD)}, front edge R1; D-shaft bore "
+        n.append((f"Solid brass knob (turned from close-fitting bar) Ø{_fmt(p['knob_diameter'])} × {_fmt(faro.KNOB_PROUD)}, front edge R1; D-shaft bore "
                   "and grub screw (or push-fit) to suit the chosen 9 mm pot.", INK))
         n.append(("Tumble-polished, clear lacquer. Back face clears the conical tower by 0.5 mm.", INK))
     elif key == "nameplate":

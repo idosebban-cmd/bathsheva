@@ -222,7 +222,7 @@ def test_faro_cost_report(client, faro_project):
     assert any("potentiometer" in n.lower() for n in names)  # dimming is required
     assert not any("driver (mains)" in n for n in names)
     assert any("windows" in n.lower() for n in names)  # window laser-cutting
-    assert {"assembly", "packaging", "bought_in"} <= {ln["category"] for ln in r["product_lines"]}
+    assert {"assembly", "packaging", "bought_in", "one_off"} <= {ln["category"] for ln in r["product_lines"]}
 
 
 def test_project_volume_added_to_table(client, faro_project):
@@ -325,3 +325,40 @@ def test_cost_items_migration(tmp_path):
         cfg.attributes["connection"] = conn
         command.downgrade(cfg, "0002")
     assert "cost_items" not in inspect(engine).get_table_names()
+
+
+def test_one_off_items_are_shared_over_the_batch_without_freight():
+    inp = simple_inputs()
+    inp.assumptions["item:10"] = A("item:10", 9000)
+    inp.assumptions["freight"] = A("freight", 10)
+    inp.items.append(ItemSpec(10, "one_off", "Safety and EMC testing", 1, "pcs", "item:10"))
+    inp.overhead_key = "freight"
+    for q in (500, 2000):
+        lines = evaluate(inp, inp.mids(), q)
+        cats = by_cat(lines)
+        assert cats["one_off"] == pytest.approx(9000 / q)
+        assert cats["freight_duty"] == pytest.approx((total(lines) - cats["one_off"] - cats["freight_duty"]) * 0.10)
+        assert lines[-1].category == "one_off"  # listed after freight and duty
+
+
+def test_near_net_stock_factor_replaces_bar_stock():
+    inp = simple_inputs(cnc=True)
+    inp.parts[0].cnc_stock_factor = 1.5
+    cats = by_cat(evaluate(inp, inp.mids(), 100))
+    assert cats["material"] == pytest.approx(2 * 100 * 1.5 * 2.7 / 1000 * 5)  # 1.5 x the part volume, not the bar
+    assert cats["process"] == pytest.approx(2 * (6 + 50 * 0.02) * 60 / 60)  # removes only the 50 cm3 allowance
+
+
+def test_faro_near_net_parts_and_one_off_testing(client, faro_project):
+    pid = faro_project["id"]
+    report = client.get(f"/api/projects/{pid}/costs").json()
+    parts = {p["name"]: p for p in report["parts"]}
+    for name in ("Lantern frame", "Finial", "Dimmer knob", "Cream band", "Cap bayonet spigot"):
+        assert parts[name]["process"].startswith("CNC turning from near-net stock"), (name, parts[name]["process"])
+    gallery = parts["Gallery"]
+    assert gallery["process"] == "Metal spinning" and gallery["material"].startswith("Brass")
+    items = client.get(f"/api/projects/{pid}/cost-items").json()
+    testing = next(i for i in items if i["price_key"] == "lamp_safety_emc_testing")
+    assert testing["kind"] == "one_off"
+    battery = next(i for i in items if i["price_key"] == "battery_pack")
+    assert "pre-certified" in battery["name"].lower()

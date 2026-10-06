@@ -14,6 +14,8 @@ const CATEGORY_TEXT: Record<string, [string, string]> = {
   bought_in: ["Bought-in parts", "LED, electronics, cable, fasteners and seals bought ready-made."],
   assembly: ["Assembly", "Putting the lamp together, wiring and testing it."],
   packaging: ["Packaging", "Retail box and inserts."],
+  freight_duty: ["Freight and duty", "Shipping to the UK and import duty when made abroad."],
+  one_off: ["One-off costs", "Certification testing and similar one-off costs, shared across the batch."],
 };
 
 export default function ManufacturingPage() {
@@ -221,7 +223,10 @@ function priceChange(it: CostItem, end: "low" | "high", value: number | null): P
     : { unit_cost_high: value };
 }
 
-const KIND_LABEL = { bought_in: "Bought-in", assembly: "Assembly", packaging: "Packaging", other: "Other" };
+const KIND_LABEL: Record<CostItem["kind"], string> = {
+  bought_in: "Bought-in", assembly: "Assembly", packaging: "Packaging", finishing: "Finishing",
+  one_off: "One-off (total £, shared over the batch)", other: "Other",
+};
 
 const BASIS_LABEL: Record<CostItem["price_basis"], string> = {
   trade_volume: "trade / volume",

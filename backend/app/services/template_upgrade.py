@@ -6,7 +6,8 @@ truth), so projects created before then carry the old parts. The upgrade:
 * removes parts the template no longer has (with their quotes and decisions),
 * adds the template's new parts,
 * updates requirements the template now fixes (dimensions, power, runtime),
-* records the template's accepted decisions,
+* records the template's accepted decisions (also offered when only the decisions changed,
+  e.g. Oct 2026: near-net turning, the spun gallery),
 * resets the cost line items to the template defaults,
 * and leaves CAD history alone (the CAD tab starts from the new defaults).
 
@@ -30,7 +31,7 @@ UPDATED_REQUIREMENTS = ["approx_dimensions", "power_type", "battery_runtime_h", 
 
 def plan(project: Project) -> dict[str, Any]:
     if not project.template:
-        return {"needed": False, "remove": [], "add": [], "requirements": []}
+        return {"needed": False, "remove": [], "add": [], "requirements": [], "decisions": []}
     tpl = load_template(project.template)
     tpl_keys = [p["cad_key"] for p in tpl["parts"]]
     have = {p.cad_key: p for p in project.parts if p.cad_key}
@@ -45,7 +46,13 @@ def plan(project: Project) -> dict[str, Any]:
     add = [{"cad_key": p["cad_key"], "name": p["name"]} for p in tpl["parts"] if p["cad_key"] not in have]
     req = project.requirements or {}
     changed = [k for k in UPDATED_REQUIREMENTS if req.get(k) != tpl["requirements"].get(k)]
-    return {"needed": bool(remove or add), "remove": remove, "add": add, "requirements": changed}
+    from app.services.decisions import missing_template_decisions
+
+    names = {p["cad_key"]: p["name"] for p in tpl["parts"]}
+    decisions = [f"{names.get(d['part'], d['part'])}: {d['process'].replace('_', ' ')} ({d['material'].replace('_', ' ')})"
+                 if "part" in d else d["topic"].replace("_", " ") for d in missing_template_decisions(project)]
+    return {"needed": bool(remove or add or decisions), "remove": remove, "add": add, "requirements": changed,
+            "decisions": decisions}
 
 
 def upgrade(session: Session, project: Project) -> dict[str, Any]:

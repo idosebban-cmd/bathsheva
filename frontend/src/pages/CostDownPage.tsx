@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { api, errorText } from "../api";
 import { SafetyBadge, UnverifiedBadge } from "../components/Badges";
 import { gbp } from "../components/CostCharts";
@@ -72,7 +72,32 @@ interface PricePointRow {
   cost: { low: number; mid: number; high: number };
   by_price: Record<string, Record<"dtc" | "retail", TargetAssess>>;
 }
+interface StackLine {
+  key: string;
+  label: string;
+  amount: number;
+}
+interface PriceStack {
+  factory_cost: number;
+  quantity: number;
+  break_even_retail: number;
+  target_retail: number;
+  lines: StackLine[];
+  at_planned?: { retail: number; profit: number; profit_pct: number };
+}
+interface EditionRow {
+  edition: string;
+  power: string;
+  power_label: string;
+  quantity: number;
+  region_name: string;
+  cost: Range;
+  targets: Record<"dtc" | "retail", TargetAssess>;
+  selection: string[];
+  price_stack: PriceStack;
+}
 interface Summary {
+  editions?: { rows: EditionRow[]; label: string | null; notes: string[] };
   price_points?: { points: PricePoint[]; rows: PricePointRow[]; power_label: string; notes: string[] };
   rows: SummaryRow[];
   power_options?: { key: string; label: string; scenario: string | null }[];
@@ -224,6 +249,7 @@ export default function CostDownPage() {
         </p>
       </section>
       <TargetsCard pricing={pricing} projectId={project.id} onSaved={loadAll} />
+      <PriceStackCard pricing={pricing} summary={summary} projectId={project.id} onSaved={loadAll} />
       <SummaryCard summary={summary} />
       <ScenarioBuilder projectId={project.id} catalog={catalog} />
       <RoutesCard projectId={project.id} routes={routes} onChanged={loadAll} />
@@ -323,6 +349,164 @@ function TargetsCard({ pricing, projectId, onSaved }: { pricing: Pricing; projec
           <button className="primary" disabled={!Object.keys(draft).length} onClick={save}>
             Save pricing
           </button>
+          <span className="muted small">{status}</span>
+        </div>
+      </details>
+    </section>
+  );
+}
+
+// ---- DTC price stack -----------------------------------------------------------------
+
+const STACK_FIELDS: [string, string, "money" | "pct"][] = [
+  ["vat_rate", "VAT", "pct"],
+  ["stack_freight", "Inbound handling and storage (£ per lamp)", "money"],
+  ["stack_delivery", "Delivery to customer (£ per order)", "money"],
+  ["stack_payment_pct", "Payment fees (% of price paid)", "pct"],
+  ["stack_payment_fixed", "Payment fee per order (£)", "money"],
+  ["stack_returns_pct", "Returns and warranty (% of ex-VAT price)", "pct"],
+  ["stack_marketing", "Marketing per sale (£)", "money"],
+  ["stack_one_off", "Other one-off launch costs (£ total, shared over the batch)", "money"],
+  ["stack_profit_pct", "Profit target (% of ex-VAT price)", "pct"],
+];
+
+function PriceStackCard({ pricing, summary, projectId, onSaved }: {
+  pricing: Pricing; summary: Summary; projectId: number; onSaved: () => Promise<void>;
+}) {
+  const [draft, setDraft] = useState<Record<string, string>>({});
+  const [status, setStatus] = useState("");
+  const rows = summary.editions?.rows ?? [];
+  const powers = Array.from(new Set(rows.map((r) => r.power)));
+  const [power, setPower] = useState<string>(powers[0] ?? "A");
+  const [open, setOpen] = useState<string | null>(null);
+  if (!rows.length) return null;
+  const shown = rows.filter((r) => r.power === power);
+  const planned = pricing.values.retail_price;
+
+  async function save() {
+    const changes: Record<string, number> = {};
+    for (const [k, v] of Object.entries(draft)) {
+      const [, , kind] = STACK_FIELDS.find((f) => f[0] === k)!;
+      changes[k] = kind === "pct" ? Number(v) / 100 : Number(v);
+    }
+    setStatus("Saving…");
+    try {
+      await api.put(`/api/projects/${projectId}/pricing`, changes);
+      setDraft({});
+      setStatus("Saved");
+      await onSaved();
+    } catch (e) {
+      setStatus(errorText(e));
+    }
+  }
+
+  return (
+    <section className="card">
+      <h2>DTC price stack: the retail price each version needs</h2>
+      <p className="small">
+        Selling direct, the retail price has to cover VAT, the factory cost and every line below. <b>Break-even</b> covers them with no
+        profit; <b>for profit target</b> also keeps the profit share. Costs are the best configuration with no compromise to the look
+        (full detail) and the same search for the simplified premium version.
+      </p>
+      {powers.length > 1 && (
+        <div className="row small">
+          Power:{" "}
+          {powers.map((pk) => (
+            <button key={pk} className={`link${pk === power ? " active" : ""}`} onClick={() => setPower(pk)}>
+              {rows.find((r) => r.power === pk)?.power_label ?? pk}
+            </button>
+          ))}
+        </div>
+      )}
+      <table className="summary-table">
+        <thead>
+          <tr>
+            <th>Version</th>
+            <th>Units</th>
+            <th>Made in</th>
+            <th className="num">Factory cost</th>
+            <th className="num">Break-even retail</th>
+            <th className="num">Retail for profit target</th>
+            <th className="num">Profit at {gbp(planned)}</th>
+            <th />
+          </tr>
+        </thead>
+        <tbody>
+          {shown.map((r) => {
+            const id = `${r.edition}-${r.quantity}`;
+            const ps = r.price_stack;
+            return (
+              <Fragment key={id}>
+                <tr>
+                  <td>{r.edition}</td>
+                  <td>{r.quantity.toLocaleString()}</td>
+                  <td>{r.region_name}</td>
+                  <td className="num">
+                    {gbp(r.cost.mid)} <span className="muted small">({gbp(r.cost.low)}–{gbp(r.cost.high)})</span>
+                  </td>
+                  <td className="num">{gbp(ps.break_even_retail)}</td>
+                  <td className="num"><b>{gbp(ps.target_retail)}</b></td>
+                  <td className="num">
+                    {ps.at_planned
+                      ? <span className={ps.at_planned.profit < 0 ? "error" : ""}>{gbp(ps.at_planned.profit)} ({(ps.at_planned.profit_pct * 100).toFixed(1)}%)</span>
+                      : "—"}
+                  </td>
+                  <td>
+                    <button className="link" onClick={() => setOpen(open === id ? null : id)}>{open === id ? "Hide" : "Stack"}</button>
+                  </td>
+                </tr>
+                {open === id && (
+                  <tr>
+                    <td colSpan={8}>
+                      <table className="small">
+                        <tbody>
+                          {ps.lines.map((l) => (
+                            <tr key={l.key}>
+                              <td>{l.label}</td>
+                              <td className="num">{gbp(l.amount)}</td>
+                            </tr>
+                          ))}
+                          <tr>
+                            <td><b>Retail price (inc. VAT)</b></td>
+                            <td className="num"><b>{gbp(ps.target_retail)}</b></td>
+                          </tr>
+                        </tbody>
+                      </table>
+                      {r.selection.length > 0 && <p className="muted small">Changes: {r.selection.join("; ")}</p>}
+                    </td>
+                  </tr>
+                )}
+              </Fragment>
+            );
+          })}
+        </tbody>
+      </table>
+      <ul className="muted small">
+        {(summary.editions?.notes ?? []).map((n) => <li key={n}>{n}</li>)}
+      </ul>
+      <details>
+        <summary>Edit the price stack</summary>
+        <div className="grid">
+          {STACK_FIELDS.map(([k, label, kind]) => {
+            const m = pricing.meta[k];
+            if (!m) return null;
+            const val = kind === "pct" ? +(m.value * 100).toFixed(2) : m.value;
+            return (
+              <label key={k} className="field">
+                <span>
+                  {label} {!m.verified && <UnverifiedBadge title={`${m.source}, ${m.confidence} confidence`} />}
+                  {m.edited && <span className="badge badge-status-edited">yours</span>}
+                </span>
+                <input type="number" step="any" value={draft[k] ?? String(val)}
+                  onChange={(e) => setDraft({ ...draft, [k]: e.target.value })} />
+                {kind === "pct" && <span className="muted small">%</span>}
+                {m.plain_language && <span className="muted small">{m.plain_language}</span>}
+              </label>
+            );
+          })}
+        </div>
+        <div className="row">
+          <button className="primary" disabled={!Object.keys(draft).length} onClick={save}>Save price stack</button>
           <span className="muted small">{status}</span>
         </div>
       </details>

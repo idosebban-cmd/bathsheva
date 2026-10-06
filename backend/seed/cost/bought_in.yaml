@@ -30,8 +30,8 @@ bought_in:
     confidence: low
     verified: false
   - key: battery_pack
-    name: "Li-ion battery pack: 2 x 18650 (3,350 mAh, branded cells), protection circuit, holder and leads"
-    gbp: {low: 7.0, high: 13.0}
+    name: "Pre-certified Li-ion battery pack: 2 x 18650 (3,350 mAh, branded cells), protection circuit, leads; supplier provides UN38.3 and IEC 62133-2 reports"
+    gbp: {low: 8.5, high: 15.0}
     source: model-generated
     confidence: low
     verified: false
@@ -262,4 +262,22 @@ bought_in:
     source: model-generated
     confidence: low
     verified: false
-
+  - key: battery_pack_custom
+    name: "Custom Li-ion battery pack: 2 x 18650 (3,350 mAh), protection circuit, leads; no test reports (needs its own testing)"
+    gbp: {low: 6.5, high: 11.0}
+    source: model-generated
+    confidence: low
+    verified: false
+  # One-off costs: the price is the TOTAL, shared over the batch (cost item kind one_off).
+  - key: battery_pack_testing
+    name: "Custom pack certification: UN38.3 transport tests and IEC 62133-2 (accredited lab), one-off"
+    gbp: {low: 6000, high: 12000}
+    source: model-generated
+    confidence: low
+    verified: false
+  - key: lamp_safety_emc_testing
+    name: "Lamp electrical safety and EMC testing (accredited lab, UKCA/CE technical file), one-off"
+    gbp: {low: 5000, high: 10000}
+    source: model-generated
+    confidence: low
+    verified: false

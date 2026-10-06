@@ -94,6 +94,7 @@ POT_D, POT_DEPTH = 12.0, 9.0  # slim 9 mm-class rotary pot behind the tower wall
 POT_HOLE_D = 7.5  # M7 bushing
 POT_STANDOFF = 1.5  # curved spacer washer between the conical wall and the pot face
 GALLERY_ROUND = 1.0
+GALLERY_SHEET = 1.0  # spun brass gallery shell
 GALLERY_BORE_INSET = 4.0  # gallery bore radius = lantern radius - this
 LEDGE_BORE = 34.0
 LEDGE_T = 1.6
@@ -126,6 +127,8 @@ FILAMENT_D = 2.5
 DIFFUSER_WALL = 2.0
 DIFFUSER_TOP_GAP = 7.0  # diffuser top below the tower top (gallery spigot + silicone ring)
 DIFFUSER_RING = 1.5  # silicone ring that centres the diffuser top in the tower
+DIFFUSER_OVERLAP = 5.0  # diffuser runs this far past the lowest and highest window
+SPIDER_T = 1.5  # spider on the tower-light spine that carries the diffuser
 MIN_TOWER_HEIGHT = 60.0
 
 
@@ -240,7 +243,8 @@ PRODUCTION_CHANGES: list[dict[str, str]] = [
      "production": "One spun cone lacquered in two colours with a masked line; removes a joint"},
     {"feature": "Window diffusers", "prototype": "Five frosted resin inserts, numbered, glued behind the windows",
      "production": "One opal borosilicate tube inside the tower behind all five windows (glass, no plastic on view); "
-                   "no numbering needed"},
+                   "no numbering needed. It covers only the window zone (5 mm past the lowest and highest window) and "
+                   "stands on a spider on the tower-light spine, so it is about half the full tower height"},
     {"feature": "Window glow", "prototype": "Fairy lights coiled in the tower",
      "production": "Tower light: LED filament strips on a central spine inside the diffuser tube (bought-in)"},
     {"feature": "Windows", "prototype": "Printed openings",
@@ -248,9 +252,16 @@ PRODUCTION_CHANGES: list[dict[str, str]] = [
     {"feature": "Railing", "prototype": "Printed 1.6 mm round posts and rails",
      "production": "Photo-etched brass strip (0.6 mm) rolled into a ring and soldered; flat posts read the same at "
                    "arm's length. Alternatives: soldered brass wire, or lost-wax cast"},
+    {"feature": "Gallery", "prototype": "Printed solid ring",
+     "production": "Spun brass shell, 1.0 mm (flat top that is also the LED ledge, outer skirt, open underneath) "
+                   "with a turned brass locating ring soldered under it; same look from above and the side, far less "
+                   "brass than a solid turned ring"},
     {"feature": "Lantern frame", "prototype": "One printed frame with the bayonet lip",
-     "production": "Turned brass bottom ring and top band (bayonet slots and lip machined) with brass mullion bars "
-                   "soldered or brazed between them"},
+     "production": "Brass bottom ring and top band turned from tube (bayonet slots and lip machined) with brass "
+                   "mullion bars soldered or brazed between them"},
+    {"feature": "Small turned parts", "prototype": "Printed",
+     "production": "Cream band, cap spigot, finial and knob turned from near-net stock (tube, ring blanks or "
+                   "close-fitting bar) rather than solid bar, to cut material and cycle time"},
     {"feature": "Lantern glass", "prototype": "Printed/frosted 1.2 mm ring",
      "production": "Frosted (acid-etched) borosilicate tube, 2.0 mm wall (1.2 mm is thinner than stock tube)"},
     {"feature": "Cap twist-lock", "prototype": "Lugs printed on a spigot under the cap",
@@ -348,7 +359,13 @@ def derived(p: dict[str, float]) -> dict[str, Any]:
     rl = p["lantern_diameter"] / 2
     glass_r = rl - MULLION_DEPTH - 0.1
     r_lip = rl - 3.0
-    diffuser_top = tower_top - DIFFUSER_TOP_GAP
+    diffuser_max_top = tower_top - DIFFUSER_TOP_GAP
+    wins = windows(p)
+    if wins:  # the diffuser only needs to sit behind the window zone
+        diffuser_bottom = max(wins[0][0] - p["window_height"] / 2 - DIFFUSER_OVERLAP, hb + 1.0)
+        diffuser_top = min(max(z for z, _ in wins) + p["window_height"] / 2 + DIFFUSER_OVERLAP, diffuser_max_top)
+    else:
+        diffuser_bottom, diffuser_top = hb + 1.0, diffuser_max_top
 
     def r_out(z: float) -> float:
         return r0 + (r1 - r0) * (z - tower_bottom) / tower_h if tower_h > 0 else r0
@@ -375,9 +392,10 @@ def derived(p: dict[str, float]) -> dict[str, Any]:
         "led_access_dia": 2 * (r_lip - FIT_CLEAR - SPIGOT_WALL),
         "gallery_bore_r": rl - GALLERY_BORE_INSET,
         "diffuser_od": 2 * diffuser_r,
-        "diffuser_bottom_z": hb + 1.0,  # on a silicone ring on the base top
+        "diffuser_bottom_z": diffuser_bottom,  # on a spider on the tower-light spine
         "diffuser_top_z": diffuser_top,
-        "diffuser_length": diffuser_top - (hb + 1.0),
+        "diffuser_max_top_z": diffuser_max_top,
+        "diffuser_length": diffuser_top - diffuser_bottom,
         "weight_plate_diameter": 2 * (rb - p["base_top_round"] - 0.5),
         "weight_plate_top_z": wp_top,
         "weight_plate_bottom_z": wp_top - p["weight_plate_thickness"],
@@ -507,7 +525,7 @@ def validate(
             warn("window_first_z", "The lowest window cuts into the red section")
         if lo < d["tower_bottom_z"] + 5:
             err("window_first_z", "Windows must start at least 5 mm above the tower foot")
-        if hi > d["diffuser_top_z"] - 2:
+        if hi > d["diffuser_max_top_z"] - 2:
             err("window_last_z", "The highest window must sit below the diffuser top (8 mm under the tower top)")
         if p["window_width"] < 6 or p["window_width"] >= p["window_height"]:
             err("window_width", "Windows must be at least 6 mm wide and taller than they are wide (arched top)")
@@ -519,9 +537,16 @@ def validate(
         err("tower_top_diameter", "Tower is too narrow for the diffuser tube and tower light")
     if not d["tower_bottom_z"] + p["knob_diameter"] / 2 + 3 <= p["knob_z"] <= d["tower_top_z"] - p["knob_diameter"] / 2 - 8:
         err("knob_z", "Dimmer knob must sit on the tower")
-    elif r_out(p["knob_z"]) - w - d["diffuser_od"] / 2 < POT_DEPTH + POT_STANDOFF + 1:
-        err("knob_z", f"No room for the dimmer behind the knob: {r_out(p['knob_z']) - w - d['diffuser_od'] / 2:.1f} mm between "
-                      f"the tower wall and the diffuser tube, {POT_DEPTH + POT_STANDOFF + 1:g} mm needed; move the knob lower")
+    else:
+        # Behind the knob is the diffuser tube if it reaches that high, otherwise the tower-light spine.
+        rk = p["knob_diameter"] / 2
+        behind_diffuser = d["diffuser_bottom_z"] - SPIDER_T - rk < p["knob_z"] < d["diffuser_top_z"] + rk
+        inner_r, what = ((d["diffuser_od"] / 2, "the diffuser tube") if behind_diffuser else
+                         (SPINE_D / 2 + FILAMENT_D + 0.5, "the tower-light spine"))
+        room = r_out(p["knob_z"]) - w - inner_r
+        if room < POT_DEPTH + POT_STANDOFF + 1:
+            err("knob_z", f"No room for the dimmer behind the knob: {room:.1f} mm between the tower wall and {what}, "
+                          f"{POT_DEPTH + POT_STANDOFF + 1:g} mm needed; move the knob lower")
 
     # Base: battery, weight plate, USB-C.
     if d["base_inner_height"] < BATTERY[2] + 1:
@@ -713,15 +738,15 @@ def _sections(p: dict[str, float], d: dict[str, Any]) -> dict[str, Face]:
     zt0, zt1 = d["tower_bottom_z"], d["tower_top_z"]
     out["tower"] = _poly([(r_out(zt0) - w, zt0), (r_out(zt0), zt0), (r_out(zt1), zt1), (r_out(zt1) - w, zt1)])
 
-    # Gallery: turned brass ring, LED ledge flush with its top, spigot into the tower top.
-    rg, zg0, zg1 = p["gallery_diameter"] / 2, zt1, d["gallery_top_z"]
-    rbore = d["gallery_bore_r"]
-    ring = _poly([(rbore, zg0), (rg, zg0), (rg, zg1), (rbore, zg1)])
-    ring = _fillet_at(ring, [(rg, zg0), (rg, zg1)], min(GALLERY_ROUND, p["gallery_height"] / 2 - 0.1))
-    ledge = _poly([(LEDGE_BORE / 2, zg1 - LEDGE_T), (rbore + 0.01, zg1 - LEDGE_T), (rbore + 0.01, zg1), (LEDGE_BORE / 2, zg1)])
+    # Gallery: spun brass shell (flat top that doubles as the LED ledge, outer skirt, open underneath)
+    # with a turned brass locating ring soldered under it that sits on the tower top and spigots inside it.
+    rg, zg0, zg1, t = p["gallery_diameter"] / 2, zt1, d["gallery_top_z"], GALLERY_SHEET
+    shell = _poly([(LEDGE_BORE / 2, zg1 - t), (rg - t, zg1 - t), (rg - t, zg0), (rg, zg0), (rg, zg1), (LEDGE_BORE / 2, zg1)])
+    shell = _fillet_at(shell, [(rg, zg1)], min(GALLERY_ROUND, p["gallery_height"] / 2 - 0.1))
     sp_o = r_out(zt1) - w - 0.1
-    sp = _poly([(sp_o - 1.5, zg0 - GALLERY_SPIGOT_H), (sp_o, zg0 - GALLERY_SPIGOT_H), (sp_o, zg0 + 0.01), (sp_o - 1.5, zg0 + 0.01)])
-    out["gallery"] = _one_face(ring + ledge + sp)
+    ring = _poly([(sp_o - 1.5, zg0 - GALLERY_SPIGOT_H), (sp_o, zg0 - GALLERY_SPIGOT_H), (sp_o, zg0), (r_out(zt1), zg0),
+                  (r_out(zt1), zg1 - t + 0.01), (sp_o - 1.5, zg1 - t + 0.01)])
+    out["gallery"] = _one_face(shell + ring)
 
     # Lantern glass and diffuser: stock borosilicate tubes.
     gr = d["glass_od"] / 2
@@ -832,6 +857,8 @@ def build_model(params: dict[str, Any]) -> Model:
     parts["diffuser"] = _revolve(sec["diffuser"])
     z_s0, z_s1 = hb, d["gallery_top_z"] - LEDGE_T - 0.5
     spine = Pos(0, 0, z_s0) * Cylinder(SPINE_D / 2, z_s1 - z_s0, align=MIN)
+    # spider (disc) on the spine that carries the diffuser tube
+    spine = spine + Pos(0, 0, d["diffuser_bottom_z"] - SPIDER_T) * Cylinder(d["diffuser_od"] / 2, SPIDER_T, align=MIN)
     wz = [z for z, _ in windows(p)] or [(d["tower_bottom_z"] + d["tower_top_z"]) / 2]
     zf0 = max(min(wz) - wh / 2 - 5, z_s0 + 5)
     zf1 = min(max(wz) + wh / 2 + 5, z_s1 - 5)

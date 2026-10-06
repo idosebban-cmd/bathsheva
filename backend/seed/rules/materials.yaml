@@ -35,7 +35,7 @@ materials:
   - key: al_5052
     name: Aluminium 5052 (H32)
     category: aluminium
-    processes: [sheet_forming, deep_drawing, metal_spinning]
+    processes: [sheet_forming, deep_drawing, metal_spinning, photo_etching]
     plain_language: >-
       A stronger sheet alloy with good corrosion resistance. Bends and welds
       well; a good choice for rolled and welded parts.
@@ -48,7 +48,7 @@ materials:
   - key: al_6061
     name: Aluminium 6061 (T6)
     category: aluminium
-    processes: [cnc_machining, extrusion]
+    processes: [cnc_machining, extrusion, cnc_turning_near_net]
     plain_language: >-
       The standard alloy for machined parts. It machines cleanly, is widely
       available and gives a good cosmetic finish. If production volume becomes
@@ -102,7 +102,7 @@ materials:
   - key: brass
     name: Brass (CZ121 bar / CZ108 sheet)
     category: brass
-    processes: [cnc_machining, photo_etching, investment_casting, wire_forming]
+    processes: [cnc_turning_near_net, cnc_machining, metal_spinning, photo_etching, investment_casting, wire_forming]
     plain_language: >-
       Solid brass: machines beautifully, takes a high polish and ages to a warm
       patina (or stays bright under clear lacquer). Heavy and dearer than

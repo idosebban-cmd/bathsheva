@@ -33,6 +33,19 @@ process_rates:
     source: model-generated
     confidence: low
     verified: false
+  - process: cnc_turning_near_net
+    machine_gbp_per_hr: {low: 40, high: 70}
+    lead_time_weeks: {low: 1, high: 3}
+    setup_hours: {low: 1.0, high: 3.0}
+    cycle_min: {low: 2, high: 6}
+    cycle_min_per_kg: {low: 0, high: 0}
+    material_utilisation: {low: 1.0, high: 1.0}
+    min_per_cm3_removed: {low: 0.01, high: 0.04}
+    stock_allowance_mm: 2
+    stock_factor: 1.5
+    source: model-generated
+    confidence: low
+    verified: false
   - process: metal_tube_cut
     machine_gbp_per_hr: {low: 30, high: 45}
     lead_time_weeks: {low: 1, high: 2}
