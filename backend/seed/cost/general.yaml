@@ -28,3 +28,22 @@ general:
     source: model-generated
     confidence: high
     verified: false
+  # Volume discounts: distributor and retail prices are per piece at small quantities.
+  # When costing at `from_quantity` or more, the researched price is multiplied by this
+  # fraction (low–high). Editable per project on the Manufacturing tab.
+  - key: volume_discount_electronics
+    value: {low: 0.40, high: 0.60, from_quantity: 500}
+    plain_language: >-
+      Bought-in electronics bought direct or on an OEM price list at 500+ cost about
+      40–60% of the small-quantity distributor price.
+    source: "user assumption (Oct 2026)"
+    confidence: medium
+    verified: false
+  - key: volume_discount_merchant_material
+    value: {low: 0.50, high: 0.70, from_quantity: 500}
+    plain_language: >-
+      Material bought from a stockholder or mill at production volume costs about
+      50–70% of the online merchant price for single sheets and bars.
+    source: "user assumption (Oct 2026)"
+    confidence: medium
+    verified: false

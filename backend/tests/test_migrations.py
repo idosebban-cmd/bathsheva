@@ -69,7 +69,7 @@ def test_init_db_migrates_and_app_works(tmp_path):
     assert _current(engine) == _head()
     session = new_session()
     project = create_project(session, "Faro", template="faro")
-    assert len(project.parts) == 7
+    assert len(project.parts) == 14
     session.close()
     # Re-running startup on an up-to-date database is a no-op.
     init_db(f"sqlite:///{tmp_path / 'app.db'}")

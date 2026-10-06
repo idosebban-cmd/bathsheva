@@ -209,14 +209,15 @@ def test_faro_cost_report(client, faro_project):
     assert mids[0] > mids[1] > mids[2]
     assert all(v["low"] < v["mid"] < v["high"] for v in r["volumes"])
     assert {p["name"] for p in r["parts"]} == {"Base", "Main body", "Decorative band", "Lantern", "Top cap"}
-    assert {s["name"] for s in r["skipped"]} == {"LED module and mounting", "Cable / power entry"}
+    assert {"LED module and mounting", "Cable / power entry", "Weight plate", "Lamp tube"} <= {s["name"] for s in r["skipped"]}
     assert len(r["sensitivity"]["top"]) == 5
     assert r["uses_unverified_data"] and all(not a["verified"] for a in r["assumptions"])
     for p in r["parts"]:
         assert {ln["category"] for ln in p["lines"]} >= {"material", "process", "setup", "tooling"}
         assert all(ln["explanation"] and ln["unverified"] for ln in p["lines"])
     names = {ln["label"] for ln in r["product_lines"]}
-    assert any("driver (mains)" in n for n in names)  # undecided power -> mains set
+    assert any("driver (mains)" in n for n in names)  # undecided power -> mains set (option A)
+    assert any("dimmer" in n.lower() for n in names)  # dimming is required
     assert not any("battery" in n.lower() for n in names)
     assert {"assembly", "packaging", "bought_in"} <= {ln["category"] for ln in r["product_lines"]}
 
@@ -240,7 +241,8 @@ def test_cost_items_crud_and_reset(client, faro_project):
     r = client.patch(f"/api/projects/{pid}/cost-items/{led['id']}", json={"unit_cost_low": 20, "unit_cost_high": 20})
     assert r.json()["source"] == "user"
     after = client.get(f"/api/projects/{pid}/costs").json()["unit_cost"]["mid"]
-    assert after - before == pytest.approx(20 - (2.53 + 3.74) / 2, abs=0.02)
+    # The seeded LED price is a distributor price, discounted to 40–60% at 500; a typed price is not.
+    assert after - before == pytest.approx(20 - (2.53 + 3.74) / 2 * 0.5, abs=0.02)
 
     assert client.patch(f"/api/projects/{pid}/cost-items/{led['id']}", json={"unit_cost_high": 1}).status_code == 422
     r = client.post(f"/api/projects/{pid}/cost-items", json={"name": "Brass finial", "quantity": 1, "unit_cost_low": 3, "unit_cost_high": 5})

@@ -51,7 +51,8 @@ def test_unknown_parameter_rejected():
 def test_lantern_must_fit_body():
     assert "lantern_diameter" in errors_for(with_(lantern_diameter=140, top_cap_diameter=150))  # > body_diameter
     assert "lantern_diameter" in errors_for(with_(lantern_diameter=105, top_cap_diameter=120))  # > body top
-    assert faro.validate(with_(lantern_diameter=100, top_cap_diameter=110)).ok
+    assert "lantern_diameter" in errors_for(with_(lantern_diameter=100, top_cap_diameter=110))  # no room for the gasket
+    assert faro.validate(with_(lantern_diameter=96, top_cap_diameter=110)).ok
 
 
 def test_body_taper_and_base_relationships():
@@ -124,3 +125,53 @@ def test_process_on_part_sets_wall_limits(client, faro_project):
 def test_blank_project_has_no_generator(client):
     pid = client.post("/api/projects", json={"name": "Blank"}).json()["id"]
     assert client.get(f"/api/projects/{pid}/cad").status_code == 404
+
+
+# --- new construction parameters ------------------------------------------------
+
+
+def test_new_construction_parameters_are_validated():
+    assert "weight_plate_diameter" in errors_for(with_(weight_plate_diameter=178))  # doesn't fit the shell
+    assert "weight_plate_diameter" in errors_for(with_(weight_plate_diameter=100))  # misses the rivet-nut screws
+    assert "weight_plate_thickness" in errors_for(with_(weight_plate_thickness=22))  # no room for the lamp nut
+    assert "dimmer_hole_diameter" in errors_for(with_(dimmer_hole_diameter=3))
+    assert "dimmer_hole_diameter" in errors_for(with_(weight_plate_thickness=12))  # dimmer no longer fits below
+    assert faro.validate(with_(dimmer_hole_diameter=0, weight_plate_thickness=12)).ok  # touch / inline dimmer
+    assert "tube_diameter" in errors_for(with_(tube_diameter=16, body_top_diameter=40, lantern_diameter=30, top_cap_diameter=40))
+    assert "target_mass_kg" in errors_for(with_(target_mass_kg=20))
+    assert "step_depth" in errors_for(with_(step_depth=8))
+
+
+def test_derived_construction_dimensions():
+    d = faro.derived({k: float(v) for k, v in DEFAULTS.items()})
+    assert d["band_inner_diameter"] < DEFAULTS["body_diameter"]
+    assert d["glass_in_cap"] >= faro.MIN_GLASS_IN_CAP
+    assert d["tube_bottom_z"] > 0 and d["tube_top_z"] > d["cap_top_z"]
+    assert d["cap_top_z"] + faro.CAP_NUT_H == pytest.approx(DEFAULTS["overall_height"])
+
+
+def test_band_is_a_straight_ring_and_mismatch_changes_are_implemented():
+    assert faro.derived_traits("band", DEFAULTS) == ["constant_section"]
+    bodies = set(faro.PART_KEYS)
+    assert faro.implements("thin_shell_needs_mass", "base", bodies)
+    assert faro.implements("thin_wall_inserts", "base", bodies)
+    assert not faro.implements("casting_draft", "base", bodies)
+    assert not faro.implements("thin_shell_needs_mass", "base", {"base", "main_body"})
+
+
+def test_old_parameters_upgrade_with_new_defaults():
+    old = {k: v for k, v in DEFAULTS.items() if k not in ("weight_plate_diameter", "step_depth", "target_mass_kg")}
+    old["colour"] = 1
+    up = faro.upgrade(old, DEFAULTS)
+    assert set(up) == set(faro.PARAM_KEYS) and faro.validate(up).ok
+
+
+def test_mass_estimate_and_target(client, faro_project):
+    pid = faro_project["id"]
+    mass = client.get(f"/api/projects/{pid}/cad").json()["mass"]
+    assert mass["target_kg"] == DEFAULTS["target_mass_kg"]
+    assert 1.0 < mass["total_kg"] < 4.0 and mass["parts_kg"]["weight_plate"] > 0.5
+    assert mass["status"] == "ok"
+    params = client.get(f"/api/projects/{pid}/cad").json()["parameters"]
+    client.post(f"/api/projects/{pid}/cad/generate", json={"parameters": {**params, "weight_plate_thickness": 3, "target_mass_kg": 3}})
+    assert client.get(f"/api/projects/{pid}/cad").json()["mass"]["status"] == "low"

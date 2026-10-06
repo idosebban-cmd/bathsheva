@@ -43,3 +43,24 @@ Confidence on all of these is now `medium`. None is a published commodity price,
 | Wet lacquer / powder coat rates | Only US $/ft² figures and sprayer wages | No UK £/m² source |
 | `regions.yaml` multipliers | Eurostat: Portugal manufacturing labour €16.50/hr in 2025 ([Eurostat](https://ec.europa.eu/eurostat/web/products-eurostat-news/w/ddn-20260331-2)); UK not in Eurostat; no Turkey or China figures | **No credible source gives specific multipliers, so they are unchanged.** |
 | Screws, gaskets, battery-path parts | Out of scope | — |
+
+## Update (6 Oct 2026): price basis, volume discounts, dimmer and DC-DC driver
+
+Each researched entry now records its **price basis** and the quantity it applies to (`price_basis`, `basis_quantity` in the seed). Distributor and retail prices are adjusted when costing at 500 and 2,000 by an editable volume-discount assumption (medium confidence, unverified, user-specified): bought-in electronics 40–60% of the small-quantity distributor price; material from online merchants 50–70% of the merchant price. Hardware (grommets, rivet nuts) is not discounted. The audit shows raw and adjusted prices side by side.
+
+Outside the UK, sheet aluminium (1050/3003/5052) is priced on a **trade basis**: LME cash ($3,110–3,129/t, high confidence) + regional premium (Rotterdam duty-paid $330–490/t for Portugal, sourced; Turkey and China premiums are model estimates, low confidence) ÷ USD/GBP (1.3224–1.3241, high) + a sheet / spinning-circle conversion premium (£1.0–2.0/kg, **model estimate, needs a quote**). That gives about £3.9/kg for China, against £8.45/kg midpoint at UK merchant prices before discount.
+
+`al_6061` bar was restated as a retail basis only (single UK bars £11.5–18.6/kg: Cromwell and RS PRO 4 in × 24 in), so the merchant discount is not applied on top of a contract price.
+
+New researched prices (from search excerpts, accessed 5 Oct 2026):
+
+| Entry | £ | Basis | Source |
+|---|---|---|---|
+| `dimmer_in_base` (potentiometer + solid aluminium knob) | 3.19–4.61 | distributor, 100 (pot) / 1–4 (knob) | Radiohm POTM 100k £2.34 @100 (RS UK); Alpha 100k $1.56 @100; RS PRO aluminium knobs £2.01–2.27 |
+| `dimmer_inline_mains` | 30.00–38.72 | retail, 1 | mr-resistor inline slide dimmer £38.72 ex VAT; creative-cables £36 inc VAT |
+| `dimmer_inline_lv` | 3.43 | retail, 1 | Maplin inline 12–24 V dimmer £4.12 inc VAT |
+| `dc_dc_cc_driver` (Mean Well LDH-25 class) | 7.38–7.82 | distributor, 100 | TRC / DigiKey LDH-25 $9.76–10.34 @100 |
+| `cap_finial_nut` | 0.6–2.5 | model estimate | — |
+
+Still needs quotes, in addition to the list above: touch dimmer module (only uncertified modules from about €1.2 and a €13 retail unit were found), the sheet conversion premium, Turkey and China aluminium premiums, the borosilicate tube price (stock 90 mm OD tubes come in 2.5 and 3.5 mm walls; no price found).
+

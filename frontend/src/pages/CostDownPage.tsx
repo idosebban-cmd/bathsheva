@@ -17,6 +17,7 @@ interface Range {
   low: number;
   mid: number;
   high: number;
+  raw_mid?: number;
 }
 interface SelItem {
   key: string;
@@ -52,9 +53,12 @@ interface SummaryRow {
   flags: Flag[];
   tier?: string;
   same_as?: string | null;
+  power?: string;
+  power_label?: string;
 }
 interface Summary {
   rows: SummaryRow[];
+  power_options?: { key: string; label: string; scenario: string | null }[];
   premium: { label: string; retail: number; targets: Record<string, number>; rows: SummaryRow[] };
   notes: string[];
 }
@@ -67,7 +71,7 @@ interface Scenario {
   conflicts: string[];
   flags: Flag[];
   tradeoffs: Record<string, string>;
-  options: { option: number; label: string; saving: Record<string, number> }[];
+  options: { option: number; label: string; saving: Record<string, number>; allowed?: boolean; excluded_reason?: string }[];
 }
 interface RegionInfo {
   key: string;
@@ -198,7 +202,7 @@ export default function CostDownPage() {
           here changes the design until you select a route; scenarios are what-ifs.
         </p>
         <p className="notice small">
-          <UnverifiedBadge /> All rates, regional multipliers and channel economics are <strong>model-generated and unverified</strong>. Use
+          <UnverifiedBadge /> Most rates, the regional multipliers and channel economics are <strong>model-generated</strong>; some prices are researched distributor or retail prices adjusted for volume. All are <strong>unverified</strong>. Use
           this to decide which quotes to get first, not as a price.
         </p>
       </section>
@@ -344,6 +348,11 @@ function SummaryTable({ rows, targetLabel }: { rows: SummaryRow[]; targetLabel: 
               <div className="muted small">
                 {gbp(r.cost.low)} – {gbp(r.cost.high)}
               </div>
+              {r.cost.raw_mid !== undefined && r.cost.raw_mid !== r.cost.mid && (
+                <div className="muted small" title="Every price at its researched basis (small-quantity distributor / retail), no volume discount">
+                  raw researched {gbp(r.cost.raw_mid)}
+                </div>
+              )}
             </td>
             <td>
               <StatusChip a={r.targets.dtc} name="DTC" />
@@ -362,7 +371,12 @@ function SummaryCard({ summary }: { summary: Summary }) {
   return (
     <section className="card">
       <h2>Product view: current vs best combination</h2>
-      <SummaryTable rows={summary.rows} targetLabel="target" />
+      {(summary.power_options ?? [{ key: "A", label: "", scenario: null }]).map((p) => (
+        <div key={p.key}>
+          {p.label && <h3 style={{ marginTop: "0.8rem" }}>Power option {p.label}</h3>}
+          <SummaryTable rows={summary.rows.filter((r) => (r.power ?? "A") === p.key)} targetLabel="target" />
+        </div>
+      ))}
       <h3 style={{ marginTop: "1rem" }}>
         {summary.premium.label} at {gbp(summary.premium.retail)}
       </h3>
@@ -370,7 +384,12 @@ function SummaryCard({ summary }: { summary: Summary }) {
         Band and top cap in brass, either plated or solid (polished, clear lacquer), compared with the premium edition's own targets. The
         painted-stripe change is excluded because brass needs a separate band.
       </p>
-      <SummaryTable rows={summary.premium.rows} targetLabel="(premium)" />
+      {(summary.power_options ?? [{ key: "A", label: "", scenario: null }]).map((p) => (
+        <div key={p.key}>
+          {p.label && <h4>Power option {p.label}</h4>}
+          <SummaryTable rows={summary.premium.rows.filter((r) => (r.power ?? "A") === p.key)} targetLabel="(premium)" />
+        </div>
+      ))}
       <ul className="small muted">
         {summary.notes.map((n, i) => (
           <li key={i}>{n}</li>
@@ -483,9 +502,9 @@ function ScenarioBuilder({ projectId, catalog }: { projectId: number; catalog: C
                       >
                         <option value="auto">Cheapest</option>
                         {s.options.map((o) => (
-                          <option key={o.option} value={o.option}>
+                          <option key={o.option} value={o.option} disabled={o.allowed === false} title={o.excluded_reason}>
                             {o.label} ({o.saving["500"] >= 0 ? "−" : "+"}
-                            {gbp(Math.abs(o.saving["500"]))} @500)
+                            {gbp(Math.abs(o.saving["500"]))} @500){o.allowed === false ? " — excluded by design constraint" : ""}
                           </option>
                         ))}
                       </select>

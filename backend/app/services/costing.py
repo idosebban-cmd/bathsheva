@@ -93,7 +93,10 @@ def default_items(project: Project, cost: CostData | None = None) -> list[CostIt
             source=price.source if price else "model-generated",
             confidence=price.confidence if price else spec.get("confidence", "low"),
             verified=price.verified if price else False,
-            notes=note,
+            price_basis=price.price_basis if price else "model_estimate",
+            basis_quantity=price.basis_quantity if price else None,
+            discount_class=price.discount_class if price else None,
+            notes=note or (" ".join(price.notes.split()) if price else ""),
             sort_order=i,
         ))
     return items
@@ -113,7 +116,9 @@ def reset_items(session: Session, project: Project) -> list[CostItem]:
 
 # Parameters that stay fixed when the lamp is scaled to a new height.
 UNSCALED_PARAMS = {"wall_thickness", "lantern_wall_thickness", "cable_hole_diameter", "mounting_hole_diameter",
-                   "mounting_hole_count", "band_position"}
+                   "mounting_hole_count", "band_position", "band_wall_thickness", "step_depth", "tube_diameter",
+                   "dimmer_hole_diameter", "weight_plate_thickness", "target_mass_kg",
+                   "base_height"}  # the base cavity must still fit the weight plate and dimmer
 
 
 def scaled_parameters(params: dict[str, Any], height_mm: float) -> dict[str, Any]:
@@ -157,7 +162,8 @@ def snapshot(session: Session, project: Project) -> Snapshot:
         ))
     db_items = session.query(CostItem).filter(CostItem.project_id == project.id).order_by(CostItem.sort_order, CostItem.id).all()
     items = [SnapItem(it.id, it.kind, it.name, it.quantity, it.unit, it.unit_cost_low, it.unit_cost_high, it.price_key,
-                      it.source, it.confidence, it.verified) for it in db_items]
+                      it.source, it.confidence, it.verified, it.price_basis or "model_estimate", it.basis_quantity,
+                      it.discount_class) for it in db_items]
 
     def for_height(h: float) -> dict[str, Any]:
         if project.template != "faro" or not params:
@@ -165,7 +171,63 @@ def snapshot(session: Session, project: Project) -> Snapshot:
         return _geometry_from_params(json.dumps(scaled_parameters(params, h), sort_keys=True))
 
     return Snapshot(parts=parts, items=items, params=params, geometry=geometry, geometry_source=geometry_source,
-                    geometry_for_height=for_height)
+                    geometry_for_height=for_height,
+                    volume_discounts=dict((project.cost_settings or {}).get("volume_discounts") or {}))
+
+
+# ---------------------------------------------------------------------------
+# Cost settings (volume discounts)
+# ---------------------------------------------------------------------------
+
+
+def cost_settings(project: Project) -> dict[str, Any]:
+    """Volume-discount assumptions: seed defaults overlaid with the project's edits."""
+    cost = load_cost_data()
+    user = (project.cost_settings or {}).get("volume_discounts") or {}
+    out = {}
+    for cls, g in cost.discount_classes().items():
+        edited = cls in user
+        v = user.get(cls, g.value)
+        out[cls] = {
+            "low": float(v["low"]), "high": float(v["high"]), "from_quantity": g.value.get("from_quantity", 0),
+            "default": {"low": g.value["low"], "high": g.value["high"]}, "edited": edited,
+            "source": "user (project setting)" if edited else g.source,
+            "confidence": g.confidence, "verified": False, "plain_language": " ".join(g.plain_language.split()),
+        }
+    return {"volume_discounts": out}
+
+
+def update_cost_settings(session: Session, project: Project, discounts: dict[str, dict[str, float] | None]) -> dict[str, Any]:
+    from fastapi import HTTPException
+
+    classes = load_cost_data().discount_classes()
+    current = dict((project.cost_settings or {}).get("volume_discounts") or {})
+    for cls, v in discounts.items():
+        if cls not in classes:
+            raise HTTPException(422, f"Unknown volume discount class {cls!r}")
+        if v is None:  # back to the default
+            current.pop(cls, None)
+            continue
+        lo, hi = float(v.get("low", -1)), float(v.get("high", -1))
+        if not 0 < lo <= hi <= 1:
+            raise HTTPException(422, "Volume discount must be a share of the small-quantity price: 0 < low ≤ high ≤ 1")
+        current[cls] = {"low": lo, "high": hi}
+    project.cost_settings = {**(project.cost_settings or {}), "volume_discounts": current}
+    session.commit()
+    return cost_settings(project)
+
+
+def snapshot_material_keys(project: Project) -> dict[str, str]:
+    """Effective material key per CAD body (decided, else recommended), without the database session."""
+    rules = load_rules()
+    recs = {r["part_id"]: r for r in project_recommendations(project)}
+    out = {}
+    for part in project.parts:
+        if part.cad_key:
+            _, mat, _ = _effective(part, recs.get(part.id, {}), rules)
+            if mat:
+                out[part.cad_key] = mat
+    return out
 
 
 def build_inputs(session: Session, project: Project, config: CostConfig | None = None,

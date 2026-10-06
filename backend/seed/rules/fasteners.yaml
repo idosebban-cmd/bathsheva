@@ -50,3 +50,13 @@ fasteners:
     source: model-generated
     confidence: high
     verified: false
+  - key: central_lamp_tube
+    name: Central threaded lamp tube and nuts
+    plain_language: >-
+      One hollow M10x1 lamp tube runs up the middle; nuts at each end clamp the whole
+      stack together and the cable runs inside the tube. No visible fixings.
+    notes: Use thread-locking on the lower nut; add an anti-rotation feature so parts can't turn on the tube.
+    source: model-generated
+    confidence: medium
+    verified: false
+

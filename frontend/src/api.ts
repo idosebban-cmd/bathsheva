@@ -168,6 +168,7 @@ export interface WallLimit {
 }
 
 export interface CadState {
+  mass?: { total_kg: number; target_kg: number | null; status: string; note: string; parts_kg: Record<string, number> } | null;
   generator: string;
   param_defs: ParamDef[];
   parameters: Record<string, number>;
@@ -215,7 +216,8 @@ export interface Recommendation {
   confidence: "low" | "medium" | "high";
   confidence_reason: string;
   alternatives: Alternative[];
-  excluded: { process_key: string; process_name: string; reason: string }[];
+  excluded: { process_key: string; process_name: string; reason: string; constraint?: string | null }[];
+  constraints?: { key: string; name: string; message: string; scope: string; requirement: string; excluded_processes: string[]; violations: string[] }[];
   volume_sensitivity?: { volume: number; process_key: string; process_name: string }[];
   open_questions: string[];
   risks: string[];
@@ -390,6 +392,7 @@ export interface CostRange {
   high: number;
   worst_low: number;
   worst_high: number;
+  raw_mid?: number;
   is_project_volume?: boolean;
 }
 
@@ -466,4 +469,55 @@ export interface CostItem {
   verified: boolean;
   notes: string;
   sort_order: number;
+  price_basis: "trade_volume" | "distributor_small_qty" | "retail" | "model_estimate";
+  basis_quantity: number | null;
+  discount_class: string | null;
+}
+
+export interface VolumeDiscount {
+  low: number;
+  high: number;
+  from_quantity: number;
+  default: { low: number; high: number };
+  edited: boolean;
+  source: string;
+  confidence: string;
+  verified: boolean;
+  plain_language: string;
+}
+
+export interface CostSettings {
+  volume_discounts: Record<string, VolumeDiscount>;
+}
+
+// --- Factory Pack (RFQ) ---------------------------------------------------
+
+export interface FactoryPackPart {
+  cad_key: string;
+  part_no: string;
+  name: string;
+  quantity: number;
+  material: string;
+  process: string;
+  finish: string;
+  size_mm: string;
+  status: string;
+  unverified: string[];
+  safety: string[];
+  drawing: string;
+  step: string;
+}
+
+export interface FactoryPackSummary {
+  cad_version: number | null;
+  ready: boolean;
+  parts: FactoryPackPart[];
+  bought_in: { name: string; quantity: number; electronics: boolean }[];
+  quantity_tiers: number[];
+  mass: { total_kg: number; target_kg: number | null; status: string; note: string; parts_kg: Record<string, number> } | null;
+  unverified: string[];
+  safety: string[];
+  compliance: string[];
+  rfq_markdown: string;
+  notes: string[];
 }

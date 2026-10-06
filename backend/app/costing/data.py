@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from functools import lru_cache
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import yaml
 from pydantic import BaseModel, model_validator
@@ -28,7 +28,30 @@ class Span(BaseModel):
         return self
 
 
-class MaterialPrice(Provenance):
+PriceBasis = Literal["trade_volume", "distributor_small_qty", "retail", "model_estimate"]
+# Price bases that are adjusted by a volume-discount assumption when costing at volume.
+DISCOUNTED_BASES = {"distributor_small_qty", "retail"}
+
+
+class Priced(Provenance):
+    """A price with its basis: where it came from and the quantity it applies to."""
+
+    price_basis: PriceBasis = "model_estimate"
+    basis_quantity: float | None = None
+    # Key of the volume-discount assumption (general.yaml volume_discount_<class>) applied
+    # when costing at volume. Only used for distributor and retail prices.
+    discount_class: str | None = None
+
+    @model_validator(mode="after")
+    def _basis(self) -> "Priced":
+        if self.price_basis in DISCOUNTED_BASES and not self.basis_quantity:
+            raise ValueError(f"price_basis {self.price_basis} needs basis_quantity")
+        if self.price_basis == "model_estimate" and self.source.startswith("http"):
+            raise ValueError("a researched (URL) source needs a price_basis other than model_estimate")
+        return self
+
+
+class MaterialPrice(Priced):
     material: str
     form: str
     gbp_per_kg: Span
@@ -36,9 +59,12 @@ class MaterialPrice(Provenance):
     # and must give their own density.
     cost_only: bool = False
     density_g_cm3: float | None = None
+    # Outside the UK, sheet aluminium is costed on a trade basis built from commodity data
+    # (LME + regional premium + sheet conversion) instead of the merchant price.
+    trade_basis: Literal["aluminium_sheet"] | None = None
 
 
-class ProcessRate(Provenance):
+class ProcessRate(Priced):
     process: str
     machine_gbp_per_hr: Span
     setup_hours: Span
@@ -50,7 +76,7 @@ class ProcessRate(Provenance):
     lead_time_weeks: Span | None = None
 
 
-class FinishRate(Provenance):
+class FinishRate(Priced):
     finish: str
     gbp_per_m2: Span
     min_per_part: Span
@@ -62,10 +88,18 @@ class GeneralValue(Provenance):
     plain_language: str
 
 
-class BoughtInPrice(Provenance):
+class BoughtInPrice(Priced):
     key: str
     name: str
     gbp: Span
+    notes: str = ""
+
+
+class Commodity(Priced):
+    key: str
+    name: str
+    unit: str
+    value: Span
 
 
 class Region(Provenance):
@@ -77,6 +111,10 @@ class Region(Provenance):
     finishing: Span
     freight_duty_pct: Span
     lead_time_note: str = ""
+    # merchant: buy material at the (volume-adjusted) merchant price; trade: build the price
+    # from commodity data where a trade basis exists (sheet aluminium).
+    material_basis: Literal["merchant", "trade"] = "merchant"
+    aluminium_premium: str | None = None  # commodities.yaml key for the regional premium
 
 
 class RouteItem(BaseModel):
@@ -109,9 +147,13 @@ class CostData(BaseModel):
     regions: dict[str, Region]
     route_changes: dict[str, RouteChange]
     pricing: dict[str, PricingValue]
+    commodities: dict[str, Commodity]
 
     def value(self, key: str) -> Any:
         return self.general[key].value
+
+    def discount_classes(self) -> dict[str, GeneralValue]:
+        return {k[len(DISCOUNT_PREFIX):]: g for k, g in self.general.items() if k.startswith(DISCOUNT_PREFIX)}
 
 
 _FILES: dict[str, tuple[str, type[Provenance], str]] = {
@@ -123,9 +165,12 @@ _FILES: dict[str, tuple[str, type[Provenance], str]] = {
     "regions.yaml": ("regions", Region, "key"),
     "route_changes.yaml": ("route_changes", RouteChange, "key"),
     "pricing.yaml": ("pricing", PricingValue, "key"),
+    "commodities.yaml": ("commodities", Commodity, "key"),
 }
 REQUIRED_PRICING = {"vat_rate", "dtc_factory_share", "retailer_margin", "wholesale_factory_share", "close_band"}
 REQUIRED_GENERAL = {"labour_gbp_per_hr", "confidence_spread", "volume_table", "sensitivity_step"}
+REQUIRED_COMMODITIES = {"lme_aluminium_cash", "usd_per_gbp", "aluminium_sheet_conversion"}
+DISCOUNT_PREFIX = "volume_discount_"
 
 
 def load_cost_data_from(directory: Path, rules: RuleSet | None = None) -> CostData:
@@ -180,6 +225,21 @@ def load_cost_data_from(directory: Path, rules: RuleSet | None = None) -> CostDa
     missing_p = REQUIRED_PRICING - set(cost.pricing)
     if missing_p:
         raise RulesDataError(f"pricing.yaml: missing {sorted(missing_p)}")
+    missing_c = REQUIRED_COMMODITIES - set(cost.commodities)
+    if missing_c:
+        raise RulesDataError(f"commodities.yaml: missing {sorted(missing_c)}")
+    for r in cost.regions.values():
+        if r.material_basis == "trade" and r.aluminium_premium not in cost.commodities:
+            raise RulesDataError(f"regions {r.key}: trade basis needs an aluminium_premium commodity key")
+    for name, entries in (("material_prices", cost.material_prices), ("bought_in", cost.bought_in)):
+        for k, e in entries.items():
+            if e.discount_class and DISCOUNT_PREFIX + e.discount_class not in cost.general:
+                raise RulesDataError(f"{name} {k}: unknown discount_class {e.discount_class}")
+    for k, g in cost.general.items():
+        if k.startswith(DISCOUNT_PREFIX):
+            v = g.value
+            if not (isinstance(v, dict) and 0 < v.get("low", 0) <= v.get("high", 0) <= 1 and "from_quantity" in v):
+                raise RulesDataError(f"general.yaml {k}: needs low/high fractions (0–1] and from_quantity")
     cnc = cost.process_rates.get("cnc_machining")
     if cnc and (cnc.min_per_cm3_removed is None or cnc.stock_allowance_mm is None):
         raise RulesDataError("process_rates: cnc_machining needs min_per_cm3_removed and stock_allowance_mm")

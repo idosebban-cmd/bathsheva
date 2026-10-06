@@ -11,7 +11,9 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_project
 from app.db import get_session
 from app.models import CostItem, Project
-from app.services.costing import cost_report, reset_items
+from app.services.costing import cost_report, cost_settings, reset_items, update_cost_settings
+
+PriceBasis = Literal["trade_volume", "distributor_small_qty", "retail", "model_estimate"]
 
 router = APIRouter(prefix="/api/projects/{project_id}", tags=["costing"])
 
@@ -27,6 +29,9 @@ class CostItemIn(BaseModel):
     confidence: Literal["low", "medium", "high"] = "medium"
     verified: bool = False
     notes: str = ""
+    price_basis: PriceBasis = "trade_volume"
+    basis_quantity: float | None = Field(default=None, gt=0)
+    discount_class: str | None = None
 
     @model_validator(mode="after")
     def _check(self) -> "CostItemIn":
@@ -47,6 +52,9 @@ class CostItemUpdate(BaseModel):
     confidence: Literal["low", "medium", "high"] | None = None
     verified: bool | None = None
     notes: str | None = None
+    price_basis: PriceBasis | None = None
+    basis_quantity: float | None = Field(default=None, gt=0)
+    discount_class: str | None = None
 
 
 class CostItemOut(BaseModel):
@@ -64,6 +72,18 @@ class CostItemOut(BaseModel):
     verified: bool
     notes: str
     sort_order: int
+    price_basis: str
+    basis_quantity: float | None
+    discount_class: str | None
+
+
+class VolumeDiscountIn(BaseModel):
+    low: float
+    high: float
+
+
+class CostSettingsIn(BaseModel):
+    volume_discounts: dict[str, VolumeDiscountIn | None]
 
 
 @router.get("/costs")
@@ -103,9 +123,17 @@ def update_item(item_id: int, body: CostItemUpdate, project: Project = Depends(g
         raise HTTPException(422, "High cost must not be below low cost")
     if item.unit == "pcs" and item.unit_cost_low is None and item.unit_cost_high is None:
         raise HTTPException(422, "A per-piece item needs a unit cost")
-    # Editing a seeded price makes it the user's figure unless they say otherwise.
+    # Editing a seeded price makes it the user's figure unless they say otherwise. A figure the
+    # user types in is taken to be a volume price (e.g. a supplier quote), so no volume discount.
     if price_changed and "source" not in changes and item.source != "user":
         item.source = "user"
+        if "price_basis" not in changes:
+            item.price_basis, item.basis_quantity, item.discount_class = "trade_volume", None, None
+    if item.discount_class:
+        from app.costing.data import load_cost_data
+
+        if item.discount_class not in load_cost_data().discount_classes():
+            raise HTTPException(422, f"Unknown discount class {item.discount_class!r}")
     session.commit()
     return item
 
@@ -122,6 +150,16 @@ def reset(project: Project = Depends(get_project), session: Session = Depends(ge
     if not project.template:
         raise HTTPException(409, "Only template projects have default cost items")
     return reset_items(session, project)
+
+
+@router.get("/cost-settings")
+def get_cost_settings(project: Project = Depends(get_project)):
+    return cost_settings(project)
+
+
+@router.put("/cost-settings")
+def put_cost_settings(body: CostSettingsIn, project: Project = Depends(get_project), session: Session = Depends(get_session)):
+    return update_cost_settings(session, project, {k: (v.model_dump() if v else None) for k, v in body.volume_discounts.items()})
 
 
 @router.get("/cost-audit")

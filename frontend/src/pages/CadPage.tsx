@@ -149,8 +149,18 @@ export default function CadPage() {
           <div className="viewer empty">No CAD generated yet. Check the parameters and press "Regenerate CAD".</div>
         )}
         <p className="small muted">
-          Simplified concept geometry: one body per part. The LED module and cable are placeholders showing space and position.
+          Concept geometry, one body per part: spun shells, steel weight plate, tube-cut band on the body step, glass lantern between gaskets
+          and the central lamp tube. The LED module, dimmer and cable are placeholders showing space and position.
         </p>
+        {state.mass && (
+          <p className={state.mass.status === "ok" ? "small" : "small warning-text"}>
+            Estimated lamp mass <b>{state.mass.total_kg.toFixed(2)} kg</b>
+            {state.mass.target_kg ? ` vs target ${state.mass.target_kg} kg` : ""}
+            {state.mass.status === "low" && " — below target: thicken or enlarge the weight plate"}
+            {state.mass.status === "high" && " — well above target"} (weight plate {(state.mass.parts_kg.weight_plate ?? 0).toFixed(2)} kg).{" "}
+            <span className="muted">{state.mass.note}</span>
+          </p>
+        )}
         {latest && <CadDownloads model={latest} projectId={project.id} />}
       </section>
     </div>

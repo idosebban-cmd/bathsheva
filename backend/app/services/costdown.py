@@ -251,22 +251,19 @@ def select_route(session: Session, project: Project, part: Part, process_key: st
     if mat is None:
         raise HTTPException(422, f"Unknown material {material_key!r}")
 
-    traits = set(sp.traits) | set(sp.derived_traits)
-    changes = [" ".join(rc.design_change.split()) for rc in route_changes_for(cost, process_key, traits)]
+    from app.services.decisions import route_decision_chosen
+
     recommended = next((v for v in sp.viable), None)
     is_recommended = bool(recommended) and (recommended["process_key"], recommended["material_key"]) == (process_key, material_key)
-    latest = project.cad_models[-1] if project.cad_models else None
+    chosen = route_decision_chosen(project, part, process_key, material_key,
+                                   part.process or (sp.process_key or ""), part.material or (sp.material_key or ""))
     decision = EngineeringDecision(
         project_id=project.id, part_id=part.id, topic="process_route",
         status="accepted" if is_recommended else "edited",
         recommendation={"recommendation": {"process_key": recommended["process_key"], "process_name": recommended["process_name"],
                                            "material_key": recommended["material_key"], "material_name": recommended["material_name"]}}
         if recommended else {},
-        chosen={
-            "process_key": process_key, "process": proc.name, "material_key": material_key, "material": mat.name,
-            "previous_process": part.process or (sp.process_key or ""), "previous_material": part.material or (sp.material_key or ""),
-            "design_changes": changes, "cad_mismatch": bool(changes), "cad_version": latest.version if latest else None,
-        },
+        chosen=chosen,
         note=reason.strip(),
     )
     part.process = proc.name
@@ -282,11 +279,23 @@ def cad_mismatches(project: Project) -> list[dict[str, Any]]:
     for d in sorted(project.decisions, key=lambda d: (d.created_at, d.id)):
         if d.topic == "process_route" and d.part_id is not None:
             latest[d.part_id] = d
-    names = {p.id: p.name for p in project.parts}
-    return [
-        {"part_id": pid, "part": names.get(pid, "?"), "process": d.chosen.get("process"), "changes": d.chosen.get("design_changes", [])}
-        for pid, d in latest.items() if d.chosen.get("cad_mismatch")
-    ]
+    from app.services.decisions import unimplemented_changes
+
+    parts = {p.id: p for p in project.parts}
+    out = []
+    for pid, d in latest.items():
+        part = parts.get(pid)
+        keys = d.chosen.get("design_change_keys")
+        if keys is None:  # decisions recorded before change keys were stored
+            mismatch = bool(d.chosen.get("cad_mismatch"))
+            texts = d.chosen.get("design_changes", [])
+        else:
+            missing = unimplemented_changes(project, part.cad_key if part else None, keys)
+            mismatch = bool(missing)
+            texts = [t for k, t in zip(keys, d.chosen.get("design_changes", [])) if k in missing]
+        if mismatch:
+            out.append({"part_id": pid, "part": part.name if part else "?", "process": d.chosen.get("process"), "changes": texts})
+    return out
 
 
 # ---------------------------------------------------------------------------
@@ -310,11 +319,33 @@ def change_config(defn: dict[str, Any], option: int, params: dict[str, Any]) -> 
         qty = float(params.get(it["quantity_param"], 1)) if it.get("quantity_param") else float(it.get("quantity", 1))
         cfg.add_items.append(ExtraItem(it["price_key"], qty, kind=it.get("kind", "bought_in"), origin=f"scenario {defn['letter']}"))
     cfg.remove_price_keys |= set(eff.get("remove_items", []))
+    cfg.replace_price_keys.update(eff.get("replace_items", {}))
     if "assembly_min" in eff:
         cfg.assembly_delta_min = (float(eff["assembly_min"]["low"]), float(eff["assembly_min"]["high"]))
     if "scale_height" in eff:
         cfg.height_mm = float(eff["scale_height"])
     return cfg
+
+
+def option_allowed(defn: dict[str, Any], option: int, snap: Snapshot, rules: RuleSet) -> tuple[bool, str]:
+    """Whether a scenario option respects the design constraints (e.g. no plastic on visible parts)."""
+    from app.rules.engine import material_allowed
+    from app.rules.match import match_finishes
+
+    reroute = defn.get("effect", {}).get("reroute")
+    if not reroute:
+        return True, ""
+    opt = reroute["options"][option]
+    sp = next((s for s in snap.parts if s.cad_key == reroute["part"]), None)
+    if sp is None:
+        return True, ""
+    traits = set(sp.traits) | set(sp.derived_traits)
+    finishes = match_finishes(rules, sp.finish_text)
+    for fk in finishes or [None]:
+        ok, why = material_allowed(rules, traits, sp.material_category, opt["material"], fk)
+        if not ok:
+            return False, why
+    return True, ""
 
 
 def n_options(defn: dict[str, Any]) -> int:
@@ -336,16 +367,19 @@ def _conflict(keys: tuple[str, ...], defs: dict[str, dict[str, Any]]) -> bool:
 
 
 def _cheapest_options(snap: Snapshot, defs: dict[str, dict[str, Any]], region: str, q: float, rules: RuleSet,
-                      cost: CostData) -> dict[str, int]:
-    """Cheapest option for each multi-option change, judged on its own (options touch only their own part)."""
-    best = {}
+                      cost: CostData) -> dict[str, int | None]:
+    """Cheapest allowed option for each change, judged on its own (options touch only their own part).
+
+    None means every option of that change breaks a design constraint, so the optimiser skips it.
+    """
+    best: dict[str, int | None] = {}
     for key, d in defs.items():
-        n = n_options(d)
-        if n == 1:
-            best[key] = 0
+        allowed = [i for i in range(n_options(d)) if option_allowed(d, i, snap, rules)[0]]
+        if len(allowed) <= 1:
+            best[key] = allowed[0] if allowed else None
             continue
-        costs = [_cost(snap, selection_config(defs, [(key, i)], region, snap.params), q, rules, cost) for i in range(n)]
-        best[key] = min(range(n), key=lambda i: costs[i])
+        costs = {i: _cost(snap, selection_config(defs, [(key, i)], region, snap.params), q, rules, cost) for i in allowed}
+        best[key] = min(allowed, key=lambda i: costs[i])
     return best
 
 
@@ -362,8 +396,13 @@ def resolve(selection: list[dict[str, Any]], defs: dict[str, dict[str, Any]], sn
             if cheapest is None:
                 cheapest = _cheapest_options(snap, defs, region, q, rules, cost)
             opt = cheapest[s["key"]]
+            if opt is None:
+                raise HTTPException(422, f"Scenario {s['key']}: every option breaks a design constraint")
         if not 0 <= opt < n_options(defs[s["key"]]):
             raise HTTPException(422, f"Scenario {s['key']} has no option {opt}")
+        ok, why = option_allowed(defs[s["key"]], int(opt), snap, rules)
+        if not ok:
+            raise HTTPException(422, f"Scenario {s['key']} option {opt} is excluded: {why}")
         out.append((s["key"], int(opt)))
     keys = tuple(k for k, _ in out)
     if _conflict(keys, defs):
@@ -388,8 +427,9 @@ def optimise(snap: Snapshot, defs: dict[str, dict[str, Any]], q: float, rules: R
     best: dict[str, Any] | None = None
     for region in cost.regions:
         options = _cheapest_options(snap, {k: defs[k] for k in keys}, region, q, rules, cost)
-        for r in range(len(keys) + 1):
-            for combo in itertools.combinations(keys, r):
+        usable = [k for k in keys if options[k] is not None]
+        for r in range(len(usable) + 1):
+            for combo in itertools.combinations(usable, r):
                 if _conflict(combo, defs):
                     continue
                 sel = [(k, options[k]) for k in combo]
@@ -489,7 +529,8 @@ def scenario_catalog(session: Session, project: Project) -> dict[str, Any]:
         for i in range(n_options(d)):
             cfg = change_config(d, i, snap.params)
             label = d.get("effect", {}).get("reroute", {}).get("options", [{}])[i].get("label", "") if n_options(d) > 1 or "reroute" in d.get("effect", {}) else ""
-            opts.append({"option": i, "label": label,
+            ok, why = option_allowed(d, i, snap, rules)
+            opts.append({"option": i, "label": label, "allowed": ok, "excluded_reason": why,
                          "saving": {str(q): round(base[q] - _cost(snap, cfg, q, rules, cost), 2) for q in SUMMARY_VOLUMES}})
         out.append({
             "key": d["key"], "letter": d["letter"], "label": d["label"], "design_change": " ".join(d.get("design_change", "").split()),
@@ -511,9 +552,20 @@ def scenario_catalog(session: Session, project: Project) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 
+def power_options(project: Project, defs: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
+    """Power options to cost side by side (template `power_options`); a single default if none."""
+    opts = load_template(project.template).get("power_options") if project.template else None
+    if not opts:
+        return [{"key": "A", "label": "Current electronics", "scenario": None}]
+    return [o for o in opts if not o.get("scenario") or o["scenario"] in defs]
+
+
 def edition_config(project: Project, option_key: str, removed: set[str]) -> CostConfig:
     ed = load_template(project.template).get("premium_edition", {})
     opt = next(o for o in ed["options"] if o["key"] == option_key)
+    fin = load_rules().finishes.get(opt.get("finish") or "")
+    if fin is not None and fin.metal_effect:
+        raise HTTPException(422, f"Premium edition option {option_key!r} uses a metal-effect finish, which the design constraint forbids")
     cfg = CostConfig()
     for cad_key in ed["parts"]:
         if cad_key in removed:
@@ -559,25 +611,36 @@ def product_summary(session: Session, project: Project) -> dict[str, Any]:
         ("premium", "Best allowing slight compromises"),
         ("any", "Lowest cost (any change)"),
     ]
-    for q in SUMMARY_VOLUMES:
-        rows.append(row("Current configuration", [], "uk", q) | {"tier": "current"})
-        seen: list[tuple[Any, str]] = []
-        for tier, label in tier_labels:
-            best = optimise(snap, defs, q, rules, cost, tier=tier)
-            key = (tuple(best["selection"]), best["region"])
-            same_as = next((lbl for k, lbl in seen if k == key), None)
-            seen.append((key, label))
-            rows.append(row(label, best["selection"], best["region"], q) | {"tier": tier, "same_as": same_as})
-        # The brass edition needs a separate band, so the painted-stripe change is excluded.
-        for opt in ("plated", "solid"):
-            ed_cur = edition_config(project, opt, set())
-            premium_rows.append(row(f"Brass edition ({opt}), current configuration", [], "uk", q, ed_cur, tg["premium"]))
-            be = optimise(snap, defs, q, rules, cost, tier="strict", forbid={"band_stripe"}, extra=ed_cur)
-            premium_rows.append(row(f"Brass edition ({opt}), best with no compromise", be["selection"], be["region"], q,
-                                    ed_cur, tg["premium"]))
+    powers = power_options(project, defs)
+    for power in powers:
+        forced = [(power["scenario"], 0)] if power["scenario"] else []
+        forbid = {p["scenario"] for p in powers if p["scenario"]}
+        extra = selection_config(defs, forced, "uk", snap.params) if forced else None
+        for q in SUMMARY_VOLUMES:
+            rows.append(row("Current configuration", forced, "uk", q) | {"tier": "current", "power": power["key"],
+                                                                         "power_label": power["label"]})
+            seen: list[tuple[Any, str]] = []
+            for tier, label in tier_labels:
+                best = optimise(snap, defs, q, rules, cost, tier=tier, forbid=forbid, extra=extra)
+                sel = forced + best["selection"]
+                key = (tuple(sel), best["region"])
+                same_as = next((lbl for k, lbl in seen if k == key), None)
+                seen.append((key, label))
+                rows.append(row(label, sel, best["region"], q) | {"tier": tier, "same_as": same_as, "power": power["key"],
+                                                                 "power_label": power["label"]})
+            # The brass edition needs a separate band, so the painted-stripe change is excluded.
+            for opt in ("plated", "solid"):
+                ed_cur = edition_config(project, opt, set())
+                ed_extra = ed_cur.merged(extra) if extra is not None else ed_cur
+                premium_rows.append(row(f"Brass edition ({opt}), current configuration", forced, "uk", q, ed_cur,
+                                        tg["premium"]) | {"power": power["key"], "power_label": power["label"]})
+                be = optimise(snap, defs, q, rules, cost, tier="strict", forbid=forbid | {"band_stripe"}, extra=ed_extra)
+                premium_rows.append(row(f"Brass edition ({opt}), best with no compromise", forced + be["selection"],
+                                        be["region"], q, ed_cur, tg["premium"]) | {"power": power["key"],
+                                                                                    "power_label": power["label"]})
     ed = load_template(project.template).get("premium_edition", {})
     return {
-        "targets": tg, "close_band": close, "rows": rows,
+        "targets": tg, "close_band": close, "rows": rows, "power_options": powers,
         "premium": {"label": ed.get("label", "Premium edition"), "retail": values["premium_retail"],
                     "targets": tg["premium"], "rows": premium_rows,
                     "options": {o["key"]: o["label"] for o in ed.get("options", [])}},
@@ -585,8 +648,11 @@ def product_summary(session: Session, project: Project) -> dict[str, Any]:
             "Status compares the midpoint estimate with each target: pass at or under, close within "
             f"{close:.0%} over, fail beyond.",
             "Best combinations search every combination of changes and every region; multi-option changes use their cheapest option.",
+            "Power options are costed side by side: A keeps the internal mains driver; B always uses the external adapter and "
+            "an internal DC-DC driver (scenario g), whatever the tier.",
             "Tiers: 'no compromise' uses only changes that keep the look and feel; 'slight compromises' also allows the painted "
-            "stripe, the plug-in adapter and the 350 mm height; 'any' also allows the straight tube body.",
+            "stripe, the inline dimmer and the 350 mm height; 'any' also allows the straight tube body.",
+            "Changes whose options break a design constraint (e.g. plastic on a visible part) are never chosen.",
             "Rates are unverified: most are model-generated, some come from published distributor prices. Treat the ranking as a guide for which quotes to get first.",
         ],
     }

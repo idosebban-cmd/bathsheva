@@ -1,0 +1,29 @@
+# Design constraints enforced by the rules engine and the cost-down optimiser.
+# A process whose only materials break a constraint is shown as excluded (with
+# the constraint named), never silently dropped.
+#
+#   applies_traits_any  the constraint applies to parts with any of these traits
+#   exempt_traits       parts with any of these traits are exempt (e.g. hidden)
+#   exempt_categories   material categories that are exempt (certified electrical parts)
+#   allowed_kinds       material kinds allowed: metal | glass | polymer
+#   transparent_kinds   kinds allowed instead for transparent parts (the lantern)
+#   trim_traits         bought-in parts with these traits have a visible metal element (e.g. a dimmer knob):
+#                       the constraint is shown on them as a requirement for the supplier
+
+design_constraints:
+  - key: visible_parts_solid_metal
+    name: Visible metal parts must be solid metal
+    message: >-
+      Every visible or touchable part must be solid metal, or glass for the
+      lantern. No plastic, metallised plastic or metal-effect paint on plastic,
+      at any volume. Hidden functional parts (grommets, gaskets, insulators,
+      strain relief) may be plastic or rubber.
+    applies_traits_any: [cosmetic, transparent, visible_trim]
+    exempt_traits: [hidden]
+    exempt_categories: [electrical, bought_in]
+    allowed_kinds: [metal]
+    transparent_kinds: [glass]
+    trim_traits: [visible_trim]
+    source: "user requirement (Oct 2026)"
+    confidence: high
+    verified: false

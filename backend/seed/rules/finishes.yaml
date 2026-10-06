@@ -42,9 +42,8 @@ finishes:
     name: Brass plating on aluminium
     keywords: [brass]
     plain_language: >-
-      A brass-coloured metal plated onto aluminium. Needs special pretreatment
-      (zincate) and a good plater; solid brass or a brass-effect PVD coating
-      may be more reliable.
+      Real brass plated onto an aluminium part. Needs special pretreatment
+      (zincate) and a good plater; solid brass is the more reliable option.
     min_process_finish: good
     notes: Plating adhesion on aluminium is a known risk; confirm with plater.
     source: model-generated
@@ -65,4 +64,15 @@ finishes:
     min_process_finish: fair
     source: model-generated
     confidence: medium
+    verified: false
+  - key: metal_effect_paint
+    name: Metal-effect paint or coating (not allowed on visible parts)
+    keywords: [metal effect, metal-effect, metallic paint, brass effect, brass-effect, brass look, brass-look, chrome effect, metallised, metallized]
+    plain_language: >-
+      Paint or a vacuum-metallised film that imitates metal. Faro's design
+      constraint forbids it on any visible part: visible metal must be solid metal.
+    min_process_finish: fair
+    metal_effect: true
+    source: "user requirement (Oct 2026): visible metal parts must be solid metal"
+    confidence: high
     verified: false

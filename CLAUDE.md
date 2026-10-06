@@ -29,7 +29,9 @@ backend/app/
   models.py          ORM. M1 tables plus schema-only later entities
   schemas.py         Pydantic API schemas (Requirements etc.)
   api/               Thin HTTP routers, one per area
-  services/          Orchestration: projects, BOM, DFM, revisions
+  services/          Orchestration: projects, BOM, DFM, revisions, decisions (template-accepted
+                     decisions), factory_pack (RFQ pack)
+  factory/           drawings.py: 2D quotation drawings (reportlab -> SVG + PDF) from faro.section_profiles
   rules/             Rules engine: loads seed YAML, produces recommendations
   cad/               CadQuery generators, parameter validation, export
   ai/                LLM provider abstraction (anthropic | mock | none)
@@ -37,15 +39,16 @@ backend/app/
                      assemble.py (snapshot + config -> inputs), pricing.py (retail -> target factory cost)
 backend/seed/
   rules/*.yaml       Engineering rules (editable)
+  rules/constraints.yaml  Design constraints (visible parts solid metal) enforced by engine + optimiser
   cost/*.yaml        Cost rates: material £/kg, process rates, finishes, labour, bought-in prices,
-                     regions, route design changes, channel pricing
+                     regions, route design changes, channel pricing, commodities (LME, FX, premiums)
   products/faro.yaml Faro template: parts, requirements placeholders, CAD defaults
 backend/migrations/  Alembic env and versions/ (one file per schema change)
 scripts/             stress_cad.py (CAD soak test), check_run_shutdown.py (run.sh and launcher stop behaviour),
                      cost_audit.py (regenerates docs/cost-assumptions-audit.md),
                      setup_mac.sh + mac_env.sh + workbench_check.py (Mac setup, PATH, migrate/self-test)
 Start Workbench.command  Double-click launcher for macOS (wraps run.sh, opens the browser)
-docs/                Generated reports (cost-assumptions-audit.md)
+docs/                Generated reports (cost-assumptions-audit.md) and cost-price-research.md
 ~/Bathsheva Workbench/data   Runtime: SQLite DB, uploads, CAD outputs (outside the repo)
 ```
 
@@ -79,20 +82,25 @@ Other useful commands, run from `backend/`: `.venv/bin/alembic current`, `.venv/
 | CAD | `GET /cad`, `POST /cad/validate`, `POST /cad/generate`, `GET /cad/models/{v}/download.zip`; files under `/files/projects/...` |
 | Engineering | `GET /recommendations`, `POST /recommendations/{part}/explain` (LLM), `POST /decisions` |
 | BOM | `GET /bom`, `GET /bom.csv` |
-| Manufacturing | `GET /costs`; `GET/POST /cost-items`, `PATCH/DELETE /cost-items/{id}`, `POST /cost-items/reset`; `GET /cost-audit` (+ `.md`, `.csv`) |
+| Manufacturing | `GET /costs`; `GET/POST /cost-items`, `PATCH/DELETE /cost-items/{id}`, `POST /cost-items/reset`; `GET/PUT /cost-settings` (volume discounts); `GET /cost-audit` (+ `.md`, `.csv`) |
 | Cost-down | `GET/PUT /pricing`; `GET /routes`, `POST /parts/{part}/route`; `GET /scenarios`, `POST /scenarios/evaluate`; `GET /cost-down/summary`; `GET/POST /scenario-sets`, `DELETE /scenario-sets/{id}` |
 | DFM report | `GET /dfm`, `GET /dfm.md` |
+| Factory Pack | `GET /factory-pack`, `GET /factory-pack.zip`, `GET /drawings/{cad_key}.svg\|.pdf`, `GET /rfq.md\|.pdf` |
 | Revisions | `GET/POST /revisions`, `GET /revisions/{n}` (no update or delete) |
 
-The Factory Pack tab, compliance and factory feedback are later milestones. Their tables exist in `models.py` but have no API.
+The Factory Pack tab has the first part of SPEC §5 (the RFQ pack). Compliance and factory feedback are later milestones; their tables exist in `models.py` but have no API.
 
 ## Rules engine in brief
 
 For each candidate process in the part's material family, the engine applies hard exclusions first: missing required traits, excluded traits, or a wall thickness the process can't make. It then scores what's left on trait fit, volume fit, tooling cost, cosmetic finish need and finish compatibility. The best material is the one most often paired with the process that suits the target finish. Confidence comes from the score margin. It drops to low when volume is assumed and the answer changes between 100, 1,000 and 10,000 units, and it is capped at medium while the data is unverified. Traits come from the part plus CAD-derived traits (`faro.derived_traits`, for example tapered vs constant_section).
 
+Design constraints (`seed/rules/constraints.yaml`): "visible parts must be solid metal" restricts the material kinds (metal, or glass for transparent parts) for parts with `cosmetic`/`transparent` traits; `hidden` parts and certified electrical / bought-in parts are exempt, and `visible_trim` bought-in parts (dimmer knob, cap nut) get a supplier requirement. A process whose materials all break it appears in `excluded` with `constraint` set; metal-effect finishes are reported as violations. The cost-down optimiser never chooses a scenario option that breaks it (`costdown.option_allowed`).
+
 ## Cost model in brief
 
 `app/costing/model.py` is pure. Each input is a named `Assumption` (low/high plus provenance). Per part: material is CAD volume × density × scrap factor (CNC uses bar stock), process is cycle minutes × machine rate, setup and tooling are divided by the quantity, and finishing is max(minimum charge, visible area × rate). Product-level lines (bought-in parts, assembly minutes × labour rate, packaging) are editable `CostItem` rows, seeded from `faro.yaml` `cost_items` for the current power type.
+
+Price basis: material and bought-in seed entries carry `price_basis` (trade_volume / distributor_small_qty / retail / model_estimate) and `basis_quantity`. Distributor and retail prices with a `discount_class` are multiplied by a volume-discount assumption (`general.yaml` `volume_discount_*`, editable per project via `/cost-settings`) at `from_quantity` (500) and above. Outside the UK (`regions.yaml` `material_basis: trade`), sheet aluminium is priced from `commodities.yaml`: (LME + regional premium) / FX / 1000 + sheet conversion. `evaluate(..., raw=True)` and `raw_mid` give the cost at the researched basis, shown next to the adjusted cost. A price the user types into a cost item becomes `trade_volume` (no discount).
 
 Ranges: each input is widened by its confidence (`seed/cost/general.yaml` `confidence_spread`; verified inputs are not widened). The range is the midpoint ± the root-sum-square of each input's effect, and the all-worst-case envelope is also reported. Sensitivity moves each assumption ±25% and ranks by unit-cost swing. Process and material come from the part's decision, else the rules recommendation. When a part's manual cost fields are blank, quotes are compared with the model's estimate at the quote's quantity.
 
@@ -102,6 +110,9 @@ Ranges: each input is widened by its confidence (`seed/cost/general.yaml` `confi
 
 - **Routes:** every `viable` process from the rules engine is costed per part. `seed/cost/route_changes.yaml` adds the design changes and extra parts a route needs; these are costed wherever that route is used (current configuration, route table, scenarios). Selecting a route records a `process_route` decision and sets the part's process and material. CAD is never changed. `costdown.cad_mismatches()` drives the "CAD no longer matches" flags in the BOM and DFM.
 - **Sheet-formed parts** (spun, pressed, rolled) are costed as a shell of the CAD wall thickness when the CAD body is solid.
+- **Accepted decisions** in `faro.yaml` `decisions` are recorded on new projects (`services/decisions.py`, idempotent): spun base shell with weight plate and rivet nuts, band cut from stock tube, borosilicate lantern, central lamp tube. They are the baseline, not scenarios.
+- **CAD mismatch** is computed at read time: a route decision's `design_change_keys` are checked against `faro.IMPLEMENTED_CHANGES` and the bodies in the latest generated model.
+- **Power options** (`faro.yaml` `power_options`): A (internal mains driver) and B (scenario g: external adapter + DC-DC driver). The product summary optimises each separately; B always includes g. The inline dimmer (scenario j) swaps to the low-voltage dimmer under B via `replace_items`.
 - **Scenarios** live in `faro.yaml` `scenarios`. The optimiser searches every non-conflicting subset and every region exhaustively. Each multi-option change uses its cheapest option on its own, which is valid because options touch only their own part (a test checks this against brute force). There are three tiers by `premium_impact`: strict (none), premium (none or slight) and any.
 - **Pricing:** `projects.pricing` overlays defaults from `seed/cost/pricing.yaml` plus the template. DTC target = ex-VAT × dtc share. Retail-channel target = ex-VAT × (1 − retailer margin) × wholesale share. Status: pass ≤ target, close ≤ target × (1 + close band), otherwise fail.
 - **Migrations on SQLite** run with foreign keys off (`app/migrate.py`), because batch rebuilds would otherwise cascade-delete child rows.
@@ -113,9 +124,10 @@ Ranges: each input is widened by its confidence (`seed/cost/general.yaml` `confi
 - **Assumptions:** placeholder requirements are listed in `project.assumed_fields` and shown with an Assumption badge. When an inferred value feeds the rules (for example, assumed volume when volume is TBD), it appears in the recommendation's `assumptions`.
 - **Plain language first:** each recommendation leads with a non-engineer explanation, with technical detail underneath.
 - **Units:** millimetres, degrees, GBP.
-- **CAD:** one body per part. A part's `cad_key` equals the generator's body name. Every regeneration creates a new immutable `CadModel` version under `data/projects/<id>/cad/v<n>/`.
+- **CAD:** one body per part. A part's `cad_key` equals the generator's body name. Faro has 14 bodies (shells, weight plate, lamp tube, nuts, gaskets, dimmer). `overall_height` includes the cap nut. Old saved parameters are upgraded with new defaults (`faro.upgrade`). `section_profiles()` feeds the 2D drawings and must match `build()`. Every regeneration creates a new immutable `CadModel` version under `data/projects/<id>/cad/v<n>/`.
 - **Revisions:** an immutable JSON snapshot (requirements, parameters, parts, decisions, recommendations, CAD version and its file paths). No branching.
 - **External quotes:** real supplier quotes and DFM feedback (`ExternalQuote`) are for the user to review against the part's estimated unit-cost range. They never change the rules engine, seed data or part fields automatically. Seed data is updated by hand. The comparison doesn't convert currencies. The quote pack includes only manufactured parts; bought-in parts and hardware are listed in its README.
 - **Decisions:** `EngineeringDecision.status` is one of proposed / accepted / rejected / edited.
+- **Factory Pack:** drawings cover made-to-drawing parts only (`drawings.DRAWN_PARTS`). Nothing sent to suppliers contains our cost estimates or targets. Mark unverified values (UNVERIFIED) and safety / compliance items in every drawing and the RFQ.
 - Tests live in `backend/tests`. Add tests with every rules, CAD, model or export change.
 - Commit after each working vertical slice.

@@ -61,7 +61,15 @@ def _hardware(project: Project, params: dict[str, Any]) -> list[dict[str, Any]]:
     clearance = rules.plan("metric_clearance_holes_mm")
     for j in joints:
         a, b = j["between"]
-        if j["method"] == "machine_screw_tapped" and {a, b} == {"base", "main_body"}:
+        if j["method"] == "threaded_insert" and "weight_plate" in (a, b):
+            rows.append({
+                "name": "M4 machine screw, weight plate to rivet nuts",
+                "quantity": int(params["mounting_hole_count"]),
+                "material": "Stainless steel (A2)",
+                "notes": "Through the weight plate into the base rivet nuts so the plate can't turn or rattle; length TBD.",
+                "assumption": True,
+            })
+        elif j["method"] == "machine_screw_tapped" and {a, b} == {"base", "main_body"}:
             size = _screw_size(float(params["mounting_hole_diameter"]), clearance) or "M?"
             rows.append({
                 "name": f"{size} machine screw, base to body",
@@ -78,7 +86,7 @@ def _hardware(project: Project, params: dict[str, Any]) -> list[dict[str, Any]]:
                 "notes": "Quantity and size assumed until the LED module is chosen.",
                 "assumption": True,
             })
-        elif j["method"] == "clamp_with_gasket":
+        elif j["method"] == "clamp_with_gasket" and not {"gasket_lower", "gasket_upper"} & set(_cad_keys(project)):
             rows.append({
                 "name": f"Silicone gasket ring, {a.replace('_', ' ')} / {b.replace('_', ' ')}",
                 "quantity": 1,
@@ -98,6 +106,14 @@ def _hardware(project: Project, params: dict[str, Any]) -> list[dict[str, Any]]:
     return rows
 
 
+def _cad_keys(project: Project) -> list[str]:
+    return [p.cad_key for p in project.parts if p.cad_key]
+
+
+# Route extras that are modelled as their own CAD part (so the BOM doesn't list them twice).
+EXTRA_AS_PART = {"steel_weight_plate": "weight_plate"}
+
+
 def _route_extras(project: Project) -> list[dict[str, Any]]:
     """Extra parts the chosen process routes need (e.g. a weight plate for a spun base)."""
     from sqlalchemy.orm import object_session
@@ -109,10 +125,14 @@ def _route_extras(project: Project) -> list[dict[str, Any]]:
         return []
     inputs, ctx = build_inputs(session, project)
     out = []
+    keys = set(_cad_keys(project))
     for it in inputs.items:
         if it.part_id is None:
             continue
-        origin = ctx["extras"][it.item_id].origin
+        ex = ctx["extras"][it.item_id]
+        if EXTRA_AS_PART.get(ex.price_key) in keys:
+            continue
+        origin = ex.origin
         out.append({"name": it.name, "quantity": it.quantity, "origin": origin})
     return out
 

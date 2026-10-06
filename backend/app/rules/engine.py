@@ -10,7 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from app.rules.data import CONFIDENCE_RANK, FINISH_RANK, Material, Process, RuleSet, source_ref
+from app.rules.data import CONFIDENCE_RANK, FINISH_RANK, DesignConstraint, Material, Process, RuleSet, source_ref
 from app.rules.match import match_finishes
 
 # Plain-language phrases for geometry traits.
@@ -36,6 +36,8 @@ TRAIT_TEXT = {
     "strain_relief": "needs cable strain relief",
     "user_accessible": "handled by the user",
     "non_axisymmetric": "not round",
+    "hidden": "hidden inside the product",
+    "visible_trim": "has a visible metal element (e.g. a knob)",
 }
 
 # Which CAD parameter holds the wall thickness for a part.
@@ -82,11 +84,17 @@ def _tooling_text(rules: RuleSet, key: str) -> str:
     return f"{t.name.lower()} tooling cost (roughly £{_fmt_volume(t.gbp_min)}–£{_fmt_volume(t.gbp_max)})"
 
 
-def _best_material(rules: RuleSet, process: Process, finish_keys: list[str]) -> tuple[Material | None, float, list[str]]:
-    """Pick the material most commonly paired with the process that suits the finishes."""
+def _best_material(rules: RuleSet, process: Process, finish_keys: list[str],
+                   kinds: set[str] | None = None) -> tuple[Material | None, float, list[str]]:
+    """Pick the material most commonly paired with the process that suits the finishes.
+
+    `kinds` restricts the choice to material kinds a design constraint allows (None = any).
+    """
     best: tuple[Material | None, float, list[str]] = (None, float("-inf"), [])
     for mat in rules.materials.values():
         if process.key not in mat.processes:
+            continue
+        if kinds is not None and mat.material_kind not in kinds:
             continue
         preference = -0.3 * mat.processes.index(process.key)
         compat = 0.0
@@ -104,16 +112,49 @@ def _best_material(rules: RuleSet, process: Process, finish_keys: list[str]) -> 
     return best
 
 
+def active_constraints(rules: RuleSet, traits: set[str], category: str) -> list[DesignConstraint]:
+    """Design constraints that apply to a part with these traits and material category."""
+    return [c for c in rules.design_constraints.values() if c.applies(traits, category)]
+
+
+def allowed_kinds(rules: RuleSet, traits: set[str], category: str) -> tuple[set[str] | None, DesignConstraint | None]:
+    """Material kinds the part may use under the active constraints (None = unrestricted)."""
+    kinds: set[str] | None = None
+    first: DesignConstraint | None = None
+    for c in active_constraints(rules, traits, category):
+        k = c.kinds_for(traits)
+        kinds = k if kinds is None else kinds & k
+        first = first or c
+    return kinds, first
+
+
+def material_allowed(rules: RuleSet, traits: set[str], category: str, material_key: str | None,
+                     finish_key: str | None = None) -> tuple[bool, str]:
+    """Whether a material (and finish) is allowed on a part under the design constraints."""
+    kinds, constraint = allowed_kinds(rules, traits, category)
+    if constraint is None:
+        return True, ""
+    mat = rules.materials.get(material_key or "")
+    kind = mat.material_kind if mat else ("metal" if material_key == "brass" else None)
+    if kind is not None and kind not in kinds:
+        return False, f"{constraint.name}: {mat.name if mat else material_key} is {kind}"
+    fin = rules.finishes.get(finish_key or "")
+    if fin is not None and fin.metal_effect:
+        return False, f"{constraint.name}: {fin.name.split(' (')[0].lower()} imitates metal"
+    return True, ""
+
+
 def _score(
-    rules: RuleSet, process: Process, traits: set[str], volume: float, finish_keys: list[str], wall: float | None
-) -> _Scored | str:
-    """Score one candidate process, or return a plain-language exclusion reason."""
+    rules: RuleSet, process: Process, traits: set[str], volume: float, finish_keys: list[str], wall: float | None,
+    category: str = "",
+) -> _Scored | tuple[str, str | None]:
+    """Score one candidate process, or return a plain-language exclusion reason (and constraint key, if any)."""
     missing = [t for t in process.requires_all if t not in traits]
     if missing:
-        return f"only works for parts that are {', '.join(TRAIT_TEXT.get(t, t) for t in missing)}"
+        return f"only works for parts that are {', '.join(TRAIT_TEXT.get(t, t) for t in missing)}", None
     blocked = [t for t in process.excludes if t in traits]
     if blocked:
-        return f"not suited to parts that are {', '.join(TRAIT_TEXT.get(t, t) for t in blocked)}"
+        return f"not suited to parts that are {', '.join(TRAIT_TEXT.get(t, t) for t in blocked)}", None
 
     score = 0.0
     reasons: list[str] = []
@@ -159,15 +200,20 @@ def _score(
     if wall is not None and process.wall_mm is not None:
         w = process.wall_mm
         if not w.min <= wall <= w.max:
-            return f"cannot make the current {wall:g} mm wall (possible range {w.min:g}–{w.max:g} mm)"
+            return f"cannot make the current {wall:g} mm wall (possible range {w.min:g}–{w.max:g} mm)", None
         if w.typical_min <= wall <= w.typical_max:
             score += 0.5
         else:
             concerns.append(f"Current wall thickness {wall:g} mm is outside the typical {w.typical_min:g}–{w.typical_max:g} mm.")
 
-    material, mat_score, mat_notes = _best_material(rules, process, finish_keys)
+    kinds, constraint = allowed_kinds(rules, traits, category)
+    material, mat_score, mat_notes = _best_material(rules, process, finish_keys, kinds)
     if material is None:
-        return "no material in the rules data is paired with this process"
+        if constraint is not None and _best_material(rules, process, finish_keys)[0] is not None:
+            names = ", ".join(sorted({m.name for m in rules.materials.values() if process.key in m.processes}))
+            return (f"excluded by the design constraint \"{constraint.name}\": it only works with {names}",
+                    constraint.key)
+        return "no material in the rules data is paired with this process", None
     if mat_score < 0:
         score -= 1
     concerns.extend(n + "." for n in mat_notes)
@@ -180,9 +226,11 @@ def _rank(rules: RuleSet, part: dict[str, Any], traits: set[str], volume: float,
     for proc in rules.processes.values():
         if part["material_category"] not in proc.material_categories:
             continue
-        result = _score(rules, proc, traits, volume, finish_keys, wall)
-        if isinstance(result, str):
-            excluded.append({"process_key": proc.key, "process_name": proc.name, "reason": result})
+        result = _score(rules, proc, traits, volume, finish_keys, wall, part["material_category"])
+        if isinstance(result, tuple):
+            reason, constraint_key = result
+            excluded.append({"process_key": proc.key, "process_name": proc.name, "reason": reason,
+                             "constraint": constraint_key})
         else:
             scored.append(result)
     # Highest score first; cheaper tooling breaks ties.
@@ -256,6 +304,24 @@ def recommend(rules: RuleSet, part: dict[str, Any], ctx: Context) -> dict[str, A
 
     scored, excluded = _rank(rules, part, traits, volume, finish_keys, wall)
 
+    # Design constraints: which apply, which processes they exclude, and any finish that breaks them.
+    constraints = []
+    for c in rules.design_constraints.values():
+        applies = c.applies(traits, category)
+        trim = bool(traits & set(c.trim_traits))
+        if not (applies or trim):
+            continue
+        violations = [f"{rules.finishes[fk].name.split(' (')[0]} imitates metal and is not allowed on a visible part."
+                      for fk in finish_keys if rules.finishes[fk].metal_effect] if applies else []
+        constraints.append({
+            "key": c.key, "name": c.name, "message": " ".join(c.message.split()),
+            "scope": "part" if applies else "visible_trim",
+            "requirement": ("Visible parts of this bought-in component (e.g. the knob) must be solid metal."
+                            if trim and not applies else ""),
+            "excluded_processes": [e["process_name"] for e in excluded if e.get("constraint") == c.key],
+            "violations": violations, "source": c.source,
+        })
+
     base = {
         "part_id": part.get("id"),
         "part_key": cad_key,
@@ -284,6 +350,7 @@ def recommend(rules: RuleSet, part: dict[str, Any], ctx: Context) -> dict[str, A
             "alternatives": [],
             "viable": [],
             "excluded": excluded,
+            "constraints": constraints,
             "open_questions": questions or ["What is this part made from, and how?"],
             "risks": [],
             "technical": {},
@@ -405,7 +472,7 @@ def recommend(rules: RuleSet, part: dict[str, Any], ctx: Context) -> dict[str, A
     if power == "undecided" and (category in ("electrical", "aluminium")):
         questions.append("Mains or rechargeable battery? This changes the electrical design and safety requirements.")
     if "brass_plating" in finish_keys:
-        questions.append("Brass details: solid brass, brass plating or a brass-effect PVD coating?")
+        questions.append("Brass details: solid brass, or real brass plating on the metal part? (Brass-look coatings are not allowed.)")
 
     safety = _safety_flags(rules, traits, category, mat, proc, power)
     for rule in rules.safety_rules:
@@ -454,6 +521,7 @@ def recommend(rules: RuleSet, part: dict[str, Any], ctx: Context) -> dict[str, A
             for v in scored if v.material is not None
         ],
         "excluded": excluded,
+        "constraints": constraints,
         "volume_sensitivity": sensitivity,
         "open_questions": list(dict.fromkeys(questions)),
         "risks": risks,

@@ -121,9 +121,12 @@ def test_straight_body_makes_extrusion_viable_at_volume():
 def test_volume_changes_base_recommendation():
     low = recommend(RULES, faro_part("base"), ctx(production_volume=100))
     high = recommend(RULES, faro_part("base"), ctx(production_volume=50000))
-    assert low["recommendation"]["process_key"] == "cnc_machining"
-    assert high["recommendation"]["process_key"] == "die_casting"
-    assert high["recommendation"]["material_key"] == "al_a380"
+    assert low["recommendation"]["process_key"] != high["recommendation"]["process_key"]
+    # The base is now a thin shell: at high volume it is pressed rather than spun.
+    assert high["recommendation"]["process_key"] == "deep_drawing"
+    assert high["recommendation"]["material_key"] == "al_1050"
+    solid = {**faro_part("base"), "traits": [t for t in faro_part("base")["traits"] if t != "thin_wall"]}
+    assert recommend(RULES, solid, ctx(production_volume=50000))["recommendation"]["process_key"] == "die_casting"
 
 
 def test_unknown_volume_is_an_explicit_assumption_and_lowers_confidence():
@@ -157,7 +160,8 @@ def test_technical_details_present():
     body = recommend(RULES, faro_part("main_body"), ctx())
     assert "wall_thickness" in body["technical"] and "tolerances" in body["technical"]
     assert any("base" in f for f in body["technical"]["fastening"])
-    cast = recommend(RULES, faro_part("base"), ctx(production_volume=50000))
+    solid = {**faro_part("base"), "traits": [t for t in faro_part("base")["traits"] if t != "thin_wall"]}
+    cast = recommend(RULES, solid, ctx(production_volume=50000))
     assert "draft_angles" in cast["technical"]
 
 
@@ -209,7 +213,7 @@ def test_mock_provider_explains_without_changing_recommendation():
 def test_recommendations_and_decisions_api(client, faro_project):
     pid = faro_project["id"]
     data = client.get(f"/api/projects/{pid}/recommendations").json()
-    assert len(data["recommendations"]) == 7
+    assert len(data["recommendations"]) == len(load_template("faro")["parts"])
     assert data["open_decisions"][0]["topic"] == "power_type" and data["open_decisions"][0]["open"]
     body = next(r for r in data["recommendations"] if r["part_key"] == "main_body")
 
@@ -250,6 +254,37 @@ def test_app_works_with_llm_disabled(client, faro_project, monkeypatch):
     monkeypatch.setattr(engineering, "settings", disabled)
     pid = faro_project["id"]
     recs = client.get(f"/api/projects/{pid}/recommendations").json()
-    assert recs["llm"]["enabled"] is False and len(recs["recommendations"]) == 7
+    assert recs["llm"]["enabled"] is False and len(recs["recommendations"]) == len(load_template("faro")["parts"])
     r = client.post(f"/api/projects/{pid}/recommendations/{recs['recommendations'][0]['part_id']}/explain")
     assert r.status_code == 503
+
+
+# --- design constraint: visible parts solid metal ------------------------------------
+
+
+def test_visible_parts_constraint_excludes_plastic_and_shows_why():
+    lantern = recommend(RULES, faro_part("lantern"), ctx(production_volume=200))
+    assert lantern["recommendation"]["material_key"] == "borosilicate"
+    by_proc = {e["process_key"]: e for e in lantern["excluded"]}
+    for proc in ("polymer_tube_cut", "injection_moulding_clear"):
+        assert by_proc[proc]["constraint"] == "visible_parts_solid_metal"
+        assert "design constraint" in by_proc[proc]["reason"]
+    assert all(v["material_key"] in ("borosilicate", "soda_lime_glass") for v in lantern["viable"])
+    c = next(c for c in lantern["constraints"] if c["key"] == "visible_parts_solid_metal")
+    assert "Cut and polished clear tube" in c["excluded_processes"]
+
+
+def test_hidden_parts_are_exempt_and_trim_gets_a_requirement():
+    plate = recommend(RULES, faro_part("weight_plate"), ctx())
+    assert not any(c["scope"] == "part" for c in plate["constraints"])
+    knob = recommend(RULES, faro_part("dimmer"), ctx())
+    assert any(c["scope"] == "visible_trim" and "solid metal" in c["requirement"] for c in knob["constraints"])
+
+
+def test_metal_effect_finish_is_a_violation():
+    body = recommend(RULES, faro_part("main_body", finish="Brass-effect paint"), ctx())
+    c = next(c for c in body["constraints"] if c["key"] == "visible_parts_solid_metal")
+    assert c["violations"]
+    band_q = recommend(RULES, faro_part("band"), ctx())["open_questions"]
+    assert any("Brass-look coatings are not allowed" in q for q in band_q)
+    assert not any("PVD" in q for q in band_q)

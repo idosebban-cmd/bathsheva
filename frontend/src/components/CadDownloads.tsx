@@ -8,6 +8,13 @@ const LABELS: Record<string, string> = {
   top_cap: "Top cap",
   led_module: "LED module",
   cable: "Cable / power entry",
+  dimmer: "Dimmer (in base)",
+  weight_plate: "Weight plate",
+  lamp_tube: "Lamp tube",
+  lamp_nut: "Lamp nut and washer",
+  cap_nut: "Cap nut (finial)",
+  gasket_lower: "Lantern gasket (lower)",
+  gasket_upper: "Lantern gasket (upper)",
 };
 
 export default function CadDownloads({ model, projectId }: { model: CadModel; projectId: number }) {

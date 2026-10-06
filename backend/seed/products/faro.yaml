@@ -19,7 +19,7 @@ requirements:
     - Aluminium main body
     - Painted / lacquered coloured aluminium sections
     - Possible brass or brass-plated details
-    - Transparent lantern section
+    - Borosilicate glass lantern (no plastic on visible parts)
   preferred_finishes:
     - Coloured lacquer on aluminium
     - Black lacquer base
@@ -37,78 +37,122 @@ assumed_fields:
   - intended_markets
 
 # One CAD body per part (cad_key must match the generator's body names).
+# Traits: `hidden` marks functional parts that are never seen (they may be plastic or
+# rubber); `visible_trim` marks bought-in parts with a visible metal element.
 parts:
   - cad_key: base
     name: Base
-    function: Weighted foot that keeps the lamp stable; hides the cable exit and mounting screws.
+    function: >-
+      Spun aluminium shell that hides the weight plate, the dimmer and the cable entry;
+      the lamp tube clamps it to the body.
     material_category: aluminium
     finish: Black lacquer
-    traits: [axisymmetric, cosmetic, closed_top, needs_mass, mounting_holes, side_hole]
-    open_questions:
-      - Does the base need added mass (e.g. steel weight plate) to meet the stability target?
+    traits: [axisymmetric, cosmetic, closed_top, thin_wall, needs_mass, mounting_holes, side_hole]
   - cad_key: main_body
     name: Main body
-    function: Tapered lighthouse tower; the main visual surface of the lamp and the cable route to the lantern.
+    function: Tapered lighthouse tower with a locating step for the band; the main visual surface of the lamp.
     material_category: aluminium
     finish: Coloured lacquer
     traits: [axisymmetric, cosmetic, thin_wall, open_both_ends]
   - cad_key: band
     name: Decorative band
-    function: Contrasting ring around the tower, like a lighthouse gallery stripe.
+    function: Straight ring cut from stock tube, sitting on the body's step like a lighthouse gallery stripe.
     material_category: aluminium
     finish: Coloured lacquer (contrast) or brass-plated
-    traits: [axisymmetric, cosmetic, ring, short]
-    open_questions:
-      - Is the band a separate coloured part, or could it be a painted stripe on the main body?
+    traits: [axisymmetric, cosmetic, ring, short, open_both_ends]
   - cad_key: lantern
     name: Lantern
-    function: Transparent section that lets the LED light out.
+    function: Borosilicate glass tube that lets the LED light out, clamped between gaskets.
     material_category: clear_polymer_or_glass
     finish: Clear, optionally frosted inside
     traits: [axisymmetric, transparent, thin_wall, open_both_ends, near_heat_source]
     open_questions:
-      - Clear or frosted/diffused lantern?
+      - Clear or frosted (acid-etched or sand-blasted inside) glass?
   - cad_key: top_cap
     name: Top cap
-    function: Domed roof of the lighthouse; closes the lantern.
+    function: Spun domed roof of the lighthouse; clamps the lantern via the cap nut.
     material_category: aluminium
     finish: Coloured lacquer or brass-plated
-    traits: [axisymmetric, cosmetic, closed_top, domed]
+    traits: [axisymmetric, cosmetic, closed_top, domed, thin_wall]
   - cad_key: led_module
     name: LED module and mounting
-    function: Light source and its mounting/heat-spreading bracket inside the lantern.
+    function: >-
+      LED plate on the body top (clamped by a threaded LED holder on the lamp tube) and the
+      LED module around the tube inside the lantern.
     material_category: electrical
     finish: None (internal)
     traits: [electrical, heat_source, internal]
     open_questions:
-      - Target brightness (lumens) and colour temperature?
-      - Dimmable?
+      - Target brightness (lumens)? Colour temperature 2700K, CRI 90+, dimmable.
+      - LED arrangement around the central tube (COB on a bracket, or a ring module) to agree with the supplier.
   - cad_key: cable
     name: Cable / power entry
-    function: Brings power into the lamp through the base, with strain relief.
+    function: Brings power into the base through a strain-relief grommet; the cable then runs up the lamp tube.
     material_category: electrical
     finish: Cable colour to match
     traits: [electrical, user_accessible, strain_relief]
-    open_questions:
-      - Inline switch, touch dimmer or switch on the lamp?
+  - cad_key: dimmer
+    name: Dimmer (in base)
+    function: Rotary dimmer on the base with a solid metal knob (touch dimmer as an alternative).
+    material_category: electrical
+    finish: Knob in solid aluminium or brass, finish to match
+    traits: [electrical, user_accessible, visible_trim]
+  - cad_key: weight_plate
+    name: Weight plate
+    function: Laser-cut steel plate inside the base for stability; clamped by the lamp nut and screwed to rivet nuts so it can't rattle.
+    material_category: bought_in
+    material: Mild steel S275 (zinc plated)
+    process: Laser cut and zinc plated (made to drawing)
+    finish: Zinc plated
+    traits: [hidden, needs_mass]
+  - cad_key: lamp_tube
+    name: Lamp tube
+    function: Hollow M10x1 threaded tube running the full height; clamps the stack and carries the cable.
+    material_category: bought_in
+    finish: Zinc plated
+    traits: [hidden]
+  - cad_key: lamp_nut
+    name: Lamp nut and washer
+    function: Nut and washer under the weight plate that tighten the lamp tube.
+    material_category: bought_in
+    finish: Zinc plated
+    traits: [hidden]
+  - cad_key: cap_nut
+    name: Cap nut (finial)
+    function: Decorative domed nut on top of the cap; tightens the cap, lantern and gaskets.
+    material_category: bought_in
+    finish: Solid brass or aluminium, finish to match the cap
+    traits: [visible_trim, user_accessible]
+  - cad_key: gasket_lower
+    name: Lantern gasket (lower)
+    function: Silicone ring between the LED plate and the glass.
+    material_category: bought_in
+    finish: None
+    traits: [hidden]
+  - cad_key: gasket_upper
+    name: Lantern gasket (upper)
+    function: Silicone ring between the glass and the inside of the cap.
+    material_category: bought_in
+    finish: None
+    traits: [hidden]
 
 # How parts join. References fasteners.yaml keys.
 joints:
   - between: [base, main_body]
-    method: machine_screw_tapped
-    note: Screws from underneath the base into bosses or a ring in the body foot.
+    method: central_lamp_tube
+    note: The body foot sits on the base; the lamp tube pulls the LED plate down so the body is clamped between plate and base.
+  - between: [weight_plate, base]
+    method: threaded_insert
+    note: M4 screws through the plate into rivet nuts in the base shell stop it turning or rattling; the lamp nut clamps it.
   - between: [main_body, band]
     method: adhesive_bonding
-    note: Band slides over the taper and is bonded, or is clamped by the lantern seat.
+    note: Ring slides down from the top and sits on the body step; bonded at the step.
   - between: [main_body, lantern]
     method: clamp_with_gasket
-    note: Lantern sits in a seat with a soft gasket; clamped by the top cap via a central rod.
+    note: Glass sits on the lower gasket on the LED plate.
   - between: [lantern, top_cap]
     method: clamp_with_gasket
-    note: Top cap retained by a central threaded rod from the LED mount.
-  - between: [led_module, main_body]
-    method: machine_screw_tapped
-    note: LED bracket screwed to a plate at the top of the body.
+    note: Cap nut on the lamp tube pulls the cap down onto the upper gasket.
   - between: [cable, base]
     method: strain_relief_grommet
     note: Cable passes through the base side hole with a strain-relief grommet.
@@ -116,13 +160,40 @@ joints:
 # Project-level decisions that are still open.
 open_decisions:
   - topic: power_type
-    question: Mains or rechargeable battery?
-    options: [mains, battery]
+    question: "Power: (A) internal mains dimmable driver, or (B) certified external low-voltage adapter with an internal DC-DC driver?"
+    options: [mains, mains_external_adapter]
     impact: >-
-      Changes the internal electronics, the cable/power entry part, the
-      compliance scope and whether the metal body needs earthing.
+      Changes the electronics, the cable, the compliance scope (B moves most of it to the
+      adapter supplier) and whether the metal body needs earthing.
 
-# Default CAD parameters (mm). Placeholder dimensions: overall size is TBD.
+# Engineering decisions accepted by the user (Oct 2026), recorded on new projects.
+decisions:
+  - part: base
+    process: metal_spinning
+    material: al_1050
+    reason: >-
+      Spun aluminium base shell with an internal steel weight plate and rivet nuts: same look
+      as a solid base at a fraction of the material and machining cost. Tip-over stability
+      stays an open safety check.
+  - part: band
+    process: metal_tube_cut
+    material: al_6063
+    reason: >-
+      Band as a straight ring cut from stock tube, sitting on a locating step in the body:
+      keeps a separate contrasting part with a crisp shadow line, no tooling.
+  - part: lantern
+    process: glass_tube_cut
+    material: borosilicate
+    reason: >-
+      Borosilicate glass tube cut to length (replaces acrylic): premium feel, scratch
+      resistance, and it never yellows.
+  - topic: construction
+    chosen: {value: central_lamp_tube, scenario: lamp_tube}
+    reason: >-
+      Central threaded lamp tube construction: one tube clamps the whole stack, the cable
+      runs inside it and no fixings show; replaces tapped holes in thin walls.
+
+# Default CAD parameters (mm, kg). Placeholder dimensions: overall size is TBD.
 cad_parameters:
   overall_height: 420
   base_diameter: 180
@@ -132,15 +203,22 @@ cad_parameters:
   wall_thickness: 2.0
   band_height: 22
   band_position: 0.55
+  band_wall_thickness: 2.0
+  step_depth: 2.0
   lantern_height: 80
   lantern_diameter: 90
-  lantern_wall_thickness: 3.0
+  lantern_wall_thickness: 3.5
   top_cap_diameter: 110
   top_cap_height: 45
   cable_hole_diameter: 8
   mounting_hole_count: 3
-  mounting_hole_diameter: 4.5
+  mounting_hole_diameter: 6.0
   mounting_hole_pcd: 110
+  weight_plate_diameter: 130
+  weight_plate_thickness: 8
+  tube_diameter: 10
+  dimmer_hole_diameter: 7.5
+  target_mass_kg: 2.0
 
 # Default cost line items (prices come from seed/cost/bought_in.yaml).
 # power: only include for that power type; undecided projects get the mains set.
@@ -152,12 +230,15 @@ cost_items:
   - {kind: bought_in, price_key: battery_pack, quantity: 1, power: battery}
   - {kind: bought_in, price_key: charge_control_board, quantity: 1, power: battery}
   - {kind: bought_in, price_key: usb_c_cable, quantity: 1, power: battery}
+  - {kind: bought_in, price_key: dimmer_in_base, quantity: 1}
   - {kind: bought_in, price_key: screw_m4, quantity_param: mounting_hole_count}
-  - {kind: bought_in, price_key: screw_m3, quantity: 2}
+  - {kind: bought_in, price_key: lamp_tube_m10, quantity: 1}
+  - {kind: bought_in, price_key: lamp_nut_set, quantity: 1}
+  - {kind: bought_in, price_key: cap_finial_nut, quantity: 1}
   - {kind: bought_in, price_key: silicone_gasket, quantity: 2}
   - {kind: bought_in, price_key: cable_grommet, quantity: 1}
   - {kind: packaging, price_key: retail_packaging, quantity: 1}
-  - {kind: assembly, name: "Final assembly, wiring and test", quantity: 20, unit: min, confidence: low}
+  - {kind: assembly, name: "Final assembly, wiring and test", quantity: 16, unit: min, confidence: low}
 
 # Retail pricing (user-stated). Channel economics come from seed/cost/pricing.yaml.
 pricing:
@@ -175,74 +256,38 @@ pricing:
 #   assembly_min: change to assembly minutes {low, high}
 #   scale_height: new overall height (mm); other linear dimensions scale with it
 # premium_impact: none | slight | significant (significant = changes the design's look)
+# Power options shown side by side in the product view. Option B forces scenario g.
+power_options:
+  - key: A
+    label: "A: internal mains dimmable driver"
+    scenario: null
+  - key: B
+    label: "B: certified external low-voltage adapter + internal DC-DC driver"
+    scenario: external_adapter
+
 scenarios:
-  - key: base_sheet
+  - key: base_pressed
     letter: a
-    label: Base spun or pressed from sheet, with a steel weight plate
-    design_change: >-
-      Base becomes a thin formed shell (spun, or pressed at volume) with a steel weight
-      plate inside for mass, and rivet nuts instead of tapped holes.
+    label: Base pressed (deep drawn) instead of spun
+    design_change: Same thin shell, weight plate and rivet nuts; the shell is deep drawn in a press tool instead of spun.
     effect:
       reroute:
         part: base
         options:
-          - {process: metal_spinning, material: al_1050, label: Spun}
           - {process: deep_drawing, material: al_1050, label: Pressed (deep drawn)}
-      # The weight plate and rivet nuts come from seed/cost/route_changes.yaml
-      # (thin_shell_needs_mass), so they are costed wherever a sheet base is used.
     premium_impact: none
     flags:
       - {kind: safety, message: "Stability is safety-relevant: tip-over must be verified on the finished lamp with the weight plate fitted."}
     tradeoffs:
-      finish: Spun or pressed surface takes black lacquer well after light sanding; edges must be rolled or deburred.
-      weight: The steel plate keeps the lamp heavy and planted, so it still feels substantial in the hand.
-      premium: Looks the same from outside; the weight plate is hidden underneath.
-      lead_time: Spinning forms in 2–4 weeks; press tools 6–10 weeks.
-      tooling: Spinning form a few hundred pounds; press tool tens of thousands (only worth it at volume).
-  - key: band_tube
-    letter: b
-    label: Band cut from stock tube or rolled strip
-    design_change: >-
-      Band becomes a straight ring cut from standard tube (or rolled and joined strip)
-      sitting on a small step in the body, instead of a machined ring that follows the taper.
-    conflicts: [band_stripe]
-    effect:
-      reroute:
-        part: band
-        options:
-          - {process: extrusion, material: al_6063, tooling: none, label: Cut from stock tube}
-          - {process: sheet_forming, material: al_5052, label: Rolled strip}
-    premium_impact: none
-    tradeoffs:
-      finish: Stock tube has a good surface; a rolled strip has a joint that needs to sit at the back.
-      weight: Slightly lighter than a machined ring.
-      premium: Still a separate contrasting part with a crisp shadow line.
-      lead_time: Stock tube is available in days.
-      tooling: None for stock tube; simple rolls for strip.
-  - key: lamp_tube
-    letter: c
-    label: Central threaded lamp tube construction
-    design_change: >-
-      One M10x1 threaded lamp tube runs from base to top cap; a single nut clamps the
-      whole stack and the cable runs through the tube. Replaces tapped holes in thin walls.
-    effect:
-      add_items:
-        - {price_key: lamp_tube_m10, quantity: 1}
-        - {price_key: lamp_nut_set, quantity: 1}
-      remove_items: [screw_m4, screw_m3, rivet_nut_m4]
-      assembly_min: {low: -6, high: -2}
-    premium_impact: none
-    tradeoffs:
-      finish: No visible fixings; parts can be finished completely before assembly.
-      weight: Negligible change.
-      premium: Cleaner, more serviceable construction typical of quality lamps.
-      lead_time: Standard lamp hardware, available off the shelf.
-      tooling: None.
+      finish: Pressed surface is very consistent and takes black lacquer well.
+      weight: Same as the spun shell; the steel plate provides the mass.
+      premium: Looks the same as the spun base.
+      lead_time: Press tools 6–10 weeks.
+      tooling: Press tool tens of thousands of pounds; only worth it at volume.
   - key: band_stripe
     letter: d
     label: Band as a masked lacquer stripe on the body
     design_change: Remove the band part; paint the stripe directly on the body with a masked second colour.
-    conflicts: [band_tube]
     effect:
       remove_part: band
       add_items:
@@ -264,7 +309,7 @@ scenarios:
       reroute:
         part: main_body
         options:
-          - {process: extrusion, material: al_6063, tooling: none, label: Stock tube}
+          - {process: metal_tube_cut, material: al_6063, tooling: none, label: Stock tube}
       add_items:
         - {price_key: spun_end_ring, quantity: 2}
     premium_impact: significant
@@ -274,39 +319,24 @@ scenarios:
       premium: Loses the tapered lighthouse silhouette that defines Faro.
       lead_time: Stock tube in days; end-ring forms 2–4 weeks.
       tooling: Small spinning forms for the end rings only.
-  - key: lantern_stock
-    letter: f
-    label: Lantern from stock acrylic or borosilicate tube
-    design_change: Lantern cut to length from standard tube; diameter must match a stock size.
-    effect:
-      reroute:
-        part: lantern
-        options:
-          - {process: polymer_tube_cut, material: pmma, label: Stock acrylic tube}
-          - {process: glass_tube_cut, material: borosilicate, label: Stock borosilicate tube}
-    premium_impact: none
-    tradeoffs:
-      finish: Edges need polishing (acrylic) or fire-polishing (glass).
-      weight: Glass is about twice as heavy as acrylic.
-      premium: Borosilicate feels noticeably more premium; acrylic can scratch.
-      lead_time: Stock tube in days.
-      tooling: None.
   - key: external_adapter
     letter: g
-    label: Off-the-shelf LED module with an external certified 12 V adapter
+    label: "Power option B: certified external 12 V adapter with an internal DC-DC driver"
     design_change: >-
       Replace the internal mains driver and mains cable with a certified external 12 V
-      adapter, a low-voltage cable and an off-the-shelf 12 V LED module.
+      adapter, a low-voltage cable and an internal step-up DC-DC constant-current driver
+      for the same LED module. Dimming stays on the driver's dim input.
     effect:
       add_items:
-        - {price_key: led_module_12v, quantity: 1}
         - {price_key: external_adapter_12v, quantity: 1}
+        - {price_key: dc_dc_cc_driver, quantity: 1}
         - {price_key: lv_cable_switch, quantity: 1}
-      remove_items: [led_module, led_driver_mains, mains_cable_plug_switch]
-      assembly_min: {low: -5, high: -2}
+      remove_items: [led_driver_mains, mains_cable_plug_switch]
+      replace_items: {dimmer_inline_mains: dimmer_inline_lv}
+      assembly_min: {low: -4, high: -1}
     premium_impact: slight
     flags:
-      - {kind: compliance, message: "Adapter choice must be verified for compliance (electrical safety, EMC, ecodesign) in each market."}
+      - {kind: compliance, message: "Adapter and DC-DC driver must be verified for compliance (electrical safety, EMC, ecodesign) in each market."}
     tradeoffs:
       finish: No change to the lamp.
       weight: Lighter lamp; the adapter brick sits at the wall.
@@ -326,8 +356,29 @@ scenarios:
       premium: Less presence on a table; proportions are unchanged.
       lead_time: No change.
       tooling: Smaller forms, marginally cheaper.
+  - key: dimmer_inline
+    letter: j
+    label: Inline cable dimmer instead of the in-base dimmer
+    design_change: >-
+      Replace the in-base rotary (or touch) dimmer with an inline dimmer on the cable:
+      mains triac dimmer for option A (needs a triac-dimmable driver), low-voltage PWM
+      dimmer for option B. The base loses the knob and its hole.
+    effect:
+      add_items:
+        - {price_key: dimmer_inline_mains, quantity: 1}
+      remove_items: [dimmer_in_base]
+    premium_impact: slight
+    flags:
+      - {kind: compliance, message: "Inline dimmer must be certified for the cable and load in each market."}
+    tradeoffs:
+      finish: Cleaner base with no knob.
+      weight: No change.
+      premium: An inline dimmer on the cable feels less special than a control on the lamp.
+      lead_time: Off-the-shelf.
+      tooling: None.
 
-# Premium brass edition: band and top cap in brass.
+# Premium brass edition: band and top cap in brass. Solid brass or real plating on
+# the metal part only; brass-look coatings are not allowed (visible metal must be solid metal).
 premium_edition:
   label: Premium brass edition
   parts: [band, top_cap]

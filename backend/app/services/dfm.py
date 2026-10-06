@@ -99,16 +99,23 @@ def build_dfm(project: Project) -> dict[str, Any]:
             f"Cable hole is {p['cable_hole_diameter']:g} mm (heuristic minimum {min_hole} mm for a mains flex plus grommet).",
             unverified=True, part="Cable / power entry"))
 
-        clearance_table = rules.plan("metric_clearance_holes_mm")
-        screw = max((s for s, d in clearance_table.items() if d <= p["mounting_hole_diameter"] + 1e-6),
-                    key=lambda s: clearance_table[s], default=None)
-        if screw:
-            nominal = float(re.sub(r"[^0-9.]", "", screw))
-            if p["wall_thickness"] < 1.5 * nominal:
-                checks.append(_check(
-                    "Assembly", "warning", "Body wall too thin to tap for base screws",
-                    f"A {p['wall_thickness']:g} mm wall can't hold {screw} threads. Add a thicker foot ring or bosses, "
-                    "or use threaded inserts / rivet nuts.", unverified=True, part="Main body"))
+        checks.append(_check(
+            "Assembly", "pass", "Central lamp tube construction",
+            "One M10x1 lamp tube clamps base, body, LED plate, glass and cap; no threads are cut in thin walls. "
+            f"The weight plate is screwed to {int(p['mounting_hole_count'])} rivet nuts in the base so it can't turn or rattle.",
+            unverified=True, part="Base"))
+
+        from app.services.cad import mass_estimate
+
+        mass = mass_estimate(project)
+        if mass and mass["target_kg"]:
+            level = {"ok": "pass", "low": "warning", "high": "warning"}.get(mass["status"], "info")
+            hint = {"low": " Increase the weight plate thickness or diameter.", "high": " Lighter than this may be fine; check the target."}
+            checks.append(_check(
+                "Geometry", level, "Lamp mass vs target",
+                f"Estimated {mass['total_kg']:.2f} kg vs target {mass['target_kg']:.2f} kg "
+                f"(weight plate {mass['parts_kg'].get('weight_plate', 0):.2f} kg).{hint.get(mass['status'], '')}",
+                unverified=True, part="Weight plate"))
 
     # --- Chosen process routes that the CAD doesn't reflect yet ------------
     from app.services.costdown import cad_mismatches
