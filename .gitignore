@@ -7,3 +7,8 @@ __pycache__/
 /data/
 backend/data/
 .env
+# User data lives outside the repo (~/Bathsheva Workbench/data); never commit it
+# if WORKBENCH_DATA_DIR is pointed inside the checkout.
+Bathsheva Workbench/
+*.db
+*.egg-info/

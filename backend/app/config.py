@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import os
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-BACKEND_DIR = Path(__file__).resolve().parent.parent
-REPO_DIR = BACKEND_DIR.parent
+from app.datadir import BACKEND_DIR, data_dir_from_env, migrate_legacy_data
+
 SEED_DIR = BACKEND_DIR / "seed"
 
 
@@ -20,7 +21,11 @@ class Settings:
 
 
 def load_settings() -> Settings:
-    data_dir = Path(os.environ.get("WORKBENCH_DATA_DIR", REPO_DIR / "data")).resolve()
+    data_dir, is_default = data_dir_from_env()
+    if is_default:
+        # Older checkouts kept data in the repo; move it out once (never overwrites).
+        for msg in migrate_legacy_data(data_dir):
+            print(f"==> {msg}", file=sys.stderr)
     data_dir.mkdir(parents=True, exist_ok=True)
     db_url = os.environ.get("WORKBENCH_DATABASE_URL", f"sqlite:///{data_dir / 'workbench.db'}")
 

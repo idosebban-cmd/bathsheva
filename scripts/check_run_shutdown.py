@@ -2,8 +2,9 @@
 
 Usage: backend/.venv/bin/python scripts/check_run_shutdown.py
 
-Each scenario starts run.sh in a new session, stops it a different way, and
-checks run.sh's exit status and that no server process is left behind.
+Each scenario starts run.sh (or the macOS launcher "Start Workbench.command") in
+a new session, stops it a different way, and checks the exit status and that no
+server process is left behind.
 """
 
 from __future__ import annotations
@@ -41,20 +42,34 @@ def descendants(pid: int) -> list[int]:
     return result
 
 
+def cmdline(pid: int) -> bytes:
+    """A process's command line, or b"" if it has already exited (short-lived probes do)."""
+    try:
+        return Path(f"/proc/{pid}/cmdline").read_bytes()
+    except OSError:
+        return b""
+
+
 def alive(pid: int) -> bool:
     try:
         os.kill(pid, 0)
     except ProcessLookupError:
         return False
     # Zombies count as gone.
-    stat = Path(f"/proc/{pid}/stat")
-    return not (stat.exists() and stat.read_text().split()[2] == "Z")
+    try:
+        return Path(f"/proc/{pid}/stat").read_text().split()[2] != "Z"
+    except OSError:
+        return False
 
 
-def scenario(name: str, stop, expected: int) -> bool:
+RUN_SH = str(ROOT / "run.sh")
+LAUNCHER = str(ROOT / "Start Workbench.command")
+
+
+def scenario(name: str, stop, expected: int, command: str = RUN_SH) -> bool:
     log = tempfile.NamedTemporaryFile(prefix="run_sh_", suffix=".log", delete=False)
     env = {**os.environ, "WORKBENCH_DATA_DIR": tempfile.mkdtemp(prefix="run-sh-check-")}
-    proc = subprocess.Popen([str(ROOT / "run.sh")], stdout=log, stderr=subprocess.STDOUT, env=env, start_new_session=True)
+    proc = subprocess.Popen([command], stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT, env=env, start_new_session=True)
     for _ in range(240):
         if up("http://127.0.0.1:8000/api/health") and up("http://127.0.0.1:5173/"):
             break
@@ -65,8 +80,8 @@ def scenario(name: str, stop, expected: int) -> bool:
         return False
     tree = descendants(proc.pid)
     servers = {
-        "backend": next(p for p in tree if b"uvicorn" in Path(f"/proc/{p}/cmdline").read_bytes()),
-        "frontend": next(p for p in tree if b"vite" in Path(f"/proc/{p}/cmdline").read_bytes() and b"esbuild" not in Path(f"/proc/{p}/cmdline").read_bytes()),
+        "backend": next(p for p in tree if b"uvicorn" in cmdline(p)),
+        "frontend": next(p for p in tree if b"vite" in cmdline(p) and b"esbuild" not in cmdline(p)),
     }
     stop(proc, servers)
     try:
@@ -90,6 +105,11 @@ def main() -> int:
         scenario("SIGINT to run.sh (Ctrl-C)", lambda proc, s: os.killpg(proc.pid, signal.SIGINT), 0),
         scenario("servers killed externally", lambda proc, s: [os.kill(p, signal.SIGTERM) for p in s.values()], 0),
         scenario("backend crashes (SIGSEGV)", lambda proc, s: os.kill(s["backend"], signal.SIGSEGV), 139),
+        scenario("SIGHUP to the group (Terminal window closed)", lambda proc, s: os.killpg(proc.pid, signal.SIGHUP), 0),
+        scenario("launcher: Ctrl-C", lambda proc, s: os.killpg(proc.pid, signal.SIGINT), 0, LAUNCHER),
+        scenario("launcher: Terminal window closed", lambda proc, s: os.killpg(proc.pid, signal.SIGHUP), 0, LAUNCHER),
+        scenario("launcher: SIGHUP to the launcher only", lambda proc, s: proc.send_signal(signal.SIGHUP), 0, LAUNCHER),
+        scenario("launcher: backend crashes", lambda proc, s: os.kill(s["backend"], signal.SIGSEGV), 139, LAUNCHER),
     ]
     return 0 if all(results) else 1
 
