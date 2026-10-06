@@ -125,7 +125,8 @@ def generate(session: Session, project: Project, params: dict[str, Any]) -> CadM
         for key, shape in parts.items():
             files += export.export_part(shape, out_dir / "parts", key)
         files += export.export_assembly(gen.assembly(parts, project.slug), parts, out_dir, project.slug,
-                                        colours=gen.PART_COLOURS, two_tone=gen.preview_two_tone(params))
+                                        colours=gen.PART_COLOURS, two_tone=gen.preview_two_tone(params),
+                                        extras=gen.preview_extras(params) if hasattr(gen, "preview_extras") else None)
         info = export.part_info(parts)
     except Exception as e:  # geometry kernel failure
         shutil.rmtree(out_dir, ignore_errors=True)

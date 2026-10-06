@@ -200,6 +200,47 @@ def _rfq_settings(project: Project) -> dict[str, Any]:
     return (load_template(project.template).get("rfq") or {}) if project.template else {}
 
 
+# Contact and commercial fields saved on the project (Factory Pack tab), with the placeholder shown when blank.
+CONTACT_FIELDS: list[tuple[str, str, str]] = [
+    ("company_name", "Company name", "[COMPANY NAME]"),
+    ("contact_name", "Contact name and role", "[CONTACT NAME, ROLE]"),
+    ("email", "Email", "[EMAIL]"),
+    ("phone", "Phone", "[PHONE]"),
+    ("company_address", "Company address", "[COMPANY ADDRESS]"),
+    ("quote_deadline", "Quote deadline", "[QUOTE DEADLINE]"),
+    ("delivery_address", "Delivery address (for DDP)", "[DELIVERY ADDRESS, to be filled in]"),
+]
+
+
+def contact(project: Project) -> dict[str, str]:
+    saved = project.rfq_contact or {}
+    return {k: " ".join(str(saved.get(k) or "").split()) for k, _, _ in CONTACT_FIELDS}
+
+
+def missing_contact(project: Project) -> list[str]:
+    values = contact(project)
+    return [label for k, label, _ in CONTACT_FIELDS if not values[k]]
+
+
+def update_contact(project: Project, changes: dict[str, Any]) -> dict[str, str]:
+    unknown = set(changes) - {k for k, _, _ in CONTACT_FIELDS}
+    if unknown:
+        raise FactoryPackError(f"Unknown contact fields: {sorted(unknown)}")
+    new = {**contact(project), **{k: " ".join(str(v or "").split()) for k, v in changes.items()}}
+    for k, v in new.items():
+        if len(v) > 300:
+            raise FactoryPackError(f"{k} is too long (300 characters at most)")
+    if new["email"] and not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", new["email"]):
+        raise FactoryPackError("That email address doesn't look right")
+    project.rfq_contact = new
+    return new
+
+
+def _fill(project: Project, key: str) -> str:
+    value = contact(project)[key]
+    return value or next(ph for k, _, ph in CONTACT_FIELDS if k == key)
+
+
 def _numbered(blocks: list[Block]) -> list[Block]:
     """Number the section headings 1, 2, 3... in order."""
     n = 0
@@ -216,9 +257,9 @@ def _header(c: dict[str, Any], title: str) -> list[Block]:
     cad = f"v{c['cad_version']}" if c["cad_version"] else "(not generated)"
     return [
         Block("h1", title),
-        Block("table", widths=[1.6, 6.4], header=["From", "[COMPANY NAME]"], rows=[
-            ["Contact", "[CONTACT NAME, ROLE]"], ["Email", "[EMAIL]"], ["Phone", "[PHONE]"], ["Address", "[COMPANY ADDRESS]"],
-            ["Quote deadline", "[QUOTE DEADLINE]"],
+        Block("table", widths=[1.6, 6.4], header=["From", _fill(project, "company_name")], rows=[
+            ["Contact", _fill(project, "contact_name")], ["Email", _fill(project, "email")], ["Phone", _fill(project, "phone")],
+            ["Address", _fill(project, "company_address")], ["Quote deadline", _fill(project, "quote_deadline")],
             ["Reference", f"{project.name.upper()}-RFQ, CAD {cad}, {c['date']}"],
         ]),
         Block("p", f"{project.name} table lamp · CAD version {cad} · units: millimetres"),
@@ -242,7 +283,8 @@ def _colour_refs(c: dict[str, Any]) -> dict[str, str]:
 
 def _commercial(c: dict[str, Any]) -> list[Block]:
     r = _rfq_settings(c["project"])
-    terms = r.get("incoterms") or ["FOB (port of loading)", "DDP to our UK address"]
+    terms = [t.replace("[DELIVERY ADDRESS, to be filled in]", _fill(c["project"], "delivery_address"))
+             for t in (r.get("incoterms") or ["FOB (port of loading)", "DDP to our UK address: [DELIVERY ADDRESS, to be filled in]"])]
     cur = " or ".join(r.get("currencies") or ["GBP"])
     return [
         Block("h2", "Commercial terms"),
@@ -648,17 +690,18 @@ def consistency_checks(project: Project, c: dict[str, Any] | None = None) -> lis
              "bom.csv": supplier_bom_csv(c)}
     leaks = [name for name, t in texts.items() if _MONEY.search(t)]
     check("No prices or cost targets in supplier documents", not leaks, "clean" if not leaks else f"£ amounts in {leaks}")
-    allowed = set(placeholders(project))
+    allowed = {ph for _, _, ph in CONTACT_FIELDS}
     found = sorted({m for t in texts.values() for m in re.findall(r"\[[A-Z][A-Z ,]+[^\]]*\]", t)})
     stray = [m for m in found if m not in allowed]
-    check("Only your placeholders left in the RFQs", not stray,
-          f"to fill in: {', '.join(found)}" if not stray else f"unexpected: {', '.join(stray)}")
-    art = nameplate.artwork_files()
-    plate, letters = nameplate.shapes()
-    lb = letters.bounding_box()
-    fits = lb.size.X < faro.NAMEPLATE_W - 4 and lb.size.Y < faro.NAMEPLATE_H - 4
-    check("Nameplate artwork in the pack", len(art) == 2 and fits,
-          f"{', '.join(art)}; lettering {lb.size.X:.1f} × {lb.size.Y:.1f} mm on a {faro.NAMEPLATE_W:g} × {faro.NAMEPLATE_H:g} mm plate")
+    check("No stray placeholders in the RFQs", not stray,
+          ("only the contact fields still blank: " + ", ".join(found) if found else "none") if not stray else
+          f"unexpected: {', '.join(stray)}")
+    missing = missing_contact(project)
+    out.append({"check": "Contact and delivery details filled in", "ok": not missing, "level": "warn",
+                "detail": "all filled in" if not missing else
+                "empty: " + ", ".join(missing) + " (Factory Pack tab); the RFQs show placeholders for them"})
+    for name, ok, detail in nameplate.consistency(model.part_info or {}, faro.model(c["params"]).info):
+        check(name, ok, detail)
     open_q = [q["question"] for q in open_questions(project, c) if q["status"] == "open"]
     check("Supplier questions answered", not open_q, "all answered" if not open_q else "; ".join(open_q))
     return out
@@ -692,8 +735,9 @@ def open_questions(project: Project, c: dict[str, Any]) -> list[dict[str, str]]:
 
 
 def placeholders(project: Project) -> list[str]:
-    """Bracketed fields left in the RFQs for you to fill in before sending."""
-    return list(_rfq_settings(project).get("placeholders", []))
+    """Bracketed fields still left in the RFQs: the contact fields you haven't filled in."""
+    values = contact(project)
+    return [ph for k, _, ph in CONTACT_FIELDS if not values[k]]
 
 
 def rfq_markdown(blocks: list[Block]) -> str:
@@ -856,6 +900,9 @@ def pack_summary(project: Project) -> dict[str, Any]:
         "consistency": consistency_checks(project, c) if c["cad_version"] is not None else [],
         "open_questions": open_questions(project, c),
         "placeholders": placeholders(project),
+        "contact": contact(project),
+        "contact_fields": [{"key": k, "label": label, "placeholder": ph} for k, label, ph in CONTACT_FIELDS],
+        "missing_contact": missing_contact(project),
         "rfq_markdown": rfq_markdown(blocks),
         "electronics_rfq_markdown": rfq_markdown(electronics_rfq_blocks(c)),
         "notes": ["Our cost estimates and targets are not included in anything sent to suppliers.",

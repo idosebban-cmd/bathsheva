@@ -226,6 +226,15 @@ PART_COLOURS: dict[str, tuple[float, float, float, float]] = {
 PART_KEYS = list(PART_COLOURS)
 
 
+NAMEPLATE_FILL = (0.05, 0.05, 0.05, 1.0)
+
+
+def preview_extras(params: dict[str, Any]) -> dict[str, tuple[Shape, tuple]]:
+    """Preview-only bodies for the GLB: the black fill in the nameplate's etched lettering."""
+    m = model(params)
+    return {"nameplate_fill": (m.preview["nameplate_fill"], NAMEPLATE_FILL)} if "nameplate_fill" in m.preview else {}
+
+
 def preview_two_tone(params: dict[str, Any]) -> dict[str, dict[str, Any]]:
     """The tower's red lower section is the same part lacquered in two colours (masked line)."""
     p = {k: float(v) for k, v in params.items()}
@@ -702,6 +711,36 @@ def _wedge(a0_deg: float, a1_deg: float, r: float, z0: float, h: float) -> Shape
     return Pos(0, 0, z0) * extrude(Polygon(*pts, align=None), amount=h)
 
 
+@lru_cache(maxsize=4)
+def _nameplate(rb: float, hb: float) -> tuple[Shape, Shape]:
+    """The nameplate and its etched lettering (the fill shown black in the preview); depends only on the base.
+
+    Its curved faces are 0.5° facets (chord error 0.0005 mm): the lettering's many small faces cut reliably
+    into flat facets. The lettering is the same artwork as the SVG / DXF files and the drawing."""
+    from app.factory import nameplate as art
+
+    zn = NAMEPLATE_Z
+    half = math.degrees(NAMEPLATE_W / 2 / rb) + 3
+    plate = _one(_arc_shell(rb + 0.01, rb + NAMEPLATE_T, 0, hb, -90 - half, -90 + half)
+                 & (Pos(0, 0, zn) * _front_prism(RectangleRounded(NAMEPLATE_W, NAMEPLATE_H, 1.2))))
+    etch_shell = _arc_shell(rb + NAMEPLATE_T - art.ETCH_DEPTH, rb + NAMEPLATE_T, 0, hb, -90 - half, -90 + half)
+    letters = []
+    for face in art.shapes()[1].faces():  # one boolean per letter
+        letters += (etch_shell & (Pos(0, 0, zn) * _front_prism(face))).solids()
+    for sol in letters:
+        plate = plate - sol
+    return _one(plate), Compound(letters)
+
+
+def _arc_shell(ri: float, ro: float, z0: float, h: float, a0: float = -135.0, a1: float = -45.0, step: float = 0.5) -> Shape:
+    """A faceted cylindrical shell segment round the front (-Y), angles in degrees from +X."""
+    n = int(round((a1 - a0) / step))
+    angs = [math.radians(a0 + i * (a1 - a0) / n) for i in range(n + 1)]
+    pts = [Vector(ro * math.cos(a), ro * math.sin(a), z0) for a in angs] + \
+          [Vector(ri * math.cos(a), ri * math.sin(a), z0) for a in reversed(angs)]
+    return extrude(Face(Wire.make_polygon(pts, close=True)), amount=h)
+
+
 def _annulus(ro: float, ri: float, z0: float, h: float) -> Shape:
     return Pos(0, 0, z0) * (Cylinder(ro, h, align=MIN) - Cylinder(ri, h + 2, align=MIN))
 
@@ -716,6 +755,7 @@ class Model:
     parts: dict[str, Shape]
     sections: dict[str, Face]  # half-sections (r, z in the XZ plane) of the revolved made parts
     info: dict[str, Any]
+    preview: dict[str, Shape] = field(default_factory=dict)  # preview-only bodies (e.g. the nameplate's black fill)
 
 
 def _sections(p: dict[str, float], d: dict[str, Any]) -> dict[str, Face]:
@@ -786,6 +826,7 @@ def build_model(params: dict[str, Any]) -> Model:
     sec = _sections(p, d)
     parts: dict[str, Shape] = {}
     info: dict[str, Any] = {}
+    preview: dict[str, Shape] = {}
 
     # ---- base: spun shell + holes ------------------------------------------------
     base = _revolve(sec["base"])
@@ -834,10 +875,11 @@ def build_model(params: dict[str, Any]) -> Model:
     parts["charge_board"] = _one(board + rec + stand)
     info["battery_headroom"] = round(d["base_inner_height"] - bt - 0.5, 2)
 
-    # Nameplate: etched brass, curved to the base, bonded on the front.
-    zn = NAMEPLATE_Z
-    shell = Cylinder(rb + NAMEPLATE_T, hb, align=MIN) - Cylinder(rb + 0.01, hb + 1, align=MIN)
-    parts["nameplate"] = _one(shell & (Pos(0, 0, zn) * _front_prism(RectangleRounded(NAMEPLATE_W, NAMEPLATE_H, 1.2))))
+    # Nameplate: etched brass, curved to the base, bonded on the front, with the FARO lettering etched in.
+    plate, etch = _nameplate(rb, hb)
+    parts["nameplate"] = plate
+    preview["nameplate_fill"] = etch
+    info["nameplate_etch_mm3"] = round(etch.volume, 3)
 
     # ---- cream band -------------------------------------------------------------
     band = _revolve(sec["band_cream"])
@@ -964,7 +1006,7 @@ def build_model(params: dict[str, Any]) -> Model:
                        "lug_under_lip_mm": round((groove_r - FIT_CLEAR) - r_lip, 2),
                        "led_lifts_out": d["led_access_dia"] > LED_BOARD_D}
     info["glass_frame_clash_mm3"] = clash(parts["lantern_glass"], parts["lantern_frame"])
-    return Model(parts={k: _one(parts[k]) for k in PART_KEYS}, sections=sec, info=info)
+    return Model(parts={k: _one(parts[k]) for k in PART_KEYS}, sections=sec, info=info, preview=preview)
 
 
 @lru_cache(maxsize=8)

@@ -56,6 +56,8 @@ class Project(Base):
     pricing: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
     # Cost-model settings edited by the user, e.g. volume discounts {class: {low, high}}. Null = defaults.
     cost_settings: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    # Our company and contact details, quote deadline and delivery address for the RFQs. Null = not filled in.
+    rfq_contact: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 

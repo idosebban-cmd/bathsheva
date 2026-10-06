@@ -62,12 +62,20 @@ export default function FactoryPackPage() {
             {showRfq === "electronics" ? "Hide" : "Show"} electronics RFQ text
           </button>
         </div>
+        {pack.missing_contact.length > 0 && (
+          <p className="notice small">
+            <SafetyBadge title="Fill in before sending" /> Contact details missing: {pack.missing_contact.join(", ")}. The RFQs show
+            placeholders for them until you fill them in below.
+          </p>
+        )}
         {pack.notes.map((n) => (
           <p key={n} className="notice small">
             {n}
           </p>
         ))}
       </section>
+
+      <ContactCard pack={pack} base={base} onSaved={load} />
 
       {pack.consistency.length > 0 && (
         <section className="card">
@@ -77,7 +85,9 @@ export default function FactoryPackPage() {
               {pack.consistency.map((c) => (
                 <tr key={c.check}>
                   <td>
-                    <span className={`status status-${c.ok ? "pass" : "fail"}`}>{c.ok ? "✓ OK" : "✗ Fix"}</span>
+                    <span className={`status status-${c.ok ? "pass" : c.level === "warn" ? "close" : "fail"}`}>
+                      {c.ok ? "✓ OK" : c.level === "warn" ? "! Warning" : "✗ Fix"}
+                    </span>
                   </td>
                   <td>{c.check}</td>
                   <td className="small muted">{c.detail}</td>
@@ -245,5 +255,57 @@ export default function FactoryPackPage() {
         </section>
       )}
     </div>
+  );
+}
+
+function ContactCard({ pack, base, onSaved }: { pack: FactoryPackSummary; base: string; onSaved: () => Promise<void> }) {
+  const [draft, setDraft] = useState<Record<string, string>>({});
+  const [status, setStatus] = useState("");
+  const dirty = Object.keys(draft).length > 0;
+
+  async function save() {
+    setStatus("Saving…");
+    try {
+      await api.put(`${base}/factory-pack/contact`, draft);
+      setDraft({});
+      setStatus("Saved");
+      await onSaved();
+    } catch (e) {
+      setStatus(errorText(e));
+    }
+  }
+
+  return (
+    <section className="card">
+      <h2>Your details for the RFQs</h2>
+      <p className="small muted">
+        Saved on this project and filled into both RFQs (mechanical and electronics) when the pack is built. Blank fields stay as
+        placeholders.
+      </p>
+      <div className="grid">
+        {pack.contact_fields.map((f) => {
+          const value = draft[f.key] ?? pack.contact[f.key] ?? "";
+          const multiline = f.key.endsWith("address");
+          return (
+            <label key={f.key} className="field">
+              <span>
+                {f.label} {!value.trim() && <span className="badge badge-unverified">empty</span>}
+              </span>
+              {multiline ? (
+                <textarea rows={2} value={value} placeholder={f.placeholder}
+                  onChange={(e) => setDraft({ ...draft, [f.key]: e.target.value })} />
+              ) : (
+                <input value={value} placeholder={f.placeholder} type={f.key === "email" ? "email" : "text"}
+                  onChange={(e) => setDraft({ ...draft, [f.key]: e.target.value })} />
+              )}
+            </label>
+          );
+        })}
+      </div>
+      <div className="row">
+        <button className="primary" disabled={!dirty} onClick={save}>Save details</button>
+        <span className="muted small">{status}</span>
+      </div>
+    </section>
   );
 }

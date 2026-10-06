@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+
+from app.db import get_session
 from fastapi.responses import Response
 
 from app.api.deps import get_project
@@ -74,3 +77,18 @@ def rfq_electronics(fmt: str, project: Project = Depends(get_project)):
                         media_type="application/pdf",
                         headers={"Content-Disposition": f'inline; filename="{project.slug}_rfq_electronics.pdf"'})
     raise HTTPException(404, "RFQ is available as .md or .pdf")
+
+
+@router.get("/factory-pack/contact")
+def get_contact(project: Project = Depends(get_project)):
+    return {"values": fp.contact(project), "missing": fp.missing_contact(project)}
+
+
+@router.put("/factory-pack/contact")
+def put_contact(body: dict[str, str | None], project: Project = Depends(get_project), session: Session = Depends(get_session)):
+    try:
+        fp.update_contact(project, body)
+    except fp.FactoryPackError as e:
+        raise HTTPException(422, str(e)) from e
+    session.commit()
+    return {"values": fp.contact(project), "missing": fp.missing_contact(project)}

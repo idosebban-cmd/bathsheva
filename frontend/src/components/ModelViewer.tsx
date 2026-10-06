@@ -2,43 +2,7 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { Canvas, useThree } from "@react-three/fiber";
 import { Bounds, ContactShadows, Environment, Lightformer, OrbitControls, useBounds, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
-
-// Finishes by part name (the GLB's node names are the CAD part keys; a two-tone part's
-// lower colour is exported as "<key>_lower"). Anything else keeps its exported colour.
-type Finish = "gloss_black" | "cream" | "red" | "brass" | "frosted" | "opal" | "internal";
-const FINISH: Record<string, Finish> = {
-  base: "gloss_black", base_plate: "internal", felt_pad: "internal",
-  band_cream: "cream", tower: "cream", tower_lower: "red", cap: "red",
-  nameplate: "brass", knob: "brass", gallery: "brass", railing: "brass", lantern_frame: "brass", cap_spigot: "brass",
-  finial: "brass",
-  lantern_glass: "frosted", diffuser: "opal",
-};
-const GLOW = new THREE.Color("#ffb45e");
-
-function material(finish: Finish, lit: boolean): THREE.Material {
-  switch (finish) {
-    case "gloss_black":
-      return new THREE.MeshPhysicalMaterial({ color: "#0e0e0e", roughness: 0.22, clearcoat: 1, clearcoatRoughness: 0.04 });
-    case "cream":
-      return new THREE.MeshPhysicalMaterial({ color: "#f6ecd6", roughness: 0.42, clearcoat: 0.5, clearcoatRoughness: 0.18 });
-    case "red":
-      return new THREE.MeshPhysicalMaterial({ color: "#7d1913", roughness: 0.4, clearcoat: 0.55, clearcoatRoughness: 0.18 });
-    case "brass":
-      return new THREE.MeshPhysicalMaterial({ color: "#c9a256", metalness: 1, roughness: 0.27, clearcoat: 0.3, clearcoatRoughness: 0.1 });
-    case "frosted":
-      return new THREE.MeshPhysicalMaterial({
-        color: "#fbf6ec", roughness: 0.55, transmission: lit ? 0.2 : 0.85, thickness: 2, ior: 1.47,
-        emissive: lit ? GLOW : new THREE.Color(0), emissiveIntensity: lit ? 2.2 : 0, side: THREE.DoubleSide,
-      });
-    case "opal":
-      return new THREE.MeshPhysicalMaterial({
-        color: "#f7f1e6", roughness: 0.7, transmission: 0.25, thickness: 2, ior: 1.47,
-        emissive: lit ? GLOW : new THREE.Color(0), emissiveIntensity: lit ? 2.6 : 0, side: THREE.DoubleSide,
-      });
-    default:
-      return new THREE.MeshStandardMaterial({ color: "#5a5a5e", roughness: 0.7 });
-  }
-}
+import { FINISH, material, smoothFaceted } from "./materials";
 
 function partName(obj: THREE.Object3D): string | undefined {
   for (let o: THREE.Object3D | null = obj; o; o = o.parent) {
@@ -49,7 +13,11 @@ function partName(obj: THREE.Object3D): string | undefined {
 
 function Model({ url, lit }: { url: string; lit: boolean }) {
   const { scene } = useGLTF(url);
-  const cloned = useMemo(() => scene.clone(true), [scene]);
+  const cloned = useMemo(() => {
+    const c = scene.clone(true);
+    smoothFaceted(c);
+    return c;
+  }, [scene]);
   useEffect(() => {
     cloned.traverse((obj) => {
       const mesh = obj as THREE.Mesh;

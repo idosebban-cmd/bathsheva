@@ -704,11 +704,3 @@ rfq:
        source: "Atelier params.py RED_HEX (warm deep oxblood lacquer); prototype faro/params.py uses the same value"}
     - {name: "Polished brass, clear lacquer", parts: [gallery, railing, lantern_frame, finial, knob, nameplate], hex: "#C4A15A",
        ral: "n/a (natural brass)", gloss: "polished", source: "prototype faro/params.py BRASS_HEX (render reference only)"}
-  placeholders:
-    - "[COMPANY NAME]"
-    - "[CONTACT NAME, ROLE]"
-    - "[EMAIL]"
-    - "[PHONE]"
-    - "[COMPANY ADDRESS]"
-    - "[QUOTE DEADLINE]"
-    - "[DELIVERY ADDRESS, to be filled in]"

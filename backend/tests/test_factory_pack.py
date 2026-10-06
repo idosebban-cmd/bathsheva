@@ -147,7 +147,8 @@ def test_consistency_checks_and_open_questions(client, faro_project):
     client.post(f"/api/projects/{pid}/cad/generate", json={"parameters": params})
     s = client.get(f"/api/projects/{pid}/factory-pack").json()
     checks = {c["check"]: c for c in s["consistency"]}
-    assert all(c["ok"] for c in s["consistency"]), [c for c in s["consistency"] if not c["ok"]]
+    assert all(c["ok"] or c.get("level") == "warn" for c in s["consistency"]), [c for c in s["consistency"] if not c["ok"]]
+    assert not checks["Contact and delivery details filled in"]["ok"]  # blank by default: a warning, not a failure
     for name in ("Drawings and STEP files show the same solids", "STEP file for every drawing",
                  "Drawing notes match each part's process", "Production change: Gallery", "Production change: Window diffusers",
                  "No prices or cost targets in supplier documents"):
@@ -157,7 +158,8 @@ def test_consistency_checks_and_open_questions(client, faro_project):
                                                        "production_volume", "electrical_data", "intended_markets"}
     assert all(q["status"] == "resolved" and q["answer"] for q in s["open_questions"])
     assert "[DELIVERY ADDRESS, to be filled in]" in s["placeholders"] and "[COMPANY NAME]" in s["placeholders"]
-    for name in ("Only your placeholders left in the RFQs", "Nameplate artwork in the pack", "Supplier questions answered"):
+    for name in ("No stray placeholders in the RFQs", "Nameplate lettering is clean and centred", "Nameplate SVG / DXF match the artwork",
+                 "Nameplate lettering on the 3D model", "Nameplate lettering on the drawing", "Supplier questions answered"):
         assert checks[name]["ok"], name
     assert len(s["brass_parts"]) == 7 and s["electronics_rfq_markdown"].startswith("# Request for quotation")
     assert client.get(f"/api/projects/{pid}/rfq-electronics.pdf").content.startswith(b"%PDF")
@@ -196,15 +198,60 @@ def test_production_change_checks_follow_geometry():
     assert {"Shell walls", "Window diffusers", "Gallery", "Cap twist-lock", "Lantern glass"} <= set(checks)
 
 
-def test_nameplate_artwork_is_the_prototype_lettering():
+def test_nameplate_lettering_artwork():
+    """Cormorant Garamond SemiBold from the bundled font, 5 mm caps, centred exactly on the plate."""
     from app.factory import nameplate
 
+    assert nameplate.FONT_PATH.is_file() and "Cormorant" in nameplate.FONT_NAME
     files = nameplate.artwork_files()
     assert set(files) == {"F-05_nameplate_lettering.svg", "F-05_nameplate_lettering.dxf"}
     svg = files["F-05_nameplate_lettering.svg"].decode()
     assert 'width="37.05mm"' in svg and 'id="lettering_etch"' in svg and 'fill="rgb(0,0,0)"' in svg
     plate, letters = nameplate.shapes()
-    assert len(letters.faces()) == 4  # F, A, R, O
+    faces = letters.faces()
+    assert len(faces) == 4 and all(f.is_valid for f in faces)  # F, A, R, O: overlaps and the A's self-crossing resolved
+    assert [len(f.inner_wires()) for f in faces] == [0, 1, 1, 1]  # counters in A, R, O
     bb = letters.bounding_box()
-    assert 15 < bb.size.X < 20 and 4.5 < bb.size.Y < 5.5  # 6.5 mm bold, as on the prototype
-    assert abs(bb.center().X) < 0.5 and abs(bb.center().Y) < 1.0  # centred on the em box, as on the prototype
+    assert bb.size.Y == pytest.approx(5.0, abs=0.01) and 18 < bb.size.X < 22
+    assert abs(bb.center().X) < 0.01 and abs(bb.center().Y) < 0.01  # optical centre, no em-box offset
+    assert nameplate.letter_area() == pytest.approx(nameplate.nonzero_area(), rel=0.01)
+
+
+def test_nameplate_lettering_on_model_and_drawing():
+    from app.factory import nameplate
+
+    m = faro.model(DEFAULTS)
+    assert m.parts["nameplate"].is_valid
+    assert len(m.preview["nameplate_fill"].solids()) == 4
+    assert m.info["nameplate_etch_mm3"] == pytest.approx(nameplate.letter_area() * nameplate.ETCH_DEPTH, rel=0.03)
+    checks = nameplate.consistency({}, m.info)
+    assert all(ok for _, ok, _ in checks), checks
+    svg = dr.to_svg(dr.part_drawing(DEFAULTS, _sheet("nameplate")))
+    assert "Cormorant Garamond SemiBold" in svg and ">FARO<" not in svg  # outlines from the artwork, not a font
+
+
+def test_contact_fields_fill_the_rfqs(client, faro_project):
+    pid = faro_project["id"]
+    r = client.get(f"/api/projects/{pid}/factory-pack/contact").json()
+    assert all(v == "" for v in r["values"].values()) and len(r["missing"]) == 7
+    md = client.get(f"/api/projects/{pid}/rfq.md").text
+    assert "[COMPANY NAME]" in md and "[DELIVERY ADDRESS, to be filled in]" in md
+    assert client.put(f"/api/projects/{pid}/factory-pack/contact", json={"email": "not-an-email"}).status_code == 422
+    assert client.put(f"/api/projects/{pid}/factory-pack/contact", json={"fax": "1"}).status_code == 422
+    details = {"company_name": "Bathsheva London", "contact_name": "A. Person, Founder", "email": "hello@example.com",
+               "phone": "+44 20 0000 0000", "company_address": "1 Example Street, London", "quote_deadline": "30 October 2026",
+               "delivery_address": "Unit 2, Example Estate, London E1"}
+    r = client.put(f"/api/projects/{pid}/factory-pack/contact", json=details)
+    assert r.status_code == 200 and r.json()["missing"] == []
+    md = client.get(f"/api/projects/{pid}/rfq.md").text
+    emd = client.get(f"/api/projects/{pid}/rfq-electronics.md").text
+    for doc in (md, emd):
+        assert "| From | Bathsheva London |" in doc and "hello@example.com" in doc and "30 October 2026" in doc
+        assert "DDP to our UK address: Unit 2, Example Estate, London E1" in doc
+        assert "[COMPANY NAME]" not in doc and "[DELIVERY ADDRESS" not in doc
+    s = client.get(f"/api/projects/{pid}/factory-pack").json()
+    assert s["missing_contact"] == [] and s["placeholders"] == []
+    # Clearing a field brings its placeholder (and the warning) back.
+    client.put(f"/api/projects/{pid}/factory-pack/contact", json={"phone": ""})
+    assert "[PHONE]" in client.get(f"/api/projects/{pid}/rfq.md").text
+    assert client.get(f"/api/projects/{pid}/factory-pack").json()["missing_contact"] == ["Phone"]
