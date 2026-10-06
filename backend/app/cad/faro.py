@@ -66,7 +66,7 @@ FELT_BACKING = 0.4  # ...laminated to a steel disc that the magnets hold
 FELT_INSET = 3.0
 BOTTOM_PLATE_T = 2.0  # laser-cut aluminium bottom plate (production; prototype 3 mm printed)
 PLATE_CLEAR = 0.2
-BATTERY = (65.0, 37.0, 19.0)  # 2 x 18650 pack lying flat
+BATTERY = (70.0, 38.0, 19.5)  # pre-certified 2 x 18650 pack lying flat, incl. protection board and wrap
 BATTERY_Y = -4.0
 USBC_W, USBC_H = 8.94 + 0.7, 3.26 + 0.7  # receptacle opening + clearance
 USBC_Z = 11.0  # low on the rear (+Y) of the base
@@ -274,6 +274,9 @@ PRODUCTION_CHANGES: list[dict[str, str]] = [
     {"feature": "Base fixing", "prototype": "Glued plate, coins for weight",
      "production": "Laser-cut steel weight plate screwed up into the cream band; aluminium bottom plate on 4 M2.5 "
                    "screws into standoffs so the battery is user-replaceable; felt on a steel disc held by magnets"},
+    {"feature": "Battery bay", "prototype": "Sized for the bare cells (65 × 37 × 19 mm)",
+     "production": "Sized for a pre-certified 2 x 18650 pack with its protection board and wrap: 70 × 38 × 19.5 mm; "
+                   "weight plate cut-out enlarged to match"},
     {"feature": "Construction", "prototype": "Stacked and glued",
      "production": "No central rod: band screwed to the base through the weight plate, tower and gallery bonded on "
                    "turned spigots, cap twist-locks onto the lantern"},
@@ -1014,6 +1017,46 @@ def assembly(parts: dict[str, Shape], name: str = "faro") -> Compound:
         s.color = Color(*PART_COLOURS.get(key, (0.7, 0.7, 0.7, 1.0)))
         kids.append(s)
     return Compound(children=kids, label=name)
+
+
+def production_change_checks(params: dict[str, Any]) -> list[dict[str, Any]]:
+    """Check the built solids against the PRODUCTION_CHANGES rows that geometry can prove."""
+    p = {k: float(v) for k, v in params.items()}
+    d = derived(p)
+    m = model(params)
+    parts, info = m.parts, m.info
+    w = p["wall_thickness"]
+    out = []
+
+    def check(feature: str, ok: bool, detail: str) -> None:
+        out.append({"feature": feature, "ok": bool(ok), "detail": detail})
+
+    walls = {}
+    for key in ("base", "tower", "cap"):
+        sec = m.sections[key]
+        walls[key] = sec.area / (sum(e.length for e in sec.outer_wire().edges()) / 2)
+    check("Shell walls", all(abs(v - w) <= 0.25 * w for v in walls.values()),
+          "spun shells " + ", ".join(f"{k} {v:.2f} mm" for k, v in walls.items()) + f" (wall {w:g} mm)")
+    bb = parts["diffuser"].bounding_box()
+    check("Window diffusers", abs(bb.min.Z - d["diffuser_bottom_z"]) < 0.05 and abs(bb.max.Z - d["diffuser_top_z"]) < 0.05,
+          f"opal tube z {bb.min.Z:.1f}–{bb.max.Z:.1f} mm, length {d['diffuser_length']:.1f} mm (window zone ± "
+          f"{DIFFUSER_OVERLAP:g} mm)")
+    check("Windows", len(info.get("windows", [])) == int(p["window_count"]), f"{len(info.get('windows', []))} windows cut")
+    rg = p["gallery_diameter"] / 2
+    solid = math.pi * (rg**2 - d["gallery_bore_r"] ** 2) * p["gallery_height"]
+    check("Gallery", parts["gallery"].volume < 0.4 * solid,
+          f"spun shell {parts['gallery'].volume / 1000:.1f} cm³ vs {solid / 1000:.1f} cm³ for a solid ring")
+    bay = info.get("bayonet", {})
+    check("Cap twist-lock", bay.get("locked_clash_mm3") == 0 and bay.get("entry_clash_mm3") == 0 and bay.get("lug_under_lip_mm", 0) > 1,
+          f"4 lugs, no clash locked or at entry, {bay.get('lug_under_lip_mm', 0):.1f} mm under the lip")
+    gb = parts["lantern_glass"].bounding_box()
+    vol = parts["lantern_glass"].volume
+    h = gb.max.Z - gb.min.Z
+    ro = (gb.max.X - gb.min.X) / 2
+    wall = ro - math.sqrt(max(ro**2 - vol / (math.pi * h), 0))
+    check("Lantern glass", abs(wall - p["glass_wall_thickness"]) < 0.05, f"tube wall {wall:.2f} mm")
+    check("Base fixing", {"weight_plate", "base_plate", "felt_pad"} <= set(parts), "weight plate, bottom plate and felt pad modelled")
+    return out
 
 
 def derived_traits(part_key: str, params: dict[str, Any]) -> list[str]:

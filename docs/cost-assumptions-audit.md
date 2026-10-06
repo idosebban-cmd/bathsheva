@@ -1,6 +1,6 @@
 # Cost assumptions audit: Faro
 
-Generated 2026-10-06 19:55 UTC by Product Workbench.
+Generated 2026-10-06 20:12 UTC by Product Workbench.
 
 **Configuration:** Best with no compromise to look and feel, power option A: cordless, 2 x 18650 rechargeable over USB-C: no further design changes beyond the accepted decisions; made in China.  
 **Unit cost (midpoint) at 500 units:** £147.11.  
@@ -121,7 +121,7 @@ Unit cost at 500 with every price at its researched basis (no volume adjustment)
 
 # Cost assumptions audit: Faro
 
-Generated 2026-10-06 19:55 UTC by Product Workbench.
+Generated 2026-10-06 20:12 UTC by Product Workbench.
 
 **Configuration:** Best with no compromise to look and feel, power option A: cordless, 2 x 18650 rechargeable over USB-C: no further design changes beyond the accepted decisions; made in China.  
 **Unit cost (midpoint) at 2000 units:** £129.82.  

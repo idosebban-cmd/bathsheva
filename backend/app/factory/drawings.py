@@ -41,6 +41,15 @@ DRAWN_PARTS = ["base", "band_cream", "tower", "diffuser", "gallery", "railing", 
 # Parts drawn with a plan (top) view as well as the section.
 PLAN_PARTS = {"weight_plate", "base_plate", "base", "lantern_frame", "cap_spigot"}
 SPUN = {"base", "tower", "cap"}
+# The process each part's drawing notes are written for. The Factory Pack checks the part's
+# chosen process against it, so a changed route can't ship with stale notes.
+NOTE_PROCESS = {
+    "base": "metal_spinning", "tower": "metal_spinning", "cap": "metal_spinning", "gallery": "metal_spinning",
+    "band_cream": "cnc_turning_near_net", "lantern_frame": "cnc_turning_near_net", "cap_spigot": "cnc_turning_near_net",
+    "finial": "cnc_turning_near_net", "knob": "cnc_turning_near_net",
+    "railing": "photo_etching", "nameplate": "photo_etching",
+    "diffuser": "glass_tube_cut", "lantern_glass": "glass_tube_cut",
+}
 
 
 @dataclass

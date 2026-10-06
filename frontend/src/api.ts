@@ -545,11 +545,30 @@ export interface FactoryPackPart {
   step: string;
 }
 
+export interface FactoryPackCheck {
+  check: string;
+  ok: boolean;
+  detail: string;
+}
+
+export interface OpenQuestion {
+  id: string;
+  topic: string;
+  question: string;
+  why: string;
+  proposed: string;
+}
+
 export interface FactoryPackSummary {
   cad_version: number | null;
   ready: boolean;
   parts: FactoryPackPart[];
-  bought_in: { name: string; quantity: number; electronics: boolean }[];
+  bought_in: { name: string; quantity: number; electronics: boolean; group: "electronics" | "operation" | "hardware" }[];
+  hardware: { item: string; name: string; quantity: number; material: string; notes: string }[];
+  brass_parts: { part_no: string; name: string; near_net: string }[];
+  consistency: FactoryPackCheck[];
+  open_questions: OpenQuestion[];
+  electronics_rfq_markdown: string;
   quantity_tiers: number[];
   mass: { total_kg: number; target_kg: number | null; status: string; note: string; parts_kg: Record<string, number> } | null;
   unverified: string[];
