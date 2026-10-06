@@ -549,6 +549,7 @@ export interface FactoryPackCheck {
   check: string;
   ok: boolean;
   detail: string;
+  level?: "warn";
 }
 
 export interface OpenQuestion {
@@ -571,6 +572,9 @@ export interface FactoryPackSummary {
   consistency: FactoryPackCheck[];
   open_questions: OpenQuestion[];
   placeholders: string[];
+  contact: Record<string, string>;
+  contact_fields: { key: string; label: string; placeholder: string }[];
+  missing_contact: string[];
   electronics_rfq_markdown: string;
   quantity_tiers: number[];
   mass: { total_kg: number; target_kg: number | null; status: string; note: string; parts_kg: Record<string, number> } | null;

@@ -73,6 +73,11 @@ class PartSheet:
 # ---------------------------------------------------------------------------
 
 
+def _scale_label(n: float) -> str:
+    """Drawing scale: 1:2 for reductions, 2:1 for enlargements."""
+    return f"{_fmt(1 / n)}:1" if n < 1 else f"1:{_fmt(n)}"
+
+
 def _text(g: Group, x: float, y: float, s: str, size: float = 7.5, anchor: str = "start", color=INK, bold: bool = False):
     g.add(String(x, y, s, fontName="Helvetica-Bold" if bold else "Helvetica", fontSize=size, fillColor=color,
                  textAnchor=anchor))
@@ -141,7 +146,7 @@ def _frame_and_title(g: Group, sheet: PartSheet, scale: float):
         ("Material", sheet.material or "TBD"), ("Process", sheet.process or "TBD"), ("Finish", sheet.finish or "TBD"),
         ("Qty per lamp", str(sheet.quantity)),
         ("CAD", f"v{sheet.cad_version}" if sheet.cad_version else "not generated"),
-        ("Scale / units", f"1:{_fmt(scale)}  ·  mm  ·  A4"), ("Date", sheet.date),
+        ("Scale / units", f"{_scale_label(scale)}  ·  mm  ·  A4"), ("Date", sheet.date),
     ]
     row_h = 10.5
     for i, (k, v) in enumerate(rows):
@@ -190,7 +195,7 @@ def _frame_and_title(g: Group, sheet: PartSheet, scale: float):
         ("Material", sheet.material or "TBD"), ("Process", sheet.process or "TBD"), ("Finish", sheet.finish or "TBD"),
         ("Qty per lamp", str(sheet.quantity)),
         ("CAD", f"v{sheet.cad_version}" if sheet.cad_version else "not generated"),
-        ("Scale / units", f"1:{_fmt(scale)}  ·  mm  ·  A4"), ("Date", sheet.date),
+        ("Scale / units", f"{_scale_label(scale)}  ·  mm  ·  A4"), ("Date", sheet.date),
     ]
     row_h = 10.5
     for i, (k, v) in enumerate(rows):
@@ -302,14 +307,15 @@ def _poly_pts(pts: list[tuple[float, float]], ox: float, oy: float, k: float) ->
     return [c for x, y in pts for c in (ox + x * k, oy + y * k)]
 
 
-def _draw_faces(g: Group, faces, ox: float, oy: float, k: float, fill=SECTION_FILL):
+def _draw_faces(g: Group, faces, ox: float, oy: float, k: float, fill=SECTION_FILL, hole_fill=colors.white,
+                stroke=INK, width: float = 0.6):
     for wires in faces:
         outer, holes = wires[0], wires[1:]
         if len(outer) >= 3:
-            g.add(Polygon(_poly_pts(outer, ox, oy, k), fillColor=fill, strokeColor=INK, strokeWidth=0.6))
+            g.add(Polygon(_poly_pts(outer, ox, oy, k), fillColor=fill, strokeColor=stroke, strokeWidth=width))
         for hole in holes:
             if len(hole) >= 3:
-                g.add(Polygon(_poly_pts(hole, ox, oy, k), fillColor=colors.white, strokeColor=INK, strokeWidth=0.5))
+                g.add(Polygon(_poly_pts(hole, ox, oy, k), fillColor=hole_fill, strokeColor=stroke, strokeWidth=width * 0.8))
 
 
 def _bounds(faces) -> tuple[float, float, float, float]:
@@ -401,7 +407,9 @@ def _part_notes(key: str, p: dict[str, float], d: dict[str, Any]) -> list[tuple[
         n.append((f"Etched brass t = {_fmt(faro.NAMEPLATE_T)}, {_fmt(faro.NAMEPLATE_W)} × {_fmt(faro.NAMEPLATE_H)}, corner R1.2, "
                   f"formed to R{_fmt(p['base_diameter'] / 2)} (the base). \"FARO\" etched, filled black.", INK))
         n.append(("Bonded on the base front, centred {0} above the underside.".format(_fmt(faro.NAMEPLATE_Z)), INK))
-        n.append(("Lettering artwork: artwork/F-05_nameplate_lettering.svg / .dxf (1:1, prototype lettering).", INK))
+        n.append((f"Lettering: \"FARO\" in Cormorant Garamond SemiBold, cap height {_fmt(5.0)}, centred on the plate, etched "
+                  "0.15 deep and filled black. Artwork: artwork/F-05_nameplate_lettering.svg / .dxf (1:1). Fine serifs: "
+                  "tell us your minimum etched line width.", INK))
     elif key == "weight_plate":
         n.append((f"Laser-cut mild steel S275, t = {_fmt(p['weight_plate_thickness'])}, zinc plated. Hidden; no cosmetic requirement.", INK))
         n.append((f"Battery cut-out {_fmt(faro.BATTERY[0] + 2)} × {_fmt(faro.BATTERY[1] + 2)} R3; {faro.STANDOFFS} × M2.5 tapped "
@@ -454,7 +462,12 @@ def part_drawing(params: dict[str, Any], sheet: PartSheet) -> Drawing:
     oy = MARGIN + 80 - y0 * k + max((view_h - H * k) / 2 - 20, 0)
     _draw_faces(g, main, ox, oy, k)
     if key == "nameplate":
-        _text(g, ox + faro.NAMEPLATE_W / 2 * k, oy + (faro.NAMEPLATE_H / 2 - 2.3) * k, "FARO", 6.5 * k, "middle", bold=True)
+        # The etched lettering, drawn from the same artwork as the SVG / DXF files and the 3D model.
+        from app.factory import nameplate as art
+
+        cx, cy = faro.NAMEPLATE_W / 2, faro.NAMEPLATE_H / 2
+        letters = [[[(x + cx, y + cy) for x, y in loop] for loop in face] for face in art.letter_loops()]
+        _draw_faces(g, letters, ox, oy, k, fill=colors.black, hole_fill=SECTION_FILL, stroke=colors.black, width=0.1)
     if key == "railing":
         for (a, b, c, e) in fp["windows"]:
             g.add(Rect(ox + a * k, oy + b * k, (c - a) * k, (e - b) * k, fillColor=colors.white, strokeColor=INK,

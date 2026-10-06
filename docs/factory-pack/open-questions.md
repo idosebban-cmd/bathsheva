@@ -4,15 +4,15 @@ Internal. Do not send. Answers marked resolved are already written into the RFQs
 
 ## Fill in before sending
 
-These placeholders are in both RFQs (mechanical/rfq and electronics/rfq_electronics):
+Enter these in the Factory Pack tab (Your details for the RFQs), then download the pack again. Until then both RFQs show these placeholders:
 
-- [ ] `[COMPANY NAME]`
-- [ ] `[CONTACT NAME, ROLE]`
-- [ ] `[EMAIL]`
-- [ ] `[PHONE]`
-- [ ] `[COMPANY ADDRESS]`
-- [ ] `[QUOTE DEADLINE]`
-- [ ] `[DELIVERY ADDRESS, to be filled in]`
+- [ ] Company name: `[COMPANY NAME]`
+- [ ] Contact name and role: `[CONTACT NAME, ROLE]`
+- [ ] Email: `[EMAIL]`
+- [ ] Phone: `[PHONE]`
+- [ ] Company address: `[COMPANY ADDRESS]`
+- [ ] Quote deadline: `[QUOTE DEADLINE]`
+- [ ] Delivery address (for DDP): `[DELIVERY ADDRESS, to be filled in]`
 
 ## Still open
 

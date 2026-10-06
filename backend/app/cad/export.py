@@ -32,9 +32,11 @@ def export_part(shape: Shape, directory: Path, key: str) -> list[ExportedFile]:
     return [ExportedFile(key, "step", step), ExportedFile(key, "stl", stl)]
 
 
-def _display_split(parts: dict[str, Shape], colours: dict[str, tuple], two_tone: dict[str, dict[str, Any]]) -> Compound:
+def _display_split(parts: dict[str, Shape], colours: dict[str, tuple], two_tone: dict[str, dict[str, Any]],
+                   extras: dict[str, tuple[Shape, tuple]] | None = None) -> Compound:
     """Preview-only compound: two-tone parts are split at their colour line into `<key>` (upper)
-    and `<key>_lower`, so the GLB shows both lacquers. STEP keeps one body per part."""
+    and `<key>_lower`, so the GLB shows both lacquers; `extras` adds preview-only bodies (e.g. the
+    nameplate's black lettering fill). STEP keeps one body per part."""
     kids = []
     for key, shape in parts.items():
         tone = two_tone.get(key)
@@ -52,11 +54,17 @@ def _display_split(parts: dict[str, Shape], colours: dict[str, tuple], two_tone:
             s.label = name
             s.color = Color(*col)
             kids.append(s)
+    for name, (shape, col) in (extras or {}).items():
+        s = copy.copy(shape)
+        s.label = name
+        s.color = Color(*col)
+        kids.append(s)
     return Compound(children=kids, label="preview")
 
 
 def export_assembly(asm: Compound, parts: dict[str, Shape], directory: Path, name: str,
-                    colours: dict[str, tuple] | None = None, two_tone: dict[str, dict[str, Any]] | None = None) -> list[ExportedFile]:
+                    colours: dict[str, tuple] | None = None, two_tone: dict[str, dict[str, Any]] | None = None,
+                    extras: dict[str, tuple[Shape, tuple]] | None = None) -> list[ExportedFile]:
     directory.mkdir(parents=True, exist_ok=True)
     step = directory / f"{name}_assembly.step"
     stl = directory / f"{name}_assembly.stl"
@@ -64,7 +72,7 @@ def export_assembly(asm: Compound, parts: dict[str, Shape], directory: Path, nam
     export_step(asm, str(step))
     export_stl(Compound(children=[copy.copy(s) for s in parts.values()]), str(stl), tolerance=STL_TOLERANCE,
                angular_tolerance=STL_ANGULAR)
-    preview = _display_split(parts, colours or {}, two_tone or {}) if two_tone else asm
+    preview = _display_split(parts, colours or {}, two_tone or {}, extras or {}) if (two_tone or extras) else asm
     export_gltf(preview, str(glb), binary=True, linear_deflection=STL_TOLERANCE * 2, angular_deflection=STL_ANGULAR)
     return [ExportedFile(None, "step", step), ExportedFile(None, "stl", stl), ExportedFile(None, "glb", glb)]
 
