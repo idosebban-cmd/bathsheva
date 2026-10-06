@@ -19,7 +19,7 @@ def test_create_faro_from_template(db):
     req = Requirements.model_validate(p.requirements)
     assert req.power_type == "battery" and req.battery_runtime_h == 8
     assert req.production_volume is None
-    assert req.intended_markets == ["UK", "EU"]
+    assert req.intended_markets == ["UK"] and "intended_markets" not in p.assumed_fields  # UK launch (Oct 2026)
     # Dimensions follow the approved prototype: confirmed, not a placeholder.
     assert req.approx_dimensions.height_mm == 300 and "approx_dimensions" not in p.assumed_fields
     assert {"production_volume", "target_unit_cost"} <= set(p.assumed_fields)
