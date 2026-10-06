@@ -11,7 +11,8 @@ setup_backend() {
   if [ ! -x "$PY" ]; then
     echo "==> Creating Python venv (backend/.venv)"
     if command -v uv >/dev/null 2>&1; then
-      uv venv -q "$VENV"
+      # Same pinned Python as scripts/setup_mac.sh (CadQuery wheels exist for it everywhere).
+      uv venv -q --python 3.12 "$VENV"
     else
       python3 -m venv "$VENV"
     fi
@@ -46,7 +47,8 @@ if [ -z "${ANTHROPIC_API_KEY:-}" ] && [ -z "${WORKBENCH_LLM_PROVIDER:-}" ]; then
   echo "==> ANTHROPIC_API_KEY not set: running with the LLM disabled (rules engine only)"
 fi
 
-# Process management. Only our own two servers are signalled (never `kill 0`, which
+# Process management. Ctrl-C (INT), TERM and a closed Terminal window (HUP) are
+# clean stops. Only our own two servers are signalled (never `kill 0`, which
 # would also hit whatever launched this script). Traps reset themselves before
 # acting so a signal can't re-enter them. Kept bash 3.2 compatible for macOS.
 BACKEND_PID=""
@@ -62,14 +64,15 @@ stop_servers() {
   done
 }
 
+# shellcheck disable=SC2329  # invoked by trap
 on_signal() {
-  echo
-  echo "==> Stopping"
+  # Writing can fail once the Terminal window is gone (HUP); keep stopping anyway.
+  { echo; echo "==> Stopping"; } 2>/dev/null || true
   stop_servers
   exit 0
 }
 
-trap on_signal INT TERM
+trap on_signal INT TERM HUP
 trap stop_servers EXIT
 
 (cd "$ROOT/backend" && exec "$PY" -m uvicorn app.main:app --host 127.0.0.1 --port "${BACKEND_PORT:-8000}") &
