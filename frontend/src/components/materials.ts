@@ -4,12 +4,12 @@ import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js
 // Preview materials for the 3D viewer (also used to render screenshots outside the app).
 // Finishes by part name (the GLB's node names are the CAD part keys; a two-tone part's
 // lower colour is exported as "<key>_lower"). Anything else keeps its exported colour.
-export type Finish = "satin_black" | "cream" | "red" | "brass" | "frosted" | "opal" | "internal" | "etch_fill";
+export type Finish = "satin_black" | "cream" | "red" | "brass" | "brass_matte" | "frosted" | "opal" | "internal" | "etch_fill";
 export const FINISH: Record<string, Finish> = {
   base: "satin_black", base_plate: "internal", felt_pad: "internal",
   band_cream: "cream", tower: "cream", tower_lower: "red", cap: "red",
   nameplate: "brass", knob: "brass", gallery: "brass", railing: "brass", lantern_frame: "brass", cap_spigot: "brass",
-  finial: "brass", nameplate_fill: "etch_fill", knob_logo_fill: "etch_fill",
+  finial: "brass", nameplate_fill: "etch_fill", knob_logo_floor: "brass_matte",
   lantern_glass: "frosted", diffuser: "opal",
 };
 const GLOW = new THREE.Color("#ffb45e");
@@ -48,6 +48,8 @@ export function material(finish: Finish, lit: boolean): THREE.Material {
     case "brass": // brushed satin, clear lacquer
       return brushed(new THREE.MeshPhysicalMaterial({ color: BRASS, metalness: 1, roughness: 0.36, clearcoat: 0.45,
         clearcoatRoughness: 0.12 }));
+    case "brass_matte": // the knob logo's engraved floor: bare cut brass under the lacquer, not brushed
+      return new THREE.MeshPhysicalMaterial({ color: BRASS, metalness: 1, roughness: 0.6, clearcoat: 0.3, clearcoatRoughness: 0.3 });
     case "frosted":
       return new THREE.MeshPhysicalMaterial({
         color: "#fbf6ec", roughness: 0.55, transmission: lit ? 0.2 : 0.85, thickness: 2, ior: 1.47,

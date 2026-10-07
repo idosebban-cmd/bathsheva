@@ -120,8 +120,14 @@ bought_in:
     confidence: low
     verified: false
   - key: knob_logo_engrave
-    name: Engrave the logo on the knob face (laser or CNC, 0.2 mm deep) and fill black
-    gbp: {low: 0.6, high: 1.8}
+    name: Engrave the logo on the knob face (laser or CNC, 0.2 mm deep), no fill, matte groove floor
+    gbp: {low: 0.5, high: 1.5}
+    source: model-generated
+    confidence: low
+    verified: false
+  - key: knob_knurl
+    name: Fine straight knurl on the knob edge (DIN 82 RAA 0.5), on the lathe
+    gbp: {low: 0.1, high: 0.4}
     source: model-generated
     confidence: low
     verified: false

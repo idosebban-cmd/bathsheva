@@ -33,6 +33,7 @@ TOLERANCE_NOTE = "General tolerance ISO 2768-m unless stated"
 INK = colors.HexColor("#1a1a1a")
 DIM = colors.HexColor("#1f4e9c")
 SECTION_FILL = colors.HexColor("#d9dde3")
+ENGRAVED_FILL = colors.Color(0.62, 0.62, 0.62)  # engraved, unfilled areas (knob logo)
 WARN = colors.HexColor("#b3261e")
 UNV = colors.HexColor("#8a5a00")
 
@@ -416,11 +417,14 @@ def _part_notes(key: str, p: dict[str, float], d: dict[str, Any]) -> list[tuple[
         n.append((f"Solid brass knob (turned from close-fitting bar) Ø{_fmt(p['knob_diameter'])} × {_fmt(faro.KNOB_PROUD)}, front edge R1; D-shaft bore "
                   "and grub screw (or push-fit) to suit the chosen 9 mm pot.", INK))
         n.append(("Brushed satin (matching Atelier), clear lacquer. Back face clears the conical tower by 0.5 mm.", INK))
+        n.append((f"Edge: fine straight knurl, DIN 82 RAA {_fmt(faro.KNURL_PITCH)} ({faro.knurl_teeth(p['knob_diameter'])} teeth on "
+                  f"Ø{_fmt(p['knob_diameter'])}), full length of the side up to the R1 front edge, which stays smooth.", INK))
         from app.factory import logo as art
 
         r = art.logo_radius(p["knob_diameter"])
         n.append((f"Logo on the face: medallion Ø{_fmt(2 * r)} with a {_fmt(art.EDGE_GROOVE_MM)} edge groove, engraved "
-                  f"{_fmt(art.ENGRAVE_DEPTH)} deep (laser or CNC), grooves {_fmt(art.MIN_GROOVE_MM)} min, filled black, after brushing and before lacquer. Upright "
+                  f"{_fmt(art.ENGRAVE_DEPTH)} deep (laser or CNC), grooves {_fmt(art.MIN_GROOVE_MM)} min, NO FILL: tone-on-tone, groove floor left "
+                  "matte as engraved (not brushed). Engrave after brushing, before the clear lacquer, which covers face and grooves. Upright "
                   "(sun at the top) with the knob turned to its off stop. Artwork: artwork/F-11_knob_logo.svg / .dxf (1:1).", INK))
     elif key == "nameplate":
         n.append((f"Etched brass t = {_fmt(faro.NAMEPLATE_T)}, {_fmt(faro.NAMEPLATE_W)} × {_fmt(faro.NAMEPLATE_H)}, corner R1.2, "
@@ -529,10 +533,11 @@ def part_drawing(params: dict[str, Any], sheet: PartSheet) -> Drawing:
         circle = lambda r: [(r * math.cos(2 * math.pi * i / 180), r * math.sin(2 * math.pi * i / 180)) for i in range(180)]  # noqa: E731
         _draw_faces(g, [[circle(rk)]], fcx, fcy, kf, fill=SECTION_FILL)
         _draw_faces(g, [[circle(rk - art.EDGE_FILLET)]], fcx, fcy, kf, fill=SECTION_FILL, stroke=DIM, width=0.3)
-        _draw_faces(g, art.loops(art.logo_radius(p["knob_diameter"])), fcx, fcy, kf, fill=colors.black, hole_fill=SECTION_FILL,
+        _draw_faces(g, art.loops(art.logo_radius(p["knob_diameter"])), fcx, fcy, kf, fill=ENGRAVED_FILL, hole_fill=SECTION_FILL,
                     stroke=colors.black, width=0.1)
         _text(g, fcx, fcy - rk * kf - 14, f"FRONT VIEW: LOGO FACE (scale {_scale_label(1 / (kf / PT_PER_MM))})", 7.5, "middle", bold=True)
-        _text(g, fcx, fcy + rk * kf + 6, "logo upright with the knob at its off stop", 6.5, "middle", DIM)
+        _text(g, fcx, fcy + rk * kf + 6, "logo upright with the knob at its off stop; shaded = engraved 0.2 deep, no fill", 6.5,
+              "middle", DIM)
 
     notes = _part_notes(key, p, d)
     for u in sheet.unverified:

@@ -90,6 +90,8 @@ NAMEPLATE_T = 0.8  # etched brass, bonded on the surface (prototype: 1.2 mm in a
 NAMEPLATE_Z = 14.0
 KNOB_PROUD = 6.0
 KNOB_GAP = 0.5
+KNURL_PITCH = 0.5  # fine straight knurl (DIN 82 RAA 0.5) on the knob's edge
+KNURL_DEPTH = 0.2  # modelled tooth depth; the knurling tool sets the real form
 POT_D, POT_DEPTH = 12.0, 9.0  # slim 9 mm-class rotary pot behind the tower wall
 POT_HOLE_D = 7.5  # M7 bushing
 POT_STANDOFF = 1.5  # curved spacer washer between the conical wall and the pot face
@@ -227,12 +229,15 @@ PART_KEYS = list(PART_COLOURS)
 
 
 NAMEPLATE_FILL = (0.05, 0.05, 0.05, 1.0)
+KNOB_LOGO_FLOOR = (0.77, 0.63, 0.35, 1.0)  # matte brass (the viewer gives it its own material)
+PREVIEW_EXTRA_COLOURS = {"nameplate_fill": NAMEPLATE_FILL, "knob_logo_floor": KNOB_LOGO_FLOOR}
 
 
 def preview_extras(params: dict[str, Any]) -> dict[str, tuple[Shape, tuple]]:
-    """Preview-only bodies for the GLB: the black fill in the nameplate's lettering and the knob logo."""
+    """Preview-only bodies for the GLB: the black fill in the nameplate's lettering, and the knob logo's matte
+    groove floor (the logo is engraved tone-on-tone, with no fill)."""
     m = model(params)
-    return {k: (m.preview[k], NAMEPLATE_FILL) for k in ("nameplate_fill", "knob_logo_fill") if k in m.preview}
+    return {k: (m.preview[k], col) for k, col in PREVIEW_EXTRA_COLOURS.items() if k in m.preview}
 
 
 def preview_two_tone(params: dict[str, Any]) -> dict[str, dict[str, Any]]:
@@ -285,9 +290,11 @@ PRODUCTION_CHANGES: list[dict[str, str]] = [
                    "screws into standoffs so the battery is user-replaceable; felt on a steel disc held by magnets"},
     {"feature": "Knob logo", "prototype": "Plain knob face",
      "production": "Logo (half sun with seven rays over two waves, traced master brand/logo/bathsheva_emblem.svg) engraved 0.2 mm into the "
-                   "brass knob face and filled black: medallion Ø16 mm; grooves 0.3 mm min. Knob version only: horizon line "
+                   "brass knob face, tone-on-tone with no fill (groove floor left matte): medallion Ø16 mm; grooves 0.3 mm min. Knob version only: horizon line "
                    "widened from 0.21-0.23 mm to 0.3 mm and a 0.3 mm edge groove round the medallion; upright with the knob "
                    "at its off stop"},
+    {"feature": "Knob edge", "prototype": "Plain turned edge",
+     "production": "Fine straight knurl on the brass knob's edge (DIN 82 RAA 0.5: 126 teeth on Ø20), smooth R1 front edge"},
     {"feature": "Battery bay", "prototype": "Sized for the bare cells (65 × 37 × 19 mm)",
      "production": "Sized for a pre-certified 2 x 18650 pack with its protection board and wrap: 70 × 38 × 19.5 mm; "
                    "weight plate cut-out enlarged to match"},
@@ -716,19 +723,35 @@ def _wedge(a0_deg: float, a1_deg: float, r: float, z0: float, h: float) -> Shape
     return Pos(0, 0, z0) * extrude(Polygon(*pts, align=None), amount=h)
 
 
-@lru_cache(maxsize=8)
-def _engraved_knob(knob_diameter: float) -> tuple[Shape, Shape]:
-    """The brass knob (back face at y = 0, front face at y = -KNOB_PROUD, axis through the origin) with the
-    logo engraved in its face, and the engraved volume (shown black in the preview). Cached per diameter;
-    build_model moves it into place.
-
-    The logo is the same artwork as the vector files and the drawing, upright as modelled: the RFQ asks
-    for it upright with the knob at its off stop."""
+def _knurled_knob(knob_diameter: float) -> Shape:
+    """The plain brass knob (back face at y = 0, front face at y = -KNOB_PROUD) with a fine straight knurl on its
+    edge: triangular teeth KNURL_DEPTH deep at KNURL_PITCH, trimmed by the smooth R1 front edge."""
     from app.factory import logo as art
 
     rk = knob_diameter / 2
     knob = Rot(90, 0, 0) * Cylinder(rk, KNOB_PROUD, align=MIN)
     knob = fillet(knob.edges().filter_by(GeomType.CIRCLE).sort_by(Axis.Y)[:1], art.EDGE_FILLET)
+    n = knurl_teeth(knob_diameter)
+    pts = [((rk if i % 2 == 0 else rk - KNURL_DEPTH) * math.cos(math.pi * i / n),
+            (rk if i % 2 == 0 else rk - KNURL_DEPTH) * math.sin(math.pi * i / n)) for i in range(2 * n)]
+    teeth = Rot(90, 0, 0) * extrude(Polygon(*pts, align=None), amount=KNOB_PROUD)
+    return _one(knob & teeth)
+
+
+def knurl_teeth(knob_diameter: float) -> int:
+    return max(12, round(math.pi * knob_diameter / KNURL_PITCH))
+
+
+@lru_cache(maxsize=8)
+def _engraved_knob(knob_diameter: float) -> tuple[Shape, Shape]:
+    """The knurled brass knob (back face at y = 0, front face at y = -KNOB_PROUD, axis through the origin) with
+    the logo engraved in its face, and the engraved volume. Cached per diameter; build_model moves it into place.
+
+    The logo is engraved tone-on-tone (no fill); the same artwork as the vector files and the drawing, upright as
+    modelled: the RFQ asks for it upright with the knob at its off stop."""
+    from app.factory import logo as art
+
+    knob = _knurled_knob(knob_diameter)
     cutter = Pos(0, -KNOB_PROUD + art.ENGRAVE_DEPTH, 0) * _front_prism(art.grooves(art.logo_radius(knob_diameter)),
                                                                      depth=art.ENGRAVE_DEPTH + 1.0)
     fill = knob & cutter
@@ -950,7 +973,10 @@ def build_model(params: dict[str, Any]) -> Model:
     knob, logo_fill = _engraved_knob(p["knob_diameter"])
     at = Pos(0, y_out - KNOB_GAP - lean, zk)
     parts["knob"] = _one(at * knob)
-    preview["knob_logo_fill"] = at * logo_fill
+    # preview only: the matte groove floor, a sliver just in front of the floor (the rest lies inside the knob)
+    from app.factory.logo import ENGRAVE_DEPTH
+
+    preview["knob_logo_floor"] = at * Pos(0, ENGRAVE_DEPTH - 0.01, 0) * logo_fill
     info["knob_logo_mm3"] = round(logo_fill.volume, 3)
 
     # ---- gallery and railing ----------------------------------------------------
@@ -1124,6 +1150,13 @@ def production_change_checks(params: dict[str, Any]) -> list[dict[str, Any]]:
     wall = ro - math.sqrt(max(ro**2 - vol / (math.pi * h), 0))
     check("Lantern glass", abs(wall - p["glass_wall_thickness"]) < 0.05, f"tube wall {wall:.2f} mm")
     check("Base fixing", {"weight_plate", "base_plate", "felt_pad"} <= set(parts), "weight plate, bottom plate and felt pad modelled")
+    teeth = knurl_teeth(p["knob_diameter"])
+    knurl_faces = sum(1 for f in parts["knob"].faces() if f.geom_type == GeomType.PLANE
+                      and abs(f.normal_at().Y) < 0.01 and (f.bounding_box().max.Y - f.bounding_box().min.Y) > 1)
+    check("Knob edge", knurl_faces >= 2 * teeth,
+          f"{knurl_faces // 2} knurl teeth on Ø{p['knob_diameter']:g} (pitch {KNURL_PITCH:g} mm, {teeth} expected)")
+    check("Knob logo", "knob_logo_fill" not in m.preview and "knob_logo_floor" in m.preview and info.get("knob_logo_mm3", 0) > 0,
+          f"engraved {info.get('knob_logo_mm3', 0):.2f} mm³, no fill (matte floor in the preview)")
     return out
 
 
