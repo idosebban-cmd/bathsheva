@@ -57,6 +57,7 @@ def create_project(session: Session, name: str, description: str = "", template:
     )
     session.add(project)
     session.commit()
+    _clear_stale_folder(project.id)
     if template:
         from app.services.costing import default_items
 
@@ -68,3 +69,37 @@ def create_project(session: Session, name: str, description: str = "", template:
         apply_template_decisions(session, project)
     session.refresh(project)
     return project
+
+
+def project_dir(project_id: int):
+    """The project's own folder in the data folder (uploads, generated CAD and exports)."""
+    from app.config import settings
+
+    return settings.data_dir / "projects" / str(int(project_id))
+
+
+def delete_project(session: Session, project: Project) -> None:
+    """Delete the project's records (they cascade from the project) and then its files."""
+    import shutil
+
+    from app.config import settings
+
+    folder = project_dir(project.id)
+    root = (settings.data_dir / "projects").resolve()
+    session.delete(session.merge(project))
+    session.commit()
+    if folder.resolve().parent == root and folder.exists():  # never anything outside data/projects/<id>
+        shutil.rmtree(folder)
+
+
+def _clear_stale_folder(project_id: int) -> None:
+    """A new project must start with an empty data folder. SQLite can reuse the id of the last deleted
+    project, so a folder left behind (an interrupted delete, or files from before deletes removed them) is
+    moved aside to projects/_orphaned/ rather than inherited or destroyed."""
+    import datetime as dt
+
+    folder = project_dir(project_id)
+    if folder.exists():
+        dest = folder.parent / "_orphaned" / f"{project_id}-{dt.datetime.now(dt.timezone.utc):%Y%m%dT%H%M%S%f}"
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        folder.rename(dest)
