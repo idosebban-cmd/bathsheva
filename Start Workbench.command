@@ -50,11 +50,37 @@ if [ ! -x "$ROOT/backend/.venv/bin/python" ] || [ ! -x "$ROOT/frontend/node_modu
   bash "$ROOT/scripts/setup_mac.sh" || finish "Setup did not finish, so the workbench was not started." 1
 fi
 
-# Already running (e.g. in another window)? Just open it.
-if responds "http://127.0.0.1:$BACKEND_PORT/api/health" && responds "$URL/"; then
-  say "The workbench is already running in another window. Opening $URL"
-  open_url "$URL"
-  exit 0
+# Stop whatever listens on a TCP port (asks politely, then insists after 10 s).
+stop_port() {
+  pids="$(lsof -t -iTCP:"$1" -sTCP:LISTEN 2>/dev/null)"
+  [ -n "$pids" ] || return 0
+  # shellcheck disable=SC2086  # one PID per word
+  kill -TERM $pids 2>/dev/null
+  for _ in $(seq 1 20); do
+    [ -z "$(port_owner "$1")" ] && return 0
+    sleep 0.5
+  done
+  # shellcheck disable=SC2086
+  kill -KILL $pids 2>/dev/null
+  sleep 0.5
+}
+
+# Already running (e.g. in another window)? Just open it, unless that server is still running the code
+# from before an update (it loads its code only at start-up, so CAD would be built with the old version;
+# a server from before this check doesn't report "stale" at all): then restart it.
+health="$(curl -fsS --max-time 2 "http://127.0.0.1:$BACKEND_PORT/api/health" 2>/dev/null)"
+if [ -n "$health" ] && responds "$URL/"; then
+  case "$health" in
+    *'"stale":false'*)
+      say "The workbench is already running in another window. Opening $URL"
+      open_url "$URL"
+      exit 0
+      ;;
+  esac
+  say "The workbench is already running in another window, but with the code from before your last update."
+  say "Restarting it so the update takes effect (the other window will say it has stopped)."
+  stop_port "$BACKEND_PORT"
+  stop_port "$FRONTEND_PORT"
 fi
 
 # Anything else on our ports?

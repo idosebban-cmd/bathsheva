@@ -12,8 +12,10 @@ import FactoryPackPage from "./pages/FactoryPackPage";
 import DfmPage from "./pages/DfmPage";
 import RevisionsPage from "./pages/RevisionsPage";
 import RevisionView from "./pages/RevisionView";
+import { STALE_MESSAGE, useServerStale } from "./components/useServerStale";
 
 export default function App() {
+  const stale = useServerStale();
   return (
     <div className="app">
       <header className="topbar">
@@ -21,6 +23,11 @@ export default function App() {
           Product Workbench
         </Link>
       </header>
+      {stale && (
+        <p className="notice stale-server" role="alert">
+          <strong>Restart needed.</strong> {STALE_MESSAGE}
+        </p>
+      )}
       <Routes>
         <Route path="/" element={<ProjectsPage />} />
         <Route path="/projects/:projectId" element={<ProjectLayout />}>

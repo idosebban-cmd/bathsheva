@@ -4,9 +4,11 @@ import { AssumptionBadge, UnverifiedBadge } from "../components/Badges";
 import CadDownloads from "../components/CadDownloads";
 import ModelViewer from "../components/ModelViewer";
 import { useProject } from "../components/useProject";
+import { useServerStale } from "../components/useServerStale";
 
 export default function CadPage() {
   const { project } = useProject();
+  const serverStale = useServerStale();
   const [state, setState] = useState<CadState | null>(null);
   const [params, setParams] = useState<Record<string, string>>({});
   const [validation, setValidation] = useState<ValidationResult | null>(null);
@@ -136,6 +138,12 @@ export default function CadPage() {
           )}
           {latest && dirty && <span className="small muted">Parameters changed since v{latest.version}</span>}
         </div>
+        {serverStale && (
+          <p className="small issue warning">
+            The server is running older code than the files on disk: restart the workbench before regenerating, or the
+            model is built with the old version (for example without the knob emblem).
+          </p>
+        )}
         {error && <p className="error">{error}</p>}
       </section>
 

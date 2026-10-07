@@ -5,6 +5,7 @@ from __future__ import annotations
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
+from app import codeversion
 from app.api import bom, cad, costdown, costing, dfm, engineering, factory, parts, projects, quotes, revisions
 from app.config import settings
 from app.db import init_db
@@ -27,7 +28,9 @@ def create_app() -> FastAPI:
 
     @app.get("/api/health")
     def health():
-        return {"status": "ok", "llm_provider": settings.llm_provider}
+        # `stale`: the code or seed data on disk changed since this server started (e.g. after an update), so
+        # it is still running the old code until it is restarted.
+        return {"status": "ok", "llm_provider": settings.llm_provider, **codeversion.status()}
 
     # Uploaded images and generated files, served read-only.
     projects_dir = settings.data_dir / "projects"
