@@ -2,14 +2,14 @@
 
 The master is traced from the reference image (seed/artwork/reference/logo_reference.webp):
 scripts/trace_logo.py finds the plate edges either side of every dark groove, takes the centre-line and
-width, and fits smooth curves, stored in brand/logo/faro_logo_curves.json (reference-image pixels).
+width, and fits smooth curves, stored in brand/logo/bathsheva_emblem_curves.json (reference-image pixels).
 This module builds the shapes from those curves: 11 raised shapes (seven rays, the sun and three sea
 bands) inside one true circle, separated by the grooves. There is no border ring: the circle is formed
 by the ends of the shapes. The ray grooves curve and widen towards the rim, the lowest rays sit on
 curved dark wedges, the sun is a little less than a half circle and the top of the horizon band bows
 very slightly, all as in the reference. Left and right are pooled, so the master is symmetric.
 
-The master files live in brand/logo/ (SVG, PDF, DXF, transparent PNG, plus the outline loops).
+The master files live in brand/logo/ as bathsheva_emblem.* (SVG, PDF, DXF, transparent PNG, plus the outline loops).
 
 On the knob the grooves are engraved and filled black. The knob version differs from the master in
 two ways, both for engraving only:
@@ -42,9 +42,9 @@ LOOPS_FILE = "F-11_knob_logo_loops.json"
 REFERENCE = ARTWORK_DIR / "reference" / "logo_reference.webp"
 
 BRAND_DIR = SEED_DIR.parents[1] / "brand" / "logo"
-CURVES_FILE = "faro_logo_curves.json"
-MASTER_STEM = "faro_logo"
-MASTER_LOOPS_FILE = "faro_logo_master.json"
+CURVES_FILE = "bathsheva_emblem_curves.json"
+MASTER_STEM = "bathsheva_emblem"
+MASTER_LOOPS_FILE = "bathsheva_emblem_master.json"
 MASTER_DIAMETER_MM = 100.0  # size of the master SVG / PDF / DXF (vector, scale freely)
 MASTER_PNG_PX = 2048
 RAYS = 7  # counted on the reference image: three each side and one at the top
@@ -321,7 +321,7 @@ def export_master(out_dir: Path = BRAND_DIR, fresh: bool = True) -> dict[str, Pa
     out_dir.mkdir(parents=True, exist_ok=True)
     shapes = [face[0] for face in _loops_of(unit_shapes_from_curves(0.0))] if fresh else master_loops()
     paths = {"json": out_dir / MASTER_LOOPS_FILE}
-    paths["json"].write_text(json.dumps({"description": "Faro logo master: 11 raised shapes (7 rays, sun, 3 sea bands), "
+    paths["json"].write_text(json.dumps({"description": "Bathsheva emblem master: 11 raised shapes (7 rays, sun, 3 sea bands), "
                                                          "unit radius, centred at the origin, +Y up",
                                          "params": geometry_params(), "shapes": shapes}, separators=(",", ":")) + "\n")
     r = MASTER_DIAMETER_MM / 2
@@ -330,14 +330,14 @@ def export_master(out_dir: Path = BRAND_DIR, fresh: bool = True) -> dict[str, Pa
     paths["svg"] = out_dir / f"{MASTER_STEM}.svg"
     paths["svg"].write_text(
         f'<svg xmlns="http://www.w3.org/2000/svg" width="{2 * r:g}mm" height="{2 * r:g}mm" viewBox="0 0 {2 * r:g} {2 * r:g}">\n'
-        f'  <title>Faro logo</title>\n  <path fill="#000000" fill-rule="nonzero" d="{d}"/>\n</svg>\n')
+        f'  <title>Bathsheva emblem</title>\n  <path fill="#000000" fill-rule="nonzero" d="{d}"/>\n</svg>\n')
     # PDF (page = the medallion's square).
     from reportlab.lib.units import mm
     from reportlab.pdfgen import canvas
 
     paths["pdf"] = out_dir / f"{MASTER_STEM}.pdf"
     cv = canvas.Canvas(str(paths["pdf"]), pagesize=(2 * r * mm, 2 * r * mm), invariant=1)
-    cv.setTitle("Faro logo")
+    cv.setTitle("Bathsheva emblem")
     cv.setFillColorRGB(0, 0, 0)
     p = cv.beginPath()
     for loop in shapes:

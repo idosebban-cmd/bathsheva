@@ -284,7 +284,7 @@ PRODUCTION_CHANGES: list[dict[str, str]] = [
      "production": "Laser-cut steel weight plate screwed up into the cream band; aluminium bottom plate on 4 M2.5 "
                    "screws into standoffs so the battery is user-replaceable; felt on a steel disc held by magnets"},
     {"feature": "Knob logo", "prototype": "Plain knob face",
-     "production": "Logo (half sun with seven rays over two waves, traced master in brand/logo/) engraved 0.2 mm into the "
+     "production": "Logo (half sun with seven rays over two waves, traced master brand/logo/bathsheva_emblem.svg) engraved 0.2 mm into the "
                    "brass knob face and filled black: medallion Ø16 mm; grooves 0.3 mm min. Knob version only: horizon line "
                    "widened from 0.21-0.23 mm to 0.3 mm and a 0.3 mm edge groove round the medallion; upright with the knob "
                    "at its off stop"},
