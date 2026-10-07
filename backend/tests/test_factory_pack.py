@@ -1,8 +1,10 @@
 """RFQ pack: drawings, RFQ document and the zip."""
 
 import io
+import math
 import re
 import zipfile
+from pathlib import Path
 
 import pytest
 
@@ -305,8 +307,11 @@ def test_knob_logo_artwork_model_and_drawing():
     grooves = logo._unit_grooves().faces()
     assert len(grooves) == 1 and len(grooves[0].inner_wires()) == 11  # 7 rays + sun + 3 sea bands, all one groove network
     r = logo.logo_radius(DEFAULTS["knob_diameter"])
-    assert r * (1 + logo.GROOVE) <= DEFAULTS["knob_diameter"] / 2 - logo.EDGE_FILLET  # inside the front-edge radius
-    assert logo.GROOVE * r >= logo.MIN_GROOVE_MM
+    assert r == pytest.approx(8.0)  # Ø16 medallion
+    assert r + logo.EDGE_GROOVE_MM <= DEFAULTS["knob_diameter"] / 2 - logo.EDGE_FILLET  # inside the front-edge radius
+    widths = logo.narrowest_lines_mm(r)
+    assert min(widths.values()) >= logo.MIN_GROOVE_MM - 1e-6, widths
+    assert widths["horizon"] == pytest.approx(0.3, abs=1e-6)  # widened on the knob only
     files = logo.artwork_files(r)
     assert set(files) == {"F-11_knob_logo.svg", "F-11_knob_logo.dxf"} and b'id="logo_engrave"' in files["F-11_knob_logo.svg"]
 
@@ -338,3 +343,49 @@ def test_knob_logo_in_the_pack(client, faro_project):
     for name in ("Knob logo lines are engravable", "Knob logo SVG / DXF match the artwork", "Knob logo on the 3D model",
                  "Knob logo on the drawing"):
         assert checks[name]["ok"], (name, checks[name])
+
+
+def test_logo_master_in_brand_folder():
+    """brand/logo/: the traced master (11 shapes in one true circle, no border ring) and its files, all
+    from the same curves as the knob artwork."""
+    import io as _io
+    import json
+
+    from PIL import Image
+
+    from app.factory import logo, nameplate
+
+    stored = json.loads((logo.BRAND_DIR / logo.MASTER_LOOPS_FILE).read_text())
+    assert stored["params"] == logo.geometry_params()
+    shapes = stored["shapes"]
+
+    def canon(loops):
+        out = []
+        for lp in loops:
+            pts = [tuple(round(v, 5) for v in p) for p in lp]
+            i = pts.index(min(pts))
+            out.append(tuple(pts[i:] + pts[:i]))
+        return sorted(out)
+
+    assert canon(shapes) == canon(f[0] for f in nameplate._loops_of(logo.unit_shapes_from_curves(0.0)))
+    assert len(shapes) == 2 * 3 + 1 + 1 + 3  # 7 rays, the sun, 3 sea bands
+    # One true circle: every outline point lies on or inside the unit circle, and the shapes reach it.
+    radii = [math.hypot(x, y) for loop in shapes for x, y in loop]
+    assert max(radii) <= 1 + 1e-5 and sum(r > 1 - 1e-4 for r in radii) > 50
+    # Symmetric about the vertical axis (same shapes mirrored).
+    area = sorted(round(nameplate._shoelace(loop), 4) for loop in shapes)
+    assert area == sorted(round(nameplate._shoelace([(-x, y) for x, y in loop]), 4) for loop in shapes)
+    # The master differs from the knob version only where the knob needs it: master horizon line is thinner.
+    c = logo.curves()
+    assert logo.horizon_shift_px(c, 0.0) == 0.0 < logo.horizon_shift_px(c, logo.knob_horizon())
+    # Fresh export from the stored loops reproduces the committed files.
+    import tempfile
+
+    out = Path(tempfile.mkdtemp())
+    fresh = logo.export_master(out, fresh=False)
+    for ext in ("svg", "pdf", "png"):
+        assert fresh[ext].read_bytes() == (logo.BRAND_DIR / f"{logo.MASTER_STEM}.{ext}").read_bytes(), ext
+    assert nameplate._dxf_signature(fresh["dxf"].read_bytes()) == nameplate._dxf_signature(
+        (logo.BRAND_DIR / f"{logo.MASTER_STEM}.dxf").read_bytes())
+    png = Image.open(_io.BytesIO((logo.BRAND_DIR / f"{logo.MASTER_STEM}.png").read_bytes()))
+    assert png.mode == "RGBA" and png.getpixel((0, 0))[3] == 0 and png.getpixel((png.width // 2, png.height // 2))[3] == 255
