@@ -21,7 +21,7 @@ from app.cad import faro
 from app.config import settings
 from app.costing.data import load_cost_data
 from app.factory import drawings as dr
-from app.factory import nameplate
+from app.factory import logo, nameplate
 from app.models import Project
 from app.rules.data import load_rules
 from app.services.bom import bom_csv, build_bom
@@ -35,7 +35,7 @@ QUANTITY_TIERS = [300, 500, 2000]
 # the BOM already lists; operations are priced into the part they are done on.
 DRAWN_ITEM_KEYS = {"steel_weight_plate", "bottom_plate"}
 HARDWARE_ITEM_KEYS = {"screw_m25_cs", "standoff_m25", "screw_m3", "magnet_6x2", "silicone_gasket"}
-OPERATION_ITEM_KEYS = {"window_laser_cut": "tower", "masked_stripe": "tower"}
+OPERATION_ITEM_KEYS = {"window_laser_cut": "tower", "masked_stripe": "tower", "knob_logo_engrave": "knob"}
 OPERATION_TEXT = {"masked_stripe": "Masked two-tone lacquer: red lower section with a crisp, level line"}
 ELECTRONIC_PARTS = {"led_module", "tower_light", "battery", "charge_board", "dimmer"}
 
@@ -472,6 +472,7 @@ def rfq_blocks(c: dict[str, Any]) -> list[Block]:
     b.append(Block("bullets", items=[
         "drawings/: one PDF and one SVG per made-to-drawing part (general tolerance ISO 2768-m unless stated).",
         "artwork/: FARO nameplate lettering, 1:1 vector (SVG and DXF; layer LETTERING_ETCH, plate outline for reference).",
+        "artwork/: knob logo, 1:1 vector (SVG and DXF; layer LOGO_ENGRAVE is the engraved area, knob outline for reference).",
         "step/: one STEP file per made-to-drawing part, plus the full assembly.",
         "bom.csv: full bill of materials (part numbers, materials, processes; electronics marked as a separate RFQ).",
         "rfq.md / rfq.pdf: this document.",
@@ -629,6 +630,8 @@ def supplier_bom_csv(c: dict[str, Any]) -> str:
             supply, files = "Made to drawing", f"{pt['drawing'].split('/')[-1]}.pdf; {pt['step'].split('/')[-1]}"
             if key == "nameplate":
                 files += f"; artwork/{nameplate.STEM}.svg / .dxf"
+            if key == "knob":
+                files += f"; artwork/{logo.STEM}.svg / .dxf"
             notes = "; ".join(["UNVERIFIED: " + u for u in pt["unverified"]] + ["SAFETY: " + x for x in pt["safety"]])
         elif key in ELECTRONIC_PARTS:
             supply, files, notes = "Electronics (separate RFQ)", "", "COMPLIANCE: certified for UK sale (UKCA)"
@@ -709,7 +712,10 @@ def consistency_checks(project: Project, c: dict[str, Any] | None = None) -> lis
     out.append({"check": "Contact and delivery details filled in", "ok": not missing, "level": "warn",
                 "detail": "all filled in" if not missing else
                 "empty: " + ", ".join(missing) + " (Factory Pack tab); the RFQs show placeholders for them"})
-    for name, ok, detail in nameplate.consistency(model.part_info or {}, faro.model(c["params"]).info):
+    built_info = faro.model(c["params"]).info
+    for name, ok, detail in nameplate.consistency(model.part_info or {}, built_info):
+        check(name, ok, detail)
+    for name, ok, detail in logo.consistency(logo.logo_radius(float(c["params"]["knob_diameter"])), built_info):
         check(name, ok, detail)
     open_q = [q["question"] for q in open_questions(project, c) if q["status"] == "open"]
     check("Supplier questions answered", not open_q, "all answered" if not open_q else "; ".join(open_q))
@@ -846,7 +852,7 @@ def readme(c: dict[str, Any], folder: str) -> str:
         "",
         "mechanical/   for metalwork, glass and finishing suppliers:",
         "              rfq.pdf (and rfq.md), drawings/ (PDF + SVG per part), step/ (STEP per part + assembly), bom.csv,",
-        "              artwork/ (FARO nameplate lettering, 1:1 SVG and DXF)",
+        "              artwork/ (FARO nameplate lettering and knob logo, 1:1 SVG and DXF)",
         "electronics/  for battery and electronics suppliers:",
         "              rfq_electronics.pdf (and .md): pre-certified 2 x 18650 pack, control board with dimming, LEDs",
         "",
@@ -882,6 +888,8 @@ def build_factory_pack(project: Project) -> tuple[str, bytes]:
         if assembly:
             zf.write(settings.data_dir / assembly, f"{mech}/step/{project.slug}_assembly.step")
         for fname, data in nameplate.artwork_files().items():
+            zf.writestr(f"{mech}/artwork/{fname}", data)
+        for fname, data in logo.artwork_files(logo.logo_radius(float(c["params"]["knob_diameter"]))).items():
             zf.writestr(f"{mech}/artwork/{fname}", data)
         zf.writestr(f"{elec}/rfq_electronics.md", rfq_markdown(eblocks))
         zf.writestr(f"{elec}/rfq_electronics.pdf", rfq_pdf(eblocks, "Request for quotation: battery, control board and LEDs"))

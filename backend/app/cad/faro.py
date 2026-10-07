@@ -230,9 +230,9 @@ NAMEPLATE_FILL = (0.05, 0.05, 0.05, 1.0)
 
 
 def preview_extras(params: dict[str, Any]) -> dict[str, tuple[Shape, tuple]]:
-    """Preview-only bodies for the GLB: the black fill in the nameplate's etched lettering."""
+    """Preview-only bodies for the GLB: the black fill in the nameplate's lettering and the knob logo."""
     m = model(params)
-    return {"nameplate_fill": (m.preview["nameplate_fill"], NAMEPLATE_FILL)} if "nameplate_fill" in m.preview else {}
+    return {k: (m.preview[k], NAMEPLATE_FILL) for k in ("nameplate_fill", "knob_logo_fill") if k in m.preview}
 
 
 def preview_two_tone(params: dict[str, Any]) -> dict[str, dict[str, Any]]:
@@ -283,6 +283,9 @@ PRODUCTION_CHANGES: list[dict[str, str]] = [
     {"feature": "Base fixing", "prototype": "Glued plate, coins for weight",
      "production": "Laser-cut steel weight plate screwed up into the cream band; aluminium bottom plate on 4 M2.5 "
                    "screws into standoffs so the battery is user-replaceable; felt on a steel disc held by magnets"},
+    {"feature": "Knob logo", "prototype": "Plain knob face",
+     "production": "Logo (half sun with nine rays over two waves) engraved 0.2 mm into the brass knob face and filled "
+                   "black: medallion Ø16 mm with a rim groove, 0.4 mm grooves; upright with the knob at its off stop"},
     {"feature": "Battery bay", "prototype": "Sized for the bare cells (65 × 37 × 19 mm)",
      "production": "Sized for a pre-certified 2 x 18650 pack with its protection board and wrap: 70 × 38 × 19.5 mm; "
                    "weight plate cut-out enlarged to match"},
@@ -711,6 +714,25 @@ def _wedge(a0_deg: float, a1_deg: float, r: float, z0: float, h: float) -> Shape
     return Pos(0, 0, z0) * extrude(Polygon(*pts, align=None), amount=h)
 
 
+@lru_cache(maxsize=8)
+def _engraved_knob(knob_diameter: float) -> tuple[Shape, Shape]:
+    """The brass knob (back face at y = 0, front face at y = -KNOB_PROUD, axis through the origin) with the
+    logo engraved in its face, and the engraved volume (shown black in the preview). Cached per diameter;
+    build_model moves it into place.
+
+    The logo is the same artwork as the vector files and the drawing, upright as modelled: the RFQ asks
+    for it upright with the knob at its off stop."""
+    from app.factory import logo as art
+
+    rk = knob_diameter / 2
+    knob = Rot(90, 0, 0) * Cylinder(rk, KNOB_PROUD, align=MIN)
+    knob = fillet(knob.edges().filter_by(GeomType.CIRCLE).sort_by(Axis.Y)[:1], art.EDGE_FILLET)
+    cutter = Pos(0, -KNOB_PROUD + art.ENGRAVE_DEPTH, 0) * _front_prism(art.grooves(art.logo_radius(knob_diameter)),
+                                                                     depth=art.ENGRAVE_DEPTH + 1.0)
+    fill = knob & cutter
+    return _one(knob - cutter), Compound(fill.solids())
+
+
 @lru_cache(maxsize=4)
 def _nameplate(rb: float, hb: float) -> tuple[Shape, Shape]:
     """The nameplate and its etched lettering (the fill shown black in the preview); depends only on the base.
@@ -923,9 +945,11 @@ def build_model(params: dict[str, Any]) -> Model:
     rk = p["knob_diameter"] / 2
     # the conical wall leans back by the taper, so the knob's back sits clear of it at its lowest point
     lean = rk * math.tan(math.radians(d["tower_taper_deg"]))
-    knob = Pos(0, y_out - KNOB_GAP - lean, zk) * Rot(90, 0, 0) * Cylinder(rk, KNOB_PROUD, align=MIN)
-    knob = fillet(knob.edges().filter_by(GeomType.CIRCLE).sort_by(Axis.Y)[:1], 1.0)
-    parts["knob"] = _one(knob)
+    knob, logo_fill = _engraved_knob(p["knob_diameter"])
+    at = Pos(0, y_out - KNOB_GAP - lean, zk)
+    parts["knob"] = _one(at * knob)
+    preview["knob_logo_fill"] = at * logo_fill
+    info["knob_logo_mm3"] = round(logo_fill.volume, 3)
 
     # ---- gallery and railing ----------------------------------------------------
     parts["gallery"] = _revolve(sec["gallery"])
