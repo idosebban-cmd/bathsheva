@@ -1,5 +1,6 @@
-"""Export the FARO nameplate lettering (Cormorant Garamond SemiBold, bundled) to backend/seed/artwork/:
-the outline loops (JSON, used by the CAD model and the drawing) and the SVG and DXF for the etcher.
+"""Export the FARO nameplate lettering (Cormorant Garamond SemiBold, bundled) and the knob logo to
+backend/seed/artwork/: the outline loops (JSON, used by the CAD model and the drawings) and the SVG and
+DXF for the etcher / engraver.
 
 Usage (from the repo root): backend/.venv/bin/python scripts/export_nameplate_artwork.py
 """
@@ -16,4 +17,15 @@ path = nameplate.export_loops(nameplate.ARTWORK_DIR)  # first: the SVG and DXF b
 print(f"Wrote {path.relative_to(ROOT)}")
 nameplate._letters_cached.cache_clear()
 for kind, path in nameplate.export(nameplate.ARTWORK_DIR).items():
+    print(f"Wrote {path.relative_to(ROOT)}")
+
+from app.cad import faro  # noqa: E402
+from app.factory import logo  # noqa: E402
+from app.services.templates import load_template  # noqa: E402
+
+path = logo.export_loops(logo.ARTWORK_DIR)
+print(f"Wrote {path.relative_to(ROOT)}")
+logo._unit_grooves.cache_clear()
+radius = logo.logo_radius(float(load_template("faro")["cad_parameters"]["knob_diameter"]))
+for kind, path in logo.export(logo.ARTWORK_DIR, radius).items():
     print(f"Wrote {path.relative_to(ROOT)}")

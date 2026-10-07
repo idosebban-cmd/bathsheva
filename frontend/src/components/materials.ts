@@ -9,7 +9,7 @@ export const FINISH: Record<string, Finish> = {
   base: "satin_black", base_plate: "internal", felt_pad: "internal",
   band_cream: "cream", tower: "cream", tower_lower: "red", cap: "red",
   nameplate: "brass", knob: "brass", gallery: "brass", railing: "brass", lantern_frame: "brass", cap_spigot: "brass",
-  finial: "brass", nameplate_fill: "etch_fill",
+  finial: "brass", nameplate_fill: "etch_fill", knob_logo_fill: "etch_fill",
   lantern_glass: "frosted", diffuser: "opal",
 };
 const GLOW = new THREE.Color("#ffb45e");

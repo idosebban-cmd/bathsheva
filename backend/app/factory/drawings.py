@@ -416,6 +416,12 @@ def _part_notes(key: str, p: dict[str, float], d: dict[str, Any]) -> list[tuple[
         n.append((f"Solid brass knob (turned from close-fitting bar) Ø{_fmt(p['knob_diameter'])} × {_fmt(faro.KNOB_PROUD)}, front edge R1; D-shaft bore "
                   "and grub screw (or push-fit) to suit the chosen 9 mm pot.", INK))
         n.append(("Brushed satin (matching Atelier), clear lacquer. Back face clears the conical tower by 0.5 mm.", INK))
+        from app.factory import logo as art
+
+        r = art.logo_radius(p["knob_diameter"])
+        n.append((f"Logo on the face: medallion Ø{_fmt(2 * r)} with a rim groove, engraved {_fmt(art.ENGRAVE_DEPTH)} deep (laser or "
+                  f"CNC), grooves {_fmt(round(art.GROOVE * r, 2))} min, filled black, after brushing and before lacquer. Upright "
+                  "(sun at the top) with the knob turned to its off stop. Artwork: artwork/F-11_knob_logo.svg / .dxf (1:1).", INK))
     elif key == "nameplate":
         n.append((f"Etched brass t = {_fmt(faro.NAMEPLATE_T)}, {_fmt(faro.NAMEPLATE_W)} × {_fmt(faro.NAMEPLATE_H)}, corner R1.2, "
                   f"formed to R{_fmt(p['base_diameter'] / 2)} (the base). \"FARO\" etched, filled black. Face brushed satin "
@@ -510,6 +516,23 @@ def part_drawing(params: dict[str, Any], sheet: PartSheet) -> Drawing:
                  "cap_spigot": ", cut through the lugs"}.get(key, "")
         _text(g, pcx, pcy - (py1 - py0) / 2 * kp - 14, f"PLAN VIEW (from above{where})", 7.5, "middle", bold=True)
         _text(g, pcx, pcy + (py1 - py0) / 2 * kp + 6, "front (-Y) at the bottom", 6.5, "middle", DIM)
+
+    if key == "knob":
+        # Front view of the face with the engraved logo, drawn from the same artwork as the vector files and the 3D model.
+        from app.factory import logo as art
+
+        rk = p["knob_diameter"] / 2
+        span = 2 * rk
+        kf = min((TITLE_W - 80) / span, (PAGE_H - 2 * MARGIN - TITLE_H - 190) / span)
+        fcx = PAGE_W - MARGIN - TITLE_W / 2
+        fcy = PAGE_H - MARGIN - 50 - rk * kf
+        circle = lambda r: [(r * math.cos(2 * math.pi * i / 180), r * math.sin(2 * math.pi * i / 180)) for i in range(180)]  # noqa: E731
+        _draw_faces(g, [[circle(rk)]], fcx, fcy, kf, fill=SECTION_FILL)
+        _draw_faces(g, [[circle(rk - art.EDGE_FILLET)]], fcx, fcy, kf, fill=SECTION_FILL, stroke=DIM, width=0.3)
+        _draw_faces(g, art.loops(art.logo_radius(p["knob_diameter"])), fcx, fcy, kf, fill=colors.black, hole_fill=SECTION_FILL,
+                    stroke=colors.black, width=0.1)
+        _text(g, fcx, fcy - rk * kf - 14, f"FRONT VIEW: LOGO FACE (scale {_scale_label(1 / (kf / PT_PER_MM))})", 7.5, "middle", bold=True)
+        _text(g, fcx, fcy + rk * kf + 6, "logo upright with the knob at its off stop", 6.5, "middle", DIM)
 
     notes = _part_notes(key, p, d)
     for u in sheet.unverified:

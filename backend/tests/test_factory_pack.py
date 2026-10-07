@@ -277,3 +277,64 @@ def test_brass_drawings_and_finishes_are_brushed():
     assert "Satin black lacquer (#121212), 30–50 GU" in _text(dr.to_svg(dr.part_drawing(DEFAULTS, _sheet("base"))))
     assert "80+ GU" in _text(dr.to_svg(dr.part_drawing(DEFAULTS, _sheet("tower"))))
     assert "80+ GU" in _text(dr.to_svg(dr.part_drawing(DEFAULTS, _sheet("cap"))))
+
+
+def test_knob_logo_artwork_model_and_drawing():
+    """The logo on the knob face: one artwork for the vector files, the 3D knob and the drawing."""
+    import json
+
+    from app.factory import logo, nameplate
+
+    # The stored outlines are exactly what the generator makes from the current proportions.
+    stored = json.loads((logo.ARTWORK_DIR / logo.LOOPS_FILE).read_text())
+    assert stored["params"] == logo.geometry_params()
+    regen = nameplate._loops_of(logo.unit_grooves_from_geometry())
+
+    def canon(faces):  # loop order and starting vertex vary between kernel runs; the outlines don't
+        out = []
+        for f in faces:
+            lps = []
+            for lp in f:
+                pts = [tuple(round(v, 5) for v in p) for p in lp]
+                i = pts.index(min(pts))
+                lps.append(tuple(pts[i:] + pts[:i]))
+            out.append((lps[0], tuple(sorted(lps[1:]))))
+        return sorted(out)
+
+    assert canon(stored["grooves"]) == canon(regen)
+    grooves = logo._unit_grooves().faces()
+    assert len(grooves) == 1 and len(grooves[0].inner_wires()) == 13  # 9 rays + sun + 3 sea bands, all one groove network
+    r = logo.logo_radius(DEFAULTS["knob_diameter"])
+    assert r * (1 + logo.GROOVE) <= DEFAULTS["knob_diameter"] / 2 - logo.EDGE_FILLET  # inside the front-edge radius
+    assert logo.GROOVE * r >= logo.MIN_GROOVE_MM
+    files = logo.artwork_files(r)
+    assert set(files) == {"F-11_knob_logo.svg", "F-11_knob_logo.dxf"} and b'id="logo_engrave"' in files["F-11_knob_logo.svg"]
+
+    m = faro.model(DEFAULTS)
+    assert m.parts["knob"].is_valid
+    expect = logo.unit_groove_area() * r * r * logo.ENGRAVE_DEPTH
+    assert m.info["knob_logo_mm3"] == pytest.approx(expect, rel=0.02)
+    assert "knob_logo_fill" in faro.preview_extras(DEFAULTS)
+    checks = logo.consistency(r, m.info)
+    assert all(ok for _, ok, _ in checks), checks
+
+    txt = _text(dr.to_svg(dr.part_drawing(DEFAULTS, _sheet("knob"))))
+    assert "FRONT VIEW: LOGO FACE" in txt and "off stop" in txt and "F-11_knob_logo" in txt
+    assert any(row["feature"] == "Knob logo" for row in faro.PRODUCTION_CHANGES)
+
+
+def test_knob_logo_in_the_pack(client, faro_project):
+    pid = faro_project["id"]
+    params = client.get(f"/api/projects/{pid}/cad").json()["parameters"]
+    client.post(f"/api/projects/{pid}/cad/generate", json={"parameters": params})
+    zf = zipfile.ZipFile(io.BytesIO(client.get(f"/api/projects/{pid}/factory-pack.zip").content))
+    mech = "faro_rfq_pack_v1/mechanical/"
+    assert {mech + "artwork/F-11_knob_logo.svg", mech + "artwork/F-11_knob_logo.dxf"} <= set(zf.namelist())
+    md = zf.read(mech + "rfq.md").decode()
+    assert "Engrave the logo on the knob face" in md and "(on the knob)" in md and "knob logo, 1:1 vector" in md
+    assert "artwork/F-11_knob_logo.svg" in zf.read(mech + "bom.csv").decode()
+    s = client.get(f"/api/projects/{pid}/factory-pack").json()
+    checks = {c["check"]: c for c in s["consistency"]}
+    for name in ("Knob logo lines are engravable", "Knob logo SVG / DXF match the artwork", "Knob logo on the 3D model",
+                 "Knob logo on the drawing"):
+        assert checks[name]["ok"], (name, checks[name])

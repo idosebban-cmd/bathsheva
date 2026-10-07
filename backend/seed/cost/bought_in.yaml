@@ -119,6 +119,12 @@ bought_in:
     source: model-generated
     confidence: low
     verified: false
+  - key: knob_logo_engrave
+    name: Engrave the logo on the knob face (laser or CNC, 0.2 mm deep) and fill black
+    gbp: {low: 0.6, high: 1.8}
+    source: model-generated
+    confidence: low
+    verified: false
   - key: spun_end_ring
     name: Small spun aluminium end ring
     gbp: {low: 2.0, high: 5.0}
