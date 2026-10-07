@@ -303,7 +303,7 @@ def test_knob_logo_artwork_model_and_drawing():
 
     assert canon(stored["grooves"]) == canon(regen)
     grooves = logo._unit_grooves().faces()
-    assert len(grooves) == 1 and len(grooves[0].inner_wires()) == 13  # 9 rays + sun + 3 sea bands, all one groove network
+    assert len(grooves) == 1 and len(grooves[0].inner_wires()) == 11  # 7 rays + sun + 3 sea bands, all one groove network
     r = logo.logo_radius(DEFAULTS["knob_diameter"])
     assert r * (1 + logo.GROOVE) <= DEFAULTS["knob_diameter"] / 2 - logo.EDGE_FILLET  # inside the front-edge radius
     assert logo.GROOVE * r >= logo.MIN_GROOVE_MM

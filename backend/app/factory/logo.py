@@ -1,4 +1,4 @@
-"""The logo (a half sun with nine rays rising over the sea) engraved on the dimmer knob's face.
+"""The logo (a half sun with seven rays rising over the sea) engraved on the dimmer knob's face.
 
 One artwork drives the vector files for the engraver, the 3D model and the knob drawing, as for the
 nameplate lettering (`nameplate.py`). The logo is redrawn as clean geometry from the reference image
@@ -6,7 +6,7 @@ nameplate lettering (`nameplate.py`). The logo is redrawn as clean geometry from
 Proportions are fractions of the medallion radius R, measured from the reference:
 
 * horizon 0.234 R below the centre; half sun of radius 0.43 R sitting on it;
-* nine rays, 20° apart, radiating from the sun's centre; the lowest pair sit on a slight wedge above
+* seven rays, evenly spread over the half circle (180°/7 apart), radiating from the sun's centre; the lowest pair sit on a slight wedge above
   the horizon (8° at the rim);
 * two wave grooves below the horizon (lowest at the centre, wavelength 1.05 R, amplitude 0.05 R);
 * grooves 0.05 R wide (rays, sun, horizon, rim) and 0.07 R (waves).
@@ -36,7 +36,7 @@ REFERENCE = ARTWORK_DIR / "reference" / "logo_reference.webp"
 # Proportions (fractions of the medallion radius), measured from the reference image.
 HORIZON_Y = -0.234
 SUN_R = 0.43
-RAYS = 9
+RAYS = 7  # counted on the reference image: three each side and one at the top
 GROOVE = 0.05
 WAVE_GROOVE = 0.07
 WAVES = (-0.40, -0.59)  # wave groove centre lines
