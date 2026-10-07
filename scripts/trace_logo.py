@@ -1,6 +1,6 @@
 """Trace the Faro logo's grooves from the reference image and fit smooth curves to them.
 
-Writes brand/logo/faro_logo_curves.json, the curves the master artwork is built from
+Writes brand/logo/bathsheva_emblem_curves.json, the curves the master artwork is built from
 (app/factory/logo.py; export with scripts/export_nameplate_artwork.py). Everything is measured in
 reference-image pixels (y down) and the frame (axis, centre, radius) is stored with the curves.
 
@@ -28,7 +28,7 @@ from scipy.optimize import least_squares
 
 ROOT = Path(__file__).resolve().parent.parent
 REFERENCE = ROOT / "backend" / "seed" / "artwork" / "reference" / "logo_reference.webp"
-OUT = ROOT / "brand" / "logo" / "faro_logo_curves.json"
+OUT = ROOT / "brand" / "logo" / "bathsheva_emblem_curves.json"
 
 # Symmetry axis (px). The sun and rays are symmetric about x ≈ 643.5, the waves about x ≈ 645 and the
 # medallion's own outline is centred near x ≈ 648; 645 gave the best edge agreement overall.

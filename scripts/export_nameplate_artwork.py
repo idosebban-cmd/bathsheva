@@ -1,7 +1,7 @@
 """Export the FARO nameplate lettering (Cormorant Garamond SemiBold, bundled) and the knob logo to
 backend/seed/artwork/: the outline loops (JSON, used by the CAD model and the drawings) and the SVG and
 DXF for the etcher / engraver. Also writes the logo master to brand/logo/ (loops, SVG, PDF, DXF,
-transparent PNG), built from the traced curves (brand/logo/faro_logo_curves.json, scripts/trace_logo.py).
+transparent PNG), built from the traced curves (brand/logo/bathsheva_emblem_curves.json, scripts/trace_logo.py).
 
 Usage (from the repo root): backend/.venv/bin/python scripts/export_nameplate_artwork.py
 """

@@ -355,6 +355,10 @@ def test_logo_master_in_brand_folder():
 
     from app.factory import logo, nameplate
 
+    names = {p.name for p in logo.BRAND_DIR.iterdir()}
+    assert {f"bathsheva_emblem.{ext}" for ext in ("svg", "pdf", "dxf", "png")} | {
+        "bathsheva_emblem_master.json", "bathsheva_emblem_curves.json"} <= names
+    assert not any(n.startswith("faro_logo") for n in names)
     stored = json.loads((logo.BRAND_DIR / logo.MASTER_LOOPS_FILE).read_text())
     assert stored["params"] == logo.geometry_params()
     shapes = stored["shapes"]
