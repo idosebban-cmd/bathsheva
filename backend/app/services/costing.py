@@ -8,7 +8,7 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
-from app.cad import export, faro
+from app.cad import export
 from app.costing.assemble import CostConfig, SnapItem, SnapPart, Snapshot, assemble
 from app.costing.data import CostData, load_cost_data
 from app.costing.model import (
@@ -24,6 +24,7 @@ from app.costing.model import (
     volume_table,
 )
 from app.models import CostItem, Part, Project
+from app.products import get_product, product_for
 from app.rules.data import RuleSet, load_rules
 from app.rules.match import match_material, match_process
 from app.services.cad import current_parameters, latest_model
@@ -39,11 +40,12 @@ TOP_SENSITIVITY = 5
 
 
 @lru_cache(maxsize=16)
-def _geometry_from_params(params_json: str) -> dict[str, Any]:
+def _geometry_from_params(product_key: str, params_json: str) -> dict[str, Any]:
+    gen = get_product(product_key).generator
     params = json.loads(params_json)
-    if not faro.validate(params).ok:
+    if not gen.validate(params).ok:
         return {}
-    return export.part_info(faro.build(params))
+    return export.part_info(gen.build(params))
 
 
 def part_geometry(project: Project) -> tuple[dict[str, Any], str]:
@@ -51,8 +53,8 @@ def part_geometry(project: Project) -> tuple[dict[str, Any], str]:
     latest = latest_model(project)
     if latest is not None:
         return latest.part_info, f"CAD v{latest.version}"
-    if project.template == "faro":
-        info = _geometry_from_params(json.dumps(current_parameters(project), sort_keys=True))
+    if product_for(project) is not None:
+        info = _geometry_from_params(project.template, json.dumps(current_parameters(project), sort_keys=True))
         if info:
             return info, "current CAD parameters (not yet generated)"
     return {}, "no CAD geometry"
@@ -115,20 +117,12 @@ def reset_items(session: Session, project: Project) -> list[CostItem]:
 # Building model inputs
 # ---------------------------------------------------------------------------
 
-# Parameters that stay fixed when the lamp is scaled to a new height.
-# (as in the prototype: walls, the knob, counts and angles don't scale; the base keeps its
-# height so the battery and weight plate still fit).
-UNSCALED_PARAMS = {"wall_thickness", "glass_wall_thickness", "weight_plate_thickness", "target_mass_kg", "base_height",
-                   "base_top_round", "window_count", "window_turn_deg", "railing_posts", "lantern_mullions",
-                   "knob_diameter", "railing_height", "cap_rim_height"}
-
-
-def scaled_parameters(params: dict[str, Any], height_mm: float) -> dict[str, Any]:
-    """Scale every linear dimension with overall height; wall thicknesses and hole sizes stay put."""
+def scaled_parameters(params: dict[str, Any], height_mm: float, unscaled: set[str]) -> dict[str, Any]:
+    """Scale every linear dimension with overall height; the generator's `unscaled` parameters stay put."""
     f = height_mm / float(params["overall_height"])
     out = {}
     for k, v in params.items():
-        if k in UNSCALED_PARAMS:
+        if k in unscaled:
             out[k] = v
         else:
             out[k] = round(float(v) * f, 2)
@@ -152,11 +146,12 @@ def snapshot(session: Session, project: Project) -> Snapshot:
     recs = {r["part_id"]: r for r in project_recommendations(project)}
     geometry, geometry_source = part_geometry(project)
     params = current_parameters(project) if project.template else {}
+    product = product_for(project)
     parts = []
     for part in project.parts:
         rec = recs.get(part.id, {})
         proc, mat, basis = _effective(part, rec, rules)
-        derived = faro.derived_traits(part.cad_key, params) if project.template == "faro" and part.cad_key else []
+        derived = product.generator.derived_traits(part.cad_key, params) if product is not None and part.cad_key else []
         parts.append(SnapPart(
             part_id=part.id, cad_key=part.cad_key, name=part.name, quantity=part.quantity,
             material_category=part.material_category, traits=list(part.traits or []), derived_traits=derived,
@@ -168,9 +163,10 @@ def snapshot(session: Session, project: Project) -> Snapshot:
                       it.discount_class) for it in db_items]
 
     def for_height(h: float) -> dict[str, Any]:
-        if project.template != "faro" or not params:
+        if product is None or not params:
             return {}
-        return _geometry_from_params(json.dumps(scaled_parameters(params, h), sort_keys=True))
+        scaled = scaled_parameters(params, h, product.generator.UNSCALED_PARAMS)
+        return _geometry_from_params(product.key, json.dumps(scaled, sort_keys=True))
 
     return Snapshot(parts=parts, items=items, params=params, geometry=geometry, geometry_source=geometry_source,
                     geometry_for_height=for_height,

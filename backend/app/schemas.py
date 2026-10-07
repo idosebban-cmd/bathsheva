@@ -43,7 +43,16 @@ REQUIREMENT_FIELDS = list(Requirements.model_fields)
 class ProjectCreate(BaseModel):
     name: str
     description: str = ""
-    template: Literal["faro"] | None = None
+    template: str | None = None  # a registered product (app.products)
+
+    @field_validator("template")
+    @classmethod
+    def _known_template(cls, v: str | None) -> str | None:
+        from app.products import products
+
+        if v is not None and v not in products():
+            raise ValueError(f"Unknown product template {v!r}; expected one of: {', '.join(products())}")
+        return v
 
 
 class ProjectUpdate(BaseModel):

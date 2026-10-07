@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { api, errorText, type Project, type ProjectSummary } from "../api";
+import { api, errorText, type ProductTemplate, type Project, type ProjectSummary } from "../api";
 import { ukDateTime } from "../format";
 
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<ProjectSummary[] | null>(null);
+  const [templates, setTemplates] = useState<ProductTemplate[]>([]);
   const [name, setName] = useState("");
   const [error, setError] = useState("");
   const [confirming, setConfirming] = useState<number | null>(null);
@@ -15,6 +16,9 @@ export default function ProjectsPage() {
     api.get<ProjectSummary[]>("/api/projects").then(setProjects, (e) => setError(errorText(e)));
   }
   useEffect(load, []);
+  useEffect(() => {
+    api.get<ProductTemplate[]>("/api/templates").then(setTemplates, (e) => setError(errorText(e)));
+  }, []);
 
   async function remove(p: ProjectSummary) {
     setDeleting(true);
@@ -30,12 +34,12 @@ export default function ProjectsPage() {
     }
   }
 
-  async function create(template: "faro" | null) {
+  async function create(template: ProductTemplate | null) {
     setError("");
     try {
       const p = await api.post<Project>("/api/projects", {
-        name: template === "faro" ? "Faro" : name.trim(),
-        template,
+        name: template ? template.label : name.trim(),
+        template: template ? template.key : null,
       });
       navigate(`/projects/${p.id}/overview`);
     } catch (e) {
@@ -50,9 +54,11 @@ export default function ProjectsPage() {
       <section className="card">
         <h2>New project</h2>
         <div className="row">
-          <button className="primary" onClick={() => create("faro")}>
-            Create Faro (lighthouse lamp template)
-          </button>
+          {templates.map((t) => (
+            <button key={t.key} className="primary" onClick={() => create(t)}>
+              Create {t.label} ({t.summary} template)
+            </button>
+          ))}
         </div>
         <div className="row">
           <input placeholder="Blank project name" value={name} onChange={(e) => setName(e.target.value)} />

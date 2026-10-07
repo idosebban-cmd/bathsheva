@@ -32,7 +32,7 @@ def cad_state(project: Project = Depends(get_project)) -> dict[str, Any]:
         "param_defs": [asdict(d) for d in gen.PARAMS],
         "parameters": params,
         "derived": gen.public_derived(params),
-        "production_changes": getattr(gen, "PRODUCTION_CHANGES", []),
+        "production_changes": gen.PRODUCTION_CHANGES,
         "validation": cad_service.validate(project, params).as_dict(),
         "wall_limits": {k: asdict(v) for k, v in cad_service.wall_limits(project).items()},
         "latest": CadModelOut.model_validate(latest).model_dump(mode="json") if latest else None,

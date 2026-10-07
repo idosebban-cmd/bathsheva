@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.cad import faro
+from app.products import get_product
 from app.models import EngineeringDecision, Part, Project
 from app.rules.data import load_rules
 from app.rules.engine import Context, recommend
@@ -29,8 +29,9 @@ def context_for(project: Project) -> Context:
 
 def part_input(part: Part, ctx: Context, template: str | None) -> dict[str, Any]:
     derived: list[str] = []
-    if template == "faro" and part.cad_key and ctx.cad_parameters:
-        derived = faro.derived_traits(part.cad_key, ctx.cad_parameters)
+    product = get_product(template)
+    if product is not None and part.cad_key and ctx.cad_parameters:
+        derived = product.generator.derived_traits(part.cad_key, ctx.cad_parameters)
     return {
         "id": part.id,
         "cad_key": part.cad_key,

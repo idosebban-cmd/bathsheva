@@ -25,6 +25,13 @@ export interface ImageInfo {
   uploaded_at: string;
 }
 
+export interface ProductTemplate {
+  key: string;
+  label: string;
+  summary: string;
+  noun: string;
+}
+
 export interface ProjectSummary {
   id: number;
   name: string;

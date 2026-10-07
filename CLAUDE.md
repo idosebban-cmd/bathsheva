@@ -35,7 +35,9 @@ backend/app/
                      decisions), factory_pack (RFQ pack), electrical (runtime), template_upgrade
   factory/           drawings.py: 2D quotation drawings (reportlab -> SVG + PDF), sectioned from the built solids
   rules/             Rules engine: loads seed YAML, produces recommendations
-  cad/               build123d generators (faro.py), parameter validation, export (STEP/STL/GLB)
+  products/          Product registry: one entry per template (label, noun, CAD generator, product-only DFM checks,
+                     wall/draft parameters, bought-in densities). Services ask `product_for(project)`, never name a product
+  cad/               build123d generators (faro.py; interface in generator.py), validation types, export (STEP/STL/GLB)
   electrical.py      Battery runtime from the battery spec and LED loads (pure)
   ai/                LLM provider abstraction (anthropic | mock | none)
   costing/           Cost model: data.py (seed loader), model.py (pure calculation),
@@ -55,6 +57,8 @@ brand/logo/          Logo master (SVG, PDF, DXF, PNG, loops) and its traced curv
 docs/                Generated reports (cost-assumptions-audit.md) and cost-price-research.md
 ~/Bathsheva Workbench/data   Runtime: SQLite DB, uploads, CAD outputs (outside the repo)
 ```
+
+Adding a product: a template `seed/products/<key>.yaml`, a generator module that defines every name in `app/cad/generator.py` (`REQUIRED`), and a `Product` entry in `app/products/` (registered in `_registry()`). `tests/test_products.py` checks each registered product, and fails if a service compares `project.template` with a literal. The Factory Pack (drawings, RFQs) is still Faro's content; `Product.factory_pack` gates it.
 
 Boundaries: routers handle only HTTP. The rules engine is pure, with no DB access: it takes plain dicts and returns recommendations. The CAD module never imports the DB. The AI layer only explains recommendations the rules engine has already made, and never changes them.
 
@@ -82,7 +86,7 @@ Other useful commands, run from `backend/`: `.venv/bin/alembic current` and `.ve
 
 | Tab | Endpoints (`/api/projects/{id}/…`) |
 |---|---|
-| Projects | `GET/POST /api/projects` (template `faro` seeds parts, requirements and CAD defaults), `DELETE /api/projects/{id}` (records cascade, then `data/projects/<id>/` is removed; the page confirms, naming the project and its times) |
+| Projects | `GET /api/templates` (registered products, for the create buttons), `GET/POST /api/projects` (template `faro` seeds parts, requirements and CAD defaults), `DELETE /api/projects/{id}` (records cascade, then `data/projects/<id>/` is removed; the page confirms, naming the project and its times) |
 | Overview | `PATCH /api/projects/{id}`, `POST /images`, `GET /runtime`, `GET/POST /template-upgrade` |
 | Parts | `GET/POST/PATCH/DELETE /parts`; quotes `GET/POST /parts/{part}/quotes`, `DELETE /quotes/{id}`; `GET /quote-pack.zip` |
 | CAD | `GET /cad`, `POST /cad/validate`, `POST /cad/generate`, `GET /cad/models/{v}/download.zip`; files under `/files/projects/...` |

@@ -23,6 +23,7 @@ from app.costing.data import load_cost_data
 from app.factory import drawings as dr
 from app.factory import logo, nameplate
 from app.models import Project
+from app.products import product_for
 from app.rules.data import load_rules
 from app.services.bom import bom_csv, build_bom
 from app.services.cad import current_parameters, latest_model, mass_estimate
@@ -98,7 +99,8 @@ def _drawn_parts(project: Project) -> list[str]:
 
 def pack_contents(project: Project) -> dict[str, Any]:
     """Everything the pack needs, gathered once (also served to the Factory Pack tab)."""
-    if project.template != "faro":
+    product = product_for(project)
+    if product is None or not product.factory_pack:
         raise FactoryPackError("The Factory Pack needs a parametric product (template project such as Faro).")
     params = current_parameters(project)
     bom = build_bom(project)
