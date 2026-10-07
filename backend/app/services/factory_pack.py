@@ -35,8 +35,12 @@ QUANTITY_TIERS = [300, 500, 2000]
 # the BOM already lists; operations are priced into the part they are done on.
 DRAWN_ITEM_KEYS = {"steel_weight_plate", "bottom_plate"}
 HARDWARE_ITEM_KEYS = {"screw_m25_cs", "standoff_m25", "screw_m3", "magnet_6x2", "silicone_gasket"}
-OPERATION_ITEM_KEYS = {"window_laser_cut": "tower", "masked_stripe": "tower", "knob_logo_engrave": "knob"}
-OPERATION_TEXT = {"masked_stripe": "Masked two-tone lacquer: red lower section with a crisp, level line"}
+OPERATION_ITEM_KEYS = {"window_laser_cut": "tower", "masked_stripe": "tower", "knob_logo_engrave": "knob", "knob_knurl": "knob"}
+# What the RFQ says for these operations, whatever name a project's (possibly older) cost item carries.
+OPERATION_TEXT = {"masked_stripe": "Masked two-tone lacquer: red lower section with a crisp, level line",
+                  "knob_logo_engrave": "Engrave the logo on the knob face (laser or CNC, 0.2 mm deep): no fill, tone-on-tone, "
+                                       "groove floor left matte; before the clear lacquer",
+                  "knob_knurl": "Fine straight knurl on the knob edge (DIN 82 RAA 0.5), on the lathe"}
 ELECTRONIC_PARTS = {"led_module", "tower_light", "battery", "charge_board", "dimmer"}
 
 # How to quote each brass part on a near-net basis (quote B), next to the supplier's preferred method.

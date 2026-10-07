@@ -99,6 +99,60 @@ def scenario(name: str, stop, expected: int, command: str = RUN_SH) -> bool:
     return ok
 
 
+def health() -> dict:
+    import json
+
+    try:
+        return json.loads(urllib.request.urlopen("http://127.0.0.1:8000/api/health", timeout=2).read())
+    except Exception:
+        return {}
+
+
+def stale_restart() -> bool:
+    """A workbench left running through an update keeps its old code: starting the launcher again restarts it
+    (the old run.sh exits cleanly) instead of just reopening it."""
+    name = "launcher: restarts a server running code from before an update"
+    data = tempfile.mkdtemp(prefix="run-sh-check-")
+    env = {**os.environ, "WORKBENCH_DATA_DIR": data}
+    log1 = tempfile.NamedTemporaryFile(prefix="run_sh_", suffix=".log", delete=False)
+    old = subprocess.Popen([RUN_SH], stdin=subprocess.DEVNULL, stdout=log1, stderr=subprocess.STDOUT, env=env, start_new_session=True)
+    for _ in range(240):
+        if up("http://127.0.0.1:8000/api/health") and up("http://127.0.0.1:5173/"):
+            break
+        time.sleep(0.5)
+    old_tree = descendants(old.pid)
+    marker = ROOT / "backend" / "app" / "_update_marker.tmp"  # stands in for files changed by git pull
+    marker.write_text("update\n")
+    new = None
+    try:
+        was_stale = health().get("stale") is True
+        log2 = tempfile.NamedTemporaryFile(prefix="run_sh_", suffix=".log", delete=False)
+        new = subprocess.Popen([LAUNCHER], stdin=subprocess.DEVNULL, stdout=log2, stderr=subprocess.STDOUT, env=env, start_new_session=True)
+        old_status = old.wait(timeout=60)
+        for _ in range(240):
+            h = health()
+            if h.get("stale") is False and up("http://127.0.0.1:5173/"):
+                break
+            time.sleep(0.5)
+        restarted = health().get("stale") is False
+        new_tree = descendants(new.pid)
+        os.killpg(new.pid, signal.SIGINT)
+        new_status = new.wait(timeout=30)
+    finally:
+        marker.unlink(missing_ok=True)
+        if new and new.poll() is None:
+            os.killpg(new.pid, signal.SIGKILL)
+    time.sleep(0.5)
+    left = [p for p in old_tree + new_tree if alive(p)]
+    ok = was_stale and old_status == 0 and restarted and new_status == 0 and not left
+    print(f"{'PASS' if ok else 'FAIL'} {name}: stale before {was_stale}, old run.sh exit {old_status}, "
+          f"restarted on current code {restarted}, launcher exit {new_status}, leftover processes: {left or 'none'}")
+    print("     launcher said:", next((ln for ln in Path(log2.name).read_text().splitlines() if "before your last update" in ln), "?"))
+    for p in left:
+        os.kill(p, signal.SIGKILL)
+    return ok
+
+
 def main() -> int:
     results = [
         scenario("SIGTERM to run.sh", lambda proc, s: proc.send_signal(signal.SIGTERM), 0),
@@ -110,6 +164,7 @@ def main() -> int:
         scenario("launcher: Terminal window closed", lambda proc, s: os.killpg(proc.pid, signal.SIGHUP), 0, LAUNCHER),
         scenario("launcher: SIGHUP to the launcher only", lambda proc, s: proc.send_signal(signal.SIGHUP), 0, LAUNCHER),
         scenario("launcher: backend crashes", lambda proc, s: os.kill(s["backend"], signal.SIGSEGV), 139, LAUNCHER),
+        stale_restart(),
     ]
     return 0 if all(results) else 1
 

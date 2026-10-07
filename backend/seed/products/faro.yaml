@@ -383,6 +383,7 @@ cost_items:
   - {kind: bought_in, price_key: window_laser_cut, quantity: 1}
   - {kind: finishing, price_key: masked_stripe, quantity: 1}
   - {kind: finishing, price_key: knob_logo_engrave, quantity: 1}
+  - {kind: finishing, price_key: knob_knurl, quantity: 1}
   - {kind: bought_in, price_key: bottom_plate, quantity: 1}
   - {kind: bought_in, price_key: felt_steel_disc, quantity: 1}
   - {kind: bought_in, price_key: magnet_6x2, quantity: 4}
@@ -514,7 +515,7 @@ scenarios:
       remove_part: knob
       add_items:
         - {price_key: touch_dimmer_board, quantity: 1}
-      remove_items: [dimmer_rotary]
+      remove_items: [dimmer_rotary, knob_logo_engrave, knob_knurl]
     premium_impact: slight
     tradeoffs:
       finish: Cleaner tower with no knob.

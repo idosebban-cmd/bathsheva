@@ -47,6 +47,7 @@ h3 { font-size: 1rem; margin: 0 0 0.5rem; }
 .small { font-size: 0.85rem; }
 .error { color: var(--danger-ink); background: var(--danger-bg); padding: 0.5rem 0.75rem; border-radius: 6px; }
 .notice { background: var(--warn-bg); color: var(--warn-ink); padding: 0.5rem 0.75rem; border-radius: 6px; }
+.stale-server { margin: 0.75rem 1.5rem 0; }
 
 input, select, textarea { font: inherit; padding: 0.4rem 0.5rem; border: 1px solid var(--line); border-radius: 5px; background: #fff; color: var(--ink); min-width: 0; }
 .row input[type="number"] { width: 7rem; }

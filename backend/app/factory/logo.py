@@ -11,7 +11,7 @@ very slightly, all as in the reference. Left and right are pooled, so the master
 
 The master files live in brand/logo/ as bathsheva_emblem.* (SVG, PDF, DXF, transparent PNG, plus the outline loops).
 
-On the knob the grooves are engraved and filled black. The knob version differs from the master in
+On the knob the grooves are engraved tone-on-tone, with no fill (the groove floor is left matte). The knob version differs from the master in
 two ways, both for engraving only:
 
 * the horizon line under the sun is widened to 0.3 mm (in the master it is 0.21-0.23 mm at Ø16 mm);

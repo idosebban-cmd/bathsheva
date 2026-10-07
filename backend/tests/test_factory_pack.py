@@ -7,6 +7,7 @@ import zipfile
 from pathlib import Path
 
 import pytest
+from build123d import GeomType
 
 from app.cad import faro
 from app.factory import drawings as dr
@@ -319,13 +320,40 @@ def test_knob_logo_artwork_model_and_drawing():
     assert m.parts["knob"].is_valid
     expect = logo.unit_groove_area() * r * r * logo.ENGRAVE_DEPTH
     assert m.info["knob_logo_mm3"] == pytest.approx(expect, rel=0.02)
-    assert "knob_logo_fill" in faro.preview_extras(DEFAULTS)
+    # Tone-on-tone: no black fill, only the matte groove floor in the preview (a sliver just in front of the floor).
+    extras = faro.preview_extras(DEFAULTS)
+    assert "knob_logo_fill" not in extras and "knob_logo_floor" in extras
+    floor = extras["knob_logo_floor"][0]
+    assert floor.volume == pytest.approx(m.info["knob_logo_mm3"], rel=0.02)
+    kb, fb = m.parts["knob"].bounding_box(), floor.bounding_box()
+    assert fb.min.Y == pytest.approx(kb.min.Y + logo.ENGRAVE_DEPTH - 0.01, abs=1e-3)  # front face just above the floor
     checks = logo.consistency(r, m.info)
     assert all(ok for _, ok, _ in checks), checks
 
     txt = _text(dr.to_svg(dr.part_drawing(DEFAULTS, _sheet("knob"))))
     assert "FRONT VIEW: LOGO FACE" in txt and "off stop" in txt and "F-11_knob_logo" in txt
-    assert any(row["feature"] == "Knob logo" for row in faro.PRODUCTION_CHANGES)
+    assert "NO FILL" in txt and "filled black" not in txt and "DIN 82 RAA 0.5" in txt
+    rows = {row["feature"]: row["production"] for row in faro.PRODUCTION_CHANGES}
+    assert "no fill" in rows["Knob logo"] and "filled black" not in rows["Knob logo"] and "knurl" in rows["Knob edge"]
+    geo = {c["feature"]: c for c in faro.production_change_checks(DEFAULTS)}
+    assert geo["Knob edge"]["ok"] and geo["Knob logo"]["ok"], geo
+
+
+def test_knob_knurl():
+    """Fine straight knurl on the knob's edge: DIN 82 RAA 0.5 teeth round the full side, smooth R1 front edge."""
+    d = DEFAULTS["knob_diameter"]
+    n = faro.knurl_teeth(d)
+    assert n == round(math.pi * d / 0.5) == 126
+    knob = faro._knurled_knob(d)
+    assert knob.is_valid
+    bb = knob.bounding_box()
+    assert bb.max.X == pytest.approx(d / 2, abs=0.01) and bb.max.Y - bb.min.Y == pytest.approx(faro.KNOB_PROUD, abs=0.01)
+    flanks = [f for f in knob.faces() if f.geom_type == GeomType.PLANE and abs(f.normal_at().Y) < 0.01]
+    assert len(flanks) == 2 * n  # two flanks per tooth
+    # the teeth stop where the R1 front edge starts: none reaches the front face
+    assert all(f.bounding_box().min.Y > bb.min.Y + 0.05 for f in flanks)
+    plain = math.pi * (d / 2) ** 2 * faro.KNOB_PROUD
+    assert 0.95 * plain < knob.volume < plain
 
 
 def test_knob_logo_in_the_pack(client, faro_project):
@@ -337,6 +365,7 @@ def test_knob_logo_in_the_pack(client, faro_project):
     assert {mech + "artwork/F-11_knob_logo.svg", mech + "artwork/F-11_knob_logo.dxf"} <= set(zf.namelist())
     md = zf.read(mech + "rfq.md").decode()
     assert "Engrave the logo on the knob face" in md and "(on the knob)" in md and "knob logo, 1:1 vector" in md
+    assert "no fill, tone-on-tone" in md and "fill black" not in md and "Fine straight knurl on the knob edge" in md
     assert "artwork/F-11_knob_logo.svg" in zf.read(mech + "bom.csv").decode()
     s = client.get(f"/api/projects/{pid}/factory-pack").json()
     checks = {c["check"]: c for c in s["consistency"]}

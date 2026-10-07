@@ -126,7 +126,13 @@ on_exit() {
       echo "${BOLD}Dry run finished. Nothing was changed.${RESET} Run without --dry-run to set up."
     else
       echo "${GREEN}${BOLD}Setup finished successfully.${RESET}"
-      echo "Start the workbench by double-clicking \"Start Workbench.command\" in the bathsheva folder."
+      if curl -fsS -o /dev/null --max-time 2 "http://127.0.0.1:${BACKEND_PORT:-8000}/api/health" 2>/dev/null; then
+        # A server left running keeps the code it started with (CAD would be built with the old version).
+        echo "${YELLOW}The workbench is still running with the old code.${RESET} Double-click \"Start Workbench.command\":"
+        echo "it restarts the running workbench with the update (or press Ctrl-C in its window and start it again)."
+      else
+        echo "Start the workbench by double-clicking \"Start Workbench.command\" in the bathsheva folder."
+      fi
       echo "Your projects are kept in: ${DATA_DIR_SHOWN:-~/Bathsheva Workbench/data}"
     fi
   else
