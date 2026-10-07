@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 PowerType = Literal["mains", "battery", "passive", "undecided"]
 
@@ -72,6 +72,13 @@ class ProjectSummary(BaseModel):
     template: str | None
     created_at: datetime
     updated_at: datetime
+
+    @field_validator("created_at", "updated_at")
+    @classmethod
+    def _utc(cls, v: datetime) -> datetime:
+        # SQLite stores timestamps without their zone; they are UTC. Send them as such so the browser can show
+        # UK local time correctly.
+        return v.replace(tzinfo=timezone.utc) if v.tzinfo is None else v.astimezone(timezone.utc)
 
 
 class ProjectOut(ProjectSummary):

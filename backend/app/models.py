@@ -331,3 +331,41 @@ class ComplianceRecord(Base):
     evidence_path: Mapped[str | None] = mapped_column(String(500), nullable=True)  # required for certified_signoff
     status: Mapped[str] = mapped_column(String(30), default="open")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+# ---------------------------------------------------------------------------
+# "Last updated": any change to a project's own records (parts, CAD, quotes, cost items, decisions,
+# revisions, images...) touches the project's updated_at, not only edits to the project row.
+# ---------------------------------------------------------------------------
+
+from sqlalchemy import event  # noqa: E402
+from sqlalchemy.orm import Session  # noqa: E402
+
+
+def _owning_project_id(obj: Any) -> int | None:
+    pid = getattr(obj, "project_id", None)
+    if pid is None:
+        for rel in ("project", "part", "cad_model"):
+            owner = getattr(obj, rel, None)
+            if owner is not None:
+                pid = getattr(owner, "id", None) if isinstance(owner, Project) else getattr(owner, "project_id", None)
+                break
+    return pid
+
+
+@event.listens_for(Session, "before_flush")
+def _touch_projects(session: Session, _ctx: Any, _instances: Any) -> None:
+    ids = set()
+    for obj in (*session.new, *session.dirty, *session.deleted):
+        if isinstance(obj, Project):
+            continue
+        if obj in session.dirty and not session.is_modified(obj, include_collections=False):
+            continue
+        pid = _owning_project_id(obj)
+        if pid is not None:
+            ids.add(pid)
+    now = utcnow()
+    for pid in ids:
+        project = session.get(Project, pid)
+        if project is not None and project not in session.deleted:
+            project.updated_at = now

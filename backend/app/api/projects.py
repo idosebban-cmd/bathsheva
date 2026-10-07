@@ -57,10 +57,11 @@ def update(body: ProjectUpdate, project: Project = Depends(get_project), session
 
 @router.delete("/{project_id}", status_code=204)
 def delete(project: Project = Depends(get_project), session: Session = Depends(get_session)):
-    project = session.merge(project)
-    session.delete(project)
-    session.commit()
-    shutil.rmtree(settings.data_dir / "projects" / str(project.id), ignore_errors=True)
+    """Delete a project: its database records (parts, CAD versions, quotes, cost items, decisions, revisions,
+    images...) cascade with it, then its folder in the data folder (uploads and generated CAD) is removed."""
+    from app.services.projects import delete_project
+
+    delete_project(session, project)
 
 
 @router.post("/{project_id}/images", response_model=ImageOut, status_code=201)

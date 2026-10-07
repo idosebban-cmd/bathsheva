@@ -8,7 +8,7 @@ A local web app for AI-assisted product engineering of physical consumer product
 
 ```bash
 ./run.sh          # first run creates backend/.venv and installs npm deps, then starts both servers
-./run.sh test     # backend pytest + front-end typecheck
+./run.sh test     # backend pytest + front-end typecheck + front-end unit tests (Node 22.6+)
 ```
 
 On a Mac, `bash scripts/setup_mac.sh` does the whole setup. It asks before installing the Xcode command line tools, Homebrew, uv or Node.js LTS, and it supports `--dry-run` and `--yes`. It builds the venv with uv on pinned Python 3.12, which has build123d/OpenCASCADE wheels for both Apple Silicon and Intel (macOS 12+). It removes CadQuery from an older venv and reinstalls build123d's OCP package, because both ship an `OCP` module. It then migrates the database (backing it up first if a migration is pending) and runs a CAD self-test in a temporary folder (`scripts/workbench_check.py`). It is safe to re-run. After that, double-click `Start Workbench.command`. README.md has the user-facing steps. `WORKBENCH_SETUP_ALLOW_NON_MAC=1` runs the non-macOS parts on Linux for testing.
@@ -81,7 +81,7 @@ Other useful commands, run from `backend/`: `.venv/bin/alembic current` and `.ve
 
 | Tab | Endpoints (`/api/projects/{id}/…`) |
 |---|---|
-| Projects | `GET/POST /api/projects` (template `faro` seeds parts, requirements and CAD defaults) |
+| Projects | `GET/POST /api/projects` (template `faro` seeds parts, requirements and CAD defaults), `DELETE /api/projects/{id}` (records cascade, then `data/projects/<id>/` is removed; the page confirms, naming the project and its times) |
 | Overview | `PATCH /api/projects/{id}`, `POST /images`, `GET /runtime`, `GET/POST /template-upgrade` |
 | Parts | `GET/POST/PATCH/DELETE /parts`; quotes `GET/POST /parts/{part}/quotes`, `DELETE /quotes/{id}`; `GET /quote-pack.zip` |
 | CAD | `GET /cad`, `POST /cad/validate`, `POST /cad/generate`, `GET /cad/models/{v}/download.zip`; files under `/files/projects/...` |
@@ -147,6 +147,7 @@ Ranges: each input is widened by its confidence (`seed/cost/general.yaml` `confi
 - **CAD:** one body per part. A part's `cad_key` equals the generator's body name. Faro has 21 bodies (spun base/tower/cap, spun brass gallery, turned brass frame/spigot/finial/knob, photo-etched railing and nameplate, glass lantern and diffuser, plates, felt, and placeholder electronics). `overall_height` runs from the base underside to the finial top; the felt adds 1.9 mm below. Revolved parts are built from 2D half-sections (`faro._sections`), and shells are an offset of the outer profile. Offset curves are converted to B-splines, because a revolved offset curve doesn't survive STEP. `faro.model()` caches one build per parameter set. Old saved parameters are upgraded with new defaults (`faro.upgrade`). Pre-prototype parameters (no `tower_bottom_diameter`) are replaced by the defaults. The tower's red section is the same part in two-tone lacquer. The GLB splits it into `tower` and `tower_lower` for the preview only. Every regeneration creates a new immutable `CadModel` version under `data/projects/<id>/cad/v<n>/`.
 - **Cordless power:** baseline 2 x 18650 + USB-C (`requirements.power_type: battery`); option B (external adapter) is scenario g. `requirements.battery_runtime_h` is the editable runtime target; `faro.yaml` `electrical` holds the battery spec, LED loads (with provenance) and battery compliance flags shown in the Overview, DFM and RFQ.
 - **Template upgrades:** projects created from an older template version keep their old parts until the user presses "Update to the current design" (Overview). `services/template_upgrade.py` removes old parts (with their quotes and decisions), adds new ones, updates the requirements the template now fixes, re-applies decisions and resets cost items.
+- **Project timestamps:** the API sends `created_at` / `updated_at` as UTC (SQLite drops the zone; `schemas.ProjectSummary` restores it) and the front end shows them in UK local time (`frontend/src/format.ts`, tested with `npm test`, Node 22.6+). A `before_flush` hook in `models.py` touches the project's `updated_at` whenever any of its records change. A new project never inherits a leftover `data/projects/<id>/` (SQLite can reuse the last deleted id): it is moved to `projects/_orphaned/`.
 - **Revisions:** an immutable JSON snapshot (requirements, parameters, parts, decisions, recommendations, CAD version and its file paths). No branching.
 - **External quotes:** real supplier quotes and DFM feedback (`ExternalQuote`) are for the user to review against the part's estimated unit-cost range. They never change the rules engine, seed data or part fields automatically. Seed data is updated by hand. The comparison doesn't convert currencies. The quote pack includes only manufactured parts; bought-in parts and hardware are listed in its README.
 - **Decisions:** `EngineeringDecision.status` is one of proposed / accepted / rejected / edited.

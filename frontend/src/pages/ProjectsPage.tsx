@@ -1,16 +1,34 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api, errorText, type Project, type ProjectSummary } from "../api";
+import { ukDateTime } from "../format";
 
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<ProjectSummary[] | null>(null);
   const [name, setName] = useState("");
   const [error, setError] = useState("");
+  const [confirming, setConfirming] = useState<number | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const navigate = useNavigate();
 
-  useEffect(() => {
+  function load() {
     api.get<ProjectSummary[]>("/api/projects").then(setProjects, (e) => setError(errorText(e)));
-  }, []);
+  }
+  useEffect(load, []);
+
+  async function remove(p: ProjectSummary) {
+    setDeleting(true);
+    setError("");
+    try {
+      await api.del(`/api/projects/${p.id}`);
+      setConfirming(null);
+      load();
+    } catch (e) {
+      setError(errorText(e));
+    } finally {
+      setDeleting(false);
+    }
+  }
 
   async function create(template: "faro" | null) {
     setError("");
@@ -52,11 +70,40 @@ export default function ProjectsPage() {
           <ul className="project-list">
             {projects.map((p) => (
               <li key={p.id} className="card">
-                <Link to={`/projects/${p.id}/overview`}>
-                  <strong>{p.name}</strong>
-                </Link>
-                <span className="muted"> · {p.template ?? "blank"} · created {new Date(p.created_at).toLocaleDateString()}</span>
+                <div className="row" style={{ justifyContent: "space-between", alignItems: "baseline" }}>
+                  <span>
+                    <Link to={`/projects/${p.id}/overview`}>
+                      <strong>{p.name}</strong>
+                    </Link>
+                    <span className="muted">
+                      {" "}· {p.template ?? "blank"} · created {ukDateTime(p.created_at)} · updated {ukDateTime(p.updated_at)}
+                    </span>
+                  </span>
+                  {confirming !== p.id && (
+                    <button className="danger" onClick={() => setConfirming(p.id)} aria-label={`Delete ${p.name}`}>
+                      Delete…
+                    </button>
+                  )}
+                </div>
                 <p className="muted small">{p.description}</p>
+                {confirming === p.id && (
+                  <div className="error" role="alertdialog" aria-label={`Confirm deleting ${p.name}`}>
+                    <p>
+                      Delete <strong>{p.name}</strong> (project #{p.id}, created {ukDateTime(p.created_at)}, last updated{" "}
+                      {ukDateTime(p.updated_at)})?
+                    </p>
+                    <p className="small">
+                      This permanently removes its parts, CAD versions and files, quotes, cost items, decisions, revisions and
+                      uploaded images. It can't be undone.
+                    </p>
+                    <div className="row">
+                      <button className="danger" disabled={deleting} onClick={() => remove(p)}>
+                        {deleting ? "Deleting…" : `Delete ${p.name} permanently`}
+                      </button>
+                      <button disabled={deleting} onClick={() => setConfirming(null)}>Cancel</button>
+                    </div>
+                  </div>
+                )}
               </li>
             ))}
           </ul>

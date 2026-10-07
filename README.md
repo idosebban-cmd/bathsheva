@@ -58,6 +58,8 @@ the code folder. Updating or deleting the code never touches them. Setup logs ar
 `~/Bathsheva Workbench/logs`. Before setup applies a database update, it saves a copy of the
 database in `~/Bathsheva Workbench/data/backups`.
 
+To delete a project, use **Delete…** on the Projects page. It asks you to confirm and names the project with its created time, then removes the project and its files for good.
+
 If you ran an older version that kept data in the `bathsheva/data` folder, the data is moved to
 the new folder automatically. Nothing is moved if the new folder already holds data.
 

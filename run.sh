@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # One command to set up (first run) and start the whole app.
 #   ./run.sh          start backend (:8000) and front end (:5173)
-#   ./run.sh test     run backend tests and front-end typecheck
+#   ./run.sh test     run backend tests, front-end typecheck and front-end unit tests
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 VENV="$ROOT/backend/.venv"
@@ -60,6 +60,12 @@ setup_frontend
 if [ "${1:-}" = "test" ]; then
   (cd "$ROOT/backend" && "$PY" -m pytest -q)
   (cd "$ROOT/frontend" && npm run -s typecheck)
+  # Front-end unit tests run TypeScript directly with node --test (Node 22.6+).
+  if node -e 'const [a, b] = process.versions.node.split(".").map(Number); process.exit(a > 22 || (a === 22 && b >= 6) ? 0 : 1)'; then
+    (cd "$ROOT/frontend" && npm test -s)
+  else
+    echo "==> Skipping front-end unit tests: they need Node 22.6 or newer"
+  fi
   exit 0
 fi
 
