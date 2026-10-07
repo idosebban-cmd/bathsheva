@@ -419,8 +419,8 @@ def _part_notes(key: str, p: dict[str, float], d: dict[str, Any]) -> list[tuple[
         from app.factory import logo as art
 
         r = art.logo_radius(p["knob_diameter"])
-        n.append((f"Logo on the face: medallion Ø{_fmt(2 * r)} with a rim groove, engraved {_fmt(art.ENGRAVE_DEPTH)} deep (laser or "
-                  f"CNC), grooves {_fmt(round(art.GROOVE * r, 2))} min, filled black, after brushing and before lacquer. Upright "
+        n.append((f"Logo on the face: medallion Ø{_fmt(2 * r)} with a {_fmt(art.EDGE_GROOVE_MM)} edge groove, engraved "
+                  f"{_fmt(art.ENGRAVE_DEPTH)} deep (laser or CNC), grooves {_fmt(art.MIN_GROOVE_MM)} min, filled black, after brushing and before lacquer. Upright "
                   "(sun at the top) with the knob turned to its off stop. Artwork: artwork/F-11_knob_logo.svg / .dxf (1:1).", INK))
     elif key == "nameplate":
         n.append((f"Etched brass t = {_fmt(faro.NAMEPLATE_T)}, {_fmt(faro.NAMEPLATE_W)} × {_fmt(faro.NAMEPLATE_H)}, corner R1.2, "
