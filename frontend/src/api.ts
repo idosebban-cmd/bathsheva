@@ -178,6 +178,7 @@ export interface WallLimit {
 export interface CadState {
   mass?: { total_kg: number; target_kg: number | null; status: string; note: string; parts_kg: Record<string, number> } | null;
   generator: string;
+  product: { key: string; label: string; noun: string; cad_note: string; mass_part: string };
   param_defs: ParamDef[];
   parameters: Record<string, number>;
   derived: Record<string, unknown>;

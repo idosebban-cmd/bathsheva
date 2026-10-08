@@ -45,12 +45,16 @@ class Product:
     bought_in_density: dict[str, tuple[str | None, float]] = field(default_factory=dict)
     # Whether the Factory Pack (RFQ, drawings, supplier BOM) is implemented for this product
     factory_pack: bool = False
+    # Shown under the CAD preview: what the model is and what is placeholder
+    cad_note: str = ""
+    # The part the mass hint names when the estimate is off target (cad_key), e.g. the weight plate
+    mass_part: str = ""
 
 
 def _registry() -> dict[str, Product]:
-    from app.products import faro
+    from app.products import atelier, faro
 
-    return {p.key: p for p in (faro.PRODUCT,)}
+    return {p.key: p for p in (faro.PRODUCT, atelier.PRODUCT)}
 
 
 _PRODUCTS: dict[str, Product] | None = None

@@ -153,6 +153,13 @@ parts:
     material: Aluminium 6061-T6
     finish: Gold PVD, fine brushed satin, diamond-cut chamfer
     traits: [cosmetic, ring, short, fine_detail]
+  - cad_key: rear_fabric
+    name: Rear acoustic fabric
+    function: Black acoustic fabric behind the rear radiator cover, so no red shows through its holes.
+    material_category: bought_in
+    material: Black acoustic fabric
+    finish: Black
+    traits: [hidden]
   - cad_key: knob
     name: Knob
     function: >-

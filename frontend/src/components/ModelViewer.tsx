@@ -2,16 +2,17 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { Canvas, useThree } from "@react-three/fiber";
 import { Bounds, ContactShadows, Environment, Lightformer, OrbitControls, useBounds, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
-import { FINISH, material, smoothFaceted } from "./materials";
+import { finishesFor, material, smoothFaceted, type Finish } from "./materials";
 
-function partName(obj: THREE.Object3D): string | undefined {
+function partName(obj: THREE.Object3D, finishes: Record<string, Finish>): string | undefined {
   for (let o: THREE.Object3D | null = obj; o; o = o.parent) {
-    if (o.name && o.name in FINISH) return o.name;
+    if (o.name && o.name in finishes) return o.name;
   }
   return undefined;
 }
 
-function Model({ url, lit }: { url: string; lit: boolean }) {
+function Model({ url, lit, product }: { url: string; lit: boolean; product?: string }) {
+  const finishes = finishesFor(product);
   const { scene } = useGLTF(url);
   const cloned = useMemo(() => {
     const c = scene.clone(true);
@@ -22,9 +23,9 @@ function Model({ url, lit }: { url: string; lit: boolean }) {
     cloned.traverse((obj) => {
       const mesh = obj as THREE.Mesh;
       if (!mesh.isMesh) return;
-      const name = partName(mesh);
+      const name = partName(mesh, finishes);
       if (name) {
-        mesh.material = material(FINISH[name], lit);
+        mesh.material = material(finishes[name], lit);
       } else {
         const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
         for (const m of mats as THREE.MeshStandardMaterial[]) {
@@ -37,7 +38,7 @@ function Model({ url, lit }: { url: string; lit: boolean }) {
       }
       mesh.castShadow = true;
     });
-  }, [cloned, lit]);
+  }, [cloned, lit, finishes]);
   // The GLB is in metres (glTF convention); the scene works in millimetres.
   return <primitive object={cloned} scale={1000} />;
 }
@@ -78,7 +79,7 @@ function Studio() {
 }
 
 /** In-browser preview of a GLB exported by the CAD service (units: mm). */
-export default function ModelViewer({ url }: { url: string }) {
+export default function ModelViewer({ url, product }: { url: string; product?: string }) {
   const [lit, setLit] = useState(false);
   const [view, setView] = useState<View>("three_quarter");
   return (
@@ -92,7 +93,7 @@ export default function ModelViewer({ url }: { url: string }) {
         {lit && <pointLight position={[0, 225, 0]} intensity={60000} distance={600} decay={2} color="#ffcf8a" />}
         <Suspense fallback={null}>
           <Bounds fit clip observe margin={1.25} key={url}>
-            <Model url={url} lit={lit} />
+            <Model url={url} lit={lit} product={product} />
             <ViewControls view={view} />
           </Bounds>
         </Suspense>

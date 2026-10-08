@@ -43,3 +43,18 @@ class WallLimit:
     typical_min: float
     typical_max: float
     verified: bool = False
+
+
+@dataclass(frozen=True)
+class ParamDef:
+    """One editable CAD parameter, as served to the CAD tab."""
+
+    key: str
+    label: str
+    group: str
+    min: float
+    max: float
+    step: float = 1.0
+    unit: str = "mm"
+    integer: bool = False
+    help: str = ""

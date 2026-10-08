@@ -15,6 +15,7 @@ from app.api.deps import get_project
 from app.config import settings
 from app.db import get_session
 from app.models import Project
+from app.products import product_for
 from app.schemas import CadModelOut
 from app.services import cad as cad_service
 
@@ -25,10 +26,13 @@ router = APIRouter(prefix="/api/projects/{project_id}/cad", tags=["cad"])
 def cad_state(project: Project = Depends(get_project)) -> dict[str, Any]:
     """Parameter definitions, current values, live validation and the latest model."""
     gen = cad_service.generator_for(project)
+    product = product_for(project)
     params = cad_service.current_parameters(project)
     latest = cad_service.latest_model(project)
     return {
         "generator": gen.GENERATOR,
+        "product": {"key": product.key, "label": product.label, "noun": product.noun, "cad_note": product.cad_note,
+                    "mass_part": product.mass_part},
         "param_defs": [asdict(d) for d in gen.PARAMS],
         "parameters": params,
         "derived": gen.public_derived(params),

@@ -147,12 +147,13 @@ def _letter_solid(polys: list[list[tuple[float, float]]]):
 
 
 @lru_cache(maxsize=1)
-def letters_from_font():
+def letters_from_font(text: str = TEXT):
     """One clean planar face per letter, cap height CAP_HEIGHT, centred optically on the plate, built from
-    the bundled font (slow: a few seconds). The result is stored as point loops in seed/artwork/."""
+    the bundled font (slow: a few seconds). The result is stored as point loops in seed/artwork/. Also used
+    for Atelier's "ATELIER" (etched under its collar; atelier.COLLAR_LETTERING_FILE)."""
     from build123d import Axis, Pos, Sketch, scale
 
-    glyphs = [[_polyline(segs) for segs in contours] for contours in _glyph_contours(TEXT)]
+    glyphs = [[_polyline(segs) for segs in contours] for contours in _glyph_contours(text)]
     pts = [p for g in glyphs for poly in g for p in poly]
     ymin, ymax = min(p[1] for p in pts), max(p[1] for p in pts)
     xmin, xmax = min(p[0] for p in pts), max(p[0] for p in pts)

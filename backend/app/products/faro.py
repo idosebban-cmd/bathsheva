@@ -136,4 +136,9 @@ PRODUCT = Product(
     dfm_checks=dfm_checks,
     bought_in_density=BOUGHT_IN_DENSITY,
     factory_pack=True,
+    cad_note="Faro as approved in the prototype, adapted for production in metal: spun aluminium base, tower and cap; turned "
+             "brass gallery, frame, finial and knob; photo-etched railing; frosted borosilicate lantern and an opal glass tube "
+             "behind the windows. One body per part. The battery, boards, LEDs and dimmer are placeholders showing space and "
+             "position. Tick \"Lights on\" to see it lit.",
+    mass_part="weight_plate",
 )

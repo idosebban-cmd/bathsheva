@@ -55,7 +55,7 @@ from build123d import (
     revolve,
 )
 
-from app.cad.validation import ValidationIssue, ValidationResult, WallLimit
+from app.cad.validation import ParamDef, ValidationIssue, ValidationResult, WallLimit
 
 GENERATOR = "faro"
 MIN = (Align.CENTER, Align.CENTER, Align.MIN)
@@ -134,19 +134,6 @@ DIFFUSER_RING = 1.5  # silicone ring that centres the diffuser top in the tower
 DIFFUSER_OVERLAP = 5.0  # diffuser runs this far past the lowest and highest window
 SPIDER_T = 1.5  # spider on the tower-light spine that carries the diffuser
 MIN_TOWER_HEIGHT = 60.0
-
-
-@dataclass(frozen=True)
-class ParamDef:
-    key: str
-    label: str
-    group: str
-    min: float
-    max: float
-    step: float = 1.0
-    unit: str = "mm"
-    integer: bool = False
-    help: str = ""
 
 
 PARAMS: list[ParamDef] = [
