@@ -700,7 +700,7 @@ def product_summary(session: Session, project: Project) -> dict[str, Any]:
                                       for x in r["selection"]],
                         "price_stack": price_stack(r["cost"]["mid"], q, values),
                     })
-            for opt in ("plated", "solid"):
+            for opt in [o["key"] for o in load_template(project.template).get("premium_edition", {}).get("options", [])]:
                 ed_cur = edition_config(project, opt, set())
                 ed_extra = ed_cur.merged(extra) if extra is not None else ed_cur
                 premium_rows.append(row(f"Brass edition ({opt}), current configuration", forced, "uk", q, ed_cur,
@@ -730,10 +730,7 @@ def product_summary(session: Session, project: Project) -> dict[str, Any]:
             "Status compares the midpoint estimate with each target: pass at or under, close within "
             f"{close:.0%} over, fail beyond.",
             "Best combinations search every combination of changes and every region; multi-option changes use their cheapest option.",
-            "Power options are costed side by side: A is cordless (2 x 18650, USB-C); B always uses the external adapter and "
-            "an internal DC-DC driver (scenario g), whatever the tier.",
-            "Tiers: 'no compromise' uses only changes that keep the look and feel; 'slight compromises' also allows the touch "
-            "dimmer; 'any' also allows the plain tower without windows and the straight tube tower.",
+            *load_template(project.template).get("cost_down_notes", []),
             "Changes whose options break a design constraint (e.g. plastic on a visible part) are never chosen.",
             "Rates are unverified: most are model-generated, some come from published distributor prices. Treat the ranking as a guide for which quotes to get first.",
         ],

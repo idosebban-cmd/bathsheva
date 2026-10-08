@@ -399,9 +399,108 @@ cad_parameters:
   pr_width: 40
   pr_height: 60
 
-cost_items: []
+# Default cost line items (prices come from seed/cost/bought_in.yaml).
+cost_items:
+  - {kind: bought_in, price_key: speaker_driver_57, quantity: 1}
+  - {kind: bought_in, price_key: passive_radiator_60x40, quantity: 1}
+  - {kind: bought_in, price_key: speaker_main_board, quantity: 1}
+  - {kind: bought_in, price_key: battery_pack_1s2p, quantity: 1, power: battery}
+  - {kind: bought_in, price_key: usb_c_receptacle_ip67, quantity: 1, power: battery}
+  - {kind: bought_in, price_key: rotary_encoder_push, quantity: 1}
+  - {kind: bought_in, price_key: status_led_light_pipe, quantity: 1}
+  - {kind: bought_in, price_key: acoustic_fabric_set, quantity: 1}
+  - {kind: bought_in, price_key: butyl_damping, quantity: 1}
+  - {kind: bought_in, price_key: o_ring_spigot, quantity: 2}
+  - {kind: bought_in, price_key: fin_pad_tpu, quantity: 3}
+  - {kind: bought_in, price_key: speaker_chassis_set, quantity: 1}
+  - {kind: bought_in, price_key: ballast_cup_steel, quantity: 1}
+  - {kind: bought_in, price_key: screw_m4_12, quantity: 6}
+  - {kind: bought_in, price_key: screw_m25_cs, quantity: 5}
+  - {kind: bought_in, price_key: stud_m4, quantity: 1}
+  - {kind: bought_in, price_key: screw_m3, quantity: 4}
+  - {kind: bought_in, price_key: structural_adhesive, quantity: 1}
+  - {kind: finishing, price_key: knob_logo_engrave, quantity: 1}
+  - {kind: finishing, price_key: knob_knurl, quantity: 1}
+  - {kind: finishing, price_key: collar_lettering_etch, quantity: 1}
+  - {kind: bought_in, price_key: usb_c_cable_braided, quantity: 1, power: battery}
+  - {kind: packaging, price_key: retail_packaging_speaker, quantity: 1}
+  - {kind: one_off, price_key: speaker_radio_emc_safety_testing, quantity: 1}
+  - {kind: one_off, price_key: bluetooth_sig_listing, quantity: 1}
+  - {kind: assembly, name: "Final assembly, wiring, sealing, acoustic test and pairing test", quantity: 30, unit: min, confidence: low}
 
+# Retail pricing (Technical Specification). Channel economics come from seed/cost/pricing.yaml.
 pricing:
   retail_price: 199
+  retail_low: 179
+  retail_high: 229
   price_points: [199]
   source: "Technical Specification (Oct 2026)"
+
+# One power option: cordless (the spec has no mains version).
+power_options:
+  - key: A
+    label: "A: cordless, 2 x 18650 1S2P, USB-C PD"
+    scenario: null
+
+# Design-change scenarios for the Cost-down tab (same effects as Faro's; see faro.yaml).
+scenarios:
+  - key: nose_cone_spun
+    letter: a
+    label: Nose cone spun instead of CNC turned
+    design_change: Spin the nose cone from 1050 aluminium disc instead of turning and hollowing 6061 bar; same outside shape.
+    effect:
+      reroute:
+        part: nose_cone
+        options:
+          - {process: metal_spinning, material: al_1050, label: Spun 1050}
+    premium_impact: none
+    tradeoffs:
+      finish: Spin lines are brushed out before PVD; the tip may need a small turned plug.
+      weight: Lighter (thinner wall); the ballast makes it up.
+      premium: Looks the same.
+      lead_time: Spinning tools in 2–4 weeks.
+      tooling: A spinning form (low cost).
+  - key: custom_battery_pack
+    letter: c
+    label: Custom battery pack with its own certification testing
+    design_change: >-
+      Buy a custom 2 x 18650 1S2P pack (cheaper per unit, no test reports) instead of a pre-certified pack,
+      and pay for UN38.3 and IEC 62133-2 testing once.
+    effect:
+      add_items:
+        - {price_key: battery_pack_1s2p_custom, quantity: 1}
+        - {price_key: battery_pack_testing, quantity: 1, kind: one_off}
+      remove_items: [battery_pack_1s2p]
+    premium_impact: none
+    flags:
+      - {kind: compliance, message: "Custom pack: UN38.3 and IEC 62133-2 must be passed before shipping or selling; allow 6–10 weeks for testing."}
+    tradeoffs:
+      finish: No change.
+      weight: No change.
+      premium: No change.
+      lead_time: Adds 6–10 weeks of testing before launch.
+      tooling: None; the testing is a one-off cost shared over the batch.
+  - key: sealed_no_radiator
+    letter: r
+    label: Sealed box without the rear passive radiator
+    design_change: >-
+      Leave out the rear passive radiator, its cover, bezel and fabric: the prototype's sealed box. The back
+      becomes plain red; the bass is thinner and the DSP has to work harder.
+    effect:
+      remove_part: [passive_radiator, rear_grille, rear_bezel, rear_fabric]
+      remove_items: [passive_radiator_60x40]
+      assembly_min: {low: -2, high: -1}
+    premium_impact: slight
+    flags:
+      - {kind: performance, message: "Without the radiator the 60 Hz (−6 dB) bass target is unlikely to be met; check with the driver supplier."}
+    tradeoffs:
+      finish: A plain red back, as the approved prototype.
+      weight: About 10 g lighter; the ballast makes it up.
+      premium: Thinner bass at the spec's 60 Hz.
+      lead_time: One part and one bezel fewer.
+      tooling: One photo-tool and one CNC programme fewer.
+
+# Notes shown under the Cost-down summary.
+cost_down_notes:
+  - "One power option: cordless (2 x 18650 1S2P, USB-C PD)."
+  - "Tiers: 'no compromise' uses only changes that keep the look and feel (spun nose cone, custom battery pack); 'slight compromises' also allows the sealed box without the rear radiator."

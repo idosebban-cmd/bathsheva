@@ -427,6 +427,11 @@ power_options:
     label: "B: certified external 12 V adapter + internal DC-DC driver (no battery)"
     scenario: external_adapter
 
+# Notes shown under the Cost-down summary.
+cost_down_notes:
+  - "Power options are costed side by side: A is cordless (2 x 18650, USB-C); B always uses the external adapter and an internal DC-DC driver (scenario g), whatever the tier."
+  - "Tiers: 'no compromise' uses only changes that keep the look and feel; 'slight compromises' also allows the touch dimmer; 'any' also allows the plain tower without windows and the straight tube tower."
+
 scenarios:
   - key: base_pressed
     letter: a

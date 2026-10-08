@@ -280,6 +280,121 @@ bought_in:
     source: model-generated
     confidence: low
     verified: false
+  # Atelier (rocket Bluetooth speaker), Oct 2026
+  - key: speaker_driver_57
+    name: "57 mm full-range neodymium driver, rated 20 W RMS (datasheet with Thiele-Small values)"
+    gbp: {low: 3.5, high: 7.5}
+    source: model-generated
+    confidence: low
+    verified: false
+  - key: passive_radiator_60x40
+    name: Passive radiator, about 60 x 40 mm oval, mass tunable
+    gbp: {low: 1.5, high: 3.5}
+    source: model-generated
+    confidence: low
+    verified: false
+  - key: speaker_main_board
+    name: "Main board: pre-certified Bluetooth 5.3 module (SBC/AAC, multipoint, stereo pairing, LE Audio ready, OTA), DSP, 20 W Class-D amplifier with boost converter, USB-C PD charger, encoder input, status LED driver"
+    gbp: {low: 9.0, high: 18.0}
+    source: model-generated
+    confidence: low
+    verified: false
+  - key: battery_pack_1s2p
+    name: "Pre-certified Li-ion pack: 2 x 18650 1S2P (about 6,000 mAh, 21.6 Wh), branded cells, protection circuit, plug-in lead; supplier provides UN38.3 and IEC 62133-2 reports"
+    gbp: {low: 8.0, high: 14.0}
+    source: model-generated
+    confidence: low
+    verified: false
+  - key: usb_c_receptacle_ip67
+    name: Sealed (IP67) mid-mount USB-C receptacle on a small board, with lead and connector
+    gbp: {low: 1.2, high: 2.5}
+    source: model-generated
+    confidence: low
+    verified: false
+  - key: rotary_encoder_push
+    name: "Rotary encoder with push switch: 24 soft detents, 6 mm shaft, sealed, 50,000 presses / 20,000 turns"
+    gbp: {low: 0.8, high: 2.0}
+    source: model-generated
+    confidence: low
+    verified: false
+  - key: status_led_light_pipe
+    name: White status LED with a 3 mm light pipe
+    gbp: {low: 0.15, high: 0.5}
+    source: model-generated
+    confidence: low
+    verified: false
+  - key: acoustic_fabric_set
+    name: Black acoustic fabric, front and rear pieces (die-cut, adhesive edge)
+    gbp: {low: 0.3, high: 0.8}
+    source: model-generated
+    confidence: low
+    verified: false
+  - key: butyl_damping
+    name: Butyl damping pads inside the shell (about 50 g)
+    gbp: {low: 0.3, high: 0.8}
+    source: model-generated
+    confidence: low
+    verified: false
+  - key: o_ring_spigot
+    name: O-ring, nose cone or collar spigot (NBR or silicone)
+    gbp: {low: 0.05, high: 0.2}
+    source: model-generated
+    confidence: low
+    verified: false
+  - key: fin_pad_tpu
+    name: TPU fin tip pad, 1 mm, adhesive-backed (die-cut)
+    gbp: {low: 0.03, high: 0.12}
+    source: model-generated
+    confidence: low
+    verified: false
+  - key: speaker_chassis_set
+    name: "Steel chassis set: 3 fin brackets, board spine, battery tray plate (laser cut, bent, zinc plated, made to drawing)"
+    gbp: {low: 3.0, high: 7.0}
+    source: model-generated
+    confidence: low
+    verified: false
+  - key: ballast_cup_steel
+    name: Steel ballast cup, about 600 g (sawn bar, milled pocket, zinc plated, made to drawing)
+    gbp: {low: 2.5, high: 6.0}
+    source: model-generated
+    confidence: low
+    verified: false
+  - key: screw_m4_12
+    name: M4 x 12 stainless socket screw
+    gbp: {low: 0.03, high: 0.1}
+    source: model-generated
+    confidence: low
+    verified: false
+  - key: stud_m4
+    name: M4 x 8 stainless stud (threadlocked)
+    gbp: {low: 0.03, high: 0.1}
+    source: model-generated
+    confidence: low
+    verified: false
+  - key: collar_lettering_etch
+    name: Laser-etch "ATELIER" under the collar before PVD (0.15 mm, tone-on-tone)
+    gbp: {low: 0.3, high: 1.0}
+    source: model-generated
+    confidence: low
+    verified: false
+  - key: usb_c_cable_braided
+    name: Braided USB-C to USB-C cable, 1.5 m, side-angled right-angle plug
+    gbp: {low: 1.5, high: 3.5}
+    source: model-generated
+    confidence: low
+    verified: false
+  - key: retail_packaging_speaker
+    name: Retail box with moulded-pulp inserts, quick-start guide (speaker)
+    gbp: {low: 3.0, high: 7.0}
+    source: model-generated
+    confidence: low
+    verified: false
+  - key: battery_pack_1s2p_custom
+    name: "Custom Li-ion pack: 2 x 18650 1S2P (about 6,000 mAh), protection circuit, plug-in lead; no test reports (needs its own testing)"
+    gbp: {low: 6.0, high: 10.0}
+    source: model-generated
+    confidence: low
+    verified: false
   # One-off costs: the price is the TOTAL, shared over the batch (cost item kind one_off).
   - key: battery_pack_testing
     name: "Custom pack certification: UN38.3 transport tests and IEC 62133-2 (accredited lab), one-off"
@@ -290,6 +405,18 @@ bought_in:
   - key: lamp_safety_emc_testing
     name: "Lamp electrical safety and EMC testing (accredited lab, UKCA/CE technical file), one-off"
     gbp: {low: 5000, high: 10000}
+    source: model-generated
+    confidence: low
+    verified: false
+  - key: speaker_radio_emc_safety_testing
+    name: "Speaker radio (ETSI EN 300 328), EMC (EN 301 489-1/-17), safety (IEC 62368-1) and RF exposure (EN 62479) testing for UKCA, technical file (accredited lab), one-off"
+    gbp: {low: 8000, high: 15000}
+    source: model-generated
+    confidence: low
+    verified: false
+  - key: bluetooth_sig_listing
+    name: Bluetooth SIG qualification and product listing (declaration fee), building on the module's qualification, one-off
+    gbp: {low: 4000, high: 8000}
     source: model-generated
     confidence: low
     verified: false
