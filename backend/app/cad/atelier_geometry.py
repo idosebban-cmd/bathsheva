@@ -950,6 +950,16 @@ def build(p, visual_only=False) -> Model:
         I.update(z_driver_bottom=z_driver_bottom,
                  ballast_max_g=h_bal_max * area_bal * rho("ballast") / 1000.0)
 
+        tray_xy = []
+        if p.BATTERY_TRAY_T > 0 and not closed_bottom:
+            if pocket_w >= pocket_d:
+                r_tray = (pocket_d / 2 + r_bal) / 2
+                tray_xy = [(0.0, r_tray), (0.0, -r_tray)]
+            else:
+                r_tray = (pocket_w / 2 + r_bal) / 2
+                tray_xy = [(r_tray, 0.0), (-r_tray, 0.0)]
+        I["tray_screw_xy"] = tray_xy
+
         def make_cup_and_chassis(ballast_g):
             """Ballast cup of the given mass round the battery, then the chassis:
             * 3 fin brackets: curved plates hugging the wall behind each fin. The fin
@@ -966,6 +976,9 @@ def build(p, visual_only=False) -> Model:
                     pocket_w, pocket_d, h_bal + 2, align=MIN))
                 if wire_slot is not None:
                     cup = _one_solid(cup - Pos(0, 0, battery_floor_z - 1) * wire_slot)
+                for x, y in tray_xy:                                 # tapped for the tray screws
+                    cup = _one_solid(cup - Pos(x, y, battery_floor_z - 0.01) * Cylinder(
+                        p.COLLAR_SCREW_TAP / 2, p.TRAY_SCREW_DEPTH, align=MIN))
                 cup_top = battery_floor_z + h_bal
             pieces = []
             for ang in fin_angles:
@@ -1004,6 +1017,13 @@ def build(p, visual_only=False) -> Model:
                                                                        p.BATTERY_TRAY_T + 2, align=MIN)
                 if wire_slot is not None:
                     tray = tray - Pos(0, 0, z_tr - 1) * wire_slot
+                # PORT: two countersunk M2.5 screws at the plate's edge, outside the battery's footprint, hold the
+                # plate to the ballast cup: with the collar off they come out and the plate drops out with the battery
+                for x, y in tray_xy:
+                    tray = tray - (Pos(x, y, z_tr - 1) * Cylinder(p.COLLAR_SCREW_CLEAR / 2, p.BATTERY_TRAY_T + 2, align=MIN)
+                                   + Pos(x, y, z_tr - 0.01) * Solid.make_cone(
+                                       p.COLLAR_SCREW_HEAD / 2, p.COLLAR_SCREW_CLEAR / 2,
+                                       (p.COLLAR_SCREW_HEAD - p.COLLAR_SCREW_CLEAR) / 2))
                 pieces.append(_one_solid(tray))
             chassis = None
             for sol in pieces:

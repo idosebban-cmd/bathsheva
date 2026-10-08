@@ -34,6 +34,13 @@ def dfm_checks(project: "Project", params: dict[str, Any], rules: "RuleSet", _ch
         f"{s['total_g'] / 1000:.2f} kg with production materials vs {target / 1000:.2f} kg (spec 1.8 ±0.1 kg); the steel "
         f"ballast cup is {s['ballast_g']:.0f} g (at most {s['ballast_max_g']:.0f} g fits below the driver).",
         unverified=True, part="Ballast cup"))
+    margin = s["ballast_max_g"] - s["ballast_g"]
+    checks.append(_check(
+        "Geometry", "pass" if margin >= atelier.MASS_MARGIN_MIN_G else "warning", "Risk: mass margin",
+        f"{margin:.0f} g of ballast can still be added below the driver (the cup is {s['ballast_g']:.0f} g of at most "
+        f"{s['ballast_max_g']:.0f} g). If the driver, radiator, battery, board or PVD parts come in lighter than "
+        "estimated, the speaker falls short of 1.8 kg. Recheck once supplier part weights arrive; options are a denser "
+        "or taller ballast, or a heavier collar.", unverified=True, part="Ballast cup"))
     checks.append(_check(
         "Geometry", "pass" if s["com_mm"][2] <= spec["com_max_mm"] else "fail", "Centre of mass",
         f"{s['com_mm'][2]:.1f} mm above the ground (spec {spec['com_max_mm']:g} mm or lower).", unverified=True))
@@ -70,6 +77,11 @@ def dfm_checks(project: "Project", params: dict[str, Any], rules: "RuleSet", _ch
         "2 x 18650 in parallel give about 3.6 V; 20 W RMS needs a boost converter ahead of the Class-D amplifier and a "
         "driver rated for it. The electronics supplier must confirm (user, Oct 2026).", unverified=True,
         part="Main board"))
+    checks.append(_check(
+        "Assembly", "pass", "Battery replacement (standard tools)",
+        "Battery replaceable after removing the base collar: " + " ".join(
+            f"{i + 1}. {step}" for i, step in enumerate(atelier.BATTERY_SERVICE)) + " Needs a plug-in battery lead and "
+        "a USB-C lead connector at the collar (main-board RFQ).", unverified=True, part="Battery pack"))
     for item in atelier.OPEN_ITEMS:
         checks.append(_check("Assembly", "warning", "Open item", item, unverified=True))
     checks.append(_check(

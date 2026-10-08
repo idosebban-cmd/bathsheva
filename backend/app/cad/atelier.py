@@ -51,6 +51,7 @@ COLLAR_SCREW_PCD = 11.0
 COLLAR_SCREW_CLEAR = 2.7
 COLLAR_SCREW_HEAD = 5.0
 COLLAR_SCREW_TAP = 2.1
+TRAY_SCREW_DEPTH = 6.0  # the tray plate's two M2.5 screws: tapped this deep into the ballast cup
 FOOT_STUD_TAP = 3.3  # M4 stud: tapped in the collar, the foot screws onto it
 FOOT_STUD_DEPTH = 6.0
 LETTERING_CAP = 2.4  # "ATELIER" etched under the collar (user, Oct 2026: option 1)
@@ -157,9 +158,11 @@ PRODUCTION_CHANGES: list[dict[str, str]] = [
     {"feature": "Joint lines", "prototype": "0.4 mm shadow-line chamfers",
      "production": "0.3 mm (spec: seams 0.3 ±0.1 mm, flush within 0.1 mm)"},
     {"feature": "Base collar", "prototype": "Slip-fit plug; the battery stands on its spigot",
-     "production": "Screws up into a 3 mm steel battery-tray plate (chassis) with three M2.5 countersunk screws on "
-                   "a Ø11 circle, hidden under the foot; the foot screws onto an M4 stud. The battery and ballast "
-                   "stand on the tray plate (spec: collar is the battery tray and ballast holder; see open items)"},
+     "production": "Screws up into a 3 mm steel battery-tray plate with three M2.5 countersunk screws on a Ø11 circle, "
+                   "hidden under the foot; the foot screws onto an M4 stud by hand. Two more M2.5 countersunk screws at "
+                   "the plate's edge hold it to the ballast cup. Battery replaceable after removing the base collar: "
+                   "foot off by hand, 3 screws, collar off, 2 screws, the tray drops out with the battery, unplug it "
+                   "(1.5 mm hex key only; user, Oct 2026)"},
     {"feature": "Name", "prototype": "None",
      "production": "\"ATELIER\" etched 0.15 mm tone-on-tone round the foot on the collar's underside, Cormorant "
                    "Garamond SemiBold 2.4 mm, seen only when lifted (user, Oct 2026)"},
@@ -174,10 +177,6 @@ IMPLEMENTED_CHANGES: dict[str, set[str]] = {}
 OPEN_ITEMS: list[str] = [
     "Driver and radiator mounting: the spec has the chassis carry them; the model keeps the prototype's moulded "
     "seats in the shell. The moulder and the electronics supplier should propose the chassis brackets.",
-    "Base collar: the spec makes the collar the battery tray and ballast holder. With a centred upright battery, "
-    "the only fixing room under the Ø17.4 foot is directly below the battery, so the model screws the collar into a "
-    "chassis tray plate and the battery stays on that plate when the collar comes off. Taking the battery out with "
-    "the collar needs a bigger foot or a twist-lock (bayonet) base module; to decide.",
     "Nose-cone bayonet and hidden detent: specified, not modelled.",
     "Moulding the body: the belly is wider than both openings, so it needs a collapsible core or two welded halves.",
     "Antenna: the Bluetooth module should sit on the spine near the top, behind the red PC/ABS (radio-transparent) "
@@ -329,6 +328,7 @@ def namespace(params: dict[str, Any]) -> types.SimpleNamespace:
     ns.COLLAR_SCREWS, ns.COLLAR_SCREW_PCD = COLLAR_SCREWS, COLLAR_SCREW_PCD
     ns.COLLAR_SCREW_CLEAR, ns.COLLAR_SCREW_HEAD, ns.COLLAR_SCREW_TAP = COLLAR_SCREW_CLEAR, COLLAR_SCREW_HEAD, COLLAR_SCREW_TAP
     ns.FOOT_STUD_TAP, ns.FOOT_STUD_DEPTH = FOOT_STUD_TAP, FOOT_STUD_DEPTH
+    ns.TRAY_SCREW_DEPTH = TRAY_SCREW_DEPTH
     ns.COLLAR_LETTERING, ns.COLLAR_LETTERING_CAP, ns.COLLAR_LETTERING_DEPTH = _lettering(), LETTERING_CAP, LETTERING_DEPTH
     ns.TARGET_MASS_G = p["target_mass_kg"] * 1000
     ns.MATERIAL_DENSITY = dict(DENSITY)
@@ -527,6 +527,18 @@ def stability(params: dict[str, Any]) -> dict[str, Any]:
     return _stability(json.dumps(normalise(params), sort_keys=True))
 
 
+# Below this much spare ballast (g) the 1.8 kg target is at risk if supplier parts come in lighter than estimated.
+MASS_MARGIN_MIN_G = 50.0
+# Battery replacement after removing the base collar (user, Oct 2026): every step with standard tools.
+BATTERY_SERVICE = [
+    "Unscrew the foot by hand (it screws onto an M4 stud).",
+    "Undo the three M2.5 countersunk screws under it (1.5 mm hex key) and take off the base collar; unplug the "
+    "USB-C lead at its connector.",
+    "Undo the two M2.5 countersunk screws at the edge of the steel tray plate (same key); the plate drops out with "
+    "the battery standing on it.",
+    "Unplug the battery's connector and fit the new pack; reassemble in reverse (threadlocker on the M4 stud only).",
+]
+
 # Specification limits checked on the built model.
 SPEC = {"height_mm": (279.0, 281.0), "mass_g": (1700.0, 1900.0), "com_max_mm": 98.0, "tip_min_deg": 18.0,
         "air_l": (0.70, 0.80), "foot_clearance_mm": 2.0}
@@ -574,8 +586,9 @@ def production_change_checks(params: dict[str, Any]) -> list[dict[str, Any]]:
     foot_gap = parts["foot"].bounding_box().min.Z
     check("Foot clearance", abs(foot_gap - SPEC["foot_clearance_mm"]) < 0.05, f"foot {foot_gap:.2f} mm off the ground")
     check("Nose cone", "cone_oring_groove" in I, "O-ring groove on the spigot; bayonet not modelled")
-    check("Base collar", len(I.get("collar_screw_xy", [])) == COLLAR_SCREWS,
-          f"{len(I.get('collar_screw_xy', []))} × M2.5 on Ø{COLLAR_SCREW_PCD:g} under the Ø{I['foot_dia']:.1f} foot")
+    check("Base collar", len(I.get("collar_screw_xy", [])) == COLLAR_SCREWS and len(I.get("tray_screw_xy", [])) == 2,
+          f"{len(I.get('collar_screw_xy', []))} × M2.5 on Ø{COLLAR_SCREW_PCD:g} under the Ø{I['foot_dia']:.1f} foot; "
+          f"tray plate on 2 × M2.5 at R{abs(sum(I.get('tray_screw_xy', [(0, 0)])[0])):.1f}, outside the battery")
     check("Name", I.get("collar_lettering_mm3", 0) > 0.3,
           f"\"ATELIER\" etched {LETTERING_DEPTH:g} mm on R{I.get('collar_lettering_radius', 0):.1f} "
           f"({I.get('collar_lettering_mm3', 0):.2f} mm³)")

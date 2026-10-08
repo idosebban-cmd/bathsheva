@@ -7,8 +7,8 @@
 #      document is to follow). It wins over everything below it.
 #   2. The user's answers (Oct 2026): lacquered PC/ABS body ("anything that looks metallic
 #      must be real metal"), rear passive radiator, Ø20 knurled knob with the Bathsheva
-#      emblem tone-on-tone, "ATELIER" etched under the collar cup, service-replaceable battery
-#      through the base collar.
+#      emblem tone-on-tone, "ATELIER" etched under the collar cup, battery replaceable after
+#      removing the base collar (standard tools).
 #   3. The approved prototype model on branch claude/rocket-speaker-3d-model-xav3pn
 #      (model.py, params.py, renders, report): the form and proportions. Every departure is
 #      listed in atelier.PRODUCTION_CHANGES.
@@ -46,7 +46,7 @@ requirements:
     - "2 x 18650 1S2P (about 6,000 mAh / 21.6 Wh): 15 h or more at 50% volume; USB-C PD 5–9 V up to 20 W; full charge in 3 h or less; play while charging; standby after 20 min"
     - "One knob: turn = volume (24 soft detents); press = play/pause; double press = next; hold 2 s = power, 5 s = pairing, 10 s = reset"
     - "White status LED: slow pulse pairing; steady 5 s then off when connected; slow breathing charging; off when full; 3 quick blinks low battery"
-    - Battery replaceable by a service centre through the base collar (EU launch stays possible)
+    - "Battery replaceable after removing the base collar, with standard tools: foot off by hand, 3 + 2 M2.5 screws (1.5 mm hex key), plug-in battery lead (EU launch stays possible)"
     - "No visible fasteners; seams 0.3 ±0.1 mm, flush within 0.1 mm"
     - Stands on its three fin tips; static tip-over 18° or more; centre of mass 98 mm high or less
   environmental_requirements:
@@ -104,8 +104,8 @@ parts:
   - cad_key: collar
     name: Base collar
     function: >-
-      Gold cup under the body; doubles as the battery tray and ballast holder. Screws into the
-      chassis from below with the screws hidden under the foot. Carries the sealed USB-C port
+      Gold cup under the body. Screws up into the battery tray plate with three M2.5 screws hidden
+      under the foot; the battery is replaceable after removing it. Carries the sealed USB-C port
       (facing 45° down between two fins) and "ATELIER" etched on its underside.
     material_category: zinc
     material: Zamak 5
@@ -172,8 +172,8 @@ parts:
   - cad_key: chassis
     name: Chassis
     function: >-
-      Steel chassis inside the shell: three fin brackets, a spine carrying the boards and a battery
-      tray plate. Carries the fin screws and the base collar.
+      Steel chassis inside the shell: three fin brackets and a spine carrying the boards, plus the
+      battery tray plate (screwed to the ballast cup). Carries the fin screws and the base collar.
     material_category: bought_in
     material: Mild steel S275, 1.2 mm (zinc plated)
     process: Laser cut and bent (made to drawing)
@@ -225,9 +225,10 @@ joints:
       - {name: "M4 x 12 socket screw, fin to chassis", quantity: 6, material: "Stainless steel (A2)", notes: "Length to suit the boss; threadlocker."}
   - between: [collar, chassis]
     method: machine_screw_tapped
-    note: The base collar screws up into the chassis battery tray plate; the screws sit under the foot.
+    note: The base collar screws up into the battery tray plate; the screws sit under the foot. Two more screws at the plate's edge hold it to the ballast cup.
     hardware:
-      - {name: "M2.5 x 8 countersunk screw, collar to chassis", quantity: 3, material: "Stainless steel (A2)", notes: "Under the foot."}
+      - {name: "M2.5 x 8 countersunk screw, hex socket, collar to tray plate", quantity: 3, material: "Stainless steel (A2)", notes: "Under the foot; 1.5 mm hex key."}
+      - {name: "M2.5 x 6 countersunk screw, hex socket, tray plate to ballast cup", quantity: 2, material: "Stainless steel (A2)", notes: "1.5 mm hex key."}
   - between: [foot, collar]
     method: machine_screw_tapped
     note: The foot screws onto an M4 stud in the collar and covers the collar screws.
@@ -305,9 +306,9 @@ decisions:
   - topic: construction
     chosen: {value: chassis_screwed_hidden}
     reason: >-
-      Internal steel chassis carries the driver, radiator, boards and battery tray; fins screw into it
-      through the shell; the base collar screws into it from below under the foot; the nose cone
-      twist-locks. No visible fasteners (spec).
+      Internal steel chassis carries the driver, radiator, boards and battery tray plate; fins screw into
+      it through the shell; the base collar screws into the tray plate from below under the foot, and the
+      battery is replaceable after removing the collar; the nose cone twist-locks. No visible fasteners (spec).
 
 # Electrical model for the runtime estimate (pure calculation in app/electrical.py).
 # For a speaker the loads are average powers at the spec's 50% volume, not peak.
@@ -330,7 +331,7 @@ electrical:
     - "Bluetooth SIG qualification and product listing, building on the pre-certified module's qualification."
     - "IEC 62368-1 includes a stability test; the spec asks for 18° static tip-over or more."
     - "RoHS, REACH and WEEE registration (spec); UK battery producer registration."
-    - "EU Batteries Regulation (EU) 2023/1542 if EU sale follows: the battery is service-replaceable through the base collar."
+    - "EU Batteries Regulation (EU) 2023/1542 if EU sale follows: the battery is replaceable after removing the base collar, with a 1.5 mm hex key (no glue, no soldering); confirm with a compliance consultant that this meets 'readily removable by the end user'."
 
 # Default CAD parameters (mm, kg): the approved prototype at 280 mm, with the spec's body
 # diameter (Ø95) and wall (3.0 mm).

@@ -87,6 +87,14 @@ def test_collar_fixings_hidden_under_the_foot_and_lettering_round_it(built):
         assert (x * x + y * y) ** 0.5 + atelier.COLLAR_SCREW_HEAD / 2 < foot_r
     assert foot_r < I["collar_lettering_radius"] < I["collar_bottom_dia"] / 2
     assert I["collar_lettering_mm3"] > 0.3
+    # the tray plate's two screws sit outside the battery's footprint, so the plate drops out with the battery
+    bat = m.parts["battery"].bounding_box()
+    assert len(I["tray_screw_xy"]) == 2
+    for x, y in I["tray_screw_xy"]:
+        outside_x = abs(x) - atelier.COLLAR_SCREW_HEAD / 2 > bat.size.X / 2
+        outside_y = abs(y) - atelier.COLLAR_SCREW_HEAD / 2 > bat.size.Y / 2
+        assert outside_x or outside_y
+        assert (x * x + y * y) ** 0.5 + atelier.COLLAR_SCREW_HEAD / 2 < m.info["ballast_dia"] / 2
     assert "collar_etch_floor" in m.preview and "knob_logo_floor" in m.preview
 
 
@@ -138,6 +146,10 @@ def test_atelier_project_api_and_dfm(client):
         assert titles[t]["level"] == "pass", (t, titles[t])
     assert titles["Playback time at 50% volume"]["level"] == "pass"
     assert any(c["title"] == "Open item" for c in dfm["checks"])
+    assert titles["Battery replacement (standard tools)"]["level"] == "pass"
+    assert "1.5 mm hex key" in titles["Battery replacement (standard tools)"]["detail"]
+    risk = titles["Risk: mass margin"]  # the ballast is at its largest size: flagged until supplier weights arrive
+    assert risk["level"] == "warning" and "Recheck once supplier part weights arrive" in risk["detail"]
     mass = client.get(f"/api/projects/{pid}/cad").json()["mass"]
     assert 1.6 <= mass["total_kg"] <= 2.0
     rt = client.get(f"/api/projects/{pid}/runtime").json()
