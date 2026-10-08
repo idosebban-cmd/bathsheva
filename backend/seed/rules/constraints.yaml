@@ -4,6 +4,9 @@
 #
 #   applies_traits_any  the constraint applies to parts with any of these traits
 #   exempt_traits       parts with any of these traits are exempt (e.g. hidden)
+#   look_exempt_traits  exempt only while the finish doesn't look metallic (a lacquered plastic body:
+#                       "anything that looks metallic must be real metal"); a metallic-looking finish
+#                       on such a part is reported as a violation
 #   exempt_categories   material categories that are exempt (certified electrical parts)
 #   allowed_kinds       material kinds allowed: metal | glass | polymer
 #   transparent_kinds   kinds allowed instead for transparent parts (the lantern)
@@ -14,16 +17,19 @@ design_constraints:
   - key: visible_parts_solid_metal
     name: Visible metal parts must be solid metal
     message: >-
-      Every visible or touchable part must be solid metal, or glass for the
-      lantern. No plastic, metallised plastic or metal-effect paint on plastic,
-      at any volume. Hidden functional parts (grommets, gaskets, insulators,
-      strain relief) may be plastic or rubber.
+      Anything that looks metallic must be real metal: every visible or
+      touchable metal-look part is solid metal, or glass for transparent parts.
+      No metallised plastic or metal-effect paint, at any volume. A part whose
+      finish doesn't look metallic (Atelier's red lacquered body) may be
+      plastic. Hidden functional parts (grommets, gaskets, insulators, strain
+      relief, pads) may be plastic or rubber.
     applies_traits_any: [cosmetic, transparent, visible_trim]
     exempt_traits: [hidden]
+    look_exempt_traits: [non_metallic_look]
     exempt_categories: [electrical, bought_in]
     allowed_kinds: [metal]
     transparent_kinds: [glass]
     trim_traits: [visible_trim]
-    source: "user requirement (Oct 2026)"
+    source: "user requirement (Oct 2026); clarified for Atelier: anything that looks metallic must be real metal"
     confidence: high
     verified: false

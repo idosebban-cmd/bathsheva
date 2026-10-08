@@ -140,6 +140,84 @@ processes:
     confidence: medium
     verified: false
 
+  - key: zinc_die_casting
+    name: Zinc die casting (hot chamber)
+    material_categories: [zinc]
+    plain_language: >-
+      Molten zinc alloy (Zamak) is injected into a steel mould in a hot-chamber
+      machine. Zinc flows into fine detail and thin walls, casts smooth enough to
+      plate or PVD, and the moulds last much longer than aluminium ones. The mould
+      is still a big one-off cost and takes weeks to make.
+    requires_all: []
+    excludes: [transparent, electrical]
+    suits: [mounting_holes, side_hole, needs_mass, fine_detail, cosmetic, closed_top]
+    poor_fit: [open_both_ends, thin_wall]
+    volume: {min: 500, max: 1000000}
+    tooling_cost: high
+    unit_cost: low
+    finish_quality: good
+    wall_mm: {min: 0.6, max: 5.0, typical_min: 1.0, typical_max: 3.0}
+    when_to_prefer: Small, heavy, detailed metal parts that will be plated or PVD-coated, from a few hundred units up.
+    risks:
+      - Porosity near the gate can blister under plating or PVD; ask for vacuum-assisted casting and a porosity spec on cosmetic faces.
+      - Every wall needs draft; hollow parts need a core that can pull straight out.
+      - Zamak needs a copper-nickel (or copper-nickel-chrome) base before decorative PVD.
+    source: model-generated
+    confidence: medium
+    verified: false
+
+  - key: injection_moulding
+    name: Injection moulding (opaque plastic)
+    material_categories: [polymer]
+    plain_language: >-
+      Plastic pellets are melted and injected into a steel mould. Cheap per part
+      and very repeatable, with bosses, ribs and clips moulded in, but the mould
+      costs tens of thousands of pounds and every undercut needs a slide or a
+      collapsible core.
+    requires_all: []
+    excludes: [transparent, electrical, needs_mass]
+    suits: [cosmetic, mounting_holes, fine_detail, side_hole, closed_top]
+    poor_fit: [ring, short]
+    volume: {min: 1000, max: 1000000}
+    tooling_cost: very_high
+    unit_cost: low
+    finish_quality: good
+    wall_mm: {min: 1.0, max: 4.0, typical_min: 1.5, typical_max: 3.0}
+    when_to_prefer: Complex plastic housings in thousands of units, painted or lacquered when the look matters.
+    risks:
+      - A shell whose belly is wider than its openings can't come off a simple core; it needs a collapsible core or two welded halves.
+      - Sink marks over thick ribs and bosses show through gloss lacquer; keep ribs under about 60% of the wall.
+      - Weld lines and gate marks must be placed away from the visible faces or sanded before painting.
+    source: model-generated
+    confidence: medium
+    verified: false
+
+  - key: photo_etching_stainless
+    name: Photo-etched stainless sheet (formed after etching)
+    material_categories: [stainless]
+    plain_language: >-
+      A pattern is printed onto thin stainless sheet and the rest is chemically
+      etched away, so fine perforations such as a speaker grille come out crisp
+      and burr-free. The flat part is then pressed to its curve. Tooling is just a
+      photo-tool plus a simple forming die.
+    requires_all: [fine_detail]
+    excludes: [closed_top, transparent, electrical, needs_mass]
+    suits: [thin_wall, flat_pattern, cosmetic, perforated]
+    poor_fit: [tapered]
+    volume: {min: 10, max: 100000}
+    tooling_cost: low
+    unit_cost: low
+    finish_quality: good
+    wall_mm: {min: 0.1, max: 1.0, typical_min: 0.3, typical_max: 0.6}
+    when_to_prefer: Fine perforated grilles and covers in stainless that will be formed and PVD-coated.
+    risks:
+      - Holes and webs must be at least the sheet thickness (about 1x t); finer features etch away or close up.
+      - Forming a perforated sheet onto a double curve can distort the hole pattern near the edge; trial the forming die.
+    source: model-generated
+    confidence: medium
+    verified: false
+
+
   - key: sand_casting
     name: Sand or gravity casting
     material_categories: [aluminium]

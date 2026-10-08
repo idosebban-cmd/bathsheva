@@ -293,3 +293,68 @@ def test_metal_effect_finish_is_a_violation():
     band_q = recommend(RULES, faro_part("band_cream", finish="Brass-plated"), ctx())["open_questions"]
     assert any("Brass-look coatings are not allowed" in q for q in band_q)
     assert not any("PVD" in q for q in band_q)
+
+
+# --- Atelier seed data (zinc, stainless, PC/ABS; gold PVD) --------------------
+
+
+def speaker_part(**kw):
+    """A part as the Atelier template will describe it; no CAD-derived traits."""
+    return {"id": 1, "cad_key": kw.pop("cad_key", "x"), "name": kw.pop("name", "Part"), "derived_traits": [],
+            "open_questions": [], **kw}
+
+
+def speaker_ctx(**kw):
+    return Context(**{"cad_parameters": {}, "joints": [], "production_volume": 2000, **kw})
+
+
+def test_gold_pvd_finish_wins_over_brushed_and_faro_text_unchanged():
+    assert match_finishes(RULES, "Gold PVD, fine brushed satin")[0] == "gold_pvd"
+    assert match_finishes(RULES, "Brushed (satin), clear lacquer")[0] == "brushed_lacquer"
+    assert "gold_pvd" not in match_finishes(RULES, "Brushed (satin), clear lacquer")
+    assert match_finishes(RULES, "Oxblood red polished lacquer: primer, colour, two clear coats")[0] == "gloss_lacquer_polished"
+    assert RULES.finishes["gold_pvd"].metallic_look and not RULES.finishes["gold_pvd"].metal_effect
+
+
+def test_zinc_fins_are_die_cast_and_the_grille_is_etched_stainless():
+    fin = recommend(RULES, speaker_part(material_category="zinc", finish="Gold PVD, fine brushed satin",
+                                        traits=["cosmetic", "needs_mass", "mounting_holes", "fine_detail"]), speaker_ctx())
+    assert fin["recommendation"]["process_key"] == "zinc_die_casting"
+    assert fin["recommendation"]["material_key"] == "zamak_5"
+    assert not any(c["violations"] for c in fin["constraints"])  # real metal under the PVD
+    grille = recommend(RULES, speaker_part(material_category="stainless", finish="Gold PVD",
+                                           traits=["cosmetic", "fine_detail", "perforated", "thin_wall", "flat_pattern"]),
+                       speaker_ctx())
+    assert grille["recommendation"]["process_key"] == "photo_etching_stainless"
+    assert grille["recommendation"]["material_key"] == "stainless_304"
+
+
+def test_lacquered_plastic_body_is_allowed_only_while_it_does_not_look_metallic():
+    traits = ["cosmetic", "non_metallic_look", "mounting_holes", "side_hole"]
+    body = recommend(RULES, speaker_part(material_category="polymer", traits=traits,
+                                         finish="Oxblood red polished lacquer: primer, colour, two clear coats"),
+                     speaker_ctx())
+    assert body["recommendation"]["process_key"] == "injection_moulding"
+    assert body["recommendation"]["material_key"] == "pc_abs"
+    assert not any(c["scope"] == "part" for c in body["constraints"])
+    gold = recommend(RULES, speaker_part(material_category="polymer", traits=traits, finish="Gold PVD"), speaker_ctx())
+    c = next(c for c in gold["constraints"] if c["key"] == "visible_parts_solid_metal")
+    assert c["violations"] and "looks metallic" in c["violations"][0]
+    # Without the trait (every Faro part), a visible plastic part is still excluded.
+    plain = recommend(RULES, speaker_part(material_category="polymer", traits=["cosmetic"], finish="Red lacquer"),
+                      speaker_ctx())
+    assert plain["recommendation"] is None or plain["recommendation"]["process_key"] != "injection_moulding"
+    assert any(e.get("constraint") == "visible_parts_solid_metal" for e in plain["excluded"])
+
+
+def test_new_seed_entries_have_cost_rates():
+    from app.costing.data import load_cost_data
+
+    cost = load_cost_data()
+    for proc in ("zinc_die_casting", "injection_moulding", "photo_etching_stainless"):
+        assert proc in cost.process_rates
+    for mat in ("zamak_5", "stainless_304", "pc_abs", "tpu"):
+        assert mat in cost.material_prices
+        assert RULES.materials[mat].density_g_cm3
+    for fin in ("gold_pvd", "gloss_lacquer_polished"):
+        assert fin in cost.finish_rates

@@ -2,6 +2,36 @@
 # PROVENANCE: general knowledge written by an AI model. Not authoritative.
 
 finishes:
+  - key: gold_pvd
+    name: Gold PVD (fine brushed satin)
+    keywords: [pvd]
+    plain_language: >-
+      The metal part is brushed to a fine satin grain, then coated with a thin,
+      very hard gold-coloured ceramic layer in a vacuum chamber (physical vapour
+      deposition). It keeps its colour, resists wear and sweat far better than
+      lacquer, and one coater can match the same gold across brass, zinc,
+      aluminium and stainless parts.
+    min_process_finish: good
+    metallic_look: true
+    notes: >-
+      Needs a base layer: copper-nickel (or copper-nickel-chrome) on zinc die-castings, nickel on brass,
+      a suitable pretreatment on aluminium. Engraving and knurling are cut before coating, so grooves come
+      out gold too. Tone matched across parts (target ΔE <= 1.5).
+    source: model-generated
+    confidence: medium
+    verified: false
+  - key: gloss_lacquer_polished
+    name: Polished gloss lacquer (primer, colour, two clear coats)
+    keywords: [polished lacquer]
+    plain_language: >-
+      Primer, a solid colour coat and two clear coats, then cut and polished to a
+      deep, mirror-like gloss (90 GU or more). Every mark in the part shows
+      through, so the moulding has to be flawless.
+    min_process_finish: good
+    notes: On plastic, use a primer made for the substrate (adhesion tested to ISO 2409 class 0).
+    source: model-generated
+    confidence: medium
+    verified: false
   - key: brushed_lacquer
     name: Brushed (satin), clear lacquered
     keywords: [brushed]
@@ -11,6 +41,7 @@ finishes:
       fingerprints better than a mirror polish; the grain direction must be
       consistent across parts.
     min_process_finish: fair
+    metallic_look: true
     source: model-generated
     confidence: low
     verified: false
@@ -22,6 +53,7 @@ finishes:
       tumbler, then clear lacquered so the brass stays bright. Much cheaper per
       part than hand polishing, with a slightly softer shine.
     min_process_finish: fair
+    metallic_look: true
     source: model-generated
     confidence: low
     verified: false
@@ -58,6 +90,7 @@ finishes:
     keywords: [polish, polished]
     plain_language: Polished bare metal under clear lacquer. Shows every defect and fingerprint.
     min_process_finish: excellent
+    metallic_look: true
     source: model-generated
     confidence: medium
     verified: false
@@ -68,6 +101,7 @@ finishes:
       Real brass plated onto an aluminium part. Needs special pretreatment
       (zincate) and a good plater; solid brass is the more reliable option.
     min_process_finish: good
+    metallic_look: true
     notes: Plating adhesion on aluminium is a known risk; confirm with plater.
     source: model-generated
     confidence: low
