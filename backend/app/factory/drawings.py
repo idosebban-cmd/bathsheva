@@ -380,7 +380,7 @@ def _part_notes(key: str, p: dict[str, float], d: dict[str, Any]) -> list[tuple[
                   f"rests on it), outer skirt, open underneath; top outer edge R{_fmt(faro.GALLERY_ROUND)}.", INK))
         n.append(("Turned brass locating ring (from tube) soldered under the top: sits on the tower top, spigot fits inside it "
                   "(bonded).", INK))
-        n.append(("Brushed satin (matching Atelier), clear lacquer. The railing is soldered or bonded on the top face.", INK))
+        n.append(("Brushed satin, clear lacquer. The railing is soldered or bonded on the top face.", INK))
     elif key == "railing":
         fp = railing_flat_pattern(p)
         n.append((f"Photo-etched brass sheet t = {_fmt(faro.RAIL_T)}. Flat pattern {_fmt(fp['length'])} × {_fmt(fp['height'])}: "
@@ -394,7 +394,7 @@ def _part_notes(key: str, p: dict[str, float], d: dict[str, Any]) -> list[tuple[
         n.append((f"Top band carries the bayonet: lip {_fmt(faro.LIP_H)} high, {faro.LOCK_LUGS} entry slots "
                   f"{_fmt(faro.LOCK_LUG_W + 2 * faro.FIT_CLEAR)} wide, and a stop {abs(faro.LOCK_TURN_DEG):g}° clockwise "
                   "(seen from above) from each slot.", INK))
-        n.append(("Lowered over the glass and bonded to the gallery. Brushed satin (matching Atelier), clear lacquer.", INK))
+        n.append(("Lowered over the glass and bonded to the gallery. Brushed satin, clear lacquer.", INK))
     elif key == "lantern_glass":
         n.append((f"Frosted (acid-etched inside) borosilicate 3.3 tube, OD Ø{_fmt(d['glass_od'])}, wall "
                   f"{_fmt(p['glass_wall_thickness'])}, length {_fmt(d['glass_height'])}. Nearest stock size may be proposed.", INK))
@@ -412,11 +412,11 @@ def _part_notes(key: str, p: dict[str, float], d: dict[str, Any]) -> list[tuple[
         n.append(("Hidden when fitted: natural brass, no cosmetic finish.", INK))
     elif key == "finial":
         n.append((f"Brass ball Ø{_fmt(p['finial_diameter'])}, turned from close-fitting bar, on a neck, M4 stud through the cap (nyloc nut inside).", INK))
-        n.append(("Brushed satin (matching Atelier), clear lacquer.", INK))
+        n.append(("Brushed satin, clear lacquer.", INK))
     elif key == "knob":
         n.append((f"Solid brass knob (turned from close-fitting bar) Ø{_fmt(p['knob_diameter'])} × {_fmt(faro.KNOB_PROUD)}, front edge R1; D-shaft bore "
                   "and grub screw (or push-fit) to suit the chosen 9 mm pot.", INK))
-        n.append(("Brushed satin (matching Atelier), clear lacquer. Back face clears the conical tower by 0.5 mm.", INK))
+        n.append(("Brushed satin, clear lacquer. Back face clears the conical tower by 0.5 mm.", INK))
         n.append((f"Edge: fine straight knurl, DIN 82 RAA {_fmt(faro.KNURL_PITCH)} ({faro.knurl_teeth(p['knob_diameter'])} teeth on "
                   f"Ø{_fmt(p['knob_diameter'])}), full length of the side up to the R1 front edge, which stays smooth.", INK))
         from app.factory import logo as art
@@ -428,8 +428,8 @@ def _part_notes(key: str, p: dict[str, float], d: dict[str, Any]) -> list[tuple[
                   "(sun at the top) with the knob turned to its off stop. Artwork: artwork/F-11_knob_logo.svg / .dxf (1:1).", INK))
     elif key == "nameplate":
         n.append((f"Etched brass t = {_fmt(faro.NAMEPLATE_T)}, {_fmt(faro.NAMEPLATE_W)} × {_fmt(faro.NAMEPLATE_H)}, corner R1.2, "
-                  f"formed to R{_fmt(p['base_diameter'] / 2)} (the base). \"FARO\" etched, filled black. Face brushed satin "
-                  "(matching Atelier), clear lacquer.", INK))
+                  f"formed to R{_fmt(p['base_diameter'] / 2)} (the base). \"FARO\" etched, filled black. Face brushed satin, "
+                  "clear lacquer.", INK))
         n.append(("Bonded on the base front, centred {0} above the underside.".format(_fmt(faro.NAMEPLATE_Z)), INK))
         n.append((f"Lettering: \"FARO\" in Cormorant Garamond SemiBold, cap height {_fmt(5.0)}, centred on the plate, etched "
                   "0.15 deep and filled black. Artwork: artwork/F-05_nameplate_lettering.svg / .dxf (1:1). Fine serifs: "

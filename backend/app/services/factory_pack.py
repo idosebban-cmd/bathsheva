@@ -358,8 +358,8 @@ def rfq_blocks(c: dict[str, Any]) -> list[Block]:
                        rows=[[col["name"], ", ".join(_part_names(c, col["parts"])), col["hex"], _ral_text(col), col["gloss"]]
                              for col in r["colours"]]))
         b.append(Block("p", "The tower is two-tone: oxblood red from the foot to the masked line, cream above it. Gloss is measured "
-                            "at 60° on the finished part. All visible brass is brushed to an even satin grain (matching our Atelier "
-                            "speaker) and clear-lacquered; brass is natural metal, so its hex is a reference only, never a paint "
+                            "at 60° on the finished part. All visible brass is brushed to an even satin grain and "
+                            "clear-lacquered; brass is natural metal, so its hex is a reference only, never a paint "
                             "colour. Keep the brush direction consistent between parts (horizontal as fitted)."))
 
     b.append(Block("h2", "Quantities"))

@@ -15,7 +15,7 @@ export const FINISH: Record<string, Finish> = {
 const GLOW = new THREE.Color("#ffb45e");
 
 // Design reference colours (the RFQ's hex values) and gloss levels: base satin black 30–50 GU, cream and oxblood
-// red gloss 80+ GU, brass brushed (satin grain) and clear-lacquered like Atelier.
+// red gloss 80+ GU, brass brushed (satin grain) and clear-lacquered.
 const BLACK = "#121212", CREAM = "#f9f2e1", RED = "#8a1c15", BRASS = "#c4a15a";
 
 /** Brushed grain without UVs: fine horizontal streaks in the roughness, keyed to world height (mm). */
