@@ -1,0 +1,352 @@
+# Atelier product template: the retro-rocket Bluetooth speaker. Seeds a new Atelier project.
+# Every value here is editable. Placeholder commercial inputs are listed in
+# `assumed_fields` so the UI labels them as assumptions.
+#
+# Sources, in priority order:
+#   1. Atelier Technical Specification (key points from the user, Oct 2026; the full
+#      document is to follow). It wins over everything below it.
+#   2. The user's answers (Oct 2026): lacquered PC/ABS body ("anything that looks metallic
+#      must be real metal"), rear passive radiator, Ø20 knurled knob with the Bathsheva
+#      emblem tone-on-tone, "ATELIER" etched under the collar cup, service-replaceable battery
+#      through the base collar.
+#   3. The approved prototype model on branch claude/rocket-speaker-3d-model-xav3pn
+#      (model.py, params.py, renders, report): the form and proportions. Every departure is
+#      listed in atelier.PRODUCTION_CHANGES.
+
+name: Atelier
+description: >-
+  A premium portable Bluetooth speaker in the form of a retro rocket: an oxblood
+  red lacquered body with a gold honeycomb grille and bezel, a gold nose cone, three
+  gold fins it stands on and a gold collar and foot. One rotary push knob, a white
+  status LED, 20 W into a 57 mm full-range driver with a rear passive radiator, and
+  15 hours or more on a charge over USB-C. First product of Bathsheva London.
+
+requirements:
+  approx_dimensions: {height_mm: 280, width_mm: 140, depth_mm: 140}   # spec: 280 ±1; fin span about 140
+  target_retail_price: {amount: 199, currency: GBP}                  # spec (for now)
+  production_volume: 500                                             # first order 300–500 (pre-orders); quoted 300 / 500 / 2,000
+  target_unit_cost: {amount: null, currency: GBP}                    # TBD
+  intended_markets: [UK]                                             # UK first; CE for the EU may follow
+  power_type: battery
+  battery_runtime_h: 15                                              # spec: at least 15 h at 50% volume
+  preferred_materials:
+    - Injection-moulded PC/ABS body (3.0 mm wall), lacquered
+    - Zamak 5 die-cast fins (hollow, 3 mm wall), collar and foot
+    - 6061 aluminium nose cone (CNC turned, hollowed) and bezel (CNC, diamond-cut chamfer)
+    - Solid brass C360 knob (CNC turned)
+    - Stainless 304 photo-etched grille (0.5 mm), black acoustic fabric behind
+  preferred_finishes:
+    - Oxblood red #8A1C15, gloss 90 GU or more, primer + colour + two clear coats, polished (ΔE ≤ 1.0 to the master)
+    - Gold PVD, fine brushed satin, on every visible metal part, one matched tone (ΔE ≤ 1.5 across parts)
+  functional_requirements:
+    - "Bluetooth 5.3 or later (LE Audio ready), SBC and AAC (aptX Adaptive optional), 10 m range"
+    - Multipoint (2 devices), stereo pairing, remembers 8 devices, OTA firmware updates; no microphone, no app
+    - "20 W RMS Class-D; 60 Hz–20 kHz (−6 dB); 90 dB SPL or more at 1 m; THD 1% or less at 85 dB"
+    - DSP bass enhancement, loudness compensation and a limiter
+    - "2 x 18650 1S2P (about 6,000 mAh / 21.6 Wh): 15 h or more at 50% volume; USB-C PD 5–9 V up to 20 W; full charge in 3 h or less; play while charging; standby after 20 min"
+    - "One knob: turn = volume (24 soft detents); press = play/pause; double press = next; hold 2 s = power, 5 s = pairing, 10 s = reset"
+    - "White status LED: slow pulse pairing; steady 5 s then off when connected; slow breathing charging; off when full; 3 quick blinks low battery"
+    - Battery replaceable by a service centre through the base collar (EU launch stays possible)
+    - "No visible fasteners; seams 0.3 ±0.1 mm, flush within 0.1 mm"
+    - Stands on its three fin tips; static tip-over 18° or more; centre of mass 98 mm high or less
+  environmental_requirements:
+    - Indoor only, 0–40 °C
+    - "Drop 0.5 m unpackaged; ISTA 2A packaged"
+
+assumed_fields:
+  - production_volume
+  - target_unit_cost
+
+# One CAD body per part (cad_key matches the generator's body names). Parts made several
+# times (fins, fin pads) have `quantity`; the generator models one and places the copies.
+# Traits: `hidden` parts are never seen (they may be plastic or rubber); `non_metallic_look`
+# marks the lacquered body, which may be plastic while its finish doesn't look metallic.
+# made_to_drawing: bought-in parts that still get a drawing in the factory pack.
+parts:
+  - cad_key: body
+    name: Body
+    function: >-
+      One-piece moulded shell, open at the nose and the base, with the front sound opening, the
+      rear radiator opening, the knob and LED holes and six slots for the fin bolts.
+    material_category: polymer
+    material: PC/ABS
+    finish: "Oxblood red polished lacquer: primer, colour, two clear coats, polished (≥ 90 GU)"
+    traits: [cosmetic, non_metallic_look, mounting_holes, side_hole, thin_wall]
+  - cad_key: nose_cone
+    name: Nose cone
+    function: >-
+      Hollow nose cone on a spigot with an O-ring; a bayonet with a hidden detent locks it to the
+      body (0.3 mm shadow line at the joint).
+    material_category: aluminium
+    material: Aluminium 6061-T6
+    finish: Gold PVD, fine brushed satin
+    traits: [axisymmetric, cosmetic, domed, closed_top, user_accessible]
+  - cad_key: fin
+    name: Fin
+    quantity: 3
+    function: >-
+      Hollow die-cast fin (3 mm wall) at 60°, 180° and 300°; the three tips carry the speaker. Two
+      M4 screws from inside the chassis go through slots in the shell into cast bosses.
+    material_category: zinc
+    material: Zamak 5
+    finish: Gold PVD, fine brushed satin
+    traits: [cosmetic, needs_mass, mounting_holes, fine_detail]
+  - cad_key: fin_pad
+    name: Fin tip pad
+    quantity: 3
+    function: 1 mm TPU pad under each fin tip, so the fins don't mark furniture; hidden.
+    material_category: bought_in
+    material: TPU, 1 mm, adhesive-backed
+    process: Die-cut (made to drawing)
+    finish: Black
+    traits: [hidden]
+    made_to_drawing: true
+  - cad_key: collar
+    name: Base collar
+    function: >-
+      Gold cup under the body; doubles as the battery tray and ballast holder. Screws into the
+      chassis from below with the screws hidden under the foot. Carries the sealed USB-C port
+      (facing 45° down between two fins) and "ATELIER" etched on its underside.
+    material_category: zinc
+    material: Zamak 5
+    finish: Gold PVD, fine brushed satin
+    traits: [axisymmetric, cosmetic, needs_mass, mounting_holes, side_hole, closed_top]
+  - cad_key: foot
+    name: Foot
+    function: Short rounded foot, 2 mm off the ground; screws onto the collar and hides the collar screws.
+    material_category: zinc
+    material: Zamak 5
+    finish: Gold PVD, fine brushed satin
+    traits: [axisymmetric, cosmetic, short, needs_mass, user_accessible]
+  - cad_key: grille
+    name: Front grille
+    function: Photo-etched hexagon grille (2.2 mm holes, 0.7 mm webs) formed to the body; bonded to the bezel.
+    material_category: stainless
+    material: Stainless steel 304, 0.5 mm
+    finish: Gold PVD, fine brushed satin
+    traits: [cosmetic, fine_detail, perforated, thin_wall, flat_pattern]
+  - cad_key: grille_fabric
+    name: Acoustic fabric
+    function: Black acoustic fabric behind the front grille, so no red shows through the holes.
+    material_category: bought_in
+    material: Black acoustic fabric
+    finish: Black
+    traits: [hidden]
+  - cad_key: bezel
+    name: Front bezel
+    function: Raised ring round the grille; the grille is bonded to it and the pair is fixed from inside.
+    material_category: aluminium
+    material: Aluminium 6061-T6
+    finish: Gold PVD, fine brushed satin, diamond-cut chamfer
+    traits: [cosmetic, ring, short, fine_detail]
+  - cad_key: rear_grille
+    name: Rear radiator cover
+    function: Perforated cover over the rear passive radiator (same sheet and hole pattern as the front grille).
+    material_category: stainless
+    material: Stainless steel 304, 0.5 mm
+    finish: Gold PVD, fine brushed satin
+    traits: [cosmetic, fine_detail, perforated, thin_wall, flat_pattern]
+  - cad_key: rear_bezel
+    name: Rear bezel
+    function: Oval bezel round the rear radiator cover, matching the front bezel.
+    material_category: aluminium
+    material: Aluminium 6061-T6
+    finish: Gold PVD, fine brushed satin, diamond-cut chamfer
+    traits: [cosmetic, ring, short, fine_detail]
+  - cad_key: knob
+    name: Knob
+    function: >-
+      Solid brass knob, Ø20, fine straight knurl, the Bathsheva emblem engraved tone-on-tone in its
+      face (turns with the knob). Volume, play/pause, track, power, pairing and reset.
+    material_category: brass
+    material: Brass C360
+    finish: Gold PVD, fine brushed satin
+    traits: [axisymmetric, cosmetic, short, user_accessible]
+  - cad_key: chassis
+    name: Chassis
+    function: >-
+      Steel chassis inside the shell: three fin brackets, a spine carrying the boards and a battery
+      tray plate. Carries the fin screws and the base collar.
+    material_category: bought_in
+    material: Mild steel S275, 1.2 mm (zinc plated)
+    process: Laser cut and bent (made to drawing)
+    finish: Zinc plated
+    traits: [hidden]
+    made_to_drawing: true
+  - cad_key: ballast
+    name: Ballast cup
+    function: Steel cup round the battery, sized so the speaker weighs 1.8 kg with its centre of mass low.
+    material_category: bought_in
+    material: Mild steel S275 (zinc plated)
+    process: Sawn bar, milled pocket (made to drawing)
+    finish: Zinc plated
+    traits: [hidden, needs_mass]
+    made_to_drawing: true
+  - cad_key: driver
+    name: Driver
+    function: 57 mm full-range neodymium driver, front-firing behind the grille.
+    material_category: electrical
+    finish: None (internal)
+    traits: [electrical, internal]
+  - cad_key: passive_radiator
+    name: Passive radiator
+    function: About 60 × 40 mm oval passive radiator, firing to the rear behind the rear cover.
+    material_category: electrical
+    finish: None (internal)
+    traits: [electrical, internal]
+  - cad_key: battery
+    name: Battery pack
+    function: 2 x 18650 Li-ion, 1S2P (about 6,000 mAh, 21.6 Wh), pre-certified, in the base collar's tray.
+    material_category: electrical
+    finish: None (internal)
+    traits: [electrical, internal, user_accessible]
+  - cad_key: main_board
+    name: Main board
+    function: >-
+      Pre-certified Bluetooth module, DSP, 20 W Class-D amplifier with its boost converter, USB-C PD
+      charger and the knob encoder input; on the chassis spine.
+    material_category: electrical
+    finish: None (internal)
+    traits: [electrical, heat_source, internal]
+
+# How parts join. `hardware` lines appear in the BOM.
+joints:
+  - between: [fin, chassis]
+    method: machine_screw_tapped
+    note: Two M4 screws per fin from inside the chassis brackets, through slots in the shell into cast bosses in the fin.
+    hardware:
+      - {name: "M4 x 12 socket screw, fin to chassis", quantity: 6, material: "Stainless steel (A2)", notes: "Length to suit the boss; threadlocker."}
+  - between: [collar, chassis]
+    method: machine_screw_tapped
+    note: The base collar screws up into the chassis battery tray plate; the screws sit under the foot.
+    hardware:
+      - {name: "M2.5 x 8 countersunk screw, collar to chassis", quantity: 3, material: "Stainless steel (A2)", notes: "Under the foot."}
+  - between: [foot, collar]
+    method: machine_screw_tapped
+    note: The foot screws onto an M4 stud in the collar and covers the collar screws.
+    hardware:
+      - {name: "M4 x 8 stud, foot to collar", quantity: 1, material: "Stainless steel (A2)", notes: "Thread-locked into the collar."}
+  - between: [nose_cone, body]
+    method: bayonet
+    note: Spigot with an O-ring; bayonet with a hidden detent.
+    hardware:
+      - {name: "O-ring, nose cone spigot", quantity: 1, material: "NBR or silicone", notes: "Section and size TBD with the moulder."}
+  - between: [collar, body]
+    method: clamp_with_gasket
+    note: The collar spigot seals the body's bottom opening with an O-ring (the enclosure is sealed apart from the radiator).
+    hardware:
+      - {name: "O-ring, collar spigot", quantity: 1, material: "NBR or silicone", notes: "Section and size TBD."}
+  - between: [grille, bezel]
+    method: adhesive_bonding
+    note: Grille bonded to the bezel; the pair is fixed from inside (no visible fasteners).
+  - between: [driver, chassis]
+    method: machine_screw_tapped
+    note: The chassis carries the driver (spec); four M3 screws through the driver frame.
+    hardware:
+      - {name: "M3 x 8 screw, driver", quantity: 4, material: "Steel, zinc plated"}
+
+open_decisions: []
+
+# Engineering decisions accepted by the user (Technical Specification, Oct 2026), recorded on new projects.
+decisions:
+  - part: body
+    process: injection_moulding
+    material: pc_abs
+    reason: >-
+      PC/ABS shell, 3.0 mm wall, injection moulded, then primer, colour, two clear coats and polish
+      (spec). The belly is wider than both openings, so the toolmaker must propose a collapsible core
+      or two welded halves.
+  - part: nose_cone
+    process: cnc_machining
+    material: al_6061
+    reason: 6061 aluminium, CNC turned and hollowed (spec), gold PVD.
+  - part: fin
+    process: zinc_die_casting
+    material: zamak_5
+    reason: Zamak 5 die-cast, hollow with a 3 mm wall (spec); copper-nickel base, then gold PVD.
+  - part: collar
+    process: zinc_die_casting
+    material: zamak_5
+    reason: Zamak die-cast collar (spec), machined at the USB-C port face and the screw seats.
+  - part: foot
+    process: zinc_die_casting
+    material: zamak_5
+    reason: Zamak die-cast, machined (spec).
+  - part: grille
+    process: photo_etching_stainless
+    material: stainless_304
+    reason: Stainless 304, 0.5 mm, photo-etched hexagons (spec); webs 0.7 mm are above the sheet thickness.
+  - part: rear_grille
+    process: photo_etching_stainless
+    material: stainless_304
+    reason: Same sheet and hole pattern as the front grille.
+  - part: bezel
+    process: cnc_machining
+    material: al_6061
+    reason: 6061 CNC with a diamond-cut chamfer (spec), gold PVD.
+  - part: rear_bezel
+    process: cnc_machining
+    material: al_6061
+    reason: As the front bezel.
+  - part: knob
+    process: cnc_turning_near_net
+    material: brass
+    reason: Solid brass C360, CNC turned (spec); knurled and engraved before PVD, so the grooves are gold too.
+  - topic: power
+    chosen: {value: battery}
+    reason: 2 x 18650 1S2P, USB-C PD charging (spec).
+  - topic: construction
+    chosen: {value: chassis_screwed_hidden}
+    reason: >-
+      Internal steel chassis carries the driver, radiator, boards and battery tray; fins screw into it
+      through the shell; the base collar screws into it from below under the foot; the nose cone
+      twist-locks. No visible fasteners (spec).
+
+# Electrical model for the runtime estimate (pure calculation in app/electrical.py).
+# For a speaker the loads are average powers at the spec's 50% volume, not peak.
+electrical:
+  battery:
+    cells: 2
+    cell_capacity_mah: 3000
+    cell_voltage: 3.6
+    usable_fraction: 0.90
+    source: "Technical Specification: 2 x 18650 1S2P, about 6,000 mAh / 21.6 Wh"
+    confidence: medium
+    verified: false
+  driver_efficiency: 0.85      # boost converter + Class-D amplifier, combined
+  loads:
+    - {part: main_board, name: "Bluetooth, DSP and standby", watts: 0.35, source: model-generated, confidence: low, verified: false}
+    - {part: driver, name: "Amplifier output at 50% volume (average music)", watts: 0.6, source: model-generated, confidence: low, verified: false}
+  compliance:
+    - "UN38.3 test summary for the cells and pack before shipping, and IEC 62133-2 for the cells and pack (spec): supplied with a pre-certified pack; check it covers the exact pack."
+    - "UK Radio Equipment Regulations 2017 (UKCA): radio (ETSI EN 300 328), EMC (EN 301 489-1/-17), safety (IEC 62368-1) and RF exposure (EN 62479). CE (Radio Equipment Directive) for the EU later."
+    - "Bluetooth SIG qualification and product listing, building on the pre-certified module's qualification."
+    - "IEC 62368-1 includes a stability test; the spec asks for 18° static tip-over or more."
+    - "RoHS, REACH and WEEE registration (spec); UK battery producer registration."
+    - "EU Batteries Regulation (EU) 2023/1542 if EU sale follows: the battery is service-replaceable through the base collar."
+
+# Default CAD parameters (mm, kg): the approved prototype at 280 mm, with the spec's body
+# diameter (Ø95) and wall (3.0 mm).
+cad_parameters:
+  overall_height: 280
+  body_max_diameter: 95
+  target_mass_kg: 1.8
+  base_clearance: 25.8
+  nose_cone_height: 45.2
+  wall_thickness: 3.0
+  grille_height: 162.1
+  grille_diameter: 72.6
+  grille_thickness: 0.5
+  grille_perforated: 1
+  fin_tip_radius: 79.0
+  fin_thickness: 8.0
+  knob_diameter: 20
+  pr_width: 40
+  pr_height: 60
+
+cost_items: []
+
+pricing:
+  retail_price: 199
+  price_points: [199]
+  source: "Technical Specification (Oct 2026)"
