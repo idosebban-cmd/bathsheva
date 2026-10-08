@@ -322,6 +322,11 @@ electrical:
     confidence: medium
     verified: false
   driver_efficiency: 0.85      # boost converter + Class-D amplifier, combined
+  runtime_basis: "at 50% volume (average music)"
+  runtime_note: >-
+    Average power at 50% volume with typical music, a new battery at room temperature (spec: 15 h or
+    more). Louder listening runs shorter; capacity falls with age and cold. Confirm with the chosen
+    module, amplifier and driver.
   loads:
     - {part: main_board, name: "Bluetooth, DSP and standby", watts: 0.35, source: model-generated, confidence: low, verified: false}
     - {part: driver, name: "Amplifier output at 50% volume (average music)", watts: 0.6, source: model-generated, confidence: low, verified: false}
@@ -332,6 +337,48 @@ electrical:
     - "IEC 62368-1 includes a stability test; the spec asks for 18° static tip-over or more."
     - "RoHS, REACH and WEEE registration (spec); UK battery producer registration."
     - "EU Batteries Regulation (EU) 2023/1542 if EU sale follows: the battery is replaceable after removing the base collar, with a 1.5 mm hex key (no glue, no soldering); confirm with a compliance consultant that this meets 'readily removable by the end user'."
+
+# Acoustic and power model (pure calculation in app/audio.py) against the spec. The driver and radiator
+# Thiele-Small values are typical for a 57 mm neodymium full-range and a 60 x 40 mm radiator until the
+# supplier's datasheets arrive (model-generated, unverified).
+audio:
+  target_spl_db: 90            # spec: 90 dB SPL or more at 1 m
+  target_low_hz: 60            # spec: 60 Hz–20 kHz (−6 dB)
+  driver:
+    name: 57 mm full-range, neodymium
+    fs_hz: 130
+    qts: 0.65
+    vas_l: 0.35
+    sd_cm2: 15.2
+    xmax_mm: 2.5
+    sensitivity_db: 84         # 1 W / 1 m
+    power_rms_w: 20            # rated for the 20 W amplifier (user, Oct 2026)
+    source: model-generated
+    confidence: low
+    verified: false
+  passive_radiator:
+    name: About 60 x 40 mm oval
+    sd_cm2: 13.0
+    xmax_mm: 5.0
+    target_fb_hz: 65
+    source: model-generated
+    confidence: low
+    verified: false
+  amplifier:
+    rms_w: 20                  # spec: Class-D 20 W RMS
+    efficiency: 0.85
+    boost_efficiency: 0.90     # 1S battery (about 3.6 V): a boost converter feeds the amplifier
+    cell_loaded_voltage: 3.2
+    cell_max_continuous_a: 10  # typical 18650 power cell; confirm with the chosen cells
+    source: model-generated
+    confidence: low
+    verified: false
+  charging:
+    pd_w: 20                   # spec: USB-C PD 5–9 V up to 20 W
+    charger_efficiency: 0.88
+    max_charge_c: 0.5          # typical standard charge rate per cell
+    cv_factor: 1.25            # constant-voltage finish
+    target_h: 3                # spec: full charge in 3 h or less
 
 # Default CAD parameters (mm, kg): the approved prototype at 280 mm, with the spec's body
 # diameter (Ø95) and wall (3.0 mm).

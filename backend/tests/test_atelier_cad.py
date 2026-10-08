@@ -152,6 +152,11 @@ def test_atelier_project_api_and_dfm(client):
     assert risk["level"] == "warning" and "Recheck once supplier part weights arrive" in risk["detail"]
     mass = client.get(f"/api/projects/{pid}/cad").json()["mass"]
     assert 1.6 <= mass["total_kg"] <= 2.0
+    au = client.get(f"/api/projects/{pid}/audio").json()
+    assert au["applicable"] and 0.70 <= au["box_l"] <= 0.80 and au["spl_ok"] and au["charge_ok"] and au["current_ok"]
+    for t in ("Loudness (amplifier-limited)", "20 W from a 1S battery", "Charge time"):
+        assert titles[t]["level"] == "pass", (t, titles[t])
+    assert {"Bass at full volume (excursion)", "Box and radiator tuning"} <= set(titles)
     rt = client.get(f"/api/projects/{pid}/runtime").json()
     assert rt["hours"] >= 15 and rt["without_tower_light_h"] is None
     # Faro's factory pack isn't offered for Atelier yet

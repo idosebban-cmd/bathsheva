@@ -98,9 +98,17 @@ def delete_image(image_id: int, project: Project = Depends(get_project), session
     session.commit()
 
 
+@router.get("/{project_id}/audio")
+def get_audio(project: Project = Depends(get_project)):
+    """Box alignment, loudness, bass excursion, peak battery current and charge time (speakers)."""
+    from app.services.audio import project_audio
+
+    return project_audio(project)
+
+
 @router.get("/{project_id}/runtime")
 def get_runtime(project: Project = Depends(get_project)):
-    """Estimated battery runtime at full brightness vs the runtime requirement."""
+    """Estimated battery runtime (on the template's basis) vs the runtime requirement."""
     from app.services.electrical import project_runtime
 
     return project_runtime(project)

@@ -40,7 +40,9 @@ backend/app/
   products/          Product registry: one entry per template (label, noun, CAD generator, product-only DFM checks,
                      wall/draft parameters, bought-in densities). Services ask `product_for(project)`, never name a product
   cad/               build123d generators (faro.py; interface in generator.py), validation types, export (STEP/STL/GLB)
-  electrical.py      Battery runtime from the battery spec and LED loads (pure)
+  electrical.py      Battery runtime from the battery spec and loads (pure); the template's runtime_basis says on what basis
+  audio.py           Speaker acoustics and power (pure): box alignment, radiator tuning mass, amplifier- and excursion-limited
+                     SPL, peak battery current, charge time; from the template's `audio` block and the CAD box volume
   ai/                LLM provider abstraction (anthropic | mock | none)
   costing/           Cost model: data.py (seed loader), model.py (pure calculation),
                      assemble.py (snapshot + config -> inputs), pricing.py (retail -> target factory cost)
@@ -89,7 +91,7 @@ Other useful commands, run from `backend/`: `.venv/bin/alembic current` and `.ve
 | Tab | Endpoints (`/api/projects/{id}/…`) |
 |---|---|
 | Projects | `GET /api/templates` (registered products, for the create buttons), `GET/POST /api/projects` (template `faro` seeds parts, requirements and CAD defaults), `DELETE /api/projects/{id}` (records cascade, then `data/projects/<id>/` is removed; the page confirms, naming the project and its times) |
-| Overview | `PATCH /api/projects/{id}`, `POST /images`, `GET /runtime`, `GET/POST /template-upgrade` |
+| Overview | `PATCH /api/projects/{id}`, `POST /images`, `GET /runtime`, `GET /audio` (speakers), `GET/POST /template-upgrade` |
 | Parts | `GET/POST/PATCH/DELETE /parts`; quotes `GET/POST /parts/{part}/quotes`, `DELETE /quotes/{id}`; `GET /quote-pack.zip` |
 | CAD | `GET /cad`, `POST /cad/validate`, `POST /cad/generate`, `GET /cad/models/{v}/download.zip`; files under `/files/projects/...` |
 | Engineering | `GET /recommendations`, `POST /recommendations/{part}/explain` (LLM), `POST /decisions` |

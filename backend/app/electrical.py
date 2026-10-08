@@ -1,7 +1,10 @@
-"""Battery runtime estimate from the battery spec and the LED loads. Pure (no DB).
+"""Battery runtime estimate from the battery spec and the loads. Pure (no DB).
 
     runtime_h = cells x capacity (Ah) x cell voltage x usable fraction x driver efficiency
-                / sum of the loads at full brightness (W)
+                / sum of the loads (W)
+
+The loads are what the template says they are: a lamp's at full brightness, a speaker's average
+power at its rated listening level. The template's `runtime_basis` and `runtime_note` say which.
 """
 
 from __future__ import annotations
@@ -16,8 +19,13 @@ def battery_energy_wh(battery: dict[str, Any]) -> float:
     return float(battery["cells"]) * float(battery["cell_capacity_mah"]) / 1000 * float(battery["cell_voltage"])
 
 
+DEFAULT_BASIS = "at full brightness with every light on"
+DEFAULT_NOTE = ("Full brightness, all lights on, a new battery at room temperature. Dimmed use runs much longer; "
+                "capacity falls with age and cold. Confirm with the chosen cells and driver.")
+
+
 def estimate(spec: dict[str, Any], target_h: float | None = None, removed_parts: set[str] | None = None) -> dict[str, Any]:
-    """Runtime at full brightness with every light on, and per load on its own."""
+    """Runtime with every load on (on the template's basis), and per load on its own."""
     removed = removed_parts or set()
     bat = spec["battery"]
     eff = float(spec["driver_efficiency"])
@@ -47,6 +55,6 @@ def estimate(spec: dict[str, Any], target_h: float | None = None, removed_parts:
             "source": bat.get("source", "model-generated"), "confidence": bat.get("confidence", "low"),
         },
         "unverified": unverified,
-        "note": "Full brightness, all lights on, a new battery at room temperature. Dimmed use runs much longer; "
-                "capacity falls with age and cold. Confirm with the chosen cells and driver.",
+        "basis": spec.get("runtime_basis", DEFAULT_BASIS),
+        "note": " ".join(str(spec.get("runtime_note", DEFAULT_NOTE)).split()),
     }

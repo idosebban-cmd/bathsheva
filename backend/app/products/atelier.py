@@ -67,16 +67,46 @@ def dfm_checks(project: "Project", params: dict[str, Any], rules: "RuleSet", _ch
         checks.append(_check(
             "Electrical", lvl, "Playback time at 50% volume",
             f"About {rt['hours']:.1f} h{tgt} ({rt['battery_wh']:.1f} Wh battery, {rt['load_w']:.2f} W average: "
-            + ", ".join(f"{ld['name']} {ld['watts']:g} W" for ld in rt["loads"]) + "). Average music power is an "
-            "estimate; confirm with the chosen module, amplifier and driver.", unverified=rt["unverified"],
+            + ", ".join(f"{ld['name']} {ld['watts']:g} W" for ld in rt["loads"]) + "). " + rt["note"],
+            unverified=rt["unverified"],
             part="Battery pack"))
         for c in rt.get("compliance", []):
             checks.append(_check("Electrical", "warning", "Compliance", c, unverified=True))
-    checks.append(_check(
-        "Electrical", "warning", "20 W from a 1S battery",
-        "2 x 18650 in parallel give about 3.6 V; 20 W RMS needs a boost converter ahead of the Class-D amplifier and a "
-        "driver rated for it. The electronics supplier must confirm (user, Oct 2026).", unverified=True,
-        part="Main board"))
+    from app.services.audio import project_audio
+
+    au = project_audio(project)
+    if au.get("applicable"):
+        uv = au["unverified"]
+        checks.append(_check(
+            "Acoustics", "pass" if au["spl_ok"] and au["driver_power_ok"] else "fail", "Loudness (amplifier-limited)",
+            f"About {au['thermal_spl_db']:.0f} dB SPL at 1 m from 20 W into the driver (sensitivity × power; spec "
+            f"{au['target_spl_db']:.0f} dB or more). The driver must be rated for the full 20 W.", unverified=uv,
+            part="Driver"))
+        b60 = next(b for b in au["bass"] if b["f_hz"] == round(au["target_low_hz"]))
+        checks.append(_check(
+            "Acoustics", "info", "Bass at full volume (excursion)",
+            f"The driver reaches {au['target_spl_db']:.0f} dB within its excursion from about {au['full_spl_from_hz']} Hz "
+            f"up. At {b60['f_hz']} Hz the radiator alone can make about {b60['radiator_db']:.0f} dB, so the DSP limiter "
+            "must hold back the bass at high volume; the −6 dB point at 60 Hz is a normal-level response, which the "
+            "radiator tuning and DSP bass enhancement give.", unverified=uv, part="Passive radiator"))
+        checks.append(_check(
+            "Acoustics", "info", "Box and radiator tuning",
+            f"{au['box_l']:.2f} L: the driver alone would give fc {au['fc_hz']} Hz, Qtc {au['qtc']:.2f} (closed box). "
+            f"The radiator tuned to about {au['pr_target_fb_hz']} Hz needs about {au['pr_moving_mass_g']:.1f} g of moving "
+            "mass before its own suspension; the supplier tunes it with the driver.", unverified=uv,
+            part="Passive radiator"))
+        if "peak_current_a" in au:
+            checks.append(_check(
+                "Electrical", "pass" if au["current_ok"] else "fail", "20 W from a 1S battery",
+                f"20 W RMS needs about {au['peak_input_w']:.0f} W in through a boost converter ahead of the Class-D "
+                f"amplifier: about {au['peak_current_a']:.1f} A from the battery, {au['peak_cell_current_a']:.1f} A per "
+                f"cell (typical limit {au['cell_max_a']:g} A). The electronics supplier must confirm the boost stage, "
+                "the cells' rating and the driver (user, Oct 2026).", unverified=True, part="Main board"))
+            checks.append(_check(
+                "Electrical", "pass" if au["charge_ok"] else "fail", "Charge time",
+                f"About {au['charge_h']:.1f} h at {au['charge_power_w']:.1f} W into the cells (USB-C PD up to 20 W, "
+                f"limited by the cells' charge rate), spec {au['charge_target_h']:g} h or less; play while charging.",
+                unverified=True, part="Battery pack"))
     checks.append(_check(
         "Assembly", "pass", "Battery replacement (standard tools)",
         "Battery replaceable after removing the base collar: " + " ".join(
@@ -116,4 +146,5 @@ PRODUCT = Product(
              "times. The driver, radiator, battery and board are placeholders showing space and position. The honeycomb "
              "grilles take about a minute to build.",
     mass_part="ballast",
+    box_volume_l=lambda params: atelier.stability(params)["air_l"],
 )

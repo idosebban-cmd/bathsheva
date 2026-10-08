@@ -49,6 +49,8 @@ class Product:
     cad_note: str = ""
     # The part the mass hint names when the estimate is off target (cad_key), e.g. the weight plate
     mass_part: str = ""
+    # Air volume of the enclosure (litres) from the CAD parameters, for the acoustic model (speakers only)
+    box_volume_l: Callable[[dict[str, Any]], float] | None = None
 
 
 def _registry() -> dict[str, Product]:
