@@ -335,7 +335,7 @@ def assemble(snapshot: Snapshot, config: CostConfig, rules: RuleSet, cost: CostD
         price = cost.bought_in[ex.price_key]
         item_id = -n
         key = f"extra:{ex.price_key}"
-        group = "Finishing" if ex.kind == "finishing" else "Bought-in components"
+        group = {"finishing": "Finishing", "tooling": "Tooling"}.get(ex.kind, "Bought-in components")
         _add(assumptions, Assumption(key, f"{price.name} price", "£", price.gbp.low, price.gbp.high,
                                      price.confidence, price.verified, price.source, group))
         disc = discount_assumption(cost, snapshot, price.discount_class, price.price_basis)

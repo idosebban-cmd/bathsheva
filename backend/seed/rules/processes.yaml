@@ -192,6 +192,33 @@ processes:
     confidence: medium
     verified: false
 
+  - key: pu_vacuum_casting
+    name: Polyurethane cast in silicone moulds (soft tooling)
+    material_categories: [polymer]
+    plain_language: >-
+      A finished master pattern (3D-printed or machined) is cast round in
+      silicone, and two-part polyurethane is poured into the silicone mould
+      under vacuum. No steel tool, and undercuts come out of the flexible
+      mould, but each mould makes only about 20 parts and every part is cast,
+      cured and trimmed by hand.
+    requires_all: []
+    excludes: [transparent, electrical, needs_mass]
+    suits: [cosmetic, fine_detail, side_hole, closed_top, mounting_holes]
+    poor_fit: [ring]
+    volume: {min: 1, max: 1000}
+    tooling_cost: low
+    unit_cost: high
+    finish_quality: good
+    wall_mm: {min: 1.0, max: 6.0, typical_min: 1.5, typical_max: 4.0}
+    when_to_prefer: A first batch of a few hundred plastic housings, before paying for a steel mould.
+    risks:
+      - Each silicone mould lasts about 15–25 castings, so moulds are remade throughout the batch; colour and size drift slightly between moulds.
+      - Polyurethane is less tough and less heat- and UV-resistant than moulded PC/ABS; check the drop test and the lacquer's adhesion (primer needed).
+      - Bosses and screw seats are cast in or bonded in; threads need inserts.
+    source: model-generated
+    confidence: low
+    verified: false
+
   - key: photo_etching_stainless
     name: Photo-etched stainless sheet (formed after etching)
     material_categories: [stainless]

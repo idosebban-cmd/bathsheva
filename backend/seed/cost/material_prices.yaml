@@ -110,6 +110,13 @@ material_prices:
     confidence: low
     verified: false
 
+  - material: pu_casting_resin
+    form: two-part casting resin
+    gbp_per_kg: {low: 12.0, high: 25.0}
+    source: model-generated
+    confidence: low
+    verified: false
+
   - material: tpu
     form: moulding pellets
     gbp_per_kg: {low: 4.0, high: 8.0}

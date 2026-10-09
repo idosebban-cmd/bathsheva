@@ -322,7 +322,8 @@ def change_config(defn: dict[str, Any], option: int, params: dict[str, Any]) -> 
     cfg = CostConfig()
     if "reroute" in eff:
         opt = eff["reroute"]["options"][option]
-        cfg.routes[eff["reroute"]["part"]] = RouteChoice(opt["process"], opt["material"], opt.get("tooling"), opt.get("label", ""))
+        for part in _reroute_parts(eff["reroute"]):
+            cfg.routes[part] = RouteChoice(opt["process"], opt["material"], opt.get("tooling"), opt.get("label", ""))
     for rr in eff.get("reroutes", []):
         cfg.routes[rr["part"]] = RouteChoice(rr["process"], rr["material"], rr.get("tooling"), defn.get("label", ""))
     cfg.finish_overrides.update(eff.get("finishes", {}))
@@ -349,7 +350,7 @@ def option_allowed(defn: dict[str, Any], option: int, snap: Snapshot, rules: Rul
     eff = defn.get("effect", {})
     checks: list[tuple[str, str]] = []
     if eff.get("reroute"):
-        checks.append((eff["reroute"]["part"], eff["reroute"]["options"][option]["material"]))
+        checks += [(part, eff["reroute"]["options"][option]["material"]) for part in _reroute_parts(eff["reroute"])]
     checks += [(rr["part"], rr["material"]) for rr in eff.get("reroutes", [])]
     for cad_key, material in checks:
         sp = next((s for s in snap.parts if s.cad_key == cad_key), None)
@@ -363,6 +364,11 @@ def option_allowed(defn: dict[str, Any], option: int, snap: Snapshot, rules: Rul
             if not ok:
                 return False, why
     return True, ""
+
+
+def _reroute_parts(reroute: dict[str, Any]) -> list[str]:
+    """A `reroute` names one `part`, or `parts` that all take the chosen option."""
+    return list(reroute.get("parts") or [reroute["part"]])
 
 
 def n_options(defn: dict[str, Any]) -> int:
@@ -464,7 +470,7 @@ def optimise(snap: Snapshot, defs: dict[str, dict[str, Any]], q: float, rules: R
 
 def _rerouted_parts(defn: dict[str, Any]) -> list[str]:
     eff = defn.get("effect", {})
-    return ([eff["reroute"]["part"]] if "reroute" in eff else []) + [rr["part"] for rr in eff.get("reroutes", [])]
+    return (_reroute_parts(eff["reroute"]) if "reroute" in eff else []) + [rr["part"] for rr in eff.get("reroutes", [])]
 
 
 def describe_selection(defs: dict[str, dict[str, Any]], selection: list[tuple[str, int]]) -> list[dict[str, Any]]:

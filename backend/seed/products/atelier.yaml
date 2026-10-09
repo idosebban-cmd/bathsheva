@@ -499,11 +499,40 @@ scenarios:
       premium: Thinner bass at the spec's 60 Hz.
       lead_time: One part and one bezel fewer.
       tooling: One photo-tool and one CNC programme fewer.
+  - key: low_tooling_first_batch
+    letter: t
+    label: Low-tooling first batch
+    design_change: >-
+      For a first batch of a few hundred: the body cast in polyurethane in silicone moulds (soft tooling)
+      instead of injection-moulded PC/ABS, with the same primer, colour and clear lacquer; the fins, base
+      collar and foot CNC-machined or investment-cast in brass instead of zinc die-cast, with the same gold
+      PVD. Everything else unchanged. No steel mould and no die-casting dies.
+    effect:
+      reroutes:
+        - {part: body, process: pu_vacuum_casting, material: pu_casting_resin, tooling: low}
+      reroute:
+        parts: [fin, collar, foot]
+        options:
+          - {process: cnc_machining, material: brass, tooling: none, label: CNC-machined brass}
+          - {process: investment_casting, material: brass, label: Investment-cast brass}
+      add_items:
+        - {price_key: pu_silicone_mould_share, quantity: 1, kind: tooling}
+    premium_impact: slight
+    flags:
+      - {kind: performance, message: "Cast polyurethane is less tough and less heat-resistant than PC/ABS: repeat the 0.5 m drop test, the lacquer adhesion (ISO 2409) and the 40 °C storage test on cast bodies."}
+      - {kind: performance, message: "Brass instead of Zamak adds about 150 g to the fins, collar and foot; the ballast cup is made lighter to keep 1.8 kg (aluminium was ruled out: about 300 g lighter, and the ballast is already at its maximum)."}
+    tradeoffs:
+      finish: Same lacquer and the same gold PVD. Cast bodies need a primer coat; brass takes PVD over a nickel base as Zamak does over copper-nickel.
+      weight: About 150 g more metal in the fins, collar and foot; the ballast is reduced to keep 1.8 kg. The cast body weighs about the same.
+      premium: Looks the same; the cast body is less tough, and size and colour drift slightly between silicone moulds.
+      lead_time: Soft tooling in 2–4 weeks instead of 8–14 weeks for the steel mould and dies; casting by hand is slower per part.
+      tooling: A master pattern for the body, silicone moulds remade about every 20 bodies, and CNC programmes or wax-injection tools for the brass parts.
 
 # Notes shown under the Cost-down summary.
 cost_down_notes:
   - "One power option: cordless (2 x 18650 1S2P, USB-C PD)."
-  - "Tiers: 'no compromise' uses only changes that keep the look and feel (spun nose cone, custom battery pack); 'slight compromises' also allows the sealed box without the rear radiator."
+  - "Tiers: 'no compromise' uses only changes that keep the look and feel (spun nose cone, custom battery pack); 'slight compromises' also allows the sealed box without the rear radiator and the low-tooling first batch (cast polyurethane body, brass instead of zinc)."
+  - "Low-tooling first batch (t): soft tooling for the body and no die-casting dies, for a first batch of a few hundred; its rates (polyurethane casting, silicone moulds, CNC or investment-cast brass) are model-generated and unverified."
 
 # Questions for suppliers (shown in the Factory Pack; resolved once they have an `answer`).
 rfq_open_questions:

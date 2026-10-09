@@ -125,6 +125,14 @@ bought_in:
     source: model-generated
     confidence: low
     verified: false
+  - key: pu_silicone_mould_share
+    # Soft tooling for the low-tooling first batch: a silicone mould for the body (about 6–8 kg of
+    # silicone plus labour, £300–550) lasts about 15–25 castings, so each body carries a share.
+    name: Silicone mould share for the cast polyurethane body (each mould makes about 20 bodies)
+    gbp: {low: 12.0, high: 35.0}
+    source: model-generated
+    confidence: low
+    verified: false
   - key: knob_knurl
     name: Fine straight knurl on the knob edge (DIN 82 RAA 0.5), on the lathe
     gbp: {low: 0.1, high: 0.4}
