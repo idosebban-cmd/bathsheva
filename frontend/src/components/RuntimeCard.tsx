@@ -5,7 +5,7 @@ import { useProject } from "./useProject";
 
 const STATUS_TEXT: Record<string, string> = { pass: "meets the target", close: "just short of the target", fail: "below the target" };
 
-/** Estimated battery runtime from the LED loads, against the runtime requirement, plus battery compliance flags. */
+/** Estimated battery runtime from the electrical loads, against the runtime requirement, plus battery compliance flags. */
 export default function RuntimeCard() {
   const { project } = useProject();
   const [rt, setRt] = useState<Runtime | null>(null);
@@ -22,13 +22,13 @@ export default function RuntimeCard() {
     <section className="card">
       <h2>Battery runtime {rt.unverified && <UnverifiedBadge />}</h2>
       <p className={cls}>
-        Estimated <b>{rt.hours?.toFixed(1)} h</b> at full brightness with every light on
+        Estimated <b>{rt.hours?.toFixed(1)} h</b>{" "}{rt.basis ?? "at full brightness with every light on"}
         {rt.target_h ? ` vs target ${rt.target_h} h: ${STATUS_TEXT[rt.status ?? ""] ?? ""}` : " (set a runtime target above)"}.
         {rt.without_tower_light_h ? ` Lantern only: ${rt.without_tower_light_h.toFixed(1)} h.` : ""}
       </p>
       <table className="small">
         <thead>
-          <tr><th>Load</th><th>Full brightness</th><th>Runtime on its own</th><th>Source</th></tr>
+          <tr><th>Load</th><th>Power</th><th>Runtime on its own</th><th>Source</th></tr>
         </thead>
         <tbody>
           {rt.loads?.map((l) => (
@@ -44,7 +44,7 @@ export default function RuntimeCard() {
       <p className="small muted">
         Battery {rt.assumptions?.cells} × {rt.assumptions?.cell_capacity_mah} mAh at {rt.assumptions?.cell_voltage} V ={" "}
         {rt.battery_wh} Wh; {Number(rt.assumptions?.usable_fraction) * 100}% usable and a {Number(rt.assumptions?.driver_efficiency) * 100}%
-        efficient driver deliver {rt.delivered_wh} Wh to {rt.load_w} W of LEDs. {rt.note}
+        efficient driver deliver {rt.delivered_wh} Wh to {rt.load_w} W of loads. {rt.note}
       </p>
       {rt.compliance && rt.compliance.length > 0 && (
         <>

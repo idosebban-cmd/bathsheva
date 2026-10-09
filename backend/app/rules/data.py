@@ -77,9 +77,9 @@ class Material(Provenance):
             return self.kind
         if self.is_glass:
             return "glass"
-        if self.category in ("aluminium", "brass", "steel"):
+        if self.category in ("aluminium", "brass", "steel", "zinc", "stainless"):
             return "metal"
-        if self.category == "clear_polymer_or_glass":
+        if self.category in ("clear_polymer_or_glass", "polymer"):
             return "polymer"
         return None
 
@@ -92,6 +92,7 @@ class Finish(Provenance):
     min_process_finish: FinishQuality
     notes: str = ""
     metal_effect: bool = False  # imitates metal (paint / metallised film)
+    metallic_look: bool = False  # reads as metal (real metal finishes, e.g. brushed brass, gold PVD)
 
 
 class BendRadius(Provenance):
@@ -147,13 +148,16 @@ class DesignConstraint(Provenance):
     message: str
     applies_traits_any: list[str]
     exempt_traits: list[str] = []
+    # Parts with these traits are exempt only while their finish doesn't look metallic (e.g. a lacquered
+    # plastic body); a metallic-looking finish on them is a violation.
+    look_exempt_traits: list[str] = []
     exempt_categories: list[str] = []
     allowed_kinds: list[str]
     transparent_kinds: list[str] = []
     trim_traits: list[str] = []
 
     def applies(self, traits: set[str], category: str) -> bool:
-        if traits & set(self.exempt_traits) or category in self.exempt_categories:
+        if traits & set(self.exempt_traits + self.look_exempt_traits) or category in self.exempt_categories:
             return False
         return bool(traits & set(self.applies_traits_any))
 

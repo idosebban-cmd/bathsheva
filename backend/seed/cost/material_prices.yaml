@@ -88,3 +88,31 @@ material_prices:
     source: model-generated
     confidence: low
     verified: false
+
+  - material: zamak_5
+    form: ingot
+    gbp_per_kg: {low: 2.8, high: 4.5}
+    source: model-generated
+    confidence: low
+    verified: false
+
+  - material: stainless_304
+    form: thin sheet (0.5 mm)
+    gbp_per_kg: {low: 4.0, high: 9.0}
+    source: model-generated
+    confidence: low
+    verified: false
+
+  - material: pc_abs
+    form: moulding pellets
+    gbp_per_kg: {low: 2.5, high: 4.5}
+    source: model-generated
+    confidence: low
+    verified: false
+
+  - material: tpu
+    form: moulding pellets
+    gbp_per_kg: {low: 4.0, high: 8.0}
+    source: model-generated
+    confidence: low
+    verified: false

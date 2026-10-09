@@ -3,6 +3,18 @@
 # PROVENANCE: rough UK small-batch figures written by an AI model. Get real quotes.
 
 finish_rates:
+  - finish: gold_pvd
+    gbp_per_m2: {low: 120, high: 300}
+    min_per_part: {low: 2.5, high: 7.0}
+    source: "model-generated: decorative gold PVD batch-coated, incl. the base layer (Cu-Ni on zinc, Ni on brass) and brushing"
+    confidence: low
+    verified: false
+  - finish: gloss_lacquer_polished
+    gbp_per_m2: {low: 90, high: 200}
+    min_per_part: {low: 8, high: 18}
+    source: "model-generated: primer, colour, two clear coats, cut and polish on a moulded shell"
+    confidence: low
+    verified: false
   - finish: brushed_lacquer
     gbp_per_m2: {low: 35, high: 90}
     min_per_part: {low: 1.5, high: 4.0}

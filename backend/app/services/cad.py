@@ -8,21 +8,21 @@ from typing import Any
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
-from app.cad import export, faro
+from app.cad import export
+from app.cad.validation import ValidationResult, WallLimit
 from app.config import settings
 from app.models import CadModel, CadOutput, Project
+from app.products import product_for
 from app.rules.data import load_rules
 from app.rules.match import match_process
 from app.services.templates import load_template
 
-GENERATORS = {"faro": faro}
-
 
 def generator_for(project: Project):
-    gen = GENERATORS.get(project.template or "")
-    if gen is None:
+    product = product_for(project)
+    if product is None:
         raise HTTPException(404, "This project has no parametric CAD generator (only template projects such as Faro do)")
-    return gen
+    return product.generator
 
 
 def latest_model(project: Project) -> CadModel | None:
@@ -33,25 +33,17 @@ def current_parameters(project: Project) -> dict[str, Any]:
     defaults = dict(load_template(project.template)["cad_parameters"])
     latest = latest_model(project)
     if latest is not None:
-        gen = GENERATORS.get(project.template or "")
+        product = product_for(project)
+        gen = product.generator if product is not None else None
         params = dict(latest.parameters)
-        return gen.upgrade(params, defaults) if gen is not None and hasattr(gen, "upgrade") else params
+        return gen.upgrade(params, defaults) if gen is not None else params
     return defaults
 
 
-# Rough densities (g/cm³) for bought-in bodies, used only for the lamp-mass estimate.
-# Electronics are placeholder envelopes, so their "density" turns the envelope into a
-# typical mass (2 x 18650 cells about 95 g; the boards and LED about 10-20 g each).
-BOUGHT_IN_DENSITY = {
-    "weight_plate": ("steel_s275", 7.85), "base_plate": ("al_5052", 2.68), "felt_pad": (None, 0.5),
-    "battery": (None, 2.1), "charge_board": (None, 1.8), "led_module": (None, 2.0),
-    "tower_light": (None, 0.6), "dimmer": (None, 2.0),
-}
-
-
 def mass_estimate(project: Project, part_info: dict[str, Any] | None = None) -> dict[str, Any] | None:
-    """Estimated lamp mass from CAD volumes vs the target mass parameter."""
-    if project.template != "faro":
+    """Estimated product mass from CAD volumes vs the target mass parameter."""
+    product = product_for(project)
+    if product is None:
         return None
     from app.services.costing import part_geometry, snapshot_material_keys
 
@@ -66,13 +58,13 @@ def mass_estimate(project: Project, part_info: dict[str, Any] | None = None) -> 
         m = rules.materials.get(mk or "")
         if m is not None and m.density_g_cm3:
             densities[key] = m.density_g_cm3
-        elif key in BOUGHT_IN_DENSITY:
-            rk, fallback = BOUGHT_IN_DENSITY[key]
+        elif key in product.bought_in_density:
+            rk, fallback = product.bought_in_density[key]
             rm = rules.materials.get(rk or "")
             densities[key] = rm.density_g_cm3 if rm is not None and rm.density_g_cm3 else fallback
         elif mk == "brass":
             densities[key] = 8.5
-    est = faro.estimate_mass(info, densities)
+    est = product.generator.estimate_mass(info, densities)
     target = float(current_parameters(project).get("target_mass_kg") or 0) or None
     status = "unknown"
     if target:
@@ -81,30 +73,34 @@ def mass_estimate(project: Project, part_info: dict[str, Any] | None = None) -> 
             "note": "Estimate from CAD volumes and typical densities; electronics, cable and finish are approximate."}
 
 
-def wall_limits(project: Project) -> dict[str, faro.WallLimit]:
-    """Wall limits per CAD part from the process set on that part (or a general aluminium range)."""
+def wall_limits(project: Project) -> dict[str, WallLimit]:
+    """Wall limits per CAD part from the process set on that part (or a general range from the planning rules)."""
     rules = load_rules()
-    limits: dict[str, faro.WallLimit] = {}
+    limits: dict[str, WallLimit] = {}
+    product = product_for(project)
+    if product is None:
+        return limits
     by_key = {p.cad_key: p for p in project.parts if p.cad_key}
-    for part_key in ("tower", "lantern_glass"):
+    for part_key, fallback in product.wall_limit_parts.items():
         part = by_key.get(part_key)
         proc_key = match_process(rules, part.process) if part else None
         if proc_key and rules.processes[proc_key].wall_mm:
             proc = rules.processes[proc_key]
             w = proc.wall_mm
-            limits[part_key] = faro.WallLimit(proc.name, w.min, w.max, w.typical_min, w.typical_max, proc.verified)
-        elif part_key == "tower":
-            gen = rules.planning["aluminium_wall_mm"]
-            limits[part_key] = faro.WallLimit(
-                "general aluminium", gen.value["min"], gen.value["max"], gen.value["min"], gen.value["max"], gen.verified
+            limits[part_key] = WallLimit(proc.name, w.min, w.max, w.typical_min, w.typical_max, proc.verified)
+        elif fallback:
+            gen = rules.planning[fallback]
+            label = fallback.removesuffix("_wall_mm").replace("_", " ")
+            limits[part_key] = WallLimit(
+                f"general {label}", gen.value["min"], gen.value["max"], gen.value["min"], gen.value["max"], gen.verified
             )
     return limits
 
 
-def validate(project: Project, params: dict[str, Any]) -> faro.ValidationResult:
+def validate(project: Project, params: dict[str, Any]) -> ValidationResult:
     generator_for(project)
-    rules = load_rules()
-    return faro.validate(params, wall_limits(project), rules.plan("min_stability_ratio"))
+    product = product_for(project)
+    return product.validate(params, wall_limits(project), load_rules())
 
 
 def generate(session: Session, project: Project, params: dict[str, Any]) -> CadModel:
@@ -126,7 +122,7 @@ def generate(session: Session, project: Project, params: dict[str, Any]) -> CadM
             files += export.export_part(shape, out_dir / "parts", key)
         files += export.export_assembly(gen.assembly(parts, project.slug), parts, out_dir, project.slug,
                                         colours=gen.PART_COLOURS, two_tone=gen.preview_two_tone(params),
-                                        extras=gen.preview_extras(params) if hasattr(gen, "preview_extras") else None)
+                                        extras=gen.preview_extras(params))
         info = export.part_info(parts)
     except Exception as e:  # geometry kernel failure
         shutil.rmtree(out_dir, ignore_errors=True)

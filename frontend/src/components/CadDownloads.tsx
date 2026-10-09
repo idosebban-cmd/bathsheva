@@ -1,30 +1,20 @@
-import { fileUrl, type CadModel } from "../api";
+import { useEffect, useState } from "react";
+import { api, fileUrl, type CadModel, type Part } from "../api";
 
-const LABELS: Record<string, string> = {
-  base: "Base",
-  base_plate: "Bottom plate",
-  felt_pad: "Felt pad",
-  weight_plate: "Weight plate",
-  nameplate: "Nameplate",
-  band_cream: "Cream band",
-  tower: "Tower",
-  diffuser: "Window diffuser",
-  tower_light: "Tower light",
-  dimmer: "Dimmer",
-  knob: "Dimmer knob",
-  gallery: "Gallery",
-  railing: "Gallery railing",
-  lantern_frame: "Lantern frame",
-  lantern_glass: "Lantern glass",
-  led_module: "Lantern LED",
-  cap: "Cap",
-  cap_spigot: "Cap bayonet spigot",
-  finial: "Finial",
-  battery: "Battery pack",
-  charge_board: "Control board",
+/** Bodies that are not parts of their own (preview-only splits and fills). */
+const EXTRA_LABELS: Record<string, string> = {
+  tower_lower: "Tower (red section)",
 };
 
 export default function CadDownloads({ model, projectId }: { model: CadModel; projectId: number }) {
+  // Part names come from the project's parts list (cad_key = body name), so every product is labelled correctly.
+  const [labels, setLabels] = useState<Record<string, string>>({});
+  useEffect(() => {
+    api
+      .get<Part[]>(`/api/projects/${projectId}/parts`)
+      .then((parts) => setLabels(Object.fromEntries(parts.filter((p) => p.cad_key).map((p) => [p.cad_key as string, p.name]))))
+      .catch(() => setLabels({}));
+  }, [projectId]);
   const byPart = new Map<string, Record<string, string>>();
   for (const o of model.outputs) {
     const key = o.part_key ?? "__assembly__";
@@ -57,7 +47,7 @@ export default function CadDownloads({ model, projectId }: { model: CadModel; pr
             .filter(([k]) => k !== "__assembly__")
             .map(([key, files]) => (
               <tr key={key}>
-                <td>{LABELS[key] ?? key}</td>
+                <td>{labels[key] ?? EXTRA_LABELS[key] ?? key}</td>
                 <td className="small">{model.part_info[key]?.size_mm.map((v) => v.toFixed(1)).join(" × ")}</td>
                 <td>
                   {link(files.step, "STEP")} {link(files.stl, "STL")}

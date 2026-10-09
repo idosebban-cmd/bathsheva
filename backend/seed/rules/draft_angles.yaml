@@ -9,6 +9,20 @@ draft_angles:
     source: model-generated
     confidence: medium
     verified: false
+  - process: zinc_die_casting
+    external_deg: 0.5
+    internal_deg: 1.0
+    plain_language: Zinc releases easily; about 0.5° outside and 1° inside is usually enough.
+    source: model-generated
+    confidence: medium
+    verified: false
+  - process: injection_moulding
+    external_deg: 1.0
+    internal_deg: 1.0
+    plain_language: About 1° on polished faces that will be lacquered; more on textured faces.
+    source: model-generated
+    confidence: medium
+    verified: false
   - process: sand_casting
     external_deg: 1.5
     internal_deg: 3.0

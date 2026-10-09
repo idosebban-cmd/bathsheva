@@ -29,7 +29,7 @@ requirements:
   preferred_finishes:
     - Satin black lacquer base (30–50 GU), clear-coated
     - Cream and oxblood red gloss lacquer (80+ GU) on aluminium (two-tone tower, masked line)
-    - Brushed (satin) brass, clear lacquer, matching Atelier
+    - Brushed (satin) brass, clear lacquer
   functional_requirements:
     - Cordless decorative table lamp, rechargeable over USB-C (2 x 18650 cells)
     - User-replaceable battery (bottom plate on standard screws)
@@ -427,6 +427,11 @@ power_options:
     label: "B: certified external 12 V adapter + internal DC-DC driver (no battery)"
     scenario: external_adapter
 
+# Notes shown under the Cost-down summary.
+cost_down_notes:
+  - "Power options are costed side by side: A is cordless (2 x 18650, USB-C); B always uses the external adapter and an internal DC-DC driver (scenario g), whatever the tier."
+  - "Tiers: 'no compromise' uses only changes that keep the look and feel; 'slight compromises' also allows the touch dimmer; 'any' also allows the plain tower without windows and the straight tube tower."
+
 scenarios:
   - key: base_pressed
     letter: a
@@ -631,7 +636,7 @@ rfq_open_questions:
     question: Exact colours and gloss for the black, cream and red lacquer, and the brass finish.
     why: Finishers need colour references and gloss levels to quote and match.
     proposed: "Send physical colour samples or RAL references; brass polished and clear-lacquered."
-    answer: "Hex values from the prototype (black #121212, cream #F9F2E1) and Atelier (oxblood red #8A1C15), with the nearest RAL marked approximate (red: RAL 3011 and RAL 3002); physical colour samples are the master. Gloss: base satin 30–50 GU, cream and red 80+ GU. Brass brushed and clear-lacquered, matching Atelier."
+    answer: "Hex values from the prototype (black #121212, cream #F9F2E1) and Atelier (oxblood red #8A1C15), with the nearest RAL marked approximate (red: RAL 3011 and RAL 3002); physical colour samples are the master. Gloss: base satin 30–50 GU, cream and red 80+ GU. Brass brushed and clear-lacquered."
   - id: artwork
     topic: Nameplate
     question: Nameplate artwork (FARO lettering, font, fill colour).
@@ -706,5 +711,5 @@ rfq:
        gloss: "gloss, 80+ GU (60°), clear-coated",
        source: "Atelier params.py RED_HEX (warm deep oxblood lacquer); prototype faro/params.py uses the same value"}
     - {name: "Brushed brass, clear lacquer", parts: [gallery, railing, lantern_frame, finial, knob, nameplate], hex: "#C4A15A",
-       ral: [], gloss: "brushed satin grain, clear lacquer (matching Atelier)",
-       source: "prototype faro/params.py BRASS_HEX (render reference only); finish as Atelier's brushed brass"}
+       ral: [], gloss: "brushed satin grain, clear lacquer",
+       source: "prototype faro/params.py BRASS_HEX (render reference only); brushed satin brass, clear lacquer (user, Oct 2026)"}

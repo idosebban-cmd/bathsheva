@@ -16,6 +16,7 @@ export default function TemplateUpgradeBanner() {
 
   if (!plan || !plan.needed) return null;
   const quotes = plan.remove.reduce((n, r) => n + r.quotes, 0);
+  const label = project.product?.label ?? "template";
   const partsChange = plan.remove.length > 0 || plan.add.length > 0;
 
   async function upgrade() {
@@ -39,7 +40,7 @@ export default function TemplateUpgradeBanner() {
   if (!partsChange) {
     return (
       <section className="card notice">
-        <h2>The Faro design has been updated</h2>
+        <h2>The {label} design has been updated</h2>
         <p className="small">
           Updating
           {plan.decisions.length > 0 && <> records the new accepted decisions ({plan.decisions.join("; ")}),</>}
@@ -55,9 +56,9 @@ export default function TemplateUpgradeBanner() {
 
   return (
     <section className="card notice">
-      <h2>This project uses an older Faro design</h2>
+      <h2>This project uses an older {label} design</h2>
       <p className="small">
-        Faro now follows the approved prototype. Updating replaces the old parts ({plan.remove.map((r) => r.name).join(", ")}) with the
+        {label} now follows the approved prototype. Updating replaces the old parts ({plan.remove.map((r) => r.name).join(", ")}) with the
         new ones ({plan.add.map((a) => a.name).join(", ")}), sets the confirmed dimensions, cordless power and runtime target, records the
         accepted decisions and resets the cost line items. CAD history and revisions are kept; generate CAD again afterwards.
         {quotes > 0 && <b> {quotes} supplier quote(s) on removed parts will be deleted.</b>}

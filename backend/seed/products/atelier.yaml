@@ -1,0 +1,558 @@
+# Atelier product template: the retro-rocket Bluetooth speaker. Seeds a new Atelier project.
+# Every value here is editable. Placeholder commercial inputs are listed in
+# `assumed_fields` so the UI labels them as assumptions.
+#
+# Sources, in priority order:
+#   1. Atelier Technical Specification (key points from the user, Oct 2026; the full
+#      document is to follow). It wins over everything below it.
+#   2. The user's answers (Oct 2026): lacquered PC/ABS body ("anything that looks metallic
+#      must be real metal"), rear passive radiator, Ø20 knurled knob with the Bathsheva
+#      emblem tone-on-tone, "ATELIER" etched under the collar cup, battery replaceable after
+#      removing the base collar (standard tools).
+#   3. The approved prototype model on branch claude/rocket-speaker-3d-model-xav3pn
+#      (model.py, params.py, renders, report): the form and proportions. Every departure is
+#      listed in atelier.PRODUCTION_CHANGES.
+
+name: Atelier
+description: >-
+  A premium portable Bluetooth speaker in the form of a retro rocket: an oxblood
+  red lacquered body with a gold honeycomb grille and bezel, a gold nose cone, three
+  gold fins it stands on and a gold collar and foot. One rotary push knob, a white
+  status LED, 20 W into a 57 mm full-range driver with a rear passive radiator, and
+  15 hours or more on a charge over USB-C. First product of Bathsheva London.
+
+requirements:
+  approx_dimensions: {height_mm: 280, width_mm: 140, depth_mm: 140}   # spec: 280 ±1; fin span about 140
+  target_retail_price: {amount: 199, currency: GBP}                  # spec (for now)
+  production_volume: 500                                             # first order 300–500 (pre-orders); quoted 300 / 500 / 2,000
+  target_unit_cost: {amount: null, currency: GBP}                    # TBD
+  intended_markets: [UK]                                             # UK first; CE for the EU may follow
+  power_type: battery
+  battery_runtime_h: 15                                              # spec: at least 15 h at 50% volume
+  preferred_materials:
+    - Injection-moulded PC/ABS body (3.0 mm wall), lacquered
+    - Zamak 5 die-cast fins (hollow, 3 mm wall), collar and foot
+    - 6061 aluminium nose cone (CNC turned, hollowed) and bezel (CNC, diamond-cut chamfer)
+    - Solid brass C360 knob (CNC turned)
+    - Stainless 304 photo-etched grille (0.5 mm), black acoustic fabric behind
+  preferred_finishes:
+    - Oxblood red #8A1C15, gloss 90 GU or more, primer + colour + two clear coats, polished (ΔE ≤ 1.0 to the master)
+    - Gold PVD, fine brushed satin, on every visible metal part, one matched tone (ΔE ≤ 1.5 across parts)
+  functional_requirements:
+    - "Bluetooth 5.3 or later (LE Audio ready), SBC and AAC (aptX Adaptive optional), 10 m range"
+    - Multipoint (2 devices), stereo pairing, remembers 8 devices, OTA firmware updates; no microphone, no app
+    - "20 W RMS Class-D; 60 Hz–20 kHz (−6 dB); 90 dB SPL or more at 1 m; THD 1% or less at 85 dB"
+    - DSP bass enhancement, loudness compensation and a limiter
+    - "2 x 18650 1S2P (about 6,000 mAh / 21.6 Wh): 15 h or more at 50% volume; USB-C PD 5–9 V up to 20 W; full charge in 3 h or less; play while charging; standby after 20 min"
+    - "One knob: turn = volume (24 soft detents); press = play/pause; double press = next; hold 2 s = power, 5 s = pairing, 10 s = reset"
+    - "White status LED: slow pulse pairing; steady 5 s then off when connected; slow breathing charging; off when full; 3 quick blinks low battery"
+    - "Battery replaceable after removing the base collar, with standard tools: foot off by hand, 3 + 2 M2.5 screws (1.5 mm hex key), plug-in battery lead (EU launch stays possible)"
+    - "No visible fasteners; seams 0.3 ±0.1 mm, flush within 0.1 mm"
+    - Stands on its three fin tips; static tip-over 18° or more; centre of mass 98 mm high or less
+  environmental_requirements:
+    - Indoor only, 0–40 °C
+    - "Drop 0.5 m unpackaged; ISTA 2A packaged"
+
+assumed_fields:
+  - production_volume
+  - target_unit_cost
+
+# One CAD body per part (cad_key matches the generator's body names). Parts made several
+# times (fins, fin pads) have `quantity`; the generator models one and places the copies.
+# Traits: `hidden` parts are never seen (they may be plastic or rubber); `non_metallic_look`
+# marks the lacquered body, which may be plastic while its finish doesn't look metallic.
+# made_to_drawing: bought-in parts that still get a drawing in the factory pack.
+parts:
+  - cad_key: body
+    name: Body
+    function: >-
+      One-piece moulded shell, open at the nose and the base, with the front sound opening, the
+      rear radiator opening, the knob and LED holes and six slots for the fin bolts.
+    material_category: polymer
+    material: PC/ABS
+    finish: "Oxblood red polished lacquer: primer, colour, two clear coats, polished (≥ 90 GU)"
+    traits: [cosmetic, non_metallic_look, mounting_holes, side_hole, thin_wall]
+  - cad_key: nose_cone
+    name: Nose cone
+    function: >-
+      Hollow nose cone on a spigot with an O-ring; a bayonet with a hidden detent locks it to the
+      body (0.3 mm shadow line at the joint).
+    material_category: aluminium
+    material: Aluminium 6061-T6
+    finish: Gold PVD, fine brushed satin
+    traits: [axisymmetric, cosmetic, domed, closed_top, user_accessible]
+  - cad_key: fin
+    name: Fin
+    quantity: 3
+    function: >-
+      Hollow die-cast fin (3 mm wall) at 60°, 180° and 300°; the three tips carry the speaker. Two
+      M4 screws from inside the chassis go through slots in the shell into cast bosses.
+    material_category: zinc
+    material: Zamak 5
+    finish: Gold PVD, fine brushed satin
+    traits: [cosmetic, needs_mass, mounting_holes, fine_detail]
+  - cad_key: fin_pad
+    name: Fin tip pad
+    quantity: 3
+    function: 1 mm TPU pad under each fin tip, so the fins don't mark furniture; hidden.
+    material_category: bought_in
+    material: TPU, 1 mm, adhesive-backed
+    process: Die-cut (made to drawing)
+    finish: Black
+    traits: [hidden]
+    made_to_drawing: true
+  - cad_key: collar
+    name: Base collar
+    function: >-
+      Gold cup under the body. Screws up into the battery tray plate with three M2.5 screws hidden
+      under the foot; the battery is replaceable after removing it. Carries the sealed USB-C port
+      (facing 45° down between two fins) and "ATELIER" etched on its underside.
+    material_category: zinc
+    material: Zamak 5
+    finish: Gold PVD, fine brushed satin
+    traits: [axisymmetric, cosmetic, needs_mass, mounting_holes, side_hole, closed_top]
+  - cad_key: foot
+    name: Foot
+    function: Short rounded foot, 2 mm off the ground; screws onto the collar and hides the collar screws.
+    material_category: zinc
+    material: Zamak 5
+    finish: Gold PVD, fine brushed satin
+    traits: [axisymmetric, cosmetic, short, needs_mass, user_accessible]
+  - cad_key: grille
+    name: Front grille
+    function: Photo-etched hexagon grille (2.2 mm holes, 0.7 mm webs) formed to the body; bonded to the bezel.
+    material_category: stainless
+    material: Stainless steel 304, 0.5 mm
+    finish: Gold PVD, fine brushed satin
+    traits: [cosmetic, fine_detail, perforated, thin_wall, flat_pattern]
+  - cad_key: grille_fabric
+    name: Acoustic fabric
+    function: Black acoustic fabric behind the front grille, so no red shows through the holes.
+    material_category: bought_in
+    material: Black acoustic fabric
+    finish: Black
+    traits: [hidden]
+  - cad_key: bezel
+    name: Front bezel
+    function: Raised ring round the grille; the grille is bonded to it and the pair is fixed from inside.
+    material_category: aluminium
+    material: Aluminium 6061-T6
+    finish: Gold PVD, fine brushed satin, diamond-cut chamfer
+    traits: [cosmetic, ring, short, fine_detail]
+  - cad_key: rear_grille
+    name: Rear radiator cover
+    function: Perforated cover over the rear passive radiator (same sheet and hole pattern as the front grille).
+    material_category: stainless
+    material: Stainless steel 304, 0.5 mm
+    finish: Gold PVD, fine brushed satin
+    traits: [cosmetic, fine_detail, perforated, thin_wall, flat_pattern]
+  - cad_key: rear_bezel
+    name: Rear bezel
+    function: Oval bezel round the rear radiator cover, matching the front bezel.
+    material_category: aluminium
+    material: Aluminium 6061-T6
+    finish: Gold PVD, fine brushed satin, diamond-cut chamfer
+    traits: [cosmetic, ring, short, fine_detail]
+  - cad_key: rear_fabric
+    name: Rear acoustic fabric
+    function: Black acoustic fabric behind the rear radiator cover, so no red shows through its holes.
+    material_category: bought_in
+    material: Black acoustic fabric
+    finish: Black
+    traits: [hidden]
+  - cad_key: knob
+    name: Knob
+    function: >-
+      Solid brass knob, Ø20, fine straight knurl, the Bathsheva emblem engraved tone-on-tone in its
+      face (turns with the knob). Volume, play/pause, track, power, pairing and reset.
+    material_category: brass
+    material: Brass C360
+    finish: Gold PVD, fine brushed satin
+    traits: [axisymmetric, cosmetic, short, user_accessible]
+  - cad_key: chassis
+    name: Chassis
+    function: >-
+      Steel chassis inside the shell: three fin brackets and a spine carrying the boards, plus the
+      battery tray plate (screwed to the ballast cup). Carries the fin screws and the base collar.
+    material_category: bought_in
+    material: Mild steel S275, 1.2 mm (zinc plated)
+    process: Laser cut and bent (made to drawing)
+    finish: Zinc plated
+    traits: [hidden]
+    made_to_drawing: true
+  - cad_key: ballast
+    name: Ballast cup
+    function: Steel cup round the battery, sized so the speaker weighs 1.8 kg with its centre of mass low.
+    material_category: bought_in
+    material: Mild steel S275 (zinc plated)
+    process: Sawn bar, milled pocket (made to drawing)
+    finish: Zinc plated
+    traits: [hidden, needs_mass]
+    made_to_drawing: true
+  - cad_key: driver
+    name: Driver
+    function: 57 mm full-range neodymium driver, front-firing behind the grille.
+    material_category: electrical
+    finish: None (internal)
+    traits: [electrical, internal]
+  - cad_key: passive_radiator
+    name: Passive radiator
+    function: About 60 × 40 mm oval passive radiator, firing to the rear behind the rear cover.
+    material_category: electrical
+    finish: None (internal)
+    traits: [electrical, internal]
+  - cad_key: battery
+    name: Battery pack
+    function: 2 x 18650 Li-ion, 1S2P (about 6,000 mAh, 21.6 Wh), pre-certified, in the base collar's tray.
+    material_category: electrical
+    finish: None (internal)
+    traits: [electrical, internal, user_accessible]
+  - cad_key: main_board
+    name: Main board
+    function: >-
+      Pre-certified Bluetooth module, DSP, 20 W Class-D amplifier with its boost converter, USB-C PD
+      charger and the knob encoder input; on the chassis spine.
+    material_category: electrical
+    finish: None (internal)
+    traits: [electrical, heat_source, internal]
+
+# How parts join. `hardware` lines appear in the BOM.
+joints:
+  - between: [fin, chassis]
+    method: machine_screw_tapped
+    note: Two M4 screws per fin from inside the chassis brackets, through slots in the shell into cast bosses in the fin.
+    hardware:
+      - {name: "M4 x 12 socket screw, fin to chassis", quantity: 6, material: "Stainless steel (A2)", notes: "Length to suit the boss; threadlocker."}
+  - between: [collar, chassis]
+    method: machine_screw_tapped
+    note: The base collar screws up into the battery tray plate; the screws sit under the foot. Two more screws at the plate's edge hold it to the ballast cup.
+    hardware:
+      - {name: "M2.5 x 8 countersunk screw, hex socket, collar to tray plate", quantity: 3, material: "Stainless steel (A2)", notes: "Under the foot; 1.5 mm hex key."}
+      - {name: "M2.5 x 6 countersunk screw, hex socket, tray plate to ballast cup", quantity: 2, material: "Stainless steel (A2)", notes: "1.5 mm hex key."}
+  - between: [foot, collar]
+    method: machine_screw_tapped
+    note: The foot screws onto an M4 stud in the collar and covers the collar screws.
+    hardware:
+      - {name: "M4 x 8 stud, foot to collar", quantity: 1, material: "Stainless steel (A2)", notes: "Thread-locked into the collar."}
+  - between: [nose_cone, body]
+    method: bayonet
+    note: Spigot with an O-ring; bayonet with a hidden detent.
+    hardware:
+      - {name: "O-ring, nose cone spigot", quantity: 1, material: "NBR or silicone", notes: "Section and size TBD with the moulder."}
+  - between: [collar, body]
+    method: clamp_with_gasket
+    note: The collar spigot seals the body's bottom opening with an O-ring (the enclosure is sealed apart from the radiator).
+    hardware:
+      - {name: "O-ring, collar spigot", quantity: 1, material: "NBR or silicone", notes: "Section and size TBD."}
+  - between: [grille, bezel]
+    method: adhesive_bonding
+    note: Grille bonded to the bezel; the pair is fixed from inside (no visible fasteners).
+  - between: [driver, chassis]
+    method: machine_screw_tapped
+    note: The chassis carries the driver (spec); four M3 screws through the driver frame.
+    hardware:
+      - {name: "M3 x 8 screw, driver", quantity: 4, material: "Steel, zinc plated"}
+
+open_decisions: []
+
+# Engineering decisions accepted by the user (Technical Specification, Oct 2026), recorded on new projects.
+decisions:
+  - part: body
+    process: injection_moulding
+    material: pc_abs
+    reason: >-
+      PC/ABS shell, 3.0 mm wall, injection moulded, then primer, colour, two clear coats and polish
+      (spec). The belly is wider than both openings, so the toolmaker must propose a collapsible core
+      or two welded halves.
+  - part: nose_cone
+    process: cnc_machining
+    material: al_6061
+    reason: 6061 aluminium, CNC turned and hollowed (spec), gold PVD.
+  - part: fin
+    process: zinc_die_casting
+    material: zamak_5
+    reason: Zamak 5 die-cast, hollow with a 3 mm wall (spec); copper-nickel base, then gold PVD.
+  - part: collar
+    process: zinc_die_casting
+    material: zamak_5
+    reason: Zamak die-cast collar (spec), machined at the USB-C port face and the screw seats.
+  - part: foot
+    process: zinc_die_casting
+    material: zamak_5
+    reason: Zamak die-cast, machined (spec).
+  - part: grille
+    process: photo_etching_stainless
+    material: stainless_304
+    reason: Stainless 304, 0.5 mm, photo-etched hexagons (spec); webs 0.7 mm are above the sheet thickness.
+  - part: rear_grille
+    process: photo_etching_stainless
+    material: stainless_304
+    reason: Same sheet and hole pattern as the front grille.
+  - part: bezel
+    process: cnc_machining
+    material: al_6061
+    reason: 6061 CNC with a diamond-cut chamfer (spec), gold PVD.
+  - part: rear_bezel
+    process: cnc_machining
+    material: al_6061
+    reason: As the front bezel.
+  - part: knob
+    process: cnc_turning_near_net
+    material: brass
+    reason: Solid brass C360, CNC turned (spec); knurled and engraved before PVD, so the grooves are gold too.
+  - topic: power
+    chosen: {value: battery}
+    reason: 2 x 18650 1S2P, USB-C PD charging (spec).
+  - topic: construction
+    chosen: {value: chassis_screwed_hidden}
+    reason: >-
+      Internal steel chassis carries the driver, radiator, boards and battery tray plate; fins screw into
+      it through the shell; the base collar screws into the tray plate from below under the foot, and the
+      battery is replaceable after removing the collar; the nose cone twist-locks. No visible fasteners (spec).
+
+# Electrical model for the runtime estimate (pure calculation in app/electrical.py).
+# For a speaker the loads are average powers at the spec's 50% volume, not peak.
+electrical:
+  battery:
+    cells: 2
+    cell_capacity_mah: 3000
+    cell_voltage: 3.6
+    usable_fraction: 0.90
+    source: "Technical Specification: 2 x 18650 1S2P, about 6,000 mAh / 21.6 Wh"
+    confidence: medium
+    verified: false
+  driver_efficiency: 0.85      # boost converter + Class-D amplifier, combined
+  runtime_basis: "at 50% volume (average music)"
+  runtime_note: >-
+    Average power at 50% volume with typical music, a new battery at room temperature (spec: 15 h or
+    more). Louder listening runs shorter; capacity falls with age and cold. Confirm with the chosen
+    module, amplifier and driver.
+  loads:
+    - {part: main_board, name: "Bluetooth, DSP and standby", watts: 0.35, source: model-generated, confidence: low, verified: false}
+    - {part: driver, name: "Amplifier output at 50% volume (average music)", watts: 0.6, source: model-generated, confidence: low, verified: false}
+  compliance:
+    - "UN38.3 test summary for the cells and pack before shipping, and IEC 62133-2 for the cells and pack (spec): supplied with a pre-certified pack; check it covers the exact pack."
+    - "UK Radio Equipment Regulations 2017 (UKCA): radio (ETSI EN 300 328), EMC (EN 301 489-1/-17), safety (IEC 62368-1) and RF exposure (EN 62479). CE (Radio Equipment Directive) for the EU later."
+    - "Bluetooth SIG qualification and product listing, building on the pre-certified module's qualification."
+    - "IEC 62368-1 includes a stability test; the spec asks for 18° static tip-over or more."
+    - "RoHS, REACH and WEEE registration (spec); UK battery producer registration."
+    - "EU Batteries Regulation (EU) 2023/1542 if EU sale follows: the battery is replaceable after removing the base collar, with a 1.5 mm hex key (no glue, no soldering); confirm with a compliance consultant that this meets 'readily removable by the end user'."
+
+# Acoustic and power model (pure calculation in app/audio.py) against the spec. The driver and radiator
+# Thiele-Small values are typical for a 57 mm neodymium full-range and a 60 x 40 mm radiator until the
+# supplier's datasheets arrive (model-generated, unverified).
+audio:
+  target_spl_db: 90            # spec: 90 dB SPL or more at 1 m
+  target_low_hz: 60            # spec: 60 Hz–20 kHz (−6 dB)
+  driver:
+    name: 57 mm full-range, neodymium
+    fs_hz: 130
+    qts: 0.65
+    vas_l: 0.35
+    sd_cm2: 15.2
+    xmax_mm: 2.5
+    sensitivity_db: 84         # 1 W / 1 m
+    power_rms_w: 20            # rated for the 20 W amplifier (user, Oct 2026)
+    source: model-generated
+    confidence: low
+    verified: false
+  passive_radiator:
+    name: About 60 x 40 mm oval
+    sd_cm2: 13.0
+    xmax_mm: 5.0
+    target_fb_hz: 65
+    source: model-generated
+    confidence: low
+    verified: false
+  amplifier:
+    rms_w: 20                  # spec: Class-D 20 W RMS
+    efficiency: 0.85
+    boost_efficiency: 0.90     # 1S battery (about 3.6 V): a boost converter feeds the amplifier
+    cell_loaded_voltage: 3.2
+    cell_max_continuous_a: 10  # typical 18650 power cell; confirm with the chosen cells
+    source: model-generated
+    confidence: low
+    verified: false
+  charging:
+    pd_w: 20                   # spec: USB-C PD 5–9 V up to 20 W
+    charger_efficiency: 0.88
+    max_charge_c: 0.5          # typical standard charge rate per cell
+    cv_factor: 1.25            # constant-voltage finish
+    target_h: 3                # spec: full charge in 3 h or less
+
+# Default CAD parameters (mm, kg): the approved prototype at 280 mm, with the spec's body
+# diameter (Ø95) and wall (3.0 mm).
+cad_parameters:
+  overall_height: 280
+  body_max_diameter: 95
+  target_mass_kg: 1.8
+  base_clearance: 25.8
+  nose_cone_height: 45.2
+  wall_thickness: 3.0
+  grille_height: 162.1
+  grille_diameter: 72.6
+  grille_thickness: 0.5
+  grille_perforated: 1
+  fin_tip_radius: 79.0
+  fin_thickness: 8.0
+  knob_diameter: 20
+  pr_width: 40
+  pr_height: 60
+
+# Default cost line items (prices come from seed/cost/bought_in.yaml).
+cost_items:
+  - {kind: bought_in, price_key: speaker_driver_57, quantity: 1}
+  - {kind: bought_in, price_key: passive_radiator_60x40, quantity: 1}
+  - {kind: bought_in, price_key: speaker_main_board, quantity: 1}
+  - {kind: bought_in, price_key: battery_pack_1s2p, quantity: 1, power: battery}
+  - {kind: bought_in, price_key: usb_c_receptacle_ip67, quantity: 1, power: battery}
+  - {kind: bought_in, price_key: rotary_encoder_push, quantity: 1}
+  - {kind: bought_in, price_key: status_led_light_pipe, quantity: 1}
+  - {kind: bought_in, price_key: acoustic_fabric_set, quantity: 1}
+  - {kind: bought_in, price_key: butyl_damping, quantity: 1}
+  - {kind: bought_in, price_key: o_ring_spigot, quantity: 2}
+  - {kind: bought_in, price_key: fin_pad_tpu, quantity: 3}
+  - {kind: bought_in, price_key: speaker_chassis_set, quantity: 1}
+  - {kind: bought_in, price_key: ballast_cup_steel, quantity: 1}
+  - {kind: bought_in, price_key: screw_m4_12, quantity: 6}
+  - {kind: bought_in, price_key: screw_m25_cs, quantity: 5}
+  - {kind: bought_in, price_key: stud_m4, quantity: 1}
+  - {kind: bought_in, price_key: screw_m3, quantity: 4}
+  - {kind: bought_in, price_key: structural_adhesive, quantity: 1}
+  - {kind: finishing, price_key: knob_logo_engrave, quantity: 1}
+  - {kind: finishing, price_key: knob_knurl, quantity: 1}
+  - {kind: finishing, price_key: collar_lettering_etch, quantity: 1}
+  - {kind: bought_in, price_key: usb_c_cable_braided, quantity: 1, power: battery}
+  - {kind: packaging, price_key: retail_packaging_speaker, quantity: 1}
+  - {kind: one_off, price_key: speaker_radio_emc_safety_testing, quantity: 1}
+  - {kind: one_off, price_key: bluetooth_sig_listing, quantity: 1}
+  - {kind: assembly, name: "Final assembly, wiring, sealing, acoustic test and pairing test", quantity: 30, unit: min, confidence: low}
+
+# Retail pricing (Technical Specification). Channel economics come from seed/cost/pricing.yaml.
+pricing:
+  retail_price: 199
+  retail_low: 179
+  retail_high: 229
+  price_points: [199]
+  source: "Technical Specification (Oct 2026)"
+
+# One power option: cordless (the spec has no mains version).
+power_options:
+  - key: A
+    label: "A: cordless, 2 x 18650 1S2P, USB-C PD"
+    scenario: null
+
+# Design-change scenarios for the Cost-down tab (same effects as Faro's; see faro.yaml).
+scenarios:
+  - key: nose_cone_spun
+    letter: a
+    label: Nose cone spun instead of CNC turned
+    design_change: Spin the nose cone from 1050 aluminium disc instead of turning and hollowing 6061 bar; same outside shape.
+    effect:
+      reroute:
+        part: nose_cone
+        options:
+          - {process: metal_spinning, material: al_1050, label: Spun 1050}
+    premium_impact: none
+    tradeoffs:
+      finish: Spin lines are brushed out before PVD; the tip may need a small turned plug.
+      weight: Lighter (thinner wall); the ballast makes it up.
+      premium: Looks the same.
+      lead_time: Spinning tools in 2–4 weeks.
+      tooling: A spinning form (low cost).
+  - key: custom_battery_pack
+    letter: c
+    label: Custom battery pack with its own certification testing
+    design_change: >-
+      Buy a custom 2 x 18650 1S2P pack (cheaper per unit, no test reports) instead of a pre-certified pack,
+      and pay for UN38.3 and IEC 62133-2 testing once.
+    effect:
+      add_items:
+        - {price_key: battery_pack_1s2p_custom, quantity: 1}
+        - {price_key: battery_pack_testing, quantity: 1, kind: one_off}
+      remove_items: [battery_pack_1s2p]
+    premium_impact: none
+    flags:
+      - {kind: compliance, message: "Custom pack: UN38.3 and IEC 62133-2 must be passed before shipping or selling; allow 6–10 weeks for testing."}
+    tradeoffs:
+      finish: No change.
+      weight: No change.
+      premium: No change.
+      lead_time: Adds 6–10 weeks of testing before launch.
+      tooling: None; the testing is a one-off cost shared over the batch.
+  - key: sealed_no_radiator
+    letter: r
+    label: Sealed box without the rear passive radiator
+    design_change: >-
+      Leave out the rear passive radiator, its cover, bezel and fabric: the prototype's sealed box. The back
+      becomes plain red; the bass is thinner and the DSP has to work harder.
+    effect:
+      remove_part: [passive_radiator, rear_grille, rear_bezel, rear_fabric]
+      remove_items: [passive_radiator_60x40]
+      assembly_min: {low: -2, high: -1}
+    premium_impact: slight
+    flags:
+      - {kind: performance, message: "Without the radiator the 60 Hz (−6 dB) bass target is unlikely to be met; check with the driver supplier."}
+    tradeoffs:
+      finish: A plain red back, as the approved prototype.
+      weight: About 10 g lighter; the ballast makes it up.
+      premium: Thinner bass at the spec's 60 Hz.
+      lead_time: One part and one bezel fewer.
+      tooling: One photo-tool and one CNC programme fewer.
+
+# Notes shown under the Cost-down summary.
+cost_down_notes:
+  - "One power option: cordless (2 x 18650 1S2P, USB-C PD)."
+  - "Tiers: 'no compromise' uses only changes that keep the look and feel (spun nose cone, custom battery pack); 'slight compromises' also allows the sealed box without the rear radiator."
+
+# Questions for suppliers (shown in the Factory Pack; resolved once they have an `answer`).
+rfq_open_questions:
+  - id: body_tooling
+    topic: Moulding
+    question: "Body mould: collapsible core, or two halves welded (the seam disappears under the lacquer)?"
+    why: The belly (Ø95) is wider than both openings (about Ø43 and Ø47), so a simple core can't come out.
+    proposed: "Moulder to propose, with the effect on cost, lead time and where the internal seats go."
+  - id: driver_data
+    topic: Acoustics
+    question: "Driver and radiator datasheets (Thiele-Small values, Xmax, net displaced volume, rated power)?"
+    why: The air volume (about 0.74 L) and the bass tuning are estimates from typical values until we have them.
+    proposed: Electronics supplier proposes a 57 mm neodymium driver rated 20 W and a mass-tunable 60 x 40 mm radiator.
+  - id: boost_and_cells
+    topic: Electronics
+    question: "20 W from a 1S2P pack: boost converter topology, and the cells' continuous current rating?"
+    why: About 8 A from the battery at full power (4 A per cell).
+    proposed: "Boost to 12–15 V ahead of the Class-D amplifier; branded power cells rated 10 A or more."
+  - id: bayonet
+    topic: Mechanical
+    question: "Nose-cone bayonet with a hidden detent and the O-ring: lugs on the aluminium spigot or moulded into the body?"
+    why: Specified but not yet detailed; affects the moulding and the nose cone's machining.
+    proposed: Three lugs on the turned spigot, L-slots moulded inside the body's top rim, detent bump in the slot.
+  - id: pvd_match
+    topic: Finish
+    question: "Can one coater hold ΔE ≤ 1.5 across PVD on brass, Zamak, 6061 and stainless?"
+    why: Every visible metal part is gold PVD in one matched tone (spec).
+    proposed: One PVD house for all parts, matched to the signed master sample; base layers per substrate.
+  - id: mass_margin
+    topic: Mechanical
+    question: "Part weights (driver, radiator, battery, board, PVD parts) as quoted?"
+    why: The steel ballast cup is at its largest size to reach 1.8 kg; lighter parts would leave the speaker short.
+    proposed: Weigh first samples; options are a denser or taller ballast, or a heavier collar.
+
+# What the RFQs state.
+rfq:
+  product_line: rocket Bluetooth speaker
+  first_order: "Our likely first order is 300 to 500 speakers, depending on pre-orders. Please quote all three tiers."
+  launch_market: UK
+  marking: "UKCA marking for the UK launch (radio equipment). CE marking for the EU may follow: tell us what it would add."
+  incoterms: ["FOB (port of loading)", "DDP to our UK address: [DELIVERY ADDRESS, to be filled in]"]
+  currencies: [GBP, USD]
+  tolerances: "General tolerances ISO 2768-m on metal parts and ISO 20457 (moulded) on the body unless a drawing states otherwise; seams 0.3 ±0.1 mm, flush within 0.1 mm; knob gap 0.3 ±0.05 mm."
+  aql: "AQL 1.0 for major and 2.5 for minor cosmetic defects; Bathsheva London approves the golden sample before production."
+  colour_note: "Signed physical master samples are the colour authority. The hex values are the design reference; the RAL references are approximate and for guidance only."
+  colours:
+    - {name: Oxblood red polished lacquer, parts: [body], hex: "#8A1C15", ral: ["RAL 3011 Brown red", "RAL 3002 Carmine red"],
+       gloss: "≥ 90 GU (60°), primer + colour + two clear coats, polished; ΔE ≤ 1.0 to the master",
+       source: "Technical Specification; Atelier params.py RED_HEX"}
+    - {name: "Gold PVD, fine brushed satin", parts: [nose_cone, fin, collar, foot, grille, bezel, rear_grille, rear_bezel, knob],
+       hex: "#C4A15A", ral: [], gloss: "fine brushed satin; one tone, ΔE ≤ 1.5 across parts",
+       source: "Technical Specification; prototype GOLD_HEX (render reference only)"}

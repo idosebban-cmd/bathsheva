@@ -26,7 +26,7 @@ None.
 | 2 | Electronics | Do the lantern and tower lights dim together on the one knob, or does the tower stay at a fixed ratio? | Both dim together from the knob; the tower light is a fixed share of the lantern, set at the factory. |
 | 3 | Electronics | How is charging and low battery shown to the user? | The lantern blinks twice at low battery; a small LED by the USB-C port shows charging. No other indicator. |
 | 4 | Drawings | Which general tolerance applies where a drawing gives none? | ISO 2768-m for metal parts; glass ±0.5 mm on length and ±0.3 mm on OD; fits (bayonet, spigots) as dimensioned. |
-| 5 | Finish | Exact colours and gloss for the black, cream and red lacquer, and the brass finish. | Hex values from the prototype (black #121212, cream #F9F2E1) and Atelier (oxblood red #8A1C15), with the nearest RAL marked approximate (red: RAL 3011 and RAL 3002); physical colour samples are the master. Gloss: base satin 30–50 GU, cream and red 80+ GU. Brass brushed and clear-lacquered, matching Atelier. |
+| 5 | Finish | Exact colours and gloss for the black, cream and red lacquer, and the brass finish. | Hex values from the prototype (black #121212, cream #F9F2E1) and Atelier (oxblood red #8A1C15), with the nearest RAL marked approximate (red: RAL 3011 and RAL 3002); physical colour samples are the master. Gloss: base satin 30–50 GU, cream and red 80+ GU. Brass brushed and clear-lacquered. |
 | 6 | Nameplate | Nameplate artwork (FARO lettering, font, fill colour). | Prototype lettering exported 1:1 as SVG and DXF (mechanical/artwork/); etched, filled black. |
 | 7 | Compliance | Markets for launch: UK only, or UK and EU? | UK only at launch: quote UKCA marking; CE for the EU may follow. |
 | 8 | Commercial | Delivery terms, currency and delivery address. | FOB (port of loading) and DDP to a UK address, in GBP or USD. The delivery address is a placeholder for you to fill in. |
@@ -46,4 +46,4 @@ Physical colour samples are the master.
 | Satin black lacquer | #121212 | RAL 9005 Jet black (approx.) | satin, 30–50 GU (60°), clear-coated | prototype faro/params.py BASE_HEX |
 | Cream lacquer | #F9F2E1 | RAL 9001 Cream (approx.) | gloss, 80+ GU (60°), clear-coated | prototype faro/params.py CREAM_HEX |
 | Oxblood red lacquer | #8A1C15 | RAL 3011 Brown red (approx.) / RAL 3002 Carmine red (approx.) | gloss, 80+ GU (60°), clear-coated | Atelier params.py RED_HEX (warm deep oxblood lacquer); prototype faro/params.py uses the same value |
-| Brushed brass, clear lacquer | #C4A15A | n/a (natural metal) | brushed satin grain, clear lacquer (matching Atelier) | prototype faro/params.py BRASS_HEX (render reference only); finish as Atelier's brushed brass |
+| Brushed brass, clear lacquer | #C4A15A | n/a (natural metal) | brushed satin grain, clear lacquer | prototype faro/params.py BRASS_HEX (render reference only); brushed satin brass, clear lacquer (user, Oct 2026) |

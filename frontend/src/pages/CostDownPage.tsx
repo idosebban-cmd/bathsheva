@@ -41,6 +41,7 @@ interface Pricing {
     bands: Record<"dtc" | "retail", { target: number; low: number; high: number }>;
     premium: Record<string, number>;
   } | null;
+  premium_edition?: boolean;
 }
 interface SummaryRow {
   label: string;
@@ -312,19 +313,19 @@ function TargetsCard({ pricing, projectId, onSaved }: { pricing: Pricing; projec
               band {gbp(t.bands.retail.low)} – {gbp(t.bands.retail.high)}; wholesale {gbp(t.standard.wholesale)}
             </div>
           </div>
-          <div className="tile-target">
+          {pricing.premium_edition && <div className="tile-target">
             <div className="muted small">Premium brass edition ({gbp(pricing.values.premium_retail)})</div>
             <div className="tile-big">
               {gbp(t.premium.dtc)} / {gbp(t.premium.retail)}
             </div>
             <div className="muted small">DTC / retail targets</div>
-          </div>
+          </div>}
         </div>
       )}
       <details>
         <summary>Edit pricing assumptions</summary>
         <div className="grid">
-          {PRICE_FIELDS.map(([k, label, kind]) => {
+          {PRICE_FIELDS.filter(([k]) => k !== "premium_retail" || pricing.premium_edition).map(([k, label, kind]) => {
             const m = pricing.meta[k];
             const shown = kind === "pct" ? +(m.value * 100).toFixed(2) : m.value;
             return (
@@ -360,7 +361,7 @@ function TargetsCard({ pricing, projectId, onSaved }: { pricing: Pricing; projec
 
 const STACK_FIELDS: [string, string, "money" | "pct"][] = [
   ["vat_rate", "VAT", "pct"],
-  ["stack_freight", "Inbound handling and storage (£ per lamp)", "money"],
+  ["stack_freight", "Inbound handling and storage (£ per unit)", "money"],
   ["stack_delivery", "Delivery to customer (£ per order)", "money"],
   ["stack_payment_pct", "Payment fees (% of price paid)", "pct"],
   ["stack_payment_fixed", "Payment fee per order (£)", "money"],
@@ -649,6 +650,7 @@ function SummaryCard({ summary }: { summary: Summary }) {
           <SummaryTable rows={summary.rows.filter((r) => (r.power ?? "A") === p.key)} targetLabel="target" />
         </div>
       ))}
+      {summary.premium.rows.length > 0 && (<>
       <h3 style={{ marginTop: "1rem" }}>
         {summary.premium.label} at {gbp(summary.premium.retail)}
       </h3>
@@ -662,6 +664,7 @@ function SummaryCard({ summary }: { summary: Summary }) {
           <SummaryTable rows={summary.premium.rows.filter((r) => (r.power ?? "A") === p.key)} targetLabel="(premium)" />
         </div>
       ))}
+      </>)}
       <ul className="small muted">
         {summary.notes.map((n, i) => (
           <li key={i}>{n}</li>
@@ -675,6 +678,7 @@ function SummaryCard({ summary }: { summary: Summary }) {
 // ---- Scenario builder --------------------------------------------------------------
 
 function ScenarioBuilder({ projectId, catalog }: { projectId: number; catalog: Catalog }) {
+  const noun = useProject().project.product?.noun ?? "unit";
   const [selected, setSelected] = useState<Record<string, number | null>>({});
   const [region, setRegion] = useState("uk");
   const [result, setResult] = useState<Evaluation | null>(null);
@@ -734,7 +738,7 @@ function ScenarioBuilder({ projectId, catalog }: { projectId: number; catalog: C
     <section className="card">
       <h2>Design-change scenarios</h2>
       <p className="small muted">
-        Tick changes to combine them. "Saving alone" is each change on its own against the current configuration (per lamp). Multi-option
+        Tick changes to combine them. "Saving alone" is each change on its own against the current configuration (per {noun}). Multi-option
         changes use the cheapest option unless you pick one.
       </p>
       <div className="scenario-layout">
@@ -950,6 +954,7 @@ function ScenarioBuilder({ projectId, catalog }: { projectId: number; catalog: C
 // ---- Process routes ----------------------------------------------------------------
 
 function RoutesCard({ projectId, routes, onChanged }: { projectId: number; routes: Routes; onChanged: () => Promise<void> }) {
+  const noun = useProject().project.product?.noun ?? "unit";
   const [error, setError] = useState("");
   const vols = routes.volumes.map(String);
 
@@ -968,7 +973,7 @@ function RoutesCard({ projectId, routes, onChanged }: { projectId: number; route
     <section className="card">
       <h2>Process routes per part</h2>
       <p className="small muted">
-        Every process the rules engine considers viable, costed per lamp (part plus any extra parts the route needs). Selecting a route
+        Every process the rules engine considers viable, costed per {noun} (part plus any extra parts the route needs). Selecting a route
         records a decision and updates cost, BOM and DFM. It does not change the CAD; parts whose route needs a design change are flagged
         until the CAD is updated.
       </p>

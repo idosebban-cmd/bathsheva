@@ -310,6 +310,18 @@ def recommend(rules: RuleSet, part: dict[str, Any], ctx: Context) -> dict[str, A
     for c in rules.design_constraints.values():
         applies = c.applies(traits, category)
         trim = bool(traits & set(c.trim_traits))
+        look_exempt = bool(traits & set(c.look_exempt_traits)) and not traits & set(c.exempt_traits)
+        # the part's primary finish (the first match, as costing uses): "polished lacquer" is lacquer, not polished metal
+        metallic = [fk for fk in finish_keys[:1] if rules.finishes[fk].metallic_look or rules.finishes[fk].metal_effect]
+        if look_exempt and metallic and category not in c.exempt_categories:
+            constraints.append({
+                "key": c.key, "name": c.name, "message": " ".join(c.message.split()), "scope": "part",
+                "requirement": "", "excluded_processes": [],
+                "violations": [f"{rules.finishes[fk].name.split(' (')[0]} looks metallic, so this part would have to be "
+                               "real metal; it is exempt only while its finish doesn't look like metal."
+                               for fk in metallic], "source": c.source,
+            })
+            continue
         if not (applies or trim):
             continue
         violations = [f"{rules.finishes[fk].name.split(' (')[0]} imitates metal and is not allowed on a visible part."

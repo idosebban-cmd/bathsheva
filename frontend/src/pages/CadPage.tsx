@@ -85,7 +85,7 @@ export default function CadPage() {
         <h2>Parameters</h2>
         {dimsAssumed && (
           <p className="notice small">
-            <AssumptionBadge /> Faro's real dimensions are TBD. These defaults are placeholders for exploring proportions.
+            <AssumptionBadge /> {project.product?.label ?? "The product"}'s real dimensions are TBD. These defaults are placeholders for exploring proportions.
           </p>
         )}
         {groups.map((g) => (
@@ -153,21 +153,20 @@ export default function CadPage() {
           {latest && <span className="small muted">generated {new Date(latest.created_at).toLocaleString()}</span>}
         </div>
         {glb ? (
-          <ModelViewer url={fileUrl(glb.path)} />
+          <ModelViewer url={fileUrl(glb.path)} product={state.product.key} />
         ) : (
           <div className="viewer empty">No CAD generated yet. Check the parameters and press "Regenerate CAD".</div>
         )}
-        <p className="small muted">
-          Faro as approved in the prototype, adapted for production in metal: spun aluminium base, tower and cap; turned brass gallery,
-          frame, finial and knob; photo-etched railing; frosted borosilicate lantern and an opal glass tube behind the windows. One body
-          per part. The battery, boards, LEDs and dimmer are placeholders showing space and position. Tick "Lights on" to see it lit.
-        </p>
+        <p className="small muted">{state.product.cad_note}</p>
         {state.mass && (
           <p className={state.mass.status === "ok" ? "small" : "small warning-text"}>
-            Estimated lamp mass <b>{state.mass.total_kg.toFixed(2)} kg</b>
+            Estimated {state.product.noun} mass <b>{state.mass.total_kg.toFixed(2)} kg</b>
             {state.mass.target_kg ? ` vs target ${state.mass.target_kg} kg` : ""}
-            {state.mass.status === "low" && " — below target: thicken or enlarge the weight plate"}
-            {state.mass.status === "high" && " — well above target"} (weight plate {(state.mass.parts_kg.weight_plate ?? 0).toFixed(2)} kg).{" "}
+            {state.mass.status === "low" && (state.product.mass_part === "weight_plate"
+              ? " — below target: thicken or enlarge the weight plate" : " — below target")}
+            {state.mass.status === "high" && " — well above target"}
+            {state.product.mass_part && state.mass.parts_kg[state.product.mass_part] !== undefined &&
+              ` (${state.product.mass_part.replace("_", " ")} ${state.mass.parts_kg[state.product.mass_part].toFixed(2)} kg)`}.{" "}
             <span className="muted">{state.mass.note}</span>
           </p>
         )}

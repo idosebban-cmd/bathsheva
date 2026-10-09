@@ -106,13 +106,14 @@ def test_pack_contents(client, faro_project):
                  "[COMPANY NAME]", "[CONTACT NAME, ROLE]", "[QUOTE DEADLINE]", "Colours and finishes", "#121212", "#F9F2E1",
                  "#8A1C15", "RAL 9005", "RAL 9001", "RAL 3011 Brown red (approx.) / RAL 3002 Carmine red (approx.)",
                  "approximate", "Physical colour samples will be supplied and are the master", "satin, 30–50 GU",
-                 "gloss, 80+ GU", "Brushed brass, clear lacquer", "matching our Atelier", "satin black (30–50 GU)",
+                 "gloss, 80+ GU", "Brushed brass, clear lacquer", "satin black (30–50 GU)",
                  "300 to 500 lamps", "UKCA", "CE marking for the EU may follow", "FOB (port of loading)", "DDP to our UK address",
                  "[DELIVERY ADDRESS, to be filled in]", "GBP or USD", "final assembly", "protective packing", "pull-test",
                  "artwork/",
                  "Brass parts: please quote two ways", "your preferred method", "near-net basis",
                  "Spun from a 1.0 mm CZ108 brass disc", "separate RFQ", "Battery bay"):
         assert text in md, text
+    assert "matching Atelier" not in md and "matching our Atelier" not in md  # Faro's brass is its own finish
     # Not components: our one-off testing cost, and electronics (separate RFQ) aren't priced here.
     assert "EMC testing" not in md and "| Pre-certified Li-ion battery pack" not in md
     brass_rows = md.split("Brass parts: please quote two ways")[1].split("\n## ")[0]

@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, computed_field, field_validator
 
 PowerType = Literal["mains", "battery", "passive", "undecided"]
 
@@ -43,7 +43,16 @@ REQUIREMENT_FIELDS = list(Requirements.model_fields)
 class ProjectCreate(BaseModel):
     name: str
     description: str = ""
-    template: Literal["faro"] | None = None
+    template: str | None = None  # a registered product (app.products)
+
+    @field_validator("template")
+    @classmethod
+    def _known_template(cls, v: str | None) -> str | None:
+        from app.products import products
+
+        if v is not None and v not in products():
+            raise ValueError(f"Unknown product template {v!r}; expected one of: {', '.join(products())}")
+        return v
 
 
 class ProjectUpdate(BaseModel):
@@ -72,6 +81,21 @@ class ProjectSummary(BaseModel):
     template: str | None
     created_at: datetime
     updated_at: datetime
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def product(self) -> dict[str, str] | None:
+        """The template's product for UI wording: label, noun ("lamp", "speaker"), summary, runtime basis."""
+        from app.products import get_product
+        from app.services.templates import load_template
+
+        prod = get_product(self.template)
+        if prod is None:
+            return None
+        from app.electrical import DEFAULT_BASIS
+
+        basis = (load_template(prod.key).get("electrical") or {}).get("runtime_basis", DEFAULT_BASIS)
+        return {"key": prod.key, "label": prod.label, "noun": prod.noun, "summary": prod.summary, "runtime_basis": basis}
 
     @field_validator("created_at", "updated_at")
     @classmethod

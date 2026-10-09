@@ -52,8 +52,9 @@ safety_rules:
   - key: stability
     traits_any: [needs_mass]
     message: >-
-      Stability (tip-over) affects safety for a lamp. Check the finished
-      lamp's tilt stability against the applicable luminaire standard.
+      Stability (tip-over) affects safety. Check the finished product's tilt
+      stability against the applicable standard (for example the luminaire
+      standard for a lamp, IEC 62368-1 for a speaker).
     verify_with: Test lab
     source: model-generated
     confidence: medium

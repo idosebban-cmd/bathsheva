@@ -4,7 +4,8 @@ import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js
 // Preview materials for the 3D viewer (also used to render screenshots outside the app).
 // Finishes by part name (the GLB's node names are the CAD part keys; a two-tone part's
 // lower colour is exported as "<key>_lower"). Anything else keeps its exported colour.
-export type Finish = "satin_black" | "cream" | "red" | "brass" | "brass_matte" | "frosted" | "opal" | "internal" | "etch_fill";
+export type Finish = "satin_black" | "cream" | "red" | "brass" | "brass_matte" | "frosted" | "opal" | "internal" | "etch_fill"
+  | "gold_pvd" | "gold_matte" | "fabric" | "led";
 export const FINISH: Record<string, Finish> = {
   base: "satin_black", base_plate: "internal", felt_pad: "internal",
   band_cream: "cream", tower: "cream", tower_lower: "red", cap: "red",
@@ -12,11 +13,24 @@ export const FINISH: Record<string, Finish> = {
   finial: "brass", nameplate_fill: "etch_fill", knob_logo_floor: "brass_matte",
   lantern_glass: "frosted", diffuser: "opal",
 };
+// Atelier (Technical Specification): oxblood red gloss 90+ GU over two clear coats; every visible metal part gold
+// PVD, fine brushed satin, one tone; black acoustic fabric behind the grille; white status LED.
+export const ATELIER_FINISH: Record<string, Finish> = {
+  body: "red", nose_cone: "gold_pvd", fin: "gold_pvd", fin_2: "gold_pvd", fin_3: "gold_pvd", collar: "gold_pvd",
+  foot: "gold_pvd", grille: "gold_pvd", bezel: "gold_pvd", rear_grille: "gold_pvd", rear_bezel: "gold_pvd",
+  knob: "gold_pvd", knob_logo_floor: "gold_matte", collar_etch_floor: "gold_matte", grille_fabric: "fabric", rear_fabric: "fabric",
+  fin_pad: "internal", fin_pad_2: "internal", fin_pad_3: "internal", led: "led",
+};
+
+/** The finish map for a product's GLB (Faro's when not given). */
+export function finishesFor(product?: string): Record<string, Finish> {
+  return product === "atelier" ? ATELIER_FINISH : FINISH;
+}
 const GLOW = new THREE.Color("#ffb45e");
 
 // Design reference colours (the RFQ's hex values) and gloss levels: base satin black 30–50 GU, cream and oxblood
-// red gloss 80+ GU, brass brushed (satin grain) and clear-lacquered like Atelier.
-const BLACK = "#121212", CREAM = "#f9f2e1", RED = "#8a1c15", BRASS = "#c4a15a";
+// red gloss 80+ GU, brass brushed (satin grain) and clear-lacquered.
+const BLACK = "#121212", CREAM = "#f9f2e1", RED = "#8a1c15", BRASS = "#c4a15a", GOLD = "#c4a15a";
 
 /** Brushed grain without UVs: fine horizontal streaks in the roughness, keyed to world height (mm). */
 function brushed(m: THREE.MeshPhysicalMaterial): THREE.MeshPhysicalMaterial {
@@ -60,6 +74,14 @@ export function material(finish: Finish, lit: boolean): THREE.Material {
         color: "#f7f1e6", roughness: 0.7, transmission: 0.25, thickness: 2, ior: 1.47,
         emissive: lit ? GLOW : new THREE.Color(0), emissiveIntensity: lit ? 2.6 : 0, side: THREE.DoubleSide,
       });
+    case "gold_pvd": // fine brushed satin gold PVD (no lacquer)
+      return brushed(new THREE.MeshPhysicalMaterial({ color: GOLD, metalness: 1, roughness: 0.32 }));
+    case "gold_matte": // engraved / etched groove floors: gold under the PVD, not brushed
+      return new THREE.MeshPhysicalMaterial({ color: GOLD, metalness: 1, roughness: 0.62 });
+    case "fabric":
+      return new THREE.MeshStandardMaterial({ color: "#1c1b1b", roughness: 0.95 });
+    case "led":
+      return new THREE.MeshStandardMaterial({ color: "#ffffff", emissive: new THREE.Color("#fff6e8"), emissiveIntensity: 1.5 });
     case "etch_fill":
       return new THREE.MeshStandardMaterial({ color: "#050505", roughness: 0.9 });
     default:

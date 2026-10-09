@@ -53,7 +53,7 @@ materials:
       The standard alloy for machined parts. It machines cleanly, is widely
       available and gives a good cosmetic finish. If production volume becomes
       high, a cast alloy may be cheaper.
-    finish_compat: {wet_lacquer: good, powder_coat: good, anodise: good, polish: good, brass_plating: fair}
+    finish_compat: {wet_lacquer: good, powder_coat: good, anodise: good, polish: good, brass_plating: fair, gold_pvd: fair}
     density_g_cm3: 2.70
     source: model-generated
     confidence: high
@@ -107,7 +107,7 @@ materials:
       Solid brass: machines beautifully, takes a high polish and ages to a warm
       patina (or stays bright under clear lacquer). Heavy and dearer than
       aluminium, so it is used for small visible details.
-    finish_compat: {brushed_lacquer: good, tumble_polish: good, polish: good, clear: good, wet_lacquer: fair, powder_coat: poor, anodise: poor}
+    finish_compat: {brushed_lacquer: good, tumble_polish: good, polish: good, clear: good, gold_pvd: good, wet_lacquer: fair, powder_coat: poor, anodise: poor}
     density_g_cm3: 8.5
     source: model-generated
     confidence: medium
@@ -183,6 +183,64 @@ materials:
     source: model-generated
     confidence: high
     verified: false
+
+  - key: zamak_5
+    name: Zinc alloy Zamak 5 (ZP5)
+    category: zinc
+    kind: metal
+    processes: [zinc_die_casting]
+    plain_language: >-
+      The standard zinc die-casting alloy with a little copper for strength.
+      Heavy (about 2.5 times aluminium), casts fine detail and takes plating and
+      PVD well over a copper-nickel base.
+    finish_compat: {gold_pvd: good, brass_plating: good, powder_coat: good, wet_lacquer: fair, polish: fair}
+    density_g_cm3: 6.7
+    source: model-generated
+    confidence: medium
+    verified: false
+
+  - key: stainless_304
+    name: Stainless steel 304 sheet
+    category: stainless
+    kind: metal
+    processes: [photo_etching_stainless]
+    plain_language: >-
+      The everyday austenitic stainless steel. Etches cleanly, doesn't rust and
+      is a good base for decorative PVD.
+    finish_compat: {gold_pvd: good, polish: good, brushed_lacquer: fair}
+    density_g_cm3: 8.0
+    source: model-generated
+    confidence: high
+    verified: false
+
+  - key: pc_abs
+    name: PC/ABS blend
+    category: polymer
+    kind: polymer
+    processes: [injection_moulding]
+    plain_language: >-
+      A tough, stiff blend of polycarbonate and ABS, widely used for electronics
+      housings. Moulds with a smooth surface that takes primer, colour and clear
+      coats well.
+    finish_compat: {gloss_lacquer_polished: good, wet_lacquer: good}
+    max_service_temp_c: 100
+    density_g_cm3: 1.15
+    source: model-generated
+    confidence: medium
+    verified: false
+
+  - key: tpu
+    name: TPU (thermoplastic polyurethane)
+    category: polymer
+    kind: polymer
+    processes: [injection_moulding]
+    plain_language: A rubbery, hard-wearing plastic for hidden pads and feet that protect furniture and stop slipping.
+    finish_compat: {}
+    density_g_cm3: 1.2
+    source: model-generated
+    confidence: medium
+    verified: false
+
 
   - key: certified_component
     name: Certified bought-in component

@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { api, errorText, fileUrl, type Project, type Requirements } from "../api";
 import { AssumptionBadge } from "../components/Badges";
+import AudioCard from "../components/AudioCard";
 import RuntimeCard from "../components/RuntimeCard";
 import TemplateUpgradeBanner from "../components/TemplateUpgradeBanner";
 import { useProject } from "../components/useProject";
@@ -136,7 +137,7 @@ export default function OverviewPage() {
             </select>
           </>) })}
           {(req.power_type === "battery" || req.power_type === "undecided") && renderField({
-            field: "battery_runtime_h", label: "Battery runtime target (hours at full brightness, all lights on)", children: (<>
+            field: "battery_runtime_h", label: `Battery runtime target (hours ${project.product?.runtime_basis ?? "at full brightness, all lights on"})`, children: (<>
               <input
                 type="number"
                 step={0.5}
@@ -165,6 +166,7 @@ export default function OverviewPage() {
       </section>
 
       <RuntimeCard />
+      <AudioCard />
       <ImagesSection />
     </div>
   );

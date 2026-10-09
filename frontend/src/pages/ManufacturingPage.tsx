@@ -11,8 +11,8 @@ const CATEGORY_TEXT: Record<string, [string, string]> = {
   setup: ["Setup", "Setting up each job, shared across the batch."],
   finishing: ["Finishing", "Paint, lacquer, plating or polishing."],
   tooling: ["Tooling", "One-off tools and forms, shared across the batch."],
-  bought_in: ["Bought-in parts", "LED, electronics, cable, fasteners and seals bought ready-made."],
-  assembly: ["Assembly", "Putting the lamp together, wiring and testing it."],
+  bought_in: ["Bought-in parts", "Electronics, batteries, drivers, fasteners and seals bought ready-made."],
+  assembly: ["Assembly", "Putting the product together, wiring and testing it."],
   packaging: ["Packaging", "Retail box and inserts."],
   freight_duty: ["Freight and duty", "Shipping to the UK and import duty when made abroad."],
   one_off: ["One-off costs", "Certification testing and similar one-off costs, shared across the batch."],
@@ -20,6 +20,7 @@ const CATEGORY_TEXT: Record<string, [string, string]> = {
 
 export default function ManufacturingPage() {
   const { project } = useProject();
+  const noun = project.product?.noun ?? "unit";
   const [report, setReport] = useState<CostReport | null>(null);
   const [items, setItems] = useState<CostItem[]>([]);
   const [settings, setSettings] = useState<CostSettings | null>(null);
@@ -61,7 +62,7 @@ export default function ManufacturingPage() {
             {gbp(u.low)} – {gbp(u.high)}
           </span>
           <span className="muted">
-            per lamp at {report.reference_quantity.toLocaleString()} units {volumeAssumed && <AssumptionBadge title={report.reference_basis} />}
+            per {noun} at {report.reference_quantity.toLocaleString()} units {volumeAssumed && <AssumptionBadge title={report.reference_basis} />}
           </span>
         </div>
         <p className="small muted">
@@ -104,7 +105,7 @@ export default function ManufacturingPage() {
 
       <section className="card">
         <h2>Breakdown by part</h2>
-        <p className="small muted">Per lamp at {report.reference_quantity.toLocaleString()} units. Each line explains how it was worked out.</p>
+        <p className="small muted">Per {noun} at {report.reference_quantity.toLocaleString()} units. Each line explains how it was worked out.</p>
         {report.parts.map((p) => (
           <details key={p.part_id} className="part-cost">
             <summary>
@@ -115,7 +116,7 @@ export default function ManufacturingPage() {
                 {gbp(p.low)} – {gbp(p.high)}
               </span>
             </summary>
-            <LinesTable lines={p.lines} />
+            <LinesTable lines={p.lines} noun={noun} />
           </details>
         ))}
         {report.skipped.length > 0 && (
@@ -128,7 +129,7 @@ export default function ManufacturingPage() {
           </ul>
         )}
         <h3>Product-level costs</h3>
-        <LinesTable lines={report.product_lines} />
+        <LinesTable lines={report.product_lines} noun={noun} />
       </section>
 
       {settings && <VolumeDiscounts projectId={project.id} settings={settings} onChanged={load} />}
@@ -179,20 +180,20 @@ export default function ManufacturingPage() {
   );
 }
 
-function LinesTable({ lines }: { lines: CostLine[] }) {
+function LinesTable({ lines, noun }: { lines: CostLine[]; noun: string }) {
   return (
     <table className="small cost-lines">
       <thead>
         <tr>
           <th>Line</th>
           <th>How it's worked out</th>
-          <th>Per lamp</th>
+          <th>Per {noun}</th>
         </tr>
       </thead>
       <tbody>
         {lines.map((l, i) => (
           <tr key={i}>
-            <td className="nowrap-cell">
+            <td className="cost-line-label">
               {l.part_id === null ? l.label : CATEGORY_TEXT[l.category]?.[0] ?? l.category}
               {l.unverified && (
                 <div>

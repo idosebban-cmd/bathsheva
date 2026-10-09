@@ -26,7 +26,8 @@ def project_runtime(project: Project) -> dict[str, Any]:
     removed = {ld["part"] for ld in spec.get("loads", []) if ld.get("part") and ld["part"] not in present}
     target = req.get("battery_runtime_h")
     est = electrical.estimate(spec, target, removed)
-    lantern_only = electrical.estimate(spec, target, removed | {"tower_light"})
+    has_tower_light = any(ld.get("part") == "tower_light" and ld["part"] not in removed for ld in spec.get("loads", []))
+    lantern_only = electrical.estimate(spec, target, removed | {"tower_light"}) if has_tower_light else {"hours": None}
     return {
         "applicable": True,
         **est,

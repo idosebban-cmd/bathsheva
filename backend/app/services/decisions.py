@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 from app.costing.assemble import route_changes_for
 from app.costing.data import load_cost_data
 from app.models import EngineeringDecision, Project
+from app.products import product_for
 from app.rules.data import load_rules
 from app.services.templates import load_template
 
@@ -17,13 +18,12 @@ def route_decision_chosen(project: Project, part: Any, process_key: str, materia
                           previous_process: str = "", previous_material: str = "") -> dict[str, Any]:
     """The `chosen` record for a process-route decision, with the design changes the route needs."""
     rules, cost = load_rules(), load_cost_data()
-    from app.cad import faro
-
     traits = set(part.traits or [])
-    if project.template == "faro" and part.cad_key:
+    product = product_for(project)
+    if product is not None and part.cad_key:
         from app.services.cad import current_parameters
 
-        traits |= set(faro.derived_traits(part.cad_key, current_parameters(project)))
+        traits |= set(product.generator.derived_traits(part.cad_key, current_parameters(project)))
     changes = route_changes_for(cost, process_key, traits)
     latest = project.cad_models[-1] if project.cad_models else None
     proc, mat = rules.processes[process_key], rules.materials[material_key]
@@ -40,13 +40,13 @@ def route_decision_chosen(project: Project, part: Any, process_key: str, materia
 
 def unimplemented_changes(project: Project, cad_key: str | None, keys: list[str]) -> list[str]:
     """Design changes the project's CAD doesn't show yet (latest generated model, or the current generator)."""
-    if project.template != "faro":
+    product = product_for(project)
+    if product is None:
         return list(keys)
-    from app.cad import faro
-
+    gen = product.generator
     latest = project.cad_models[-1] if project.cad_models else None
-    bodies = set(latest.part_info) if latest is not None else set(faro.PART_KEYS)
-    return [k for k in keys if not faro.implements(k, cad_key, bodies)]
+    bodies = set(latest.part_info) if latest is not None else set(gen.PART_KEYS)
+    return [k for k in keys if not gen.implements(k, cad_key, bodies)]
 
 
 def missing_template_decisions(project: Project) -> list[dict[str, Any]]:

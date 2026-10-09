@@ -55,6 +55,8 @@ from build123d import (
     revolve,
 )
 
+from app.cad.validation import ParamDef, ValidationIssue, ValidationResult, WallLimit
+
 GENERATOR = "faro"
 MIN = (Align.CENTER, Align.CENTER, Align.MIN)
 
@@ -134,19 +136,6 @@ SPIDER_T = 1.5  # spider on the tower-light spine that carries the diffuser
 MIN_TOWER_HEIGHT = 60.0
 
 
-@dataclass(frozen=True)
-class ParamDef:
-    key: str
-    label: str
-    group: str
-    min: float
-    max: float
-    step: float = 1.0
-    unit: str = "mm"
-    integer: bool = False
-    help: str = ""
-
-
 PARAMS: list[ParamDef] = [
     ParamDef("overall_height", "Overall height", "Overall", 200, 600,
              help="Base underside to the top of the finial ball (the felt pad adds 1.9 mm below)."),
@@ -198,6 +187,13 @@ PARAMS: list[ParamDef] = [
 ]
 PARAM_KEYS = [p.key for p in PARAMS]
 PARAM_BY_KEY = {p.key: p for p in PARAMS}
+
+# Parameters that stay fixed when the lamp is scaled to a new height (cost-down height scenarios).
+# (as in the prototype: walls, the knob, counts and angles don't scale; the base keeps its
+# height so the battery and weight plate still fit).
+UNSCALED_PARAMS = {"wall_thickness", "glass_wall_thickness", "weight_plate_thickness", "target_mass_kg", "base_height",
+                   "base_top_round", "window_count", "window_turn_deg", "railing_posts", "lantern_mullions",
+                   "knob_diameter", "railing_height", "cap_rim_height"}
 
 # Colours for the STEP/GLB export (sRGB, alpha). The 3D preview maps these parts to
 # PBR materials by name (frontend ModelViewer).
@@ -315,45 +311,6 @@ def implements(change_key: str, cad_key: str | None, bodies: set[str]) -> bool:
     """Whether a CAD model with these bodies shows the design change a process route needs."""
     need = IMPLEMENTED_CHANGES.get(change_key)
     return need is not None and need <= bodies
-
-
-@dataclass
-class ValidationIssue:
-    param: str | None
-    message: str
-    level: str = "error"  # error | warning
-
-    def as_dict(self) -> dict[str, Any]:
-        return {"param": self.param, "message": self.message, "level": self.level}
-
-
-@dataclass
-class ValidationResult:
-    errors: list[ValidationIssue] = field(default_factory=list)
-    warnings: list[ValidationIssue] = field(default_factory=list)
-
-    @property
-    def ok(self) -> bool:
-        return not self.errors
-
-    def as_dict(self) -> dict[str, Any]:
-        return {
-            "ok": self.ok,
-            "errors": [e.as_dict() for e in self.errors],
-            "warnings": [w.as_dict() for w in self.warnings],
-        }
-
-
-@dataclass(frozen=True)
-class WallLimit:
-    """Wall thickness limits from the rules data for the process chosen for a part."""
-
-    process_name: str
-    min: float
-    max: float
-    typical_min: float
-    typical_max: float
-    verified: bool = False
 
 
 # ---------------------------------------------------------------------------
