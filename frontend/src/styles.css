@@ -191,6 +191,8 @@ tr.viz-ref td { background: #f4f8fd; }
 .part-cost summary { color: var(--ink); display: flex; gap: 0.3rem; align-items: baseline; flex-wrap: wrap; }
 .part-cost-total { margin-left: auto; font-weight: 600; }
 .cost-lines td:first-child { width: 9rem; }
+/* Long bought-in names (a speaker's main board) wrap instead of pushing the table past the card. */
+.cost-line-label { min-width: 9rem; max-width: 18rem; }
 .nowrap-cell { white-space: nowrap; }
 
 .manufacturing input.cell.wide { width: 16rem; }

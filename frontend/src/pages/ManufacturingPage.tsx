@@ -193,7 +193,7 @@ function LinesTable({ lines, noun }: { lines: CostLine[]; noun: string }) {
       <tbody>
         {lines.map((l, i) => (
           <tr key={i}>
-            <td className="nowrap-cell">
+            <td className="cost-line-label">
               {l.part_id === null ? l.label : CATEGORY_TEXT[l.category]?.[0] ?? l.category}
               {l.unverified && (
                 <div>
