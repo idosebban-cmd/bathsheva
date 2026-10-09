@@ -527,11 +527,48 @@ scenarios:
       premium: Looks the same; the cast body is less tough, and size and colour drift slightly between silicone moulds.
       lead_time: Soft tooling in 2–4 weeks instead of 8–14 weeks for the steel mould and dies; casting by hand is slower per part.
       tooling: A master pattern for the body, silicone moulds remade about every 20 bodies, and CNC programmes or wax-injection tools for the brass parts.
+    conflicts: [jesmonite_body]
+  - key: jesmonite_body
+    letter: j
+    label: Jesmonite body
+    design_change: >-
+      The body cast in Jesmonite AC100 with glass-fibre reinforcement in silicone moulds at a UK caster
+      (soft tooling; moulds replaced every 20–30 casts), about 5 mm wall instead of 3 mm moulded PC/ABS,
+      with cast-in brass inserts for the driver, radiator and fin fixings. Sealer and primer, then the same
+      oxblood lacquer and clear coats. The heavier body takes weight off the ballast cup, so the speaker
+      stays at 1.8 kg. The gold parts stay die-cast Zamak, or are CNC-machined in brass.
+    conflicts: [low_tooling_first_batch]
+    effect:
+      reroutes:
+        - {part: body, process: jesmonite_casting, material: jesmonite_ac100, tooling: low}
+      # Body volume at a 5 mm wall / at the CAD's 3 mm wall, from the CAD (tests/test_atelier_costs.py checks it).
+      volume_scale: {body: 1.571}
+      reroute:
+        parts: [fin, collar, foot]
+        options:
+          - {process: zinc_die_casting, material: zamak_5, label: Die-cast Zamak (as now)}
+          - {process: cnc_machining, material: brass, tooling: none, label: CNC-machined brass}
+      add_items:
+        - {price_key: jesmonite_silicone_mould_share, quantity: 1, kind: tooling}
+        - {price_key: jesmonite_cast_in_inserts, quantity: 1}
+        - {price_key: jesmonite_sealer_primer, quantity: 1, kind: finishing}
+    premium_impact: slight
+    flags:
+      - {kind: safety, message: "Verify on samples: drop test (0.5 m unpackaged, ISTA 2A packaged) and the IEC 62368-1 enclosure impact test; Jesmonite is brittle compared with PC/ABS and can crack or chip."}
+      - {kind: performance, message: "Verify on samples: gloss lacquer adhesion over the sealer and primer (ISO 2409 cross-cut, ≥ 90 GU gloss) and after humidity cycling."}
+      - {kind: performance, message: "Verify on samples: Bluetooth range (10 m) through the 5 mm mineral-filled wall; the antenna position may need to move."}
+    tradeoffs:
+      finish: The same oxblood lacquer and clear coats over a sealer and primer; the porous cast surface must be sealed first.
+      weight: The body is about three times heavier; the ballast cup shrinks to keep 1.8 kg, and the centre of mass rises.
+      premium: A heavier, stone-like shell that sounds deader when tapped; more brittle than moulded plastic.
+      lead_time: Soft tooling in 3–6 weeks from a UK caster instead of 8–14 weeks for the steel mould.
+      tooling: A master pattern and silicone moulds remade every 20–30 casts; the gold parts keep their dies or are CNC-machined.
 
 # Notes shown under the Cost-down summary.
 cost_down_notes:
   - "One power option: cordless (2 x 18650 1S2P, USB-C PD)."
-  - "Tiers: 'no compromise' uses only changes that keep the look and feel (spun nose cone, custom battery pack); 'slight compromises' also allows the sealed box without the rear radiator and the low-tooling first batch (cast polyurethane body, brass instead of zinc)."
+  - "Tiers: 'no compromise' uses only changes that keep the look and feel (spun nose cone, custom battery pack); 'slight compromises' also allows the sealed box without the rear radiator, the low-tooling first batch (cast polyurethane body, brass instead of zinc) and the Jesmonite body."
+  - "Jesmonite body (j): cast Jesmonite AC100 body (5 mm, glass-fibre reinforced, UK caster) with the gold parts die-cast or CNC brass; drop test, lacquer adhesion and Bluetooth range to verify on samples; its rates are model-generated and unverified."
   - "Low-tooling first batch (t): soft tooling for the body and no die-casting dies, for a first batch of a few hundred; its rates (polyurethane casting, silicone moulds, CNC or investment-cast brass) are model-generated and unverified."
 
 # Questions for suppliers (shown in the Factory Pack; resolved once they have an `answer`).

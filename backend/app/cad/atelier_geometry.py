@@ -34,6 +34,7 @@ from dataclasses import dataclass, field
 import numpy as np
 from build123d import (
     Align,
+    Compound,
     Axis,
     Box,
     Circle,
@@ -944,9 +945,12 @@ def build(p, visual_only=False) -> Model:
         # the cup may not rise above the underside of the driver (less a clearance)
         z_driver_bottom = zg - p.DRIVER_DIA / 2
         h_bal_max = max(0.0, z_driver_bottom - p.BALLAST_DRIVER_CLEARANCE - battery_floor_z)
-        area_bal = math.pi * r_bal ** 2 - pocket_w * pocket_d
+        # PORT: the cup's true cross-section (a 1 mm slice), not circle minus pocket: with a thick body wall
+        # (cast Jesmonite) the battery pocket's corners pass the cup's rim, so the subtraction over-counts
+        slab = Cylinder(r_bal, 1.0, align=MIN) - Pos(0, 0, -1) * Box(pocket_w, pocket_d, 3, align=MIN)
         if wire_slot is not None:
-            area_bal -= p.USBC_WIRE_SLOT[0] * p.USBC_WIRE_SLOT[1]
+            slab = slab - Pos(0, 0, -500) * wire_slot
+        area_bal = slab.volume
         I.update(z_driver_bottom=z_driver_bottom,
                  ballast_max_g=h_bal_max * area_bal * rho("ballast") / 1000.0)
 
@@ -972,13 +976,15 @@ def build(p, visual_only=False) -> Model:
             cup, cup_top = None, battery_floor_z
             if h_bal > 0.1:
                 cup = Pos(0, 0, battery_floor_z) * Cylinder(r_bal, h_bal, align=MIN)
-                cup = _one_solid(cup - Pos(0, 0, battery_floor_z - 1) * Box(
-                    pocket_w, pocket_d, h_bal + 2, align=MIN))
+                cup = cup - Pos(0, 0, battery_floor_z - 1) * Box(pocket_w, pocket_d, h_bal + 2, align=MIN)
                 if wire_slot is not None:
-                    cup = _one_solid(cup - Pos(0, 0, battery_floor_z - 1) * wire_slot)
+                    cup = cup - Pos(0, 0, battery_floor_z - 1) * wire_slot
                 for x, y in tray_xy:                                 # tapped for the tray screws
-                    cup = _one_solid(cup - Pos(x, y, battery_floor_z - 0.01) * Cylinder(
-                        p.COLLAR_SCREW_TAP / 2, p.TRAY_SCREW_DEPTH, align=MIN))
+                    cup = cup - Pos(x, y, battery_floor_z - 0.01) * Cylinder(
+                        p.COLLAR_SCREW_TAP / 2, p.TRAY_SCREW_DEPTH, align=MIN)
+                # PORT: when the pocket splits the cup (thick body wall) both halves are kept: two half-cups
+                halves = [s for s in cup.solids() if s.volume > 1.0]
+                cup = halves[0] if len(halves) == 1 else Compound(halves)
                 cup_top = battery_floor_z + h_bal
             pieces = []
             for ang in fin_angles:

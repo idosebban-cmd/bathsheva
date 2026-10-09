@@ -245,6 +245,22 @@ materials:
     confidence: low
     verified: false
 
+  - key: jesmonite_ac100
+    name: Jesmonite AC100 with glass-fibre reinforcement
+    category: composite
+    kind: composite
+    processes: [jesmonite_casting]
+    plain_language: >-
+      A water-based acrylic resin with a mineral base, cast cold and reinforced
+      with glass fibre. Heavy and stone-like (dry density 1,745 kg/m³; bending
+      strength 50–65 MPa; impact strength 30 kJ/m², user's data). Needs a
+      sealer and primer before lacquer.
+    finish_compat: {gloss_lacquer_polished: fair, wet_lacquer: fair}
+    density_g_cm3: 1.745
+    source: user (Oct 2026); finish compatibility model-generated
+    confidence: medium
+    verified: false
+
   - key: tpu
     name: TPU (thermoplastic polyurethane)
     category: polymer

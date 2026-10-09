@@ -219,6 +219,34 @@ processes:
     confidence: low
     verified: false
 
+  - key: jesmonite_casting
+    name: Jesmonite cast in silicone moulds (glass-fibre reinforced, soft tooling)
+    material_categories: [composite]
+    plain_language: >-
+      Jesmonite (a water-based acrylic and mineral composite) is brushed and
+      poured into a silicone mould round a finished master pattern, in layers
+      with glass-fibre reinforcement, then demoulded, trimmed and dried. No
+      steel tool and no solvents; metal inserts are cast in. Each mould makes
+      about 20–30 parts, and every part is laid up by hand.
+    requires_all: []
+    excludes: [transparent, electrical]
+    suits: [cosmetic, fine_detail, closed_top, needs_mass]
+    poor_fit: [ring, thin_wall]
+    volume: {min: 1, max: 1000}
+    tooling_cost: low
+    unit_cost: high
+    finish_quality: good
+    wall_mm: {min: 3.0, max: 15.0, typical_min: 4.0, typical_max: 8.0}
+    when_to_prefer: A heavy, solid-feeling cast shell in a first batch of a few hundred, from a UK caster.
+    risks:
+      - Brittle compared with moulded plastic; a dropped part can crack or chip at the edges.
+      - The surface is porous and alkaline; it needs a sealer and primer before a gloss lacquer will hold.
+      - Thick walls take room from the inside; check the air volume and the fit of the internals.
+      - Each silicone mould lasts about 20–30 casts; size and colour drift slightly between moulds.
+    source: model-generated
+    confidence: low
+    verified: false
+
   - key: photo_etching_stainless
     name: Photo-etched stainless sheet (formed after etching)
     material_categories: [stainless]

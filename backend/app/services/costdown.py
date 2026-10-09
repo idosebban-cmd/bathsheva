@@ -327,6 +327,7 @@ def change_config(defn: dict[str, Any], option: int, params: dict[str, Any]) -> 
     for rr in eff.get("reroutes", []):
         cfg.routes[rr["part"]] = RouteChoice(rr["process"], rr["material"], rr.get("tooling"), defn.get("label", ""))
     cfg.finish_overrides.update(eff.get("finishes", {}))
+    cfg.volume_scale.update({k: float(v) for k, v in eff.get("volume_scale", {}).items()})
     if "remove_part" in eff:
         rp = eff["remove_part"]
         cfg.removed_parts |= set(rp if isinstance(rp, list) else [rp])

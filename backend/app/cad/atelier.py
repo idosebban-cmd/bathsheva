@@ -61,7 +61,9 @@ COLLAR_LETTERING_FILE = SEED_DIR / "artwork" / "A-01_collar_lettering_loops.json
 # Production materials (g/cm³) for the ballast sizing inside the build; the workbench's mass
 # estimate uses the rules data's densities for the decided materials.
 DENSITY = {"pc_abs": 1.15, "aluminium": 2.70, "zamak_5": 6.70, "stainless_304": 8.00, "brass": 8.50,
-           "steel": 7.85, "acoustic_cloth": 0.50, "tpu": 1.20}
+           "steel": 7.85, "acoustic_cloth": 0.50, "tpu": 1.20,
+           "jesmonite_ac100": 1.745,  # dry density with glass fibre (user, Oct 2026)
+           "pu_casting_resin": 1.12}
 PART_MATERIALS = {"body": "pc_abs", "nose_cone": "aluminium", "fins": "zamak_5", "foot": "zamak_5",
                   "grille": "stainless_304", "bezel": "aluminium", "knob": "brass", "chassis": "steel",
                   "grille_backing": "acoustic_cloth", "vent_insert": "stainless_304", "ballast": "steel"}
@@ -89,7 +91,8 @@ PARAMS: list[ParamDef] = [
     ParamDef("base_clearance", "Body underside above the ground", "Body", 18, 40, step=0.1,
              help="Room for the gold collar cup and the foot."),
     ParamDef("nose_cone_height", "Nose cone height", "Body", 30, 70, step=0.1),
-    ParamDef("wall_thickness", "Body wall", "Body", 2.0, 4.0, step=0.1, help="Spec 3.0 mm (moulded PC/ABS)."),
+    ParamDef("wall_thickness", "Body wall", "Body", 2.0, 6.0, step=0.1,
+             help="Spec 3.0 mm (moulded PC/ABS); about 5 mm for a cast Jesmonite body."),
     ParamDef("grille_height", "Grille centre height", "Front", 120, 220, step=0.1),
     ParamDef("grille_diameter", "Grille diameter", "Front", 50, 90, step=0.1,
              help="Wrapped round the body: full height, narrower seen from the front."),
@@ -297,7 +300,35 @@ def _lettering() -> list:
     return json.loads(COLLAR_LETTERING_FILE.read_text())["letters"]
 
 
-def namespace(params: dict[str, Any]) -> types.SimpleNamespace:
+# Material variants for the cost-down scenarios: the build sizes the ballast with these densities, and
+# stability() reports mass, centre of mass and tip-over for them. Keys are workbench part keys.
+VARIANT_PART_KEY = {"body": "body", "fin": "fins", "collar": "foot", "foot": "foot"}  # -> PART_MATERIALS keys
+JESMONITE_WALL = 5.0  # mm, cast Jesmonite AC100 body (user, Oct 2026)
+# Cast-in brass inserts for the driver (4), radiator (4) and fin fixings (3 x 2): about 2 g each.
+JESMONITE_INSERTS_G = 14 * 2.0
+MATERIAL_VARIANTS: dict[str, dict[str, Any]] = {
+    "jesmonite_body": {"materials": {"body": "jesmonite_ac100"}, "wall_thickness": JESMONITE_WALL,
+                       "extra_g": {"cast-in brass inserts": JESMONITE_INSERTS_G}},
+    "pu_body": {"materials": {"body": "pu_casting_resin"}},
+    "brass_metalwork": {"materials": {"fin": "brass", "collar": "brass", "foot": "brass"}},
+}
+
+
+def _variant(keys: tuple[str, ...]) -> tuple[dict[str, Any], dict[str, str], dict[str, float]]:
+    """Parameter overrides, part materials and extra masses for a combination of material variants."""
+    over: dict[str, Any] = {}
+    mats: dict[str, str] = {}
+    extra: dict[str, float] = {}
+    for k in keys:
+        v = MATERIAL_VARIANTS[k]
+        mats.update(v.get("materials", {}))
+        extra.update(v.get("extra_g", {}))
+        if "wall_thickness" in v:
+            over["wall_thickness"] = v["wall_thickness"]
+    return over, mats, extra
+
+
+def namespace(params: dict[str, Any], variant: tuple[str, ...] = ()) -> types.SimpleNamespace:
     """The prototype's parameters with production values and the workbench parameters applied."""
     p = {k: float(v) for k, v in params.items()}
     d = derived(p)
@@ -330,9 +361,11 @@ def namespace(params: dict[str, Any]) -> types.SimpleNamespace:
     ns.FOOT_STUD_TAP, ns.FOOT_STUD_DEPTH = FOOT_STUD_TAP, FOOT_STUD_DEPTH
     ns.TRAY_SCREW_DEPTH = TRAY_SCREW_DEPTH
     ns.COLLAR_LETTERING, ns.COLLAR_LETTERING_CAP, ns.COLLAR_LETTERING_DEPTH = _lettering(), LETTERING_CAP, LETTERING_DEPTH
-    ns.TARGET_MASS_G = p["target_mass_kg"] * 1000
+    _, mats, extra = _variant(variant)
+    # Masses with no body of their own (e.g. cast-in inserts) come off the ballast.
+    ns.TARGET_MASS_G = p["target_mass_kg"] * 1000 - sum(extra.values())
     ns.MATERIAL_DENSITY = dict(DENSITY)
-    ns.PART_MATERIALS = dict(PART_MATERIALS)
+    ns.PART_MATERIALS = {**PART_MATERIALS, **{VARIANT_PART_KEY[k]: m for k, m in mats.items()}}
     ns.BATTERY_MASS, ns.DRIVER_MASS, ns.PCB_MASS = BATTERY_MASS_G, DRIVER_MASS_G, BOARD_MASS_G
     return ns
 
@@ -347,8 +380,8 @@ class Model:
     geometry: Any = None  # the ported prototype Model (envelopes, profile functions)
 
 
-def build_model(params: dict[str, Any]) -> Model:
-    ns = namespace(params)
+def build_model(params: dict[str, Any], variant: tuple[str, ...] = ()) -> Model:
+    ns = namespace(params, variant)
     g = geo.build(ns)
     I = g.info
     parts: dict[str, Shape] = {}
@@ -382,13 +415,14 @@ def build_model(params: dict[str, Any]) -> Model:
 
 
 @lru_cache(maxsize=4)
-def _cached(params_json: str) -> Model:
-    return build_model(json.loads(params_json))
+def _cached(params_json: str, variant: tuple[str, ...] = ()) -> Model:
+    return build_model(json.loads(params_json), variant)
 
 
-def model(params: dict[str, Any]) -> Model:
-    """One build per parameter set (the honeycomb grilles take about a minute)."""
-    return _cached(json.dumps(normalise(params), sort_keys=True))
+def model(params: dict[str, Any], variant: tuple[str, ...] = ()) -> Model:
+    """One build per parameter set and material variant (the honeycomb grilles take about a minute)."""
+    over, _, _ = _variant(variant)
+    return _cached(json.dumps(normalise({**params, **over}), sort_keys=True), tuple(sorted(variant)))
 
 
 def build(params: dict[str, Any]) -> dict[str, Shape]:
@@ -470,12 +504,14 @@ BOUGHT_IN_MASS_G = {"driver": DRIVER_MASS_G, "passive_radiator": PR_MASS_G, "bat
                     "main_board": BOARD_MASS_G}
 
 
-@lru_cache(maxsize=4)
-def _stability(params_json: str) -> dict[str, Any]:
+@lru_cache(maxsize=8)
+def _stability(params_json: str, variant: tuple[str, ...] = ()) -> dict[str, Any]:
     from build123d import CenterOf
 
     params = json.loads(params_json)
-    m = model(params)
+    m = model(params, variant)
+    _, mats, extra = _variant(variant)
+    density_key = {**PART_DENSITY_KEY, **mats}
     rows, total, moment = [], 0.0, np.zeros(3)
 
     def add(name: str, mass: float, c) -> None:
@@ -485,14 +521,16 @@ def _stability(params_json: str) -> dict[str, Any]:
         moment += mass * np.array([c.X, c.Y, c.Z])
 
     for key, shape in m.parts.items():
-        if key in PART_DENSITY_KEY:
-            rho = DENSITY[PART_DENSITY_KEY[key]]
+        if key in density_key:
+            rho = DENSITY[density_key[key]]
             for k, s in enumerate([shape] + m.instances.get(key, [])):
                 add(key if k == 0 else f"{key}_{k + 1}", s.volume / 1000 * rho, s.center(CenterOf.MASS))
         elif key in BOUGHT_IN_MASS_G:
             add(key, BOUGHT_IN_MASS_G[key], shape.center(CenterOf.MASS))
     body_c = m.parts["body"].center(CenterOf.MASS)
     add("butyl damping pads", proto.BUTYL_MASS_G, body_c)
+    for name, grams in extra.items():
+        add(name, grams, body_c)
     if "usb_receptacle" in m.envelopes:
         add("USB-C receptacle (sealed)", proto.USBC_RECEPTACLE_MASS, m.envelopes["usb_receptacle"].center(CenterOf.MASS))
     com = moment / total
@@ -527,9 +565,13 @@ def _stability(params_json: str) -> dict[str, Any]:
             "parts": rows}
 
 
-def stability(params: dict[str, Any]) -> dict[str, Any]:
-    """Mass, centre of mass, worst tip-over angle, footprint and air volume of the built model."""
-    return _stability(json.dumps(normalise(params), sort_keys=True))
+def stability(params: dict[str, Any], variant: tuple[str, ...] = ()) -> dict[str, Any]:
+    """Mass, centre of mass, worst tip-over angle, footprint and air volume of the built model.
+
+    `variant` names MATERIAL_VARIANTS (e.g. a cast Jesmonite body): their materials, wall and extra masses
+    are applied and the ballast is re-sized to the target mass."""
+    over, _, _ = _variant(variant)
+    return _stability(json.dumps(normalise({**params, **over}), sort_keys=True), tuple(sorted(variant)))
 
 
 # Below this much spare ballast (g) the 1.8 kg target is at risk if supplier parts come in lighter than estimated.

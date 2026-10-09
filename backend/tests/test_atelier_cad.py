@@ -165,3 +165,26 @@ def test_atelier_project_api_and_dfm(client):
     # Atelier has its own factory pack (tests/test_atelier_factory_pack.py), never Faro's
     pack = client.get(f"/api/projects/{pid}/factory-pack")
     assert pack.status_code == 200 and all(pt["part_no"].startswith("A-") for pt in pack.json()["parts"])
+
+
+def test_jesmonite_body_variant_keeps_the_mass():
+    """A 5 mm Jesmonite body: the ballast is re-sized to keep 1.8 kg, and the cost model's volume scale matches."""
+    base = atelier.stability(PLAIN)
+    jes = atelier.stability(PLAIN, ("jesmonite_body",))
+    both = atelier.stability(PLAIN, ("jesmonite_body", "brass_metalwork"))
+    for s in (jes, both):
+        assert abs(s["total_g"] - 1800) < 15, s["total_g"]
+        assert 0 < s["ballast_g"] <= s["ballast_max_g"]
+        lo, hi = atelier.SPEC["mass_g"]
+        assert lo <= s["total_g"] <= hi and s["tip_deg"] >= atelier.SPEC["tip_min_deg"]
+        assert s["com_mm"][2] <= atelier.SPEC["com_max_mm"]
+    rows = {r["part"]: r["mass_g"] for r in jes["parts"]}
+    assert rows["cast-in brass inserts"] == atelier.JESMONITE_INSERTS_G
+    assert jes["ballast_g"] < base["ballast_g"] and jes["com_mm"][2] > base["com_mm"][2]  # heavier body, higher CoM
+    # volume_scale in atelier.yaml = body volume at 5 mm / at 3 mm
+    from app.services.templates import load_template
+
+    sc = next(d for d in load_template("atelier")["scenarios"] if d["key"] == "jesmonite_body")
+    v3 = {r["part"]: r["mass_g"] for r in base["parts"]}["body"] / atelier.DENSITY["pc_abs"]
+    v5 = rows["body"] / atelier.DENSITY["jesmonite_ac100"]
+    assert sc["effect"]["volume_scale"]["body"] == pytest.approx(v5 / v3, rel=0.01)

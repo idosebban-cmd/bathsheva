@@ -117,6 +117,14 @@ material_prices:
     confidence: low
     verified: false
 
+  - material: jesmonite_ac100
+    form: AC100 liquid and base, with glass-fibre matting
+    gbp_per_kg: {low: 7.0, high: 14.0}
+    density_g_cm3: 1.745
+    source: model-generated
+    confidence: low
+    verified: false
+
   - material: tpu
     form: moulding pellets
     gbp_per_kg: {low: 4.0, high: 8.0}
