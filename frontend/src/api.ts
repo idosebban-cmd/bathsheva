@@ -40,6 +40,16 @@ export interface ProjectSummary {
   template: string | null;
   created_at: string;
   updated_at: string;
+  product?: ProductInfo | null;
+}
+
+/** What the project's product is, for wording ("per speaker", "Atelier's real dimensions"). */
+export interface ProductInfo {
+  key: string;
+  label: string;
+  noun: string;
+  summary: string;
+  runtime_basis: string;
 }
 
 export interface Project extends ProjectSummary {
@@ -210,8 +220,45 @@ export interface Runtime {
   assumptions?: Record<string, string | number>;
   unverified?: boolean;
   note?: string;
+  basis?: string;
   without_tower_light_h?: number | null;
   compliance?: string[];
+}
+
+export interface AudioBass {
+  f_hz: number;
+  driver_db: number;
+  radiator_db: number | null;
+}
+
+export interface Audio {
+  applicable: boolean;
+  reason?: string;
+  driver?: string;
+  radiator?: string;
+  box_l?: number;
+  alpha?: number;
+  fc_hz?: number;
+  qtc?: number;
+  pr_target_fb_hz?: number;
+  pr_moving_mass_g?: number;
+  thermal_spl_db?: number;
+  target_spl_db?: number;
+  spl_ok?: boolean;
+  driver_power_ok?: boolean;
+  full_spl_from_hz?: number;
+  target_low_hz?: number;
+  bass?: AudioBass[];
+  unverified?: boolean;
+  peak_input_w?: number;
+  peak_current_a?: number;
+  peak_cell_current_a?: number;
+  cell_max_a?: number;
+  current_ok?: boolean;
+  charge_power_w?: number;
+  charge_h?: number;
+  charge_target_h?: number;
+  charge_ok?: boolean;
 }
 
 export interface TemplateUpgradePlan {

@@ -61,7 +61,9 @@ def pricing_values(project: Project) -> tuple[dict[str, float], dict[str, Any]]:
 
 def pricing_report(project: Project) -> dict[str, Any]:
     values, meta = pricing_values(project)
-    return {"values": values, "meta": meta, "targets": targets(values) if values["retail_price"] else None}
+    premium = bool(project.template and load_template(project.template).get("premium_edition", {}).get("options"))
+    return {"values": values, "meta": meta, "targets": targets(values) if values["retail_price"] else None,
+            "premium_edition": premium}
 
 
 def update_pricing(session: Session, project: Project, changes: dict[str, float]) -> dict[str, Any]:

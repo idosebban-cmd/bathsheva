@@ -44,9 +44,9 @@ export default function FactoryPackPage() {
         </div>
         <p className="small muted">
           {pack.ready ? `Uses CAD v${pack.cad_version}.` : "Generate CAD on the CAD tab first: the pack includes the STEP files."} The zip has
-          two folders. <b>mechanical/</b> (for metalwork, glass and finishing suppliers) holds a 2D drawing (PDF and SVG) and a STEP file per
-          made-to-drawing part, the assembly STEP, the RFQ and the BOM. <b>electronics/</b> holds a separate RFQ for the battery pack, control
-          board and LEDs. Quantity tiers: {pack.quantity_tiers.map((q) => q.toLocaleString()).join(" / ")}.
+          two folders. <b>mechanical/</b> (for the part makers and finishers) holds a 2D drawing (PDF and SVG) and a STEP file per
+          made-to-drawing part, the assembly STEP, the RFQ and the BOM. <b>electronics/</b> holds a separate RFQ for the battery pack, boards
+          and other electronics. Quantity tiers: {pack.quantity_tiers.map((q) => q.toLocaleString()).join(" / ")}.
         </p>
         <div className="row">
           <a href={`${base}/rfq.pdf`} target="_blank" rel="noreferrer">
@@ -202,7 +202,7 @@ export default function FactoryPackPage() {
         <h2>Before you send it</h2>
         {pack.mass && (
           <p>
-            Estimated lamp mass <b>{pack.mass.total_kg.toFixed(2)} kg</b>
+            Estimated {project.product?.noun ?? "product"} mass <b>{pack.mass.total_kg.toFixed(2)} kg</b>
             {pack.mass.target_kg ? ` vs target ${pack.mass.target_kg} kg (${pack.mass.status})` : ""}. <span className="small muted">{pack.mass.note}</span>
           </p>
         )}
@@ -230,14 +230,18 @@ export default function FactoryPackPage() {
             </li>
           ))}
         </ul>
-        <h3>Brass parts quoted two ways (preferred and near-net)</h3>
-        <ul className="small">
-          {pack.brass_parts.map((b) => (
-            <li key={b.part_no}>
-              {b.part_no} {b.name}: {b.near_net}
-            </li>
-          ))}
-        </ul>
+        {pack.brass_parts.length > 0 && (
+          <>
+            <h3>Brass parts quoted two ways (preferred and near-net)</h3>
+            <ul className="small">
+              {pack.brass_parts.map((b) => (
+                <li key={b.part_no}>
+                  {b.part_no} {b.name}: {b.near_net}
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
         <h3>Bought-in components (electronics go to the electronics RFQ)</h3>
         <ul className="small">
           {pack.bought_in.map((b) => (

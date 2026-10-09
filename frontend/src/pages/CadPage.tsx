@@ -85,7 +85,7 @@ export default function CadPage() {
         <h2>Parameters</h2>
         {dimsAssumed && (
           <p className="notice small">
-            <AssumptionBadge /> Faro's real dimensions are TBD. These defaults are placeholders for exploring proportions.
+            <AssumptionBadge /> {project.product?.label ?? "The product"}'s real dimensions are TBD. These defaults are placeholders for exploring proportions.
           </p>
         )}
         {groups.map((g) => (
