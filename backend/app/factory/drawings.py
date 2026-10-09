@@ -68,6 +68,7 @@ class PartSheet:
     date: str
     unverified: list[str] = field(default_factory=list)  # values on the sheet that are unverified
     safety: list[str] = field(default_factory=list)  # safety-relevant notes
+    noun: str = "lamp"  # one unit of the product, for "Qty per ..."
 
 
 # ---------------------------------------------------------------------------
@@ -146,7 +147,7 @@ def _frame_and_title(g: Group, sheet: PartSheet, scale: float):
     rows = [
         ("Project", sheet.project), ("Part", f"{sheet.part_no}  {sheet.name}"),
         ("Material", sheet.material or "TBD"), ("Process", sheet.process or "TBD"), ("Finish", sheet.finish or "TBD"),
-        ("Qty per lamp", str(sheet.quantity)),
+        (f"Qty per {sheet.noun}", str(sheet.quantity)),
         ("CAD", f"v{sheet.cad_version}" if sheet.cad_version else "not generated"),
         ("Scale / units", f"{_scale_label(scale)}  ·  mm  ·  A4"), ("Date", sheet.date),
     ]
@@ -200,7 +201,7 @@ def _frame_and_title(g: Group, sheet: PartSheet, scale: float):
     rows = [
         ("Project", sheet.project), ("Part", f"{sheet.part_no}  {sheet.name}"),
         ("Material", sheet.material or "TBD"), ("Process", sheet.process or "TBD"), ("Finish", sheet.finish or "TBD"),
-        ("Qty per lamp", str(sheet.quantity)),
+        (f"Qty per {sheet.noun}", str(sheet.quantity)),
         ("CAD", f"v{sheet.cad_version}" if sheet.cad_version else "not generated"),
         ("Scale / units", f"{_scale_label(scale)}  ·  mm  ·  A4"), ("Date", sheet.date),
     ]

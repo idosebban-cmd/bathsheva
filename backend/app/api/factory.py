@@ -15,9 +15,17 @@ from app.services import factory_pack as fp
 router = APIRouter(prefix="/api/projects/{project_id}", tags=["factory"])
 
 
+def _pack(project: Project):
+    """The project's Factory Pack module (each product has its own; contact details are shared)."""
+    try:
+        return fp.pack_module(project)
+    except fp.FactoryPackError as e:
+        raise HTTPException(409, str(e)) from e
+
+
 def _contents(project: Project):
     try:
-        return fp.pack_contents(project)
+        return _pack(project).pack_contents(project)
     except fp.FactoryPackError as e:
         raise HTTPException(409, str(e)) from e
 
@@ -25,7 +33,7 @@ def _contents(project: Project):
 @router.get("/factory-pack")
 def summary(project: Project = Depends(get_project)):
     try:
-        return fp.pack_summary(project)
+        return _pack(project).pack_summary(project)
     except fp.FactoryPackError as e:
         raise HTTPException(409, str(e)) from e
 
@@ -33,7 +41,7 @@ def summary(project: Project = Depends(get_project)):
 @router.get("/factory-pack.zip")
 def pack_zip(project: Project = Depends(get_project)):
     try:
-        filename, data = fp.build_factory_pack(project)
+        filename, data = _pack(project).build_factory_pack(project)
     except fp.FactoryPackError as e:
         raise HTTPException(409, str(e)) from e
     return Response(data, media_type="application/zip", headers={"Content-Disposition": f'attachment; filename="{filename}"'})
@@ -45,7 +53,7 @@ def drawing(cad_key: str, fmt: str, project: Project = Depends(get_project)):
         raise HTTPException(404, "Drawings are available as .svg or .pdf")
     c = _contents(project)
     try:
-        svg, pdf = fp.drawing_files(c, cad_key)
+        svg, pdf = _pack(project).drawing_files(c, cad_key)
     except fp.FactoryPackError as e:
         raise HTTPException(404, str(e)) from e
     name = f"{project.slug}_{cad_key}_drawing.{fmt}"
@@ -56,24 +64,26 @@ def drawing(cad_key: str, fmt: str, project: Project = Depends(get_project)):
 
 @router.get("/rfq.{fmt}")
 def rfq(fmt: str, project: Project = Depends(get_project)):
-    blocks = fp.rfq_blocks(_contents(project))
+    pack = _pack(project)
+    blocks = pack.rfq_blocks(_contents(project))
     if fmt == "md":
         return Response(fp.rfq_markdown(blocks), media_type="text/markdown",
                         headers={"Content-Disposition": f'attachment; filename="{project.slug}_rfq.md"'})
     if fmt == "pdf":
-        return Response(fp.rfq_pdf(blocks), media_type="application/pdf",
+        return Response(fp.rfq_pdf(blocks, pack.MECHANICAL_TITLE), media_type="application/pdf",
                         headers={"Content-Disposition": f'inline; filename="{project.slug}_rfq.pdf"'})
     raise HTTPException(404, "RFQ is available as .md or .pdf")
 
 
 @router.get("/rfq-electronics.{fmt}")
 def rfq_electronics(fmt: str, project: Project = Depends(get_project)):
-    blocks = fp.electronics_rfq_blocks(_contents(project))
+    pack = _pack(project)
+    blocks = pack.electronics_rfq_blocks(_contents(project))
     if fmt == "md":
         return Response(fp.rfq_markdown(blocks), media_type="text/markdown",
                         headers={"Content-Disposition": f'attachment; filename="{project.slug}_rfq_electronics.md"'})
     if fmt == "pdf":
-        return Response(fp.rfq_pdf(blocks, "Request for quotation: battery, control board and LEDs"),
+        return Response(fp.rfq_pdf(blocks, pack.ELECTRONICS_TITLE),
                         media_type="application/pdf",
                         headers={"Content-Disposition": f'inline; filename="{project.slug}_rfq_electronics.pdf"'})
     raise HTTPException(404, "RFQ is available as .md or .pdf")

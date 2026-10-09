@@ -139,7 +139,7 @@ PRODUCT = Product(
     wall_params={"body": "wall_thickness", "grille": "grille_thickness", "rear_grille": "grille_thickness"},
     dfm_checks=dfm_checks,
     bought_in_density=BOUGHT_IN_DENSITY,
-    factory_pack=False,
+    factory_pack="app.factory.atelier_pack",
     cad_note="Atelier as approved in the prototype, with the Technical Specification: lacquered PC/ABS body; gold PVD on "
              "every visible metal part (Zamak fins, collar and foot, 6061 nose cone and bezels, brass knob, stainless "
              "grilles); rear passive radiator. One body per part: each fin and its pad is modelled once and shown three "

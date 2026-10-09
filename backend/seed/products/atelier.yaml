@@ -504,3 +504,55 @@ scenarios:
 cost_down_notes:
   - "One power option: cordless (2 x 18650 1S2P, USB-C PD)."
   - "Tiers: 'no compromise' uses only changes that keep the look and feel (spun nose cone, custom battery pack); 'slight compromises' also allows the sealed box without the rear radiator."
+
+# Questions for suppliers (shown in the Factory Pack; resolved once they have an `answer`).
+rfq_open_questions:
+  - id: body_tooling
+    topic: Moulding
+    question: "Body mould: collapsible core, or two halves welded (the seam disappears under the lacquer)?"
+    why: The belly (Ø95) is wider than both openings (about Ø43 and Ø47), so a simple core can't come out.
+    proposed: "Moulder to propose, with the effect on cost, lead time and where the internal seats go."
+  - id: driver_data
+    topic: Acoustics
+    question: "Driver and radiator datasheets (Thiele-Small values, Xmax, net displaced volume, rated power)?"
+    why: The air volume (about 0.74 L) and the bass tuning are estimates from typical values until we have them.
+    proposed: Electronics supplier proposes a 57 mm neodymium driver rated 20 W and a mass-tunable 60 x 40 mm radiator.
+  - id: boost_and_cells
+    topic: Electronics
+    question: "20 W from a 1S2P pack: boost converter topology, and the cells' continuous current rating?"
+    why: About 8 A from the battery at full power (4 A per cell).
+    proposed: "Boost to 12–15 V ahead of the Class-D amplifier; branded power cells rated 10 A or more."
+  - id: bayonet
+    topic: Mechanical
+    question: "Nose-cone bayonet with a hidden detent and the O-ring: lugs on the aluminium spigot or moulded into the body?"
+    why: Specified but not yet detailed; affects the moulding and the nose cone's machining.
+    proposed: Three lugs on the turned spigot, L-slots moulded inside the body's top rim, detent bump in the slot.
+  - id: pvd_match
+    topic: Finish
+    question: "Can one coater hold ΔE ≤ 1.5 across PVD on brass, Zamak, 6061 and stainless?"
+    why: Every visible metal part is gold PVD in one matched tone (spec).
+    proposed: One PVD house for all parts, matched to the signed master sample; base layers per substrate.
+  - id: mass_margin
+    topic: Mechanical
+    question: "Part weights (driver, radiator, battery, board, PVD parts) as quoted?"
+    why: The steel ballast cup is at its largest size to reach 1.8 kg; lighter parts would leave the speaker short.
+    proposed: Weigh first samples; options are a denser or taller ballast, or a heavier collar.
+
+# What the RFQs state.
+rfq:
+  product_line: rocket Bluetooth speaker
+  first_order: "Our likely first order is 300 to 500 speakers, depending on pre-orders. Please quote all three tiers."
+  launch_market: UK
+  marking: "UKCA marking for the UK launch (radio equipment). CE marking for the EU may follow: tell us what it would add."
+  incoterms: ["FOB (port of loading)", "DDP to our UK address: [DELIVERY ADDRESS, to be filled in]"]
+  currencies: [GBP, USD]
+  tolerances: "General tolerances ISO 2768-m on metal parts and ISO 20457 (moulded) on the body unless a drawing states otherwise; seams 0.3 ±0.1 mm, flush within 0.1 mm; knob gap 0.3 ±0.05 mm."
+  aql: "AQL 1.0 for major and 2.5 for minor cosmetic defects; Bathsheva London approves the golden sample before production."
+  colour_note: "Signed physical master samples are the colour authority. The hex values are the design reference; the RAL references are approximate and for guidance only."
+  colours:
+    - {name: Oxblood red polished lacquer, parts: [body], hex: "#8A1C15", ral: ["RAL 3011 Brown red", "RAL 3002 Carmine red"],
+       gloss: "≥ 90 GU (60°), primer + colour + two clear coats, polished; ΔE ≤ 1.0 to the master",
+       source: "Technical Specification; Atelier params.py RED_HEX"}
+    - {name: "Gold PVD, fine brushed satin", parts: [nose_cone, fin, collar, foot, grille, bezel, rear_grille, rear_bezel, knob],
+       hex: "#C4A15A", ral: [], gloss: "fine brushed satin; one tone, ΔE ≤ 1.5 across parts",
+       source: "Technical Specification; prototype GOLD_HEX (render reference only)"}

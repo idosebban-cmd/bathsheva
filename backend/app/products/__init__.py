@@ -43,8 +43,10 @@ class Product:
     dfm_checks: Callable[["Project", dict[str, Any], "RuleSet", CheckFn], list[dict[str, Any]]] | None = None
     # Typical densities for bought-in bodies in the mass estimate: cad_key -> (rules material key | None, g/cm³)
     bought_in_density: dict[str, tuple[str | None, float]] = field(default_factory=dict)
-    # Whether the Factory Pack (RFQ, drawings, supplier BOM) is implemented for this product
-    factory_pack: bool = False
+    # The module implementing the product's Factory Pack (RFQs, drawings, supplier BOM, zip), "" = none yet. It provides
+    # pack_contents, pack_summary, build_factory_pack, drawing_files, rfq_blocks, electronics_rfq_blocks,
+    # MECHANICAL_TITLE and ELECTRONICS_TITLE; contact details and the RFQ writers are shared (app.services.factory_pack).
+    factory_pack: str = ""
     # Shown under the CAD preview: what the model is and what is placeholder
     cad_note: str = ""
     # The part the mass hint names when the estimate is off target (cad_key), e.g. the weight plate

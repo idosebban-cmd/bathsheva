@@ -71,6 +71,20 @@ class FactoryPackError(ValueError):
     pass
 
 
+MECHANICAL_TITLE = "Request for quotation: metalwork, glass and finishing"
+ELECTRONICS_TITLE = "Request for quotation: battery, control board and LEDs"
+
+
+def pack_module(project: Project):
+    """The project's Factory Pack module (this one for Faro), or FactoryPackError if its product has none."""
+    import importlib
+
+    product = product_for(project)
+    if product is None or not product.factory_pack:
+        raise FactoryPackError("The Factory Pack needs a parametric product (template project such as Faro).")
+    return importlib.import_module(product.factory_pack)
+
+
 def _slug(text: str) -> str:
     return re.sub(r"[^a-z0-9]+", "_", text.lower()).strip("_") or "part"
 
@@ -165,7 +179,11 @@ def pack_contents(project: Project) -> dict[str, Any]:
     }
 
 
-def _bought_in_lines(project: Project, cost) -> list[dict[str, Any]]:
+def _bought_in_lines(project: Project, cost, drawn_item_keys: set[str] = DRAWN_ITEM_KEYS,
+                     hardware_item_keys: set[str] = HARDWARE_ITEM_KEYS,
+                     operation_item_keys: dict[str, str] = OPERATION_ITEM_KEYS,
+                     operation_text: dict[str, str] = OPERATION_TEXT,
+                     electronics_item_keys: set[str] | None = None) -> list[dict[str, Any]]:
     """Bought-in components and operations (project cost items plus route extras), without our prices.
 
     group: electronics (separate RFQ) | operation (priced into the part it is done on) | hardware.
@@ -186,14 +204,17 @@ def _bought_in_lines(project: Project, cost) -> list[dict[str, Any]]:
             continue
         extra = ctx["extras"].get(it.item_id)
         price_key = extra.price_key if extra is not None else keys.get(it.item_id)
-        if price_key in DRAWN_ITEM_KEYS or price_key in HARDWARE_ITEM_KEYS:
+        if price_key in drawn_item_keys or price_key in hardware_item_keys:
             continue
-        electronics = any(w in it.name.lower() for w in ("led", "driver", "adapter", "dimmer", "cable", "battery",
-                                                         "board", "potentiometer", "usb"))
+        if electronics_item_keys is not None:
+            electronics = price_key in electronics_item_keys
+        else:
+            electronics = any(w in it.name.lower() for w in ("led", "driver", "adapter", "dimmer", "cable", "battery",
+                                                             "board", "potentiometer", "usb"))
         group = ("electronics" if electronics else
-                 "operation" if price_key in OPERATION_ITEM_KEYS or it.kind == "finishing" else "hardware")
-        out.append({"name": OPERATION_TEXT.get(price_key or "", it.name), "quantity": it.quantity, "electronics": electronics, "group": group,
-                    "price_key": price_key, "on_part": OPERATION_ITEM_KEYS.get(price_key or "")})
+                 "operation" if price_key in operation_item_keys or it.kind == "finishing" else "hardware")
+        out.append({"name": operation_text.get(price_key or "", it.name), "quantity": it.quantity, "electronics": electronics, "group": group,
+                    "price_key": price_key, "on_part": operation_item_keys.get(price_key or "")})
     return out
 
 
@@ -268,7 +289,7 @@ def _header(c: dict[str, Any], title: str) -> list[Block]:
             ["Address", _fill(project, "company_address")], ["Quote deadline", _fill(project, "quote_deadline")],
             ["Reference", f"{project.name.upper()}-RFQ, CAD {cad}, {c['date']}"],
         ]),
-        Block("p", f"{project.name} table lamp · CAD version {cad} · units: millimetres"),
+        Block("p", f"{project.name} {_rfq_settings(project).get('product_line', 'table lamp')} · CAD version {cad} · units: millimetres"),
     ]
 
 
@@ -883,7 +904,7 @@ def build_factory_pack(project: Project) -> tuple[str, bytes]:
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
         zf.writestr(f"{folder}/README.txt", readme(c, folder))
         zf.writestr(f"{mech}/rfq.md", rfq_markdown(blocks))
-        zf.writestr(f"{mech}/rfq.pdf", rfq_pdf(blocks, "Request for quotation: metalwork, glass and finishing"))
+        zf.writestr(f"{mech}/rfq.pdf", rfq_pdf(blocks, MECHANICAL_TITLE))
         zf.writestr(f"{mech}/bom.csv", supplier_bom_csv(c))
         for pt in c["parts"]:
             svg, pdf = drawing_files(c, pt["cad_key"])
@@ -898,7 +919,7 @@ def build_factory_pack(project: Project) -> tuple[str, bytes]:
         for fname, data in logo.artwork_files(logo.logo_radius(float(c["params"]["knob_diameter"]))).items():
             zf.writestr(f"{mech}/artwork/{fname}", data)
         zf.writestr(f"{elec}/rfq_electronics.md", rfq_markdown(eblocks))
-        zf.writestr(f"{elec}/rfq_electronics.pdf", rfq_pdf(eblocks, "Request for quotation: battery, control board and LEDs"))
+        zf.writestr(f"{elec}/rfq_electronics.pdf", rfq_pdf(eblocks, ELECTRONICS_TITLE))
     return f"{folder}.zip", buf.getvalue()
 
 
