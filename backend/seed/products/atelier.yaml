@@ -557,6 +557,8 @@ scenarios:
       - {kind: safety, message: "Verify on samples: drop test (0.5 m unpackaged, ISTA 2A packaged) and the IEC 62368-1 enclosure impact test; Jesmonite is brittle compared with PC/ABS and can crack or chip."}
       - {kind: performance, message: "Verify on samples: gloss lacquer adhesion over the sealer and primer (ISO 2409 cross-cut, ≥ 90 GU gloss) and after humidity cycling."}
       - {kind: performance, message: "Verify on samples: Bluetooth range (10 m) through the 5 mm mineral-filled wall; the antenna position may need to move."}
+      - {kind: performance, message: "Air volume falls to about 0.68 L (0.69 L with brass gold parts), below the spec's 0.7–0.8 L: the 5 mm wall takes room from the box. Recheck the radiator tuning, or thin the wall where it carries no load."}
+      - {kind: performance, message: "The ballast cup gets narrower (Ø42) and the battery pocket splits it into separate steel segments; redesign the ballast (e.g. a ring above the battery) before tooling."}
     tradeoffs:
       finish: The same oxblood lacquer and clear coats over a sealer and primer; the porous cast surface must be sealed first.
       weight: The body is about three times heavier; the ballast cup shrinks to keep 1.8 kg, and the centre of mass rises.
