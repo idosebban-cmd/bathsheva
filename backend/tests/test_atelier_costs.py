@@ -74,6 +74,17 @@ def test_cost_down_summary_has_no_faro_assumptions(project):
     assert "sealed_no_radiator" not in [x["key"] for x in best["selection"]]  # slight compromise: not in "strict"
 
 
+def test_cad_tab_mass_matches_the_stability_mass(project):
+    """The CAD tab's estimate (rules densities) and the DFM mass check (stability) count the same things."""
+    from app.cad import atelier
+
+    c, pid = project
+    est = c.get(f"/api/projects/{pid}/cad").json()["mass"]["total_kg"]
+    assert est == pytest.approx(atelier.stability(PLAIN)["total_g"] / 1000, abs=0.01)
+
+
+# Runs last: the `client` fixture re-points the database, which the module's project fixture shares.
 def test_faro_summary_notes_still_name_its_power_options(client, faro_project):
     notes = client.get(f"/api/projects/{faro_project['id']}/cost-down/summary").json()["notes"]
     assert any("Power options are costed side by side" in n for n in notes)
+

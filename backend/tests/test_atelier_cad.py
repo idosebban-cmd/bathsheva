@@ -107,6 +107,9 @@ def test_assembly_and_preview_have_all_three_fins(built):
     assert {"fin_2", "fin_3", "knob_logo_floor", "collar_etch_floor", "led"} <= set(extras)
     est = atelier.estimate_mass({"fin": {"volume_mm3": 1000.0}}, {"fin": 6.7})
     assert est["parts_kg"]["fin"] == pytest.approx(3 * 0.0067, abs=0.001)  # rounded to grams
+    assert "damping_pads_and_usb" not in est["parts_kg"]
+    with_body = atelier.estimate_mass({"body": {"volume_mm3": 1000.0}}, {"body": 1.15})
+    assert with_body["parts_kg"]["damping_pads_and_usb"] == pytest.approx(0.053)  # as stability() counts them
 
 
 def test_collar_lettering_matches_the_font():
@@ -159,5 +162,6 @@ def test_atelier_project_api_and_dfm(client):
     assert {"Bass at full volume (excursion)", "Box and radiator tuning"} <= set(titles)
     rt = client.get(f"/api/projects/{pid}/runtime").json()
     assert rt["hours"] >= 15 and rt["without_tower_light_h"] is None
-    # Faro's factory pack isn't offered for Atelier yet
-    assert client.get(f"/api/projects/{pid}/factory-pack").status_code in (404, 409, 422)
+    # Atelier has its own factory pack (tests/test_atelier_factory_pack.py), never Faro's
+    pack = client.get(f"/api/projects/{pid}/factory-pack")
+    assert pack.status_code == 200 and all(pt["part_no"].startswith("A-") for pt in pack.json()["parts"])

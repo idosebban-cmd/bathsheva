@@ -446,9 +446,14 @@ def implements(change_key: str, cad_key: str | None, bodies: set[str]) -> bool:
 
 
 def estimate_mass(part_info: dict[str, Any], densities: dict[str, float]) -> dict[str, Any]:
-    """Mass from CAD volumes (mm³) and densities (g/cm³) per part key; fins and pads count three times."""
+    """Mass from CAD volumes (mm³) and densities (g/cm³) per part key; fins and pads count three times.
+
+    With the body present it adds what `stability()` also counts but has no body of its own: the butyl
+    damping pads and the sealed USB-C receptacle, so the CAD tab and the DFM report give the same mass."""
     per = {k: round(info["volume_mm3"] / 1000 * densities[k] / 1000 * INSTANCES.get(k, 1), 3)
            for k, info in part_info.items() if k in densities}
+    if "body" in per:
+        per["damping_pads_and_usb"] = round((proto.BUTYL_MASS_G + proto.USBC_RECEPTACLE_MASS) / 1000, 3)
     return {"total_kg": round(sum(per.values()), 3), "parts_kg": per}
 
 
