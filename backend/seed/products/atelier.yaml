@@ -533,16 +533,17 @@ scenarios:
     label: Jesmonite body
     design_change: >-
       The body cast in Jesmonite AC100 with glass-fibre reinforcement in silicone moulds at a UK caster
-      (soft tooling; moulds replaced every 20–30 casts), about 5 mm wall instead of 3 mm moulded PC/ABS,
-      with cast-in brass inserts for the driver, radiator and fin fixings. Sealer and primer, then the same
+      (soft tooling; moulds replaced every 20–30 casts), 3.5 mm general wall thickened locally to 5 mm at the
+      fin roots (bolts and inserts) and round the grille and radiator openings, with cast-in brass inserts for
+      the driver, radiator and fin fixings. Sealer and primer, then the same
       oxblood lacquer and clear coats. The heavier body takes weight off the ballast cup, so the speaker
       stays at 1.8 kg. The gold parts stay die-cast Zamak, or are CNC-machined in brass.
     conflicts: [low_tooling_first_batch, all_jesmonite]
     effect:
       reroutes:
         - {part: body, process: jesmonite_casting, material: jesmonite_ac100, tooling: low}
-      # Body volume at a 5 mm wall / at the CAD's 3 mm wall, from the CAD (tests/test_atelier_costs.py checks it).
-      volume_scale: {body: 1.571}
+      # Body volume (3.5 mm wall, 5 mm locally) / the CAD's 3 mm body, from the CAD (tests/test_atelier_cad.py checks it).
+      volume_scale: {body: 1.183}
       reroute:
         parts: [fin, collar, foot]
         options:
@@ -556,12 +557,11 @@ scenarios:
     flags:
       - {kind: safety, message: "Verify on samples: drop test (0.5 m unpackaged, ISTA 2A packaged) and the IEC 62368-1 enclosure impact test; Jesmonite is brittle compared with PC/ABS and can crack or chip."}
       - {kind: performance, message: "Verify on samples: gloss lacquer adhesion over the sealer and primer (ISO 2409 cross-cut, ≥ 90 GU gloss) and after humidity cycling."}
-      - {kind: performance, message: "Verify on samples: Bluetooth range (10 m) through the 5 mm mineral-filled wall; the antenna position may need to move."}
-      - {kind: performance, message: "Air volume falls to about 0.68 L (0.69 L with brass gold parts), below the spec's 0.7–0.8 L: the 5 mm wall takes room from the box. Recheck the radiator tuning, or thin the wall where it carries no load."}
-      - {kind: performance, message: "The ballast cup gets narrower (Ø42) and the battery pocket splits it into separate steel segments; redesign the ballast (e.g. a ring above the battery) before tooling."}
+      - {kind: performance, message: "Verify on samples: Bluetooth range (10 m) through the 3.5–5 mm mineral-filled wall; the antenna position may need to move."}
+      - {kind: performance, message: "Verify on samples: the 3.5 mm general wall's stiffness and the 5 mm local thickening at the fin roots and openings (CAD: 1.80 kg, centre of mass 87 mm, tip-over 23°, air 0.73 L, ballast cup in one piece)."}
     tradeoffs:
       finish: The same oxblood lacquer and clear coats over a sealer and primer; the porous cast surface must be sealed first.
-      weight: The body is about three times heavier; the ballast cup shrinks to keep 1.8 kg, and the centre of mass rises.
+      weight: The body is about 1.8 times heavier (327 g); the ballast cup shrinks to keep 1.8 kg, and the centre of mass rises about 2 mm.
       premium: A heavier, stone-like shell that sounds deader when tapped; more brittle than moulded plastic.
       lead_time: Soft tooling in 3–6 weeks from a UK caster instead of 8–14 weeks for the steel mould.
       tooling: A master pattern and silicone moulds remade every 20–30 casts; the gold parts keep their dies or are CNC-machined.

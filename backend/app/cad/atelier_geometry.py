@@ -86,6 +86,9 @@ def _smooth_spline(points):
     return Edge.make_spline_approx(points, tol=0.01, max_deg=5)
 
 
+LOCAL_RIM = 6.0  # mm, width of the thickened rim round a sound opening (LOCAL_WALL)
+
+
 def _front_cyl(radius, z, depth=400.0, y_from=0.0):
     """Cylinder along -Y (pointing out of the front), centred at height z.
     Spans y in [y_from - depth, y_from]."""
@@ -807,6 +810,25 @@ def build(p, visual_only=False) -> Model:
         """Cylinder pointing outward from the axis at angle ang, from radius r0 to r1."""
         return Rot(0, 0, ang - 90) * Pos(r0, 0, z) * Rot(0, 90, 0) * Cylinder(radius, r1 - r0, align=MIN)
 
+    local_wall = getattr(p, "LOCAL_WALL", 0.0)
+    if not visual_only and local_wall > p.WALL:
+        # PORT: a cast body (Jesmonite) with a thin general wall is thickened locally to LOCAL_WALL where it
+        # carries load: pads behind each fin root (the bolts and inserts) and rims round the sound openings
+        pad_band = band(-local_wall, -p.WALL + 0.01)
+        zb = I["fin_bolt_z"]
+        for ang in fin_angles:
+            r_mid = r_in((min(zb) + max(zb)) / 2)
+            half = math.degrees((p.CHASSIS_BRACKET_WIDTH / 2 + 3.0) / r_mid)
+            body = body + (pad_band & _sector(ang - half, ang + half, min(zb) - 10, max(zb) + 10))
+        front_rim = (_front_cyl(open_r + LOCAL_RIM, zg, depth=200, y_from=0.0)
+                     - _front_cyl(open_r, zg, depth=400, y_from=50))
+        front_rim = pad_band & front_rim
+        if "driver" in m.envelopes:   # never into the driver (it seats just inside the wall)
+            front_rim = front_rim - _front_cyl(p.DRIVER_DIA / 2 + p.DRIVER_CLEARANCE, zg, depth=200,
+                                               y_from=I["y_driver_seat"] + 200 - p.FIT_CLEARANCE)
+        body = body + front_rim
+        I["local_wall"] = local_wall
+
     if not visual_only:   # internals: skipped for quick previews
         # ---- fins bolt through the body wall into the chassis rings ------------
         bolt_z = I["fin_bolt_z"]
@@ -854,6 +876,11 @@ def build(p, visual_only=False) -> Model:
         pr_seat = (y_oval(2 * ow, 2 * oh, y_pr, y_pr + 100) & offset_solid(-p.WALL + 0.3)) \
             - y_oval(ow2, oh2, y_pr - 5, y_pr + 100)
         body = body + pr_rot * pr_seat
+        if local_wall > p.WALL:   # PORT: rim round the radiator opening (see LOCAL_WALL)
+            rim = y_oval(ow2 + 2 * LOCAL_RIM, oh2 + 2 * LOCAL_RIM, 0.0, 200.0) - y_oval(ow2, oh2, -5, 205)
+            rim = (rim - y_oval(p.PR_W + 2 * p.FIT_CLEARANCE, p.PR_H + 2 * p.FIT_CLEARANCE,
+                                y_pr - p.PR_DEPTH - 1, y_pr + p.FIT_CLEARANCE))   # clear of the radiator
+            body = body + pr_rot * (band(-local_wall, -p.WALL + 0.01) & rim)
         body = body - pr_rot * y_oval(ow2, oh2, y_pr - 5, r_out(zp) + 10)
         m.envelopes["passive_radiator"] = pr_rot * y_oval(p.PR_W, p.PR_H, y_pr - p.PR_DEPTH, y_pr)
         I.update(z_pr=zp)
@@ -937,7 +964,7 @@ def build(p, visual_only=False) -> Model:
             foot = _safe_cut(foot, chan, "USB-C wire channel")
             I.update(usbc_wire_channel_len=L, usbc_wire_slot_xy=(xg, yg))
         t = p.CHASSIS_THICK
-        g = -p.WALL - p.CHASSIS_GAP
+        g = -max(p.WALL, local_wall) - p.CHASSIS_GAP   # PORT: brackets clear the fin-root pads
         inside_ch = offset_solid(g)
         wall_plate = band(g - t, g)
         z_lo, z_hi = min(bolt_z) - 8, max(bolt_z) + 8
