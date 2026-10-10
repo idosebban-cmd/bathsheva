@@ -31,6 +31,7 @@ from app.services.recommendations import project_recommendations
 
 MECHANICAL_TITLE = "Request for quotation: housing, metalwork and finishing"
 ELECTRONICS_TITLE = "Request for quotation: Bluetooth audio electronics, driver and battery"
+ODM_TITLE = "Request for quotation: complete product (ODM)"
 ELECTRONIC_PARTS = {"driver", "passive_radiator", "battery", "main_board"}
 ELECTRONIC_ITEM_KEYS = {"speaker_driver_57", "passive_radiator_60x40", "speaker_main_board", "battery_pack_1s2p",
                         "battery_pack_1s2p_custom", "usb_c_receptacle_ip67", "rotary_encoder_push",
@@ -396,7 +397,8 @@ def consistency_checks(project: Project, c: dict[str, Any] | None = None) -> lis
     rows = {r.get("cad_key") for r in c["bom"]["rows"]}
     check("BOM lists every drawn part", all(pt["cad_key"] in rows for pt in c["parts"]), "part numbers A-xx follow the BOM items")
     texts = {"rfq": fp.rfq_markdown(rfq_blocks(c)), "electronics rfq": fp.rfq_markdown(electronics_rfq_blocks(c)),
-             "bom.csv": supplier_bom_csv(c)}
+             "bom.csv": supplier_bom_csv(c), "ODM cover note": fp.rfq_markdown(odm_rfq_blocks(c)),
+             "ODM quote sheet": odm_quote_sheet_csv(c)}
     leaks = [name for name, t in texts.items() if _MONEY.search(t)]
     check("No prices or cost targets in supplier documents", not leaks, "clean" if not leaks else f"£ amounts in {leaks}")
     allowed = {ph for _, _, ph in fp.CONTACT_FIELDS}
@@ -465,6 +467,134 @@ def build_factory_pack(project: Project) -> tuple[str, bytes]:
     return f"{folder}.zip", buf.getvalue()
 
 
+# ---------------------------------------------------------------------------
+# ODM: one supplier quotes the finished speaker (electronics, tooling, assembly)
+# ---------------------------------------------------------------------------
+ODM_ROUTE_PARTS = ["body", "nose_cone", "fin", "collar", "foot", "grille", "bezel", "rear_grille", "rear_bezel", "knob",
+                   "chassis", "ballast"]
+
+
+def odm_rfq_blocks(c: dict[str, Any]) -> list[Block]:
+    """Cover note for a Bluetooth speaker ODM: quote the complete product, using the pack as the specification."""
+    project: Project = c["project"]
+    p = c["params"]
+    r = fp._rfq_settings(project)
+    tiers = " / ".join(f"{q:,}" for q in fp.QUANTITY_TIERS)
+    b: list[Block] = fp._header(c, f"Request for quotation: {project.name} rocket Bluetooth speaker, complete product (ODM)")
+    b.append(Block("warn", "Values marked UNVERIFIED in the attached documents are design estimates. Items marked SAFETY or "
+                           "COMPLIANCE must be verified with a qualified engineer or accredited test lab before production."))
+    b.append(Block("h2", "Cover note"))
+    b.append(Block("p", "We are looking for one manufacturer to make our speaker complete: housing and metalwork, finishing, "
+                   "Bluetooth audio electronics, battery, assembly, testing and retail packaging. The mechanical/ and "
+                   "electronics/ folders of this pack are our detailed specification: drawings, STEP files, a bill of "
+                   "materials and the two part-level RFQs. Treat them as design intent and requirements; where you would "
+                   "make something differently, tell us how and what it changes."))
+    b.append(Block("p", " ".join(project.description.split())))
+    b.append(Block("p", r.get("first_order", "") + f" Quantities to quote: {tiers} units."))
+    b.append(Block("h2", "Please quote"))
+    b.append(Block("bullets", items=[
+        "Your recommended manufacturing route for each main part (body, nose cone, fins, collar, foot, grilles, bezels, "
+        "knob, chassis, ballast), and any lower-tooling route you would suggest for a first batch of 300 to 500 (for "
+        "example soft tooling, CNC or investment casting instead of steel moulds and die-casting dies).",
+        "Tooling: an itemised list (each mould, die, fixture and test jig), its cost, expected life and who owns it.",
+        f"Unit price for the complete, packed speaker at {tiers} units, FOB and DDP to the UK. If you can, split it into "
+        "housing and metalwork, finishing, electronics and battery, assembly and test, and packaging.",
+        "Lead times: tooling, first samples (T1), golden sample, first production run after sample approval, and reorders.",
+        "Your MOQ, sample and pre-production costs, and what you include for certification (see below).",
+        "Electronics: whether you would use your own Bluetooth platform; if so, how it meets the electronics RFQ "
+        "(Bluetooth 5.3 multipoint and stereo pairing, 20 W Class-D with boost, USB-C PD charging, 15 h or more at 50% "
+        "volume) and which parts of it are pre-certified.",
+        "Please fill in the quote sheet (odm_quote_sheet.csv) so we can compare suppliers line by line.",
+    ]))
+    b.append(Block("h2", "Requirements we will not change"))
+    b.append(Block("bullets", items=[
+        f"Size and mass: {p['overall_height']:g} ±1 mm tall, body Ø{p['body_max_diameter']:g} mm, {p['target_mass_kg']:g} "
+        "±0.1 kg, standing on its three fins (tip-over 18° or more).",
+        "Every part that looks like metal is real metal: gold PVD on metal parts, solid brass knob, stainless grilles. No "
+        "metallised plastic, metal-effect paint or metal-powder coatings.",
+        "The battery is replaceable after removing the base collar, with standard tools only (no glue, no soldering).",
+        "Playback 15 h or more at 50% volume; 20 W RMS; Bluetooth 5.3 with multipoint and stereo pairing.",
+        "UK launch: " + r.get("marking", "UKCA marking."),
+        "Colours and finishes as in the colours table of the mechanical RFQ; the physical samples are the master.",
+    ]))
+    b.append(Block("h2", "Certification and compliance (COMPLIANCE)"))
+    b.append(Block("p", "Tell us which of these you arrange and include in the price, and which we must arrange: UK Radio "
+                   "Equipment Regulations (radio, EMC, safety to IEC 62368-1, RF exposure), UN38.3 and IEC 62133-2 for the "
+                   "battery, Bluetooth SIG listing, RoHS and REACH declarations."))
+    b.append(Block("h2", "Open questions from our side"))
+    b.append(Block("bullets", items=[f"{q['topic']}: {q['question']}" for q in fp.open_questions(project, c)
+                                     if q["status"] == "open"] or ["None."]))
+    b += fp._commercial(c)
+    return b
+
+
+def odm_quote_sheet_csv(c: dict[str, Any]) -> str:
+    """A blank quote sheet for the ODM: one row per part, electronics set, operation and lead time."""
+    import csv
+
+    tiers = [f"Unit price at {q:,}" for q in fp.QUANTITY_TIERS]
+    out = io.StringIO()
+    w = csv.writer(out)
+    w.writerow(["Item", "Our reference", "Your recommended route / material", "Alternative for a first batch",
+                "Tooling cost", "Tool life (shots)", "Tooling lead time (weeks)", *tiers, "Notes"])
+    blank = [""] * (5 + len(tiers) + 1)
+    by_key = {pt["cad_key"]: pt for pt in c["parts"]}
+    for key in ODM_ROUTE_PARTS:
+        pt = by_key.get(key)
+        if pt:
+            w.writerow([pt["name"], pt["part_no"], *blank])
+    for name in ("Main board (Bluetooth, DSP, amplifier with boost, charger)", "Driver (57 mm, 20 W)", "Passive radiator",
+                 "Battery pack (2 x 18650 1S2P, protection)", "Sealed USB-C receptacle", "Rotary encoder with push switch",
+                 "Status LED and light pipe", "USB-C cable", "Fasteners, seals, fabric, damping pads"):
+        w.writerow([name, "electronics RFQ / BOM", *blank])
+    for name in ("Assembly, acoustic and pairing test", "Retail packaging", "Certification (radio, EMC, safety, RF exposure)",
+                 "Battery transport and safety tests (UN38.3, IEC 62133-2)", "Bluetooth SIG listing",
+                 "Samples (T1 and golden sample)", "Total, complete packed speaker (FOB)", "Total, complete packed speaker (DDP UK)"):
+        w.writerow([name, "", *blank])
+    w.writerow([])
+    w.writerow(["Lead time", "", "Weeks"])
+    for name in ("Tooling", "First samples (T1)", "Golden sample", "First production after sample approval", "Reorder"):
+        w.writerow([name, "", ""])
+    w.writerow([])
+    w.writerow(["Currency and Incoterms", "", "State them; keep them the same across the sheet."])
+    return out.getvalue()
+
+
+def odm_readme(c: dict[str, Any]) -> str:
+    return "\n".join([
+        f"{c['project'].name} rocket Bluetooth speaker: request for quotation for the complete product (ODM) "
+        f"({c['date']}, CAD v{c['cad_version']})",
+        "",
+        "odm/          start here: odm_cover_note.pdf (and .md), odm_quote_sheet.csv",
+        "mechanical/   our specification for the housing, metalwork and finishing (RFQ, drawings, STEP, BOM, artwork)",
+        "electronics/  our specification for the Bluetooth audio electronics, driver and battery",
+        "",
+        "Quantities to quote: " + ", ".join(f"{q:,}" for q in fp.QUANTITY_TIERS) + " units.",
+        "",
+    ])
+
+
+def build_odm_pack(project: Project) -> tuple[str, bytes]:
+    """The ODM zip: cover note and quote sheet in odm/, plus the full mechanical and electronics pack."""
+    name, data = build_factory_pack(project)
+    c = pack_contents(project)
+    blocks = odm_rfq_blocks(c)
+    src = zipfile.ZipFile(io.BytesIO(data))
+    old = name[:-len(".zip")]
+    folder = old.replace("_rfq_pack_", "_odm_rfq_pack_")
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        for item in src.namelist():
+            if item == f"{old}/README.txt":
+                continue
+            zf.writestr(folder + item[len(old):], src.read(item))
+        zf.writestr(f"{folder}/README.txt", odm_readme(c))
+        zf.writestr(f"{folder}/odm/odm_cover_note.md", fp.rfq_markdown(blocks))
+        zf.writestr(f"{folder}/odm/odm_cover_note.pdf", fp.rfq_pdf(blocks, ODM_TITLE))
+        zf.writestr(f"{folder}/odm/odm_quote_sheet.csv", odm_quote_sheet_csv(c))
+    return f"{folder}.zip", buf.getvalue()
+
+
 def pack_summary(project: Project) -> dict[str, Any]:
     c = pack_contents(project)
     blocks = rfq_blocks(c)
@@ -483,6 +613,7 @@ def pack_summary(project: Project) -> dict[str, Any]:
         "contact_fields": [{"key": k, "label": label, "placeholder": ph} for k, label, ph in fp.CONTACT_FIELDS],
         "missing_contact": fp.missing_contact(project),
         "rfq_markdown": fp.rfq_markdown(blocks), "electronics_rfq_markdown": fp.rfq_markdown(electronics_rfq_blocks(c)),
+        "odm": {"available": True, "markdown": fp.rfq_markdown(odm_rfq_blocks(c))},
         "notes": ["Our cost estimates and targets are not included in anything sent to suppliers.",
                   "The zip has two folders: mechanical/ for moulding, metalwork and finishing suppliers, electronics/ for "
                   "the audio electronics, driver and battery suppliers."],

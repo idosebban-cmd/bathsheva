@@ -632,6 +632,7 @@ export interface FactoryPackSummary {
   contact_fields: { key: string; label: string; placeholder: string }[];
   missing_contact: string[];
   electronics_rfq_markdown: string;
+  odm?: { available: boolean; markdown: string };
   quantity_tiers: number[];
   mass: { total_kg: number; target_kg: number | null; status: string; note: string; parts_kg: Record<string, number> } | null;
   unverified: string[];

@@ -8,7 +8,7 @@ export default function FactoryPackPage() {
   const [pack, setPack] = useState<FactoryPackSummary | null>(null);
   const [error, setError] = useState("");
   const [preview, setPreview] = useState<string | null>(null);
-  const [showRfq, setShowRfq] = useState<"" | "mechanical" | "electronics">("");
+  const [showRfq, setShowRfq] = useState<"" | "mechanical" | "electronics" | "odm">("");
   const base = `/api/projects/${project.id}`;
 
   async function load() {
@@ -74,6 +74,36 @@ export default function FactoryPackPage() {
           </p>
         ))}
       </section>
+
+      {pack.odm?.available && (
+        <section className="card">
+          <h2>ODM: complete product</h2>
+          <p className="small muted">
+            For a Bluetooth speaker ODM that quotes the finished speaker (electronics, tooling, assembly and packaging). The zip is the
+            full RFQ pack above plus <b>odm/</b>: a cover note asking for their recommended manufacturing route, itemised tooling
+            costs, the unit price at {pack.quantity_tiers.map((q) => q.toLocaleString()).join(" / ")} and lead times, and a quote sheet
+            to fill in so suppliers can be compared line by line. Nothing in it includes our cost estimates or targets.
+          </p>
+          <div className="row">
+            {pack.ready ? (
+              <a href={`${base}/factory-pack-odm.zip`} download>
+                <button className="primary">Download ODM pack (.zip)</button>
+              </a>
+            ) : (
+              <button disabled title="Generate CAD first">Download ODM pack (.zip)</button>
+            )}
+            <a href={`${base}/odm-rfq.pdf`} target="_blank" rel="noreferrer">
+              <button>Cover note (PDF)</button>
+            </a>
+            <a href={`${base}/odm-quote-sheet.csv`} download>
+              <button>Quote sheet (CSV)</button>
+            </a>
+            <button onClick={() => setShowRfq(showRfq === "odm" ? "" : "odm")}>
+              {showRfq === "odm" ? "Hide" : "Show"} cover note text
+            </button>
+          </div>
+        </section>
+      )}
 
       <ContactCard pack={pack} base={base} onSaved={load} />
 
@@ -254,8 +284,10 @@ export default function FactoryPackPage() {
 
       {showRfq && (
         <section className="card">
-          <h2>{showRfq === "mechanical" ? "Mechanical" : "Electronics"} RFQ text</h2>
-          <pre className="rfq-text">{showRfq === "mechanical" ? pack.rfq_markdown : pack.electronics_rfq_markdown}</pre>
+          <h2>{{ mechanical: "Mechanical RFQ", electronics: "Electronics RFQ", odm: "ODM cover note" }[showRfq]} text</h2>
+          <pre className="rfq-text">
+            {{ mechanical: pack.rfq_markdown, electronics: pack.electronics_rfq_markdown, odm: pack.odm?.markdown ?? "" }[showRfq]}
+          </pre>
         </section>
       )}
     </div>

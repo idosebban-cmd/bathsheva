@@ -89,6 +89,43 @@ def rfq_electronics(fmt: str, project: Project = Depends(get_project)):
     raise HTTPException(404, "RFQ is available as .md or .pdf")
 
 
+def _odm(project: Project):
+    pack = _pack(project)
+    if not hasattr(pack, "odm_rfq_blocks"):
+        raise HTTPException(404, "There is no ODM request for quotation for this product yet")
+    return pack
+
+
+@router.get("/odm-rfq.{fmt}")
+def odm_rfq(fmt: str, project: Project = Depends(get_project)):
+    """Cover note for an ODM quoting the complete product (electronics, tooling, assembly)."""
+    pack = _odm(project)
+    blocks = pack.odm_rfq_blocks(_contents(project))
+    if fmt == "md":
+        return Response(fp.rfq_markdown(blocks), media_type="text/markdown",
+                        headers={"Content-Disposition": f'attachment; filename="{project.slug}_odm_cover_note.md"'})
+    if fmt == "pdf":
+        return Response(fp.rfq_pdf(blocks, pack.ODM_TITLE), media_type="application/pdf",
+                        headers={"Content-Disposition": f'inline; filename="{project.slug}_odm_cover_note.pdf"'})
+    raise HTTPException(404, "The ODM cover note is available as .md or .pdf")
+
+
+@router.get("/odm-quote-sheet.csv")
+def odm_quote_sheet(project: Project = Depends(get_project)):
+    pack = _odm(project)
+    return Response(pack.odm_quote_sheet_csv(_contents(project)), media_type="text/csv",
+                    headers={"Content-Disposition": f'attachment; filename="{project.slug}_odm_quote_sheet.csv"'})
+
+
+@router.get("/factory-pack-odm.zip")
+def odm_zip(project: Project = Depends(get_project)):
+    try:
+        filename, data = _odm(project).build_odm_pack(project)
+    except fp.FactoryPackError as e:
+        raise HTTPException(409, str(e)) from e
+    return Response(data, media_type="application/zip", headers={"Content-Disposition": f'attachment; filename="{filename}"'})
+
+
 @router.get("/factory-pack/contact")
 def get_contact(project: Project = Depends(get_project)):
     return {"values": fp.contact(project), "missing": fp.missing_contact(project)}
