@@ -304,11 +304,16 @@ def _lettering() -> list:
 # stability() reports mass, centre of mass and tip-over for them. Keys are workbench part keys.
 VARIANT_PART_KEY = {"body": "body", "fin": "fins", "collar": "foot", "foot": "foot",
                     "nose_cone": "nose_cone"}  # -> PART_MATERIALS keys
-JESMONITE_WALL = 5.0  # mm, cast Jesmonite AC100 body (user, Oct 2026)
+# Cast Jesmonite AC100 body (user, Oct 2026): 3.5 mm general wall, thickened locally to 5 mm at the fin roots
+# (bolts and inserts) and round the sound openings. A uniform 5 mm wall left too little air and split the
+# ballast cup; at 3.5 mm the cup stays one piece.
+JESMONITE_WALL = 3.5
+JESMONITE_LOCAL_WALL = 5.0
 # Cast-in brass inserts for the driver (4), radiator (4) and fin fixings (3 x 2): about 2 g each.
 JESMONITE_INSERTS_G = 14 * 2.0
 MATERIAL_VARIANTS: dict[str, dict[str, Any]] = {
     "jesmonite_body": {"materials": {"body": "jesmonite_ac100"}, "wall_thickness": JESMONITE_WALL,
+                       "ns": {"LOCAL_WALL": JESMONITE_LOCAL_WALL},
                        "extra_g": {"cast-in brass inserts": JESMONITE_INSERTS_G}},
     # All-Jesmonite (user, Oct 2026): body, nose cone, fins, collar and foot cast in Jesmonite. Solid fins
     # (FIN_WALL 0) with cast-in inserts, cone and collar walls thick enough to cast (about 4–5 mm), spigot ring 3 mm.
@@ -316,7 +321,7 @@ MATERIAL_VARIANTS: dict[str, dict[str, Any]] = {
     # (three M2.5 tray screws and the M4 stud, 4 x 1.5 g).
     "all_jesmonite": {"materials": {"body": "jesmonite_ac100", "nose_cone": "jesmonite_ac100", "fin": "jesmonite_ac100",
                                     "collar": "jesmonite_ac100", "foot": "jesmonite_ac100"},
-                      "wall_thickness": JESMONITE_WALL,
+                      "wall_thickness": 5.0,  # as costed and reported (reference only); uniform wall
                       "ns": {"FIN_WALL": 0.0, "CONE_WALL": 5.0, "COLLAR_WALL": 4.0, "CONE_SPIGOT_WALL": 3.0},
                       "extra_g": {"cast-in brass inserts": JESMONITE_INSERTS_G + 6 * 2.0 + 4 * 1.5}},
     "pu_body": {"materials": {"body": "pu_casting_resin"}},

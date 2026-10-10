@@ -180,6 +180,12 @@ def test_jesmonite_body_variant_keeps_the_mass():
         assert s["com_mm"][2] <= atelier.SPEC["com_max_mm"]
     rows = {r["part"]: r["mass_g"] for r in jes["parts"]}
     assert rows["cast-in brass inserts"] == atelier.JESMONITE_INSERTS_G
+    # 3.5 mm wall with 5 mm local thickening: air back in spec and the ballast cup in one piece
+    lo_air, hi_air = atelier.SPEC["air_l"]
+    for s, v in ((jes, ("jesmonite_body",)), (both, ("jesmonite_body", "brass_metalwork"))):
+        assert lo_air <= s["air_l"] <= hi_air, s["air_l"]
+        assert len(atelier.model(PLAIN, v).parts["ballast"].solids()) == 1
+    assert atelier.model(PLAIN, ("jesmonite_body",)).info["local_wall"] == atelier.JESMONITE_LOCAL_WALL
     assert jes["ballast_g"] < base["ballast_g"] and jes["com_mm"][2] > base["com_mm"][2]  # heavier body, higher CoM
     # volume_scale in atelier.yaml = body volume at 5 mm / at 3 mm
     from app.services.templates import load_template
