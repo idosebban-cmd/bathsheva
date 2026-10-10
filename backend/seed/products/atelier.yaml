@@ -568,7 +568,10 @@ scenarios:
 
   - key: all_jesmonite
     letter: m
-    label: All-Jesmonite
+    label: All-Jesmonite (reference only)
+    # Not recommended (user, Oct 2026): it can't meet the mass or balance spec. Kept for reference; the
+    # optimiser never chooses it.
+    reference_only: "Fails mass and balance: about 1.54 kg with the ballast cup full (spec 1.8 ±0.1 kg) and a centre of mass of about 107 mm (spec 98 mm or lower)."
     design_change: >-
       The body, nose cone, fins, collar and foot all cast in glass-fibre-reinforced Jesmonite AC100 at a UK
       caster, each in its own silicone mould: 5 mm body wall, solid fins with cast-in inserts for the fin bolts
@@ -613,7 +616,7 @@ scenarios:
       - {kind: safety, message: "Verify on samples: fin-tip chipping. The speaker stands on the three fin tips; drop and knock tests on solid Jesmonite fins, with the TPU pads fitted."}
       - {kind: performance, message: "Verify on samples: USB-C fit. The opening is cast, not machined: check the plug enters square and the sealed receptacle seats in it, over the mould's life."}
       - {kind: performance, message: "Verify on samples (option B): gel-coat wear. The brass skin is about 0.5–1 mm; check edges and fin tips after handling and abrasion tests, and tarnish after humidity."}
-      - {kind: compliance, message: "Option B: a brass-powder gel coat on Jesmonite looks like metal but the part is not solid metal, so it breaks the design constraint 'anything that looks metallic must be real metal'. It is shown for comparison and never chosen by the optimiser."}
+      - {kind: compliance, message: "Option B is excluded: a brass-powder gel coat on Jesmonite does not count as real metal (user, Oct 2026), so it breaks the design constraint 'anything that looks metallic must be real metal'. It is shown for comparison only."}
       - {kind: performance, message: "Mass and balance: 1.8 kg can't be met. With the ballast cup full (414 g) the speaker weighs about 1.54 kg, its centre of mass rises to about 107 mm (spec 98 mm or lower) and it tips at about 18.8° (spec 18° or more)."}
       - {kind: performance, message: "Air volume falls to about 0.65 L (spec 0.7–0.8 L): the 5 mm body wall and the thicker nose cone take room from the box; the radiator tuning must be rechecked."}
       - {kind: performance, message: "Inherits the Jesmonite body's open points: drop test, lacquer adhesion over the sealer, Bluetooth range through the wall and the split ballast cup."}

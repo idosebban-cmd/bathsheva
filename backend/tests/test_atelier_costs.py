@@ -201,6 +201,9 @@ def test_all_jesmonite_costs(project):
     a, b = m["options"]
     assert a["label"].startswith("A") and a["allowed"]
     assert b["label"].startswith("B") and not b["allowed"] and "solid metal" in b["excluded_reason"].lower()
+    assert "mass and balance" in m["reference_only"].lower()  # not recommended: kept for reference
+    summary = c.get(f"/api/projects/{pid}/cost-down/summary").json()
+    assert not any(x["key"] == "all_jesmonite" for r in summary["rows"] for x in r["selection"])
     texts = " ".join(f["message"] for f in m["flags"])
     for item in ("fin-tip chipping", "USB-C fit", "gel-coat wear"):
         assert item in texts, item

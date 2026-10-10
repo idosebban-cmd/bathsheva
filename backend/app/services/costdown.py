@@ -453,7 +453,8 @@ def optimise(snap: Snapshot, defs: dict[str, dict[str, Any]], q: float, rules: R
     forbid = forbid or set()
     allowed = TIERS[tier]
     keys = [k for k, d in defs.items()
-            if k not in forbid and not d.get("edition") and d.get("premium_impact", "none") in allowed]
+            if k not in forbid and not d.get("edition") and not d.get("reference_only")
+            and d.get("premium_impact", "none") in allowed]
     best: dict[str, Any] | None = None
     for region in cost.regions:
         options = _cheapest_options(snap, {k: defs[k] for k in keys}, region, q, rules, cost)
@@ -570,6 +571,7 @@ def scenario_catalog(session: Session, project: Project) -> dict[str, Any]:
         out.append({
             "key": d["key"], "letter": d["letter"], "label": d["label"], "design_change": " ".join(d.get("design_change", "").split()),
             "premium_impact": d.get("premium_impact", "none"), "conflicts": d.get("conflicts", []), "flags": d.get("flags", []),
+            "reference_only": d.get("reference_only", ""),
             "tradeoffs": d.get("tradeoffs", {}), "options": opts,
         })
     regions = [{
