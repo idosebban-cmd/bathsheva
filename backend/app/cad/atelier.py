@@ -63,7 +63,8 @@ COLLAR_LETTERING_FILE = SEED_DIR / "artwork" / "A-01_collar_lettering_loops.json
 DENSITY = {"pc_abs": 1.15, "aluminium": 2.70, "zamak_5": 6.70, "stainless_304": 8.00, "brass": 8.50,
            "steel": 7.85, "acoustic_cloth": 0.50, "tpu": 1.20,
            "jesmonite_ac100": 1.745,  # dry density with glass fibre (user, Oct 2026)
-           "pu_casting_resin": 1.12}
+           "pu_casting_resin": 1.12,
+           "hardwood_beech": 0.72, "walnut": 0.61}  # kiln-dried, about 10% moisture (model-generated)
 PART_MATERIALS = {"body": "pc_abs", "nose_cone": "aluminium", "fins": "zamak_5", "foot": "zamak_5",
                   "grille": "stainless_304", "bezel": "aluminium", "knob": "brass", "chassis": "steel",
                   "grille_backing": "acoustic_cloth", "vent_insert": "stainless_304", "ballast": "steel"}
@@ -311,6 +312,7 @@ JESMONITE_WALL = 3.5
 JESMONITE_LOCAL_WALL = 5.0
 # Cast-in brass inserts for the driver (4), radiator (4) and fin fixings (3 x 2): about 2 g each.
 JESMONITE_INSERTS_G = 14 * 2.0
+WOOD_FIRE_ENCLOSURE_G = 70.0  # steel sheet enclosure round the battery and main board (turned wood body)
 MATERIAL_VARIANTS: dict[str, dict[str, Any]] = {
     "jesmonite_body": {"materials": {"body": "jesmonite_ac100"}, "wall_thickness": JESMONITE_WALL,
                        "ns": {"LOCAL_WALL": JESMONITE_LOCAL_WALL},
@@ -324,6 +326,16 @@ MATERIAL_VARIANTS: dict[str, dict[str, Any]] = {
                       "wall_thickness": 5.0,  # as costed and reported (reference only); uniform wall
                       "ns": {"FIN_WALL": 0.0, "CONE_WALL": 5.0, "COLLAR_WALL": 4.0, "CONE_SPIGOT_WALL": 3.0},
                       "extra_g": {"cast-in brass inserts": JESMONITE_INSERTS_G + 6 * 2.0 + 4 * 1.5}},
+    # Turned wood body (user, Oct 2026): CNC-turned and hollowed in two halves glued at the belly, the same
+    # 3.5 mm wall with 5 mm local pads as the Jesmonite body (glued-in inserts need the depth). Extra mass: the
+    # glued-in brass inserts (as the Jesmonite body's) and a steel fire enclosure round the battery and main
+    # board (about 0.6 mm sheet, 70 g), because wood can't be the fire enclosure.
+    "wood_beech": {"materials": {"body": "hardwood_beech"}, "wall_thickness": JESMONITE_WALL,
+                   "ns": {"LOCAL_WALL": JESMONITE_LOCAL_WALL},
+                   "extra_g": {"glued-in brass inserts": JESMONITE_INSERTS_G, "steel fire enclosure": WOOD_FIRE_ENCLOSURE_G}},
+    "wood_walnut": {"materials": {"body": "walnut"}, "wall_thickness": JESMONITE_WALL,
+                    "ns": {"LOCAL_WALL": JESMONITE_LOCAL_WALL},
+                    "extra_g": {"glued-in brass inserts": JESMONITE_INSERTS_G, "steel fire enclosure": WOOD_FIRE_ENCLOSURE_G}},
     "pu_body": {"materials": {"body": "pu_casting_resin"}},
     "brass_metalwork": {"materials": {"fin": "brass", "collar": "brass", "foot": "brass"}},
 }

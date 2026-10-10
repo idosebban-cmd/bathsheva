@@ -166,6 +166,20 @@ bought_in:
     source: model-generated
     confidence: low
     verified: false
+  - key: wood_threaded_inserts
+    name: "Glued-in brass threaded inserts for the wood body: driver (4), radiator (4) and fin fixings (6), on a jig"
+    gbp: {low: 3.0, high: 7.0}
+    source: model-generated
+    confidence: low
+    verified: false
+  - key: steel_fire_enclosure
+    # Wood can't be the fire enclosure (IEC 62368-1): the internal metal chassis is extended into a closed steel
+    # enclosure round the battery and main board. To be confirmed by a test house.
+    name: Steel fire enclosure round the battery and main board (0.6 mm sheet, folded, zinc plated), extending the chassis
+    gbp: {low: 3.0, high: 7.0}
+    source: model-generated
+    confidence: low
+    verified: false
   - key: knob_knurl
     name: Fine straight knurl on the knob edge (DIN 82 RAA 0.5), on the lathe
     gbp: {low: 0.1, high: 0.4}

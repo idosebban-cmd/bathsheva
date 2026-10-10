@@ -68,8 +68,8 @@ class Material(Provenance):
     max_service_temp_c: float | None = None
     density_g_cm3: float | None = None
     is_glass: bool = False
-    # metal | glass | polymer | composite; derived from category when not given.
-    kind: Literal["metal", "glass", "polymer", "composite"] | None = None
+    # metal | glass | polymer | composite | wood; derived from category when not given.
+    kind: Literal["metal", "glass", "polymer", "composite", "wood"] | None = None
 
     @property
     def material_kind(self) -> str | None:

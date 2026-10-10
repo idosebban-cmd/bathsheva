@@ -527,7 +527,7 @@ scenarios:
       premium: Looks the same; the cast body is less tough, and size and colour drift slightly between silicone moulds.
       lead_time: Soft tooling in 2–4 weeks instead of 8–14 weeks for the steel mould and dies; casting by hand is slower per part.
       tooling: A master pattern for the body, silicone moulds remade about every 20 bodies, and CNC programmes or wax-injection tools for the brass parts.
-    conflicts: [jesmonite_body, all_jesmonite]
+    conflicts: [jesmonite_body, all_jesmonite, turned_wood_body]
   - key: jesmonite_body
     letter: j
     label: Jesmonite body
@@ -538,7 +538,7 @@ scenarios:
       the driver, radiator and fin fixings. Sealer and primer, then the same
       oxblood lacquer and clear coats. The heavier body takes weight off the ballast cup, so the speaker
       stays at 1.8 kg. The gold parts stay die-cast Zamak, or are CNC-machined in brass.
-    conflicts: [low_tooling_first_batch, all_jesmonite]
+    conflicts: [low_tooling_first_batch, all_jesmonite, turned_wood_body]
     effect:
       reroutes:
         - {part: body, process: jesmonite_casting, material: jesmonite_ac100, tooling: low}
@@ -581,7 +581,7 @@ scenarios:
       grille opening, so it is not costed). Option A: coloured Jesmonite with no gold, body lacquered as before.
       Option B: brass Flex Metal gel coat (real brass powder), polished and sealed, on the parts that are gold
       today.
-    conflicts: [low_tooling_first_batch, jesmonite_body, nose_cone_spun]
+    conflicts: [low_tooling_first_batch, jesmonite_body, nose_cone_spun, turned_wood_body]
     effect:
       reroutes:
         - {part: body, process: jesmonite_casting, material: jesmonite_ac100, tooling: low}
@@ -627,10 +627,58 @@ scenarios:
       lead_time: Soft tooling for five parts in 3–6 weeks from a UK caster; no dies.
       tooling: Five master patterns and silicone moulds remade every 20–30 casts.
 
+  - key: turned_wood_body
+    letter: w
+    label: Turned wood body
+    design_change: >-
+      The body CNC-turned and hollowed from kiln-dried hardwood in two halves, glued at the belly with a turned
+      spigot joint; 3.5 mm general wall thickened locally to 5 mm at the fin roots and openings, with glued-in
+      brass threaded inserts for the driver, radiator and fin fixings. The internal metal chassis is extended
+      into a closed steel fire enclosure round the battery and main board, because the wood can't be the fire
+      enclosure. Wood movement: about 0.2–0.4% across the grain per 1% moisture change (up to about 0.4 mm on
+      the Ø95 body over a year indoors), so the spigot fits at the nose cone and collar get extra clearance taken
+      up by the O-ring and a soft gasket, the fin screws already sit in vertical slots, and the halves are glued
+      with matched grain so they move together. The gold parts stay as they are. Option A: beech or ash,
+      grain-filled, primed and lacquered in oxblood to the same spec. Option B: walnut with a clear satin finish
+      (natural wood edition).
+    conflicts: [low_tooling_first_batch, jesmonite_body, all_jesmonite]
+    effect:
+      # Body volume (3.5 mm wall, 5 mm locally) / the CAD's 3 mm body, from the CAD (tests/test_atelier_cad.py checks it).
+      volume_scale: {body: 1.183}
+      reroute:
+        part: body
+        options:
+          - process: cnc_wood_turning
+            material: hardwood_beech
+            tooling: low
+            label: "A: beech or ash, oxblood lacquer"
+            finishes: {body: grain_filled_gloss_lacquer_wood}
+          - process: cnc_wood_turning
+            material: walnut
+            tooling: low
+            label: "B: walnut, clear satin (natural wood)"
+            finishes: {body: clear_satin_wood}
+      add_items:
+        - {price_key: wood_threaded_inserts, quantity: 1}
+        - {price_key: steel_fire_enclosure, quantity: 1}
+    premium_impact: slight
+    flags:
+      - {kind: performance, message: "Verify on samples: seam stability. Humidity-cycle the glued belly seam and the nose cone and collar spigot fits (for example 30–80% RH) and check for gaps, steps or cracks along the grain."}
+      - {kind: performance, message: "Verify on samples: finish quality. Option A: no grain telegraphing through the gloss (90 GU or more) and no crazing at the seam or end grain; option B: an even satin on the walnut."}
+      - {kind: safety, message: "Verify with a test house: fire safety. Wood is combustible, so the steel enclosure round the battery and main board must serve as the fire enclosure under IEC 62368-1; confirm the design and openings before tooling."}
+      - {kind: performance, message: "Verify on samples: the 3.5 mm turned wall's stiffness and the glued-in inserts' pull-out strength at the fin roots."}
+    tradeoffs:
+      finish: "A: the same oxblood gloss over grain-filled wood. B: natural walnut under a clear satin finish, a different look (a wood edition)."
+      weight: The wood body is lighter than PC/ABS; the steel fire enclosure and inserts add about 100 g, so the ballast stays about the same.
+      premium: Real wood; it moves with humidity and dents more easily than plastic.
+      lead_time: CNC programmes and fixtures in 3–6 weeks; no mould.
+      tooling: Fixtures, glue-up jigs and CNC programmes only; the gold parts keep their dies.
+
 # Notes shown under the Cost-down summary.
 cost_down_notes:
   - "One power option: cordless (2 x 18650 1S2P, USB-C PD)."
   - "Tiers: 'no compromise' uses only changes that keep the look and feel (spun nose cone, custom battery pack); 'slight compromises' also allows the sealed box without the rear radiator, the low-tooling first batch (cast polyurethane body, brass instead of zinc) and the Jesmonite body."
+  - "Turned wood body (w): CNC-turned hardwood body in two glued halves, A oxblood-lacquered beech or ash, B natural walnut; steel fire enclosure round the battery and board (to be confirmed by a test house); seam stability, finish quality and fire safety to verify on samples; its rates are model-generated and unverified."
   - "Jesmonite body (j): cast Jesmonite AC100 body (5 mm, glass-fibre reinforced, UK caster) with the gold parts die-cast or CNC brass; drop test, lacquer adhesion and Bluetooth range to verify on samples; its rates are model-generated and unverified."
   - "Low-tooling first batch (t): soft tooling for the body and no die-casting dies, for a first batch of a few hundred; its rates (polyurethane casting, silicone moulds, CNC or investment-cast brass) are model-generated and unverified."
 

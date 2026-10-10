@@ -21,6 +21,18 @@ finish_rates:
     source: "model-generated: brass-powder gel coat (about 1–1.5 kg/m² of coat), rubbing back, polishing and sealing by hand"
     confidence: low
     verified: false
+  - finish: grain_filled_gloss_lacquer_wood
+    gbp_per_m2: {low: 130, high: 280}
+    min_per_part: {low: 12, high: 25}
+    source: "model-generated: grain filler and sealer, primer, colour, two clear coats, cut and polish on wood"
+    confidence: low
+    verified: false
+  - finish: clear_satin_wood
+    gbp_per_m2: {low: 40, high: 110}
+    min_per_part: {low: 4, high: 10}
+    source: "model-generated: fine sanding and two or three coats of clear satin lacquer or hardwax oil"
+    confidence: low
+    verified: false
   - finish: gloss_lacquer_polished
     gbp_per_m2: {low: 90, high: 200}
     min_per_part: {low: 8, high: 18}

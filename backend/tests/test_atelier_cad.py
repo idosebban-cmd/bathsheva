@@ -212,3 +212,23 @@ def test_all_jesmonite_variant():
     sc = next(d for d in load_template("atelier")["scenarios"] if d["key"] == "all_jesmonite")
     for key in ("nose_cone", "fin", "collar", "foot"):
         assert sc["effect"]["volume_scale"][key] == pytest.approx(m.parts[key].volume / base.parts[key].volume, rel=0.01), key
+
+
+def test_turned_wood_body_variant():
+    """Turned wood body: lighter than PC/ABS, but the inserts and steel fire enclosure keep the ballast in range."""
+    from app.services.templates import load_template
+
+    base = atelier.model(PLAIN)
+    lo, hi = atelier.SPEC["mass_g"]
+    lo_air, hi_air = atelier.SPEC["air_l"]
+    for v in (("wood_beech",), ("wood_walnut",)):
+        s = atelier.stability(PLAIN, v)
+        rows = {r["part"]: r["mass_g"] for r in s["parts"]}
+        assert rows["steel fire enclosure"] == atelier.WOOD_FIRE_ENCLOSURE_G
+        assert lo <= s["total_g"] <= hi and s["ballast_g"] <= s["ballast_max_g"] + 1.0, v
+        assert s["tip_deg"] >= atelier.SPEC["tip_min_deg"] and s["com_mm"][2] <= atelier.SPEC["com_max_mm"]
+        assert lo_air <= s["air_l"] <= hi_air
+        assert len(atelier.model(PLAIN, v).parts["ballast"].solids()) == 1
+    sc = next(d for d in load_template("atelier")["scenarios"] if d["key"] == "turned_wood_body")
+    m = atelier.model(PLAIN, ("wood_beech",))
+    assert sc["effect"]["volume_scale"]["body"] == pytest.approx(m.parts["body"].volume / base.parts["body"].volume, rel=0.01)

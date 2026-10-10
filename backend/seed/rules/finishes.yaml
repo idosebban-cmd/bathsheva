@@ -48,6 +48,28 @@ finishes:
     source: model-generated
     confidence: low
     verified: false
+  - key: grain_filled_gloss_lacquer_wood
+    name: Grain-filled, primed and polished gloss lacquer on wood
+    keywords: [grain-filled]
+    plain_language: >-
+      The wood's grain is filled and sealed, then primed, given the colour coat
+      and two clear coats and polished to the same gloss as the moulded body.
+      Without the grain filler the pores show through the gloss.
+    min_process_finish: good
+    notes: Wood keeps moving; the lacquer must stay flexible enough not to craze at seams and end grain.
+    source: model-generated
+    confidence: low
+    verified: false
+  - key: clear_satin_wood
+    name: Clear satin lacquer (or hardwax oil) on walnut
+    keywords: [clear satin wood]
+    plain_language: >-
+      The natural wood is sanded fine and finished with a clear satin lacquer or
+      hardwax oil that shows the grain; scratches can be touched in.
+    min_process_finish: fair
+    source: model-generated
+    confidence: low
+    verified: false
   - key: gloss_lacquer_polished
     name: Polished gloss lacquer (primer, colour, two clear coats)
     keywords: [polished lacquer]

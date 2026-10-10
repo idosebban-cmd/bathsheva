@@ -152,7 +152,7 @@ def test_jesmonite_seed_is_unverified():
     for item in ("drop test", "lacquer adhesion", "Bluetooth range"):
         assert item in texts, item
     # every scenario that replaces the body excludes the others
-    bodies = {"low_tooling_first_batch", "jesmonite_body", "all_jesmonite"}
+    bodies = {"low_tooling_first_batch", "jesmonite_body", "all_jesmonite", "turned_wood_body"}
     for d in TPL["scenarios"]:
         if d["key"] in bodies:
             assert bodies - {d["key"]} <= set(d["conflicts"]), d["key"]
@@ -238,6 +238,51 @@ def test_all_jesmonite_costs(project):
     costs = lcd()
     assert all(not costs.bought_in[k].verified for k in ("jesmonite_small_moulds_share", "jesmonite_part_inserts"))
     assert all(not costs.finish_rates[k].verified for k in ("flex_metal_brass_gelcoat", "pigmented_jesmonite_sealed"))
+
+
+def test_turned_wood_body(project):
+    """Turned wood body: both finish options allowed, unverified rates, cheaper than the steel mould at 300 and 500."""
+    from app.rules.data import load_rules
+
+    rules, cost = load_rules(), load_cost_data()
+    entries = [rules.processes["cnc_wood_turning"], rules.materials["hardwood_beech"], rules.materials["walnut"],
+               rules.finishes["grain_filled_gloss_lacquer_wood"], rules.finishes["clear_satin_wood"],
+               cost.process_rates["cnc_wood_turning"], cost.material_prices["hardwood_beech"], cost.material_prices["walnut"],
+               cost.finish_rates["grain_filled_gloss_lacquer_wood"], cost.finish_rates["clear_satin_wood"],
+               cost.bought_in["wood_threaded_inserts"], cost.bought_in["steel_fire_enclosure"]]
+    assert all(not e.verified for e in entries)
+    assert rules.materials["walnut"].material_kind == "wood"
+
+    c, pid = project
+    w = {d["key"]: d for d in c.get(f"/api/projects/{pid}/scenarios").json()["scenarios"]}["turned_wood_body"]
+    assert [o["label"][:2] for o in w["options"]] == ["A:", "B:"] and all(o["allowed"] for o in w["options"])
+    texts = " ".join(f["message"] for f in w["flags"]).lower()
+    for item in ("seam stability", "finish quality", "fire safety", "test house"):
+        assert item in texts, item
+
+    from app.costing.assemble import assemble
+    from app.costing.data import load_cost_data as lcd
+    from app.costing.model import evaluate
+    from app.db import new_session
+    from app.models import Project
+    from app.services import costdown
+    from app.services.costing import snapshot
+
+    with new_session() as s:
+        proj = s.get(Project, pid)
+        snap = snapshot(s, proj)
+        defs = {d["key"]: d for d in costdown.scenario_defs(proj)}
+        current, _ = assemble(snap, costdown.CostConfig(), rules, lcd())
+        for opt, (material, finish) in enumerate((("hardwood_beech", "Grain-filled"), ("walnut", "Clear satin"))):
+            inputs, _ = assemble(snap, costdown.selection_config(defs, [("turned_wood_body", opt)], "uk", snap.params), rules, lcd())
+            body = next(p for p in inputs.parts if p.name == "Body")
+            assert body.process_key == "cnc_wood_turning" and body.material_key == material
+            assert body.finish_name.startswith(finish)
+            for q in (300, 500):
+                assert costdown._mid(inputs, q) < costdown._mid(current, q), (opt, q)
+            labels = [ln.label for ln in evaluate(inputs, inputs.mids(), 500)]
+            assert any(lb.startswith("Steel fire enclosure") for lb in labels)
+            assert any(lb.startswith("Glued-in brass threaded inserts") for lb in labels)
 
 
 # Runs last: the `client` fixture re-points the database, which the module's project fixture shares.

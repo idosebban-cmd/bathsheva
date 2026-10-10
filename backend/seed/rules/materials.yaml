@@ -261,6 +261,35 @@ materials:
     confidence: medium
     verified: false
 
+  - key: hardwood_beech
+    name: Beech or ash hardwood (kiln-dried turning blanks)
+    category: wood
+    kind: wood
+    processes: [cnc_wood_turning]
+    plain_language: >-
+      Close-grained (beech) or straight-grained (ash) European hardwood, kiln-dried
+      to about 10% moisture. Turns cleanly and takes a grain filler, primer and
+      gloss lacquer; ash has an open grain that must be filled first.
+    finish_compat: {grain_filled_gloss_lacquer_wood: good, clear_satin_wood: fair}
+    density_g_cm3: 0.72
+    source: model-generated
+    confidence: low
+    verified: false
+
+  - key: walnut
+    name: Walnut (black or European, kiln-dried turning blanks)
+    category: wood
+    kind: wood
+    processes: [cnc_wood_turning]
+    plain_language: >-
+      Dark, figured hardwood with moderate movement; turns very well and is
+      usually left natural under a clear satin lacquer or hardwax oil.
+    finish_compat: {clear_satin_wood: good, grain_filled_gloss_lacquer_wood: fair}
+    density_g_cm3: 0.61
+    source: model-generated
+    confidence: low
+    verified: false
+
   - key: tpu
     name: TPU (thermoplastic polyurethane)
     category: polymer
