@@ -583,7 +583,7 @@ scenarios:
       reroutes:
         - {part: body, process: jesmonite_casting, material: jesmonite_ac100, tooling: low}
       # Volumes from the all-Jesmonite build / the CAD's (tests/test_atelier_cad.py checks them).
-      volume_scale: {body: 1.571, nose_cone: 1.0, fin: 1.0, collar: 1.0, foot: 1.0}
+      volume_scale: {body: 1.571, nose_cone: 1.929, fin: 1.168, collar: 0.941, foot: 1.0}
       reroute:
         parts: [nose_cone, fin, collar, foot]
         options:
@@ -614,7 +614,8 @@ scenarios:
       - {kind: performance, message: "Verify on samples: USB-C fit. The opening is cast, not machined: check the plug enters square and the sealed receptacle seats in it, over the mould's life."}
       - {kind: performance, message: "Verify on samples (option B): gel-coat wear. The brass skin is about 0.5–1 mm; check edges and fin tips after handling and abrasion tests, and tarnish after humidity."}
       - {kind: compliance, message: "Option B: a brass-powder gel coat on Jesmonite looks like metal but the part is not solid metal, so it breaks the design constraint 'anything that looks metallic must be real metal'. It is shown for comparison and never chosen by the optimiser."}
-      - {kind: performance, message: "Air volume: the 5 mm body wall and the thicker nose cone take room from the box (see the DFM figures); the radiator tuning must be rechecked."}
+      - {kind: performance, message: "Mass and balance: 1.8 kg can't be met. With the ballast cup full (414 g) the speaker weighs about 1.54 kg, its centre of mass rises to about 107 mm (spec 98 mm or lower) and it tips at about 18.8° (spec 18° or more)."}
+      - {kind: performance, message: "Air volume falls to about 0.65 L (spec 0.7–0.8 L): the 5 mm body wall and the thicker nose cone take room from the box; the radiator tuning must be rechecked."}
       - {kind: performance, message: "Inherits the Jesmonite body's open points: drop test, lacquer adhesion over the sealer, Bluetooth range through the wall and the split ballast cup."}
     tradeoffs:
       finish: "A: coloured stone-like parts and a lacquered red body, no gold. B: polished brass-powder skin on the former gold parts; it wears on edges and needs sealing."
