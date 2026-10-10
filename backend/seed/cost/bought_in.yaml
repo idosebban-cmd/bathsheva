@@ -152,6 +152,20 @@ bought_in:
     source: model-generated
     confidence: low
     verified: false
+  - key: jesmonite_small_moulds_share
+    # All-Jesmonite: a silicone mould each for the nose cone, fin (used three times per speaker), collar and foot
+    # (£60–300 each), each lasting about 20–30 casts.
+    name: Silicone mould share for the cast Jesmonite nose cone, three fins, collar and foot
+    gbp: {low: 25.0, high: 55.0}
+    source: model-generated
+    confidence: low
+    verified: false
+  - key: jesmonite_part_inserts
+    name: "Cast-in brass inserts for the Jesmonite fins (2 each) and collar (3 x M2.5 and the M4 stud), placed on jigs"
+    gbp: {low: 2.0, high: 4.5}
+    source: model-generated
+    confidence: low
+    verified: false
   - key: knob_knurl
     name: Fine straight knurl on the knob edge (DIN 82 RAA 0.5), on the lathe
     gbp: {low: 0.1, high: 0.4}

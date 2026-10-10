@@ -324,6 +324,7 @@ def change_config(defn: dict[str, Any], option: int, params: dict[str, Any]) -> 
         opt = eff["reroute"]["options"][option]
         for part in _reroute_parts(eff["reroute"]):
             cfg.routes[part] = RouteChoice(opt["process"], opt["material"], opt.get("tooling"), opt.get("label", ""))
+        cfg.finish_overrides.update(opt.get("finishes", {}))  # an option may also change finishes
     for rr in eff.get("reroutes", []):
         cfg.routes[rr["part"]] = RouteChoice(rr["process"], rr["material"], rr.get("tooling"), defn.get("label", ""))
     cfg.finish_overrides.update(eff.get("finishes", {}))
@@ -349,6 +350,10 @@ def option_allowed(defn: dict[str, Any], option: int, snap: Snapshot, rules: Rul
     from app.rules.match import match_finishes
 
     eff = defn.get("effect", {})
+    opt = eff["reroute"]["options"][option] if eff.get("reroute") else {}
+    finish_over = {**eff.get("finishes", {}), **opt.get("finishes", {})}
+    # an option can change how a part looks (e.g. coloured Jesmonite: no longer reads as metal)
+    add_traits = opt.get("add_traits", {})
     checks: list[tuple[str, str]] = []
     if eff.get("reroute"):
         checks += [(part, eff["reroute"]["options"][option]["material"]) for part in _reroute_parts(eff["reroute"])]
@@ -357,8 +362,8 @@ def option_allowed(defn: dict[str, Any], option: int, snap: Snapshot, rules: Rul
         sp = next((s for s in snap.parts if s.cad_key == cad_key), None)
         if sp is None:
             continue
-        traits = set(sp.traits) | set(sp.derived_traits)
-        override = eff.get("finishes", {}).get(cad_key)
+        traits = set(sp.traits) | set(sp.derived_traits) | set(add_traits.get(cad_key, []))
+        override = finish_over.get(cad_key)
         finishes = [override] if override else match_finishes(rules, sp.finish_text)
         for fk in finishes or [None]:
             ok, why = material_allowed(rules, traits, sp.material_category, material, fk)
@@ -448,7 +453,8 @@ def optimise(snap: Snapshot, defs: dict[str, dict[str, Any]], q: float, rules: R
     forbid = forbid or set()
     allowed = TIERS[tier]
     keys = [k for k, d in defs.items()
-            if k not in forbid and not d.get("edition") and d.get("premium_impact", "none") in allowed]
+            if k not in forbid and not d.get("edition") and not d.get("reference_only")
+            and d.get("premium_impact", "none") in allowed]
     best: dict[str, Any] | None = None
     for region in cost.regions:
         options = _cheapest_options(snap, {k: defs[k] for k in keys}, region, q, rules, cost)
@@ -565,6 +571,7 @@ def scenario_catalog(session: Session, project: Project) -> dict[str, Any]:
         out.append({
             "key": d["key"], "letter": d["letter"], "label": d["label"], "design_change": " ".join(d.get("design_change", "").split()),
             "premium_impact": d.get("premium_impact", "none"), "conflicts": d.get("conflicts", []), "flags": d.get("flags", []),
+            "reference_only": d.get("reference_only", ""),
             "tradeoffs": d.get("tradeoffs", {}), "options": opts,
         })
     regions = [{

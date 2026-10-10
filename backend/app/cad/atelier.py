@@ -302,13 +302,23 @@ def _lettering() -> list:
 
 # Material variants for the cost-down scenarios: the build sizes the ballast with these densities, and
 # stability() reports mass, centre of mass and tip-over for them. Keys are workbench part keys.
-VARIANT_PART_KEY = {"body": "body", "fin": "fins", "collar": "foot", "foot": "foot"}  # -> PART_MATERIALS keys
+VARIANT_PART_KEY = {"body": "body", "fin": "fins", "collar": "foot", "foot": "foot",
+                    "nose_cone": "nose_cone"}  # -> PART_MATERIALS keys
 JESMONITE_WALL = 5.0  # mm, cast Jesmonite AC100 body (user, Oct 2026)
 # Cast-in brass inserts for the driver (4), radiator (4) and fin fixings (3 x 2): about 2 g each.
 JESMONITE_INSERTS_G = 14 * 2.0
 MATERIAL_VARIANTS: dict[str, dict[str, Any]] = {
     "jesmonite_body": {"materials": {"body": "jesmonite_ac100"}, "wall_thickness": JESMONITE_WALL,
                        "extra_g": {"cast-in brass inserts": JESMONITE_INSERTS_G}},
+    # All-Jesmonite (user, Oct 2026): body, nose cone, fins, collar and foot cast in Jesmonite. Solid fins
+    # (FIN_WALL 0) with cast-in inserts, cone and collar walls thick enough to cast (about 4–5 mm), spigot ring 3 mm.
+    # Cast-in inserts: the body's 14 (28 g), two per fin for the fin bolts (6 x 2 g) and four in the collar
+    # (three M2.5 tray screws and the M4 stud, 4 x 1.5 g).
+    "all_jesmonite": {"materials": {"body": "jesmonite_ac100", "nose_cone": "jesmonite_ac100", "fin": "jesmonite_ac100",
+                                    "collar": "jesmonite_ac100", "foot": "jesmonite_ac100"},
+                      "wall_thickness": JESMONITE_WALL,
+                      "ns": {"FIN_WALL": 0.0, "CONE_WALL": 5.0, "COLLAR_WALL": 4.0, "CONE_SPIGOT_WALL": 3.0},
+                      "extra_g": {"cast-in brass inserts": JESMONITE_INSERTS_G + 6 * 2.0 + 4 * 1.5}},
     "pu_body": {"materials": {"body": "pu_casting_resin"}},
     "brass_metalwork": {"materials": {"fin": "brass", "collar": "brass", "foot": "brass"}},
 }
@@ -326,6 +336,14 @@ def _variant(keys: tuple[str, ...]) -> tuple[dict[str, Any], dict[str, str], dic
         if "wall_thickness" in v:
             over["wall_thickness"] = v["wall_thickness"]
     return over, mats, extra
+
+
+def _variant_ns(keys: tuple[str, ...]) -> dict[str, float]:
+    """Prototype-parameter overrides (e.g. a solid fin) for a combination of material variants."""
+    out: dict[str, float] = {}
+    for k in keys:
+        out.update(MATERIAL_VARIANTS[k].get("ns", {}))
+    return out
 
 
 def namespace(params: dict[str, Any], variant: tuple[str, ...] = ()) -> types.SimpleNamespace:
@@ -366,6 +384,8 @@ def namespace(params: dict[str, Any], variant: tuple[str, ...] = ()) -> types.Si
     ns.TARGET_MASS_G = p["target_mass_kg"] * 1000 - sum(extra.values())
     ns.MATERIAL_DENSITY = dict(DENSITY)
     ns.PART_MATERIALS = {**PART_MATERIALS, **{VARIANT_PART_KEY[k]: m for k, m in mats.items()}}
+    for name, value in _variant_ns(variant).items():
+        setattr(ns, name, value)
     ns.BATTERY_MASS, ns.DRIVER_MASS, ns.PCB_MASS = BATTERY_MASS_G, DRIVER_MASS_G, BOARD_MASS_G
     return ns
 

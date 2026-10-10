@@ -114,6 +114,7 @@ interface Scenario {
   conflicts: string[];
   flags: Flag[];
   tradeoffs: Record<string, string>;
+  reference_only?: string; // why it is kept for reference only (never chosen by the optimiser)
   options: { option: number; label: string; saving: Record<string, number>; allowed?: boolean; excluded_reason?: string }[];
 }
 interface RegionInfo {
@@ -761,6 +762,9 @@ function ScenarioBuilder({ projectId, catalog }: { projectId: number; catalog: C
                 <div className="scenario-body small">
                   <div className="scenario-tags">
                     <ImpactBadge impact={s.premium_impact} />
+                    {s.reference_only && (
+                      <span className="badge badge-safety" title={s.reference_only}>Not recommended: reference only</span>
+                    )}
                     {s.flags.map((f, i) => (
                       <span key={i} className={f.kind === "safety" ? "badge badge-safety" : "badge badge-unverified"} title={f.message}>
                         {f.kind === "safety" ? "Safety: verify" : "Compliance: verify"}

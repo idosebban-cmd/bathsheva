@@ -151,8 +151,11 @@ def test_jesmonite_seed_is_unverified():
     texts = " ".join(f["message"] for f in sc["flags"])
     for item in ("drop test", "lacquer adhesion", "Bluetooth range"):
         assert item in texts, item
-    assert sc["conflicts"] == ["low_tooling_first_batch"]
-    assert next(d for d in TPL["scenarios"] if d["key"] == "low_tooling_first_batch")["conflicts"] == ["jesmonite_body"]
+    # every scenario that replaces the body excludes the others
+    bodies = {"low_tooling_first_batch", "jesmonite_body", "all_jesmonite"}
+    for d in TPL["scenarios"]:
+        if d["key"] in bodies:
+            assert bodies - {d["key"]} <= set(d["conflicts"]), d["key"]
 
 
 def test_jesmonite_body_costs(project):
@@ -188,6 +191,53 @@ def test_jesmonite_body_costs(project):
         assert body_mat.amount > base_mat.amount  # 5 mm wall (volume_scale) and the heavier, dearer material
         labels = {ln.label.split(" ")[0] + ln.category for ln in evaluate(die, die.mids(), 500)}
         assert {"Silicone" + "tooling", "Sealer" + "finishing", "Cast-in" + "bought_in"} <= labels
+
+
+def test_all_jesmonite_costs(project):
+    """Option A is allowed (coloured, no metal look); option B (metal-powder skin) breaks the solid-metal rule."""
+    c, pid = project
+    cat = {d["key"]: d for d in c.get(f"/api/projects/{pid}/scenarios").json()["scenarios"]}
+    m = cat["all_jesmonite"]
+    a, b = m["options"]
+    assert a["label"].startswith("A") and a["allowed"]
+    assert b["label"].startswith("B") and not b["allowed"] and "solid metal" in b["excluded_reason"].lower()
+    assert "mass and balance" in m["reference_only"].lower()  # not recommended: kept for reference
+    summary = c.get(f"/api/projects/{pid}/cost-down/summary").json()
+    assert not any(x["key"] == "all_jesmonite" for r in summary["rows"] for x in r["selection"])
+    texts = " ".join(f["message"] for f in m["flags"])
+    for item in ("fin-tip chipping", "USB-C fit", "gel-coat wear"):
+        assert item in texts, item
+
+    from app.costing.assemble import assemble
+    from app.costing.data import load_cost_data as lcd
+    from app.costing.model import evaluate
+    from app.db import new_session
+    from app.models import Project
+    from app.rules.data import load_rules
+    from app.services import costdown
+    from app.services.costing import snapshot
+
+    with new_session() as s:
+        proj = s.get(Project, pid)
+        snap = snapshot(s, proj)
+        defs = {d["key"]: d for d in costdown.scenario_defs(proj)}
+        rules, cost = load_rules(), lcd()
+        current, _ = assemble(snap, costdown.CostConfig(), rules, cost)
+        for opt, finish in ((0, "Coloured"), (1, "Brass Flex Metal")):
+            inputs, ctx = assemble(snap, costdown.selection_config(defs, [("all_jesmonite", opt)], "uk", snap.params), rules, cost)
+            for q in (300, 500):
+                assert costdown._mid(inputs, q) < costdown._mid(current, q), (opt, q)
+            fin = next(p for p in inputs.parts if p.name == "Fin")
+            assert fin.process_key == "jesmonite_casting" and fin.finish_name.startswith(finish)
+            labels = [ln.label for ln in evaluate(inputs, inputs.mids(), 500)]
+            assert not any(lb.startswith("Laser-etch") for lb in labels)  # lettering cast in from the pattern
+    from app.rules.data import load_rules as lr
+
+    rules = lr()
+    assert not rules.finishes["flex_metal_brass_gelcoat"].verified and not rules.finishes["pigmented_jesmonite_sealed"].verified
+    costs = lcd()
+    assert all(not costs.bought_in[k].verified for k in ("jesmonite_small_moulds_share", "jesmonite_part_inserts"))
+    assert all(not costs.finish_rates[k].verified for k in ("flex_metal_brass_gelcoat", "pigmented_jesmonite_sealed"))
 
 
 # Runs last: the `client` fixture re-points the database, which the module's project fixture shares.
