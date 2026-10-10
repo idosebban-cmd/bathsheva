@@ -667,6 +667,7 @@ scenarios:
       - {kind: performance, message: "Verify on samples: finish quality. Option A: no grain telegraphing through the gloss (90 GU or more) and no crazing at the seam or end grain; option B: an even satin on the walnut."}
       - {kind: safety, message: "Verify with a test house: fire safety. Wood is combustible, so the steel enclosure round the battery and main board must serve as the fire enclosure under IEC 62368-1; confirm the design and openings before tooling."}
       - {kind: performance, message: "Verify on samples: the 3.5 mm turned wall's stiffness and the glued-in inserts' pull-out strength at the fin roots."}
+      - {kind: performance, message: "Mass margin: the wood body is light, so the ballast cup is full or nearly full (CAD: beech 1.80 kg with about 3 g of ballast to spare; walnut 1.78 kg with the cup full, inside the 1.8 ±0.1 kg spec). Recheck once supplier part weights arrive; brass gold parts would add about 150 g of margin."}
     tradeoffs:
       finish: "A: the same oxblood gloss over grain-filled wood. B: natural walnut under a clear satin finish, a different look (a wood edition)."
       weight: The wood body is lighter than PC/ABS; the steel fire enclosure and inserts add about 100 g, so the ballast stays about the same.
