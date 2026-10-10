@@ -190,6 +190,50 @@ def test_jesmonite_body_costs(project):
         assert {"Silicone" + "tooling", "Sealer" + "finishing", "Cast-in" + "bought_in"} <= labels
 
 
+def test_all_jesmonite_costs(project):
+    """Option A is allowed (coloured, no metal look); option B (metal-powder skin) breaks the solid-metal rule."""
+    c, pid = project
+    cat = {d["key"]: d for d in c.get(f"/api/projects/{pid}/scenarios").json()["scenarios"]}
+    m = cat["all_jesmonite"]
+    a, b = m["options"]
+    assert a["label"].startswith("A") and a["allowed"]
+    assert b["label"].startswith("B") and not b["allowed"] and "solid metal" in b["excluded_reason"].lower()
+    texts = " ".join(f["message"] for f in m["flags"])
+    for item in ("fin-tip chipping", "USB-C fit", "gel-coat wear"):
+        assert item in texts, item
+
+    from app.costing.assemble import assemble
+    from app.costing.data import load_cost_data as lcd
+    from app.costing.model import evaluate
+    from app.db import new_session
+    from app.models import Project
+    from app.rules.data import load_rules
+    from app.services import costdown
+    from app.services.costing import snapshot
+
+    with new_session() as s:
+        proj = s.get(Project, pid)
+        snap = snapshot(s, proj)
+        defs = {d["key"]: d for d in costdown.scenario_defs(proj)}
+        rules, cost = load_rules(), lcd()
+        current, _ = assemble(snap, costdown.CostConfig(), rules, cost)
+        for opt, finish in ((0, "Coloured"), (1, "Brass Flex Metal")):
+            inputs, ctx = assemble(snap, costdown.selection_config(defs, [("all_jesmonite", opt)], "uk", snap.params), rules, cost)
+            for q in (300, 500):
+                assert costdown._mid(inputs, q) < costdown._mid(current, q), (opt, q)
+            fin = next(p for p in inputs.parts if p.name == "Fin")
+            assert fin.process_key == "jesmonite_casting" and fin.finish_name.startswith(finish)
+            labels = [ln.label for ln in evaluate(inputs, inputs.mids(), 500)]
+            assert not any(lb.startswith("Laser-etch") for lb in labels)  # lettering cast in from the pattern
+    from app.rules.data import load_rules as lr
+
+    rules = lr()
+    assert not rules.finishes["flex_metal_brass_gelcoat"].verified and not rules.finishes["pigmented_jesmonite_sealed"].verified
+    costs = lcd()
+    assert all(not costs.bought_in[k].verified for k in ("jesmonite_small_moulds_share", "jesmonite_part_inserts"))
+    assert all(not costs.finish_rates[k].verified for k in ("flex_metal_brass_gelcoat", "pigmented_jesmonite_sealed"))
+
+
 # Runs last: the `client` fixture re-points the database, which the module's project fixture shares.
 def test_faro_summary_notes_still_name_its_power_options(client, faro_project):
     notes = client.get(f"/api/projects/{faro_project['id']}/cost-down/summary").json()["notes"]

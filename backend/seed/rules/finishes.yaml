@@ -20,6 +20,34 @@ finishes:
     source: model-generated
     confidence: medium
     verified: false
+  - key: pigmented_jesmonite_sealed
+    name: Coloured (pigmented) Jesmonite, sealed
+    keywords: [pigmented jesmonite]
+    plain_language: >-
+      The colour is mixed into the Jesmonite, so it runs right through the part;
+      the cast surface is lightly sanded and sealed. A stone-like, satin finish
+      with no metal look; chips show the same colour underneath.
+    min_process_finish: fair
+    notes: Colour and sealer to match approved samples; colour varies slightly between batches of mix.
+    source: model-generated
+    confidence: low
+    verified: false
+  - key: flex_metal_brass_gelcoat
+    name: Brass Flex Metal gel coat (real brass powder), polished and sealed
+    keywords: [flex metal]
+    plain_language: >-
+      A gel coat loaded with real brass powder is brushed into the mould first
+      and backed up with Jesmonite; once cured, the surface is rubbed back and
+      polished to show the brass, then sealed. It looks and feels like cast brass
+      but is a thin metal-filled skin over a mineral composite.
+    min_process_finish: fair
+    metallic_look: true
+    notes: >-
+      About 0.5–1 mm of metal-filled coat; wears through on edges and tips with handling, and tarnishes
+      unless sealed. Under the design constraint the part is not solid metal.
+    source: model-generated
+    confidence: low
+    verified: false
   - key: gloss_lacquer_polished
     name: Polished gloss lacquer (primer, colour, two clear coats)
     keywords: [polished lacquer]

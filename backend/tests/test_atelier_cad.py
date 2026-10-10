@@ -188,3 +188,21 @@ def test_jesmonite_body_variant_keeps_the_mass():
     v3 = {r["part"]: r["mass_g"] for r in base["parts"]}["body"] / atelier.DENSITY["pc_abs"]
     v5 = rows["body"] / atelier.DENSITY["jesmonite_ac100"]
     assert sc["effect"]["volume_scale"]["body"] == pytest.approx(v5 / v3, rel=0.01)
+
+
+def test_all_jesmonite_variant():
+    """All-Jesmonite: solid fins, thick cone and collar walls; ballast re-sized, or at its maximum if 1.8 kg can't be met."""
+    from app.services.templates import load_template
+
+    base = atelier.model(PLAIN)
+    m = atelier.model(PLAIN, ("all_jesmonite",))
+    s = atelier.stability(PLAIN, ("all_jesmonite",))
+    assert m.parts["fin"].volume > 2 * base.parts["fin"].volume  # solid, not a 3 mm shell
+    if s["total_g"] < 1790:
+        assert s["ballast_g"] == pytest.approx(s["ballast_max_g"], abs=1.0)  # the most the cup can hold
+    else:
+        assert s["ballast_g"] <= s["ballast_max_g"]
+    assert s["tip_deg"] > 0 and s["height_mm"] == pytest.approx(280.0, abs=0.5)
+    sc = next(d for d in load_template("atelier")["scenarios"] if d["key"] == "all_jesmonite")
+    for key in ("nose_cone", "fin", "collar", "foot"):
+        assert sc["effect"]["volume_scale"][key] == pytest.approx(m.parts[key].volume / base.parts[key].volume, rel=0.01), key

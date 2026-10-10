@@ -9,6 +9,18 @@ finish_rates:
     source: "model-generated: decorative gold PVD batch-coated, incl. the base layer (Cu-Ni on zinc, Ni on brass) and brushing"
     confidence: low
     verified: false
+  - finish: pigmented_jesmonite_sealed
+    gbp_per_m2: {low: 20, high: 60}
+    min_per_part: {low: 0.8, high: 2.5}
+    source: "model-generated: pigment in the mix, light sanding and a sealer coat"
+    confidence: low
+    verified: false
+  - finish: flex_metal_brass_gelcoat
+    gbp_per_m2: {low: 150, high: 400}
+    min_per_part: {low: 3.0, high: 9.0}
+    source: "model-generated: brass-powder gel coat (about 1–1.5 kg/m² of coat), rubbing back, polishing and sealing by hand"
+    confidence: low
+    verified: false
   - finish: gloss_lacquer_polished
     gbp_per_m2: {low: 90, high: 200}
     min_per_part: {low: 8, high: 18}

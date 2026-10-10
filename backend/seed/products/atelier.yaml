@@ -527,7 +527,7 @@ scenarios:
       premium: Looks the same; the cast body is less tough, and size and colour drift slightly between silicone moulds.
       lead_time: Soft tooling in 2–4 weeks instead of 8–14 weeks for the steel mould and dies; casting by hand is slower per part.
       tooling: A master pattern for the body, silicone moulds remade about every 20 bodies, and CNC programmes or wax-injection tools for the brass parts.
-    conflicts: [jesmonite_body]
+    conflicts: [jesmonite_body, all_jesmonite]
   - key: jesmonite_body
     letter: j
     label: Jesmonite body
@@ -537,7 +537,7 @@ scenarios:
       with cast-in brass inserts for the driver, radiator and fin fixings. Sealer and primer, then the same
       oxblood lacquer and clear coats. The heavier body takes weight off the ballast cup, so the speaker
       stays at 1.8 kg. The gold parts stay die-cast Zamak, or are CNC-machined in brass.
-    conflicts: [low_tooling_first_batch]
+    conflicts: [low_tooling_first_batch, all_jesmonite]
     effect:
       reroutes:
         - {part: body, process: jesmonite_casting, material: jesmonite_ac100, tooling: low}
@@ -565,6 +565,63 @@ scenarios:
       premium: A heavier, stone-like shell that sounds deader when tapped; more brittle than moulded plastic.
       lead_time: Soft tooling in 3–6 weeks from a UK caster instead of 8–14 weeks for the steel mould.
       tooling: A master pattern and silicone moulds remade every 20–30 casts; the gold parts keep their dies or are CNC-machined.
+
+  - key: all_jesmonite
+    letter: m
+    label: All-Jesmonite
+    design_change: >-
+      The body, nose cone, fins, collar and foot all cast in glass-fibre-reinforced Jesmonite AC100 at a UK
+      caster, each in its own silicone mould: 5 mm body wall, solid fins with cast-in inserts for the fin bolts
+      and the TPU tip pads, about 5 mm cone wall, collar with cast-in inserts for the tray screws and foot stud
+      and a precise USB-C opening, the ATELIER lettering cast in from the pattern. The knob stays solid brass,
+      the grilles stainless and the bezels metal (a thicker Jesmonite bezel is possible but would cut into the
+      grille opening, so it is not costed). Option A: coloured Jesmonite with no gold, body lacquered as before.
+      Option B: brass Flex Metal gel coat (real brass powder), polished and sealed, on the parts that are gold
+      today.
+    conflicts: [low_tooling_first_batch, jesmonite_body, nose_cone_spun]
+    effect:
+      reroutes:
+        - {part: body, process: jesmonite_casting, material: jesmonite_ac100, tooling: low}
+      # Volumes from the all-Jesmonite build / the CAD's (tests/test_atelier_cad.py checks them).
+      volume_scale: {body: 1.571, nose_cone: 1.0, fin: 1.0, collar: 1.0, foot: 1.0}
+      reroute:
+        parts: [nose_cone, fin, collar, foot]
+        options:
+          - process: jesmonite_casting
+            material: jesmonite_ac100
+            tooling: low
+            label: "A: coloured Jesmonite"
+            finishes: {nose_cone: pigmented_jesmonite_sealed, fin: pigmented_jesmonite_sealed,
+                       collar: pigmented_jesmonite_sealed, foot: pigmented_jesmonite_sealed}
+            add_traits: {nose_cone: [non_metallic_look], fin: [non_metallic_look], collar: [non_metallic_look],
+                         foot: [non_metallic_look]}
+          - process: jesmonite_casting
+            material: jesmonite_ac100
+            tooling: low
+            label: "B: brass Flex Metal gel coat"
+            finishes: {nose_cone: flex_metal_brass_gelcoat, fin: flex_metal_brass_gelcoat,
+                       collar: flex_metal_brass_gelcoat, foot: flex_metal_brass_gelcoat}
+      add_items:
+        - {price_key: jesmonite_silicone_mould_share, quantity: 1, kind: tooling}
+        - {price_key: jesmonite_small_moulds_share, quantity: 1, kind: tooling}
+        - {price_key: jesmonite_cast_in_inserts, quantity: 1}
+        - {price_key: jesmonite_part_inserts, quantity: 1}
+        - {price_key: jesmonite_sealer_primer, quantity: 1, kind: finishing}
+      remove_items: [collar_lettering_etch]
+    premium_impact: slight
+    flags:
+      - {kind: safety, message: "Verify on samples: fin-tip chipping. The speaker stands on the three fin tips; drop and knock tests on solid Jesmonite fins, with the TPU pads fitted."}
+      - {kind: performance, message: "Verify on samples: USB-C fit. The opening is cast, not machined: check the plug enters square and the sealed receptacle seats in it, over the mould's life."}
+      - {kind: performance, message: "Verify on samples (option B): gel-coat wear. The brass skin is about 0.5–1 mm; check edges and fin tips after handling and abrasion tests, and tarnish after humidity."}
+      - {kind: compliance, message: "Option B: a brass-powder gel coat on Jesmonite looks like metal but the part is not solid metal, so it breaks the design constraint 'anything that looks metallic must be real metal'. It is shown for comparison and never chosen by the optimiser."}
+      - {kind: performance, message: "Air volume: the 5 mm body wall and the thicker nose cone take room from the box (see the DFM figures); the radiator tuning must be rechecked."}
+      - {kind: performance, message: "Inherits the Jesmonite body's open points: drop test, lacquer adhesion over the sealer, Bluetooth range through the wall and the split ballast cup."}
+    tradeoffs:
+      finish: "A: coloured stone-like parts and a lacquered red body, no gold. B: polished brass-powder skin on the former gold parts; it wears on edges and needs sealing."
+      weight: Lighter metalwork (cast Jesmonite instead of Zamak and aluminium) and a heavier body; see the mass figures.
+      premium: A handmade, cast look; more fragile than metal, especially at the fin tips.
+      lead_time: Soft tooling for five parts in 3–6 weeks from a UK caster; no dies.
+      tooling: Five master patterns and silicone moulds remade every 20–30 casts.
 
 # Notes shown under the Cost-down summary.
 cost_down_notes:
