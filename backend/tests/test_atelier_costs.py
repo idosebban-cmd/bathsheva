@@ -151,8 +151,11 @@ def test_jesmonite_seed_is_unverified():
     texts = " ".join(f["message"] for f in sc["flags"])
     for item in ("drop test", "lacquer adhesion", "Bluetooth range"):
         assert item in texts, item
-    assert sc["conflicts"] == ["low_tooling_first_batch"]
-    assert next(d for d in TPL["scenarios"] if d["key"] == "low_tooling_first_batch")["conflicts"] == ["jesmonite_body"]
+    # every scenario that replaces the body excludes the others
+    bodies = {"low_tooling_first_batch", "jesmonite_body", "all_jesmonite"}
+    for d in TPL["scenarios"]:
+        if d["key"] in bodies:
+            assert bodies - {d["key"]} <= set(d["conflicts"]), d["key"]
 
 
 def test_jesmonite_body_costs(project):
