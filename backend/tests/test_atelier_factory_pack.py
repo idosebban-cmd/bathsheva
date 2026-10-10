@@ -93,6 +93,35 @@ def test_zip_contents(project):
     assert "speaker" in zf.read(root + "README.txt").decode()
 
 
+def test_odm_rfq(project):
+    """ODM: cover note, quote sheet and the full pack in one zip; no prices; asks for route, tooling, prices, lead times."""
+    c, pid = project
+    md = c.get(f"/api/projects/{pid}/odm-rfq.md").text
+    for text in ("complete product (ODM)", "recommended manufacturing route", "Tooling", "300 / 500 / 2,000",
+                 "Lead times", "FOB and DDP", "real metal", "replaceable after removing the base collar", "COMPLIANCE",
+                 "odm_quote_sheet.csv", "[COMPANY NAME]"):
+        assert text in md, text
+    assert "£" not in md
+    assert c.get(f"/api/projects/{pid}/odm-rfq.pdf").content.startswith(b"%PDF")
+    sheet = c.get(f"/api/projects/{pid}/odm-quote-sheet.csv").text
+    assert "Unit price at 300" in sheet and "Unit price at 2,000" in sheet and "Tooling cost" in sheet
+    assert "Golden sample" in sheet and "£" not in sheet
+    r = c.get(f"/api/projects/{pid}/factory-pack-odm.zip")
+    assert r.status_code == 200
+    names = set(zipfile.ZipFile(io.BytesIO(r.content)).namelist())
+    root = "atelier_odm_rfq_pack_v1/"
+    assert {root + "README.txt", root + "odm/odm_cover_note.pdf", root + "odm/odm_cover_note.md",
+            root + "odm/odm_quote_sheet.csv", root + "mechanical/rfq.pdf", root + "electronics/rfq_electronics.pdf",
+            root + "mechanical/step/atelier_assembly.step"} <= names
+    s = c.get(f"/api/projects/{pid}/factory-pack").json()
+    assert s["odm"]["available"] and "Cover note" in s["odm"]["markdown"]
+    checks = {ch["check"]: ch for ch in s["consistency"]}
+    assert checks["No prices or cost targets in supplier documents"]["ok"]
+
+
+def test_no_odm_rfq_for_faro_yet(client, faro_project):
+    assert client.get(f"/api/projects/{faro_project['id']}/odm-rfq.md").status_code == 404
+
 def test_faro_pack_still_served_by_its_own_module(client, faro_project):
     from app.services import factory_pack as fp
 
