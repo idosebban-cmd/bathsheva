@@ -136,6 +136,30 @@ process_rates:
     source: model-generated
     confidence: low
     verified: false
+  - process: pu_vacuum_casting
+    # Per part: mix, pour under vacuum, cure, demould and trim, by hand. Silicone moulds are a
+    # per-part item (pu_silicone_mould_share), the master pattern is the tooling.
+    machine_gbp_per_hr: {low: 30, high: 50}
+    lead_time_weeks: {low: 2, high: 4}
+    setup_hours: {low: 0.5, high: 1.5}
+    cycle_min: {low: 25, high: 50}
+    cycle_min_per_kg: {low: 10, high: 30}
+    material_utilisation: {low: 1.3, high: 1.6}
+    source: model-generated
+    confidence: low
+    verified: false
+  - process: jesmonite_casting
+    # Per part, by hand at a UK caster: face coat, glass-fibre layers and back-up, demould, trim, dry.
+    # Silicone moulds are a per-part item (jesmonite_silicone_mould_share); the master pattern is the tooling.
+    machine_gbp_per_hr: {low: 30, high: 45}
+    lead_time_weeks: {low: 3, high: 6}
+    setup_hours: {low: 0.5, high: 1.0}
+    cycle_min: {low: 30, high: 60}
+    cycle_min_per_kg: {low: 10, high: 25}
+    material_utilisation: {low: 1.15, high: 1.35}
+    source: model-generated
+    confidence: low
+    verified: false
   - process: injection_moulding_clear
     machine_gbp_per_hr: {low: 40, high: 70}
     lead_time_weeks: {low: 6, high: 12}

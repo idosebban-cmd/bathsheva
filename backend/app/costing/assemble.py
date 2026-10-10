@@ -97,6 +97,8 @@ class CostConfig:
     finish_overrides: dict[str, str] = field(default_factory=dict)  # by cad_key, finish key
     # Swap one bought-in price key for another (e.g. inline mains dimmer -> low-voltage dimmer).
     replace_price_keys: dict[str, str] = field(default_factory=dict)
+    # Scale a part's CAD volume (by cad_key), e.g. a cast body with a thicker wall than the CAD's.
+    volume_scale: dict[str, float] = field(default_factory=dict)
 
     def merged(self, other: "CostConfig") -> "CostConfig":
         lo1, hi1 = self.assembly_delta_min
@@ -112,6 +114,7 @@ class CostConfig:
             material_overrides={**self.material_overrides, **other.material_overrides},
             finish_overrides={**self.finish_overrides, **other.finish_overrides},
             replace_price_keys={**self.replace_price_keys, **other.replace_price_keys},
+            volume_scale={**self.volume_scale, **other.volume_scale},
         )
 
 
@@ -230,7 +233,8 @@ def assemble(snapshot: Snapshot, config: CostConfig, rules: RuleSet, cost: CostD
         spec = PartSpec(
             part_id=sp.part_id, name=sp.name, quantity=sp.quantity, process_key=proc_key, process_name=proc_rule.name,
             material_key=mat_key, material_name=mat_name, density_g_cm3=density,
-            geometry=PartGeometry(geo["volume_mm3"], tuple(geo["size_mm"]), "axisymmetric" in sp.traits),
+            geometry=PartGeometry(geo["volume_mm3"] * config.volume_scale.get(sp.cad_key or "", 1.0),
+                                  tuple(geo["size_mm"]), "axisymmetric" in sp.traits),
             finish_key=finish_key, finish_name=rules.finishes[finish_key].name if finish_key else None, basis=basis,
             cnc_allowance_mm=rate.stock_allowance_mm if is_cnc else None, tooling_band=band_key,
             cnc_stock_factor=rate.stock_factor if is_cnc else None,
@@ -335,7 +339,7 @@ def assemble(snapshot: Snapshot, config: CostConfig, rules: RuleSet, cost: CostD
         price = cost.bought_in[ex.price_key]
         item_id = -n
         key = f"extra:{ex.price_key}"
-        group = "Finishing" if ex.kind == "finishing" else "Bought-in components"
+        group = {"finishing": "Finishing", "tooling": "Tooling"}.get(ex.kind, "Bought-in components")
         _add(assumptions, Assumption(key, f"{price.name} price", "£", price.gbp.low, price.gbp.high,
                                      price.confidence, price.verified, price.source, group))
         disc = discount_assumption(cost, snapshot, price.discount_class, price.price_basis)

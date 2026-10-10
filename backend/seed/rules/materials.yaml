@@ -229,6 +229,38 @@ materials:
     confidence: medium
     verified: false
 
+  - key: pu_casting_resin
+    name: Polyurethane casting resin (ABS-like, two-part)
+    category: polymer
+    kind: polymer
+    processes: [pu_vacuum_casting]
+    plain_language: >-
+      A two-part polyurethane that cures in a silicone mould to an ABS-like
+      plastic. Takes primer, colour and clear coats well; less tough and less
+      heat-resistant than moulded PC/ABS.
+    finish_compat: {gloss_lacquer_polished: good, wet_lacquer: good}
+    max_service_temp_c: 80
+    density_g_cm3: 1.12
+    source: model-generated
+    confidence: low
+    verified: false
+
+  - key: jesmonite_ac100
+    name: Jesmonite AC100 with glass-fibre reinforcement
+    category: composite
+    kind: composite
+    processes: [jesmonite_casting]
+    plain_language: >-
+      A water-based acrylic resin with a mineral base, cast cold and reinforced
+      with glass fibre. Heavy and stone-like (dry density 1,745 kg/m³; bending
+      strength 50–65 MPa; impact strength 30 kJ/m², user's data). Needs a
+      sealer and primer before lacquer.
+    finish_compat: {gloss_lacquer_polished: fair, wet_lacquer: fair}
+    density_g_cm3: 1.745
+    source: user (Oct 2026); finish compatibility model-generated
+    confidence: medium
+    verified: false
+
   - key: tpu
     name: TPU (thermoplastic polyurethane)
     category: polymer

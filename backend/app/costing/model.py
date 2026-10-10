@@ -29,7 +29,7 @@ from typing import Any
 
 CATEGORY_ORDER = ["material", "process", "setup", "finishing", "tooling", "bought_in", "assembly", "packaging",
                   "freight_duty", "one_off"]
-ITEM_CATEGORIES = {"bought_in", "assembly", "packaging", "finishing", "one_off"}
+ITEM_CATEGORIES = {"bought_in", "assembly", "packaging", "finishing", "one_off", "tooling"}  # tooling: per-unit (worn moulds)
 
 
 @dataclass(frozen=True)

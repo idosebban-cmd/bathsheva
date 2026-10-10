@@ -83,6 +83,113 @@ def test_cad_tab_mass_matches_the_stability_mass(project):
     assert est == pytest.approx(atelier.stability(PLAIN)["total_g"] / 1000, abs=0.01)
 
 
+def test_low_tooling_first_batch_seed_is_unverified():
+    """The scenario's new rates are model-generated and unverified (shown with the Unverified badge)."""
+    from app.rules.data import load_rules
+
+    rules, cost = load_rules(), load_cost_data()
+    proc, mat = rules.processes["pu_vacuum_casting"], rules.materials["pu_casting_resin"]
+    entries = [proc, mat, cost.process_rates["pu_vacuum_casting"], cost.bought_in["pu_silicone_mould_share"]]
+    assert all(not e.verified and e.source == "model-generated" for e in entries)
+    sc = next(d for d in TPL["scenarios"] if d["key"] == "low_tooling_first_batch")
+    assert sc["effect"]["reroute"]["parts"] == ["fin", "collar", "foot"]
+    assert [o["material"] for o in sc["effect"]["reroute"]["options"]] == ["brass", "brass"]  # aluminium: too light
+
+
+def test_low_tooling_first_batch_costs(project):
+    """Soft tooling wins at 300 and 500 and loses at 2,000, where the steel mould and dies pay back."""
+    c, pid = project
+    cat = {d["key"]: d for d in c.get(f"/api/projects/{pid}/scenarios").json()["scenarios"]}
+    t = cat["low_tooling_first_batch"]
+    assert t["premium_impact"] == "slight" and [o["label"] for o in t["options"]] == ["CNC-machined brass", "Investment-cast brass"]
+    assert all(o["allowed"] for o in t["options"])  # brass on visible parts, plastic only on the lacquered body
+    r = c.post(f"/api/projects/{pid}/scenarios/evaluate", json={"changes": [{"key": "low_tooling_first_batch", "option": 0}]})
+    assert r.status_code == 200, r.text
+
+    from app.costing.assemble import assemble
+    from app.costing.data import load_cost_data as lcd
+    from app.costing.model import evaluate
+    from app.db import new_session
+    from app.models import Project
+    from app.rules.data import load_rules
+    from app.services import costdown
+    from app.services.costing import snapshot
+
+    with new_session() as s:
+        proj = s.get(Project, pid)
+        snap = snapshot(s, proj)
+        defs = {d["key"]: d for d in costdown.scenario_defs(proj)}
+        rules, cost = load_rules(), lcd()
+        current, _ = assemble(snap, costdown.CostConfig(), rules, cost)
+        for opt in (0, 1):
+            alt, _ = assemble(snap, costdown.selection_config(defs, [("low_tooling_first_batch", opt)], "uk", snap.params),
+                              rules, cost)
+            for q in (300, 500):
+                assert costdown._mid(alt, q) < costdown._mid(current, q), (opt, q)
+            assert costdown._mid(alt, 2000) > costdown._mid(current, 2000), opt
+        cfg = costdown.selection_config(defs, [("low_tooling_first_batch", 1)], "uk", snap.params)
+        assert {k: (r.process_key, r.material_key) for k, r in cfg.routes.items()} == {
+            "body": ("pu_vacuum_casting", "pu_casting_resin"), "fin": ("investment_casting", "brass"),
+            "collar": ("investment_casting", "brass"), "foot": ("investment_casting", "brass")}
+        inputs, _ = assemble(snap, cfg, load_rules(), lcd())
+        lines = evaluate(inputs, inputs.mids(), 500)
+        mould = [ln for ln in lines if ln.label.startswith("Silicone mould share")]
+        assert len(mould) == 1 and mould[0].category == "tooling" and mould[0].amount > 10  # per unit, not shared
+
+
+def test_jesmonite_seed_is_unverified():
+    from app.rules.data import load_rules
+
+    rules, cost = load_rules(), load_cost_data()
+    mat = rules.materials["jesmonite_ac100"]
+    assert mat.density_g_cm3 == 1.745 and mat.material_kind == "composite"
+    entries = [rules.processes["jesmonite_casting"], mat, cost.process_rates["jesmonite_casting"],
+               cost.material_prices["jesmonite_ac100"]] + [
+        cost.bought_in[k] for k in ("jesmonite_silicone_mould_share", "jesmonite_cast_in_inserts", "jesmonite_sealer_primer")]
+    assert all(not e.verified for e in entries)
+    sc = next(d for d in TPL["scenarios"] if d["key"] == "jesmonite_body")
+    texts = " ".join(f["message"] for f in sc["flags"])
+    for item in ("drop test", "lacquer adhesion", "Bluetooth range"):
+        assert item in texts, item
+    assert sc["conflicts"] == ["low_tooling_first_batch"]
+    assert next(d for d in TPL["scenarios"] if d["key"] == "low_tooling_first_batch")["conflicts"] == ["jesmonite_body"]
+
+
+def test_jesmonite_body_costs(project):
+    """Soft-tooled Jesmonite body: cheaper than the steel mould at 300 and 500, dearer at 2,000."""
+    c, pid = project
+    cat = {d["key"]: d for d in c.get(f"/api/projects/{pid}/scenarios").json()["scenarios"]}
+    j = cat["jesmonite_body"]
+    assert [o["label"] for o in j["options"]] == ["Die-cast Zamak (as now)", "CNC-machined brass"]
+    assert all(o["allowed"] for o in j["options"])
+
+    from app.costing.assemble import assemble
+    from app.costing.data import load_cost_data as lcd
+    from app.costing.model import evaluate
+    from app.db import new_session
+    from app.models import Project
+    from app.rules.data import load_rules
+    from app.services import costdown
+    from app.services.costing import snapshot
+
+    with new_session() as s:
+        proj = s.get(Project, pid)
+        snap = snapshot(s, proj)
+        defs = {d["key"]: d for d in costdown.scenario_defs(proj)}
+        rules, cost = load_rules(), lcd()
+        current, _ = assemble(snap, costdown.CostConfig(), rules, cost)
+        die, _ = assemble(snap, costdown.selection_config(defs, [("jesmonite_body", 0)], "uk", snap.params), rules, cost)
+        cnc, _ = assemble(snap, costdown.selection_config(defs, [("jesmonite_body", 1)], "uk", snap.params), rules, cost)
+        for q in (300, 500):
+            assert costdown._mid(cnc, q) < costdown._mid(die, q) < costdown._mid(current, q), q
+        assert costdown._mid(die, 2000) > costdown._mid(current, 2000)
+        body_mat = next(ln for ln in evaluate(die, die.mids(), 500) if ln.label == "Body" and ln.category == "material")
+        base_mat = next(ln for ln in evaluate(current, current.mids(), 500) if ln.label == "Body" and ln.category == "material")
+        assert body_mat.amount > base_mat.amount  # 5 mm wall (volume_scale) and the heavier, dearer material
+        labels = {ln.label.split(" ")[0] + ln.category for ln in evaluate(die, die.mids(), 500)}
+        assert {"Silicone" + "tooling", "Sealer" + "finishing", "Cast-in" + "bought_in"} <= labels
+
+
 # Runs last: the `client` fixture re-points the database, which the module's project fixture shares.
 def test_faro_summary_notes_still_name_its_power_options(client, faro_project):
     notes = client.get(f"/api/projects/{faro_project['id']}/cost-down/summary").json()["notes"]
