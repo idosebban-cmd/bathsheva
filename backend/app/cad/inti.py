@@ -3,19 +3,25 @@
 INTI is a home Bluetooth speaker for Bathsheva London: a sculpted, head-shaped body in cream/ivory cast
 Jesmonite with a smooth lacquer-like finish, and real-metal brass/gold parts (a brow-and-nose piece, two eyes,
 a stepped front grille, two side dials, a top rim and a base ring). Front grille only; a rear connection
-panel carries USB-C (power and charging) and a 3.5 mm aux input.
+panel carries USB-C and a 3.5 mm aux input.
 
-The only design source so far is the concept render (front, side, rear and detail views) and the user's
-design facts (Oct 2026). No dimension has been given, so this model is a **massing placeholder**: every
-parameter default is a placeholder chosen to make a buildable model, not a design value, and is listed as
-TBD (`TBD_PARAMS`, the template's `tbd` list and the DFM report). The head is an ellipsoid cut flat at the
-bottom and top, not the sculpted form; the brass parts are applied layers of `trim_thickness` that follow
-the surface. Every simplification relative to the concept is a row in PRODUCTION_CHANGES.
+Design source: the concept render `docs/inti/concept.png` (front, side, rear and detail views) and the
+user's design facts (Oct 2026). **The proportions come from the render; the size does not.** Every
+position and size below is a fraction of the overall height H, measured in pixels on the render's front,
+side and rear views (`RENDER`, `SECTIONS`, `FEATURES`; H = 250 px from the ground to the top of the rim).
+The overall height itself is TBD: its default is a placeholder, and the width and depth follow from it in
+the render's proportions. Material thicknesses (Jesmonite wall, metal parts) can't be read from a render
+and are placeholders too (TBD). Where the render and the user's written facts disagree, the written facts
+win and the difference is listed (the render shows a third rear port, "POWER": not modelled).
+
+The head is lofted through superelliptic horizontal sections whose width (front view), depth and fore-aft
+centre (side view) were measured at nine heights; the brass parts are layers or solids placed on that
+surface. Every simplification relative to the render is a row in PRODUCTION_CHANGES.
 
 Coordinate system (as Faro and Atelier): Z up, ground at z = 0 (the base ring's underside), the front
-(face, grille) faces -Y, the rear panel faces +Y. Units mm. One solid per part; the eyes and the dials are
-one part each (quantity 2): `build` returns one, and the STEP assembly and the GLB preview add the mirror
-copy (`INSTANCES`).
+(face, grille) faces -Y, the rear panel faces +Y, X is the speaker's left (its right is -X). Units mm. One
+solid per part; the eyes and the dials are one part each (quantity 2): `build` returns one, and the STEP
+assembly and the GLB preview add the mirror copy (`INSTANCES`).
 """
 
 from __future__ import annotations
@@ -27,7 +33,8 @@ from dataclasses import dataclass, field
 from functools import lru_cache
 from typing import Any
 
-from build123d import Align, Box, Color, Compound, Cylinder, Plane, Pos, Rot, Shape, Sphere, scale
+from build123d import (Align, Axis, Box, Color, Compound, Cylinder, Edge, Plane, Polygon, Pos, Rot, Shape, Solid,
+                       Vector, Wire, extrude, scale)
 
 from app.cad.validation import ParamDef, ValidationIssue, ValidationResult, WallLimit
 
@@ -35,103 +42,127 @@ GENERATOR = "inti"
 MIN = (Align.CENTER, Align.CENTER, Align.MIN)
 
 # ---------------------------------------------------------------------------
-# Modelling constants (placeholders for the massing model; none is a design value)
+# Proportions measured on the concept render (docs/inti/concept.png, 1140 x 1044 px)
 # ---------------------------------------------------------------------------
-# The head is an ellipsoid cut flat this far from its centre (as a fraction of its vertical semi-axis): a
-# narrower neck at the base ring and a flat crown under the top rim. Placeholder for the sculpted form.
-BOTTOM_CUT = 0.85
-TOP_CUT = 0.92
-GRILLE_LAND = 3.0  # the grille overlaps the body this much round its opening (bonding land; TBD)
-RING_INSET = 4.0  # base ring and top rim: radial width inside the body's section (TBD)
-# Connector openings in the rear panel and body: typical sizes for a USB-C receptacle and a 3.5 mm jack
-# (to be confirmed against the chosen connectors).
+# Front view x 45–330, side view x 380–560, rear view x 620–905; all three share one scale: ground at y 742 px
+# and the top of the rim at y 492 px, so H = 250 px. Every value below is a fraction of H.
+RENDER = {"file": "docs/inti/concept.png", "height_px": 250, "ground_y_px": 742,
+          "views": {"front": "x 45–330 px", "side": "x 380–560 px (face to the left)", "rear": "x 620–905 px"}}
+
+# Head sections: (z, half-width from the front view, half-depth from the side view, fore-aft centre from the
+# side view, +Y = towards the back, relative to the base ring's centre). From the body's underside (on the base
+# ring) to the crown. Section shape: superellipse of exponent SECTION_N (between an ellipse and a rounded
+# rectangle; the render's top view isn't shown, so the exponent is a judgement from the hero view).
+SECTIONS: list[tuple[float, float, float, float]] = [
+    (0.088, 0.420, 0.234, 0.000),  # underside, on the base ring (y 720 px)
+    (0.128, 0.500, 0.266, 0.002),  # jaw (y 710)
+    (0.208, 0.534, 0.288, 0.008),  # y 690
+    (0.408, 0.546, 0.300, 0.016),  # widest and deepest, at the dials (y 640)
+    (0.608, 0.551, 0.288, 0.008),  # eyes (y 590)
+    (0.808, 0.534, 0.240, -0.004),  # brow (y 540)
+    (0.888, 0.500, 0.200, -0.004),  # rim's lower edge (y 520)
+    (0.968, 0.474, 0.162, -0.022),  # y 500
+    (1.000, 0.465, 0.150, -0.026),  # crown, flat (y 492)
+]
+SECTION_N = 3.0
+SECTION_POINTS = 48
+
+FEATURES: dict[str, dict[str, float]] = {
+    # Eyes: an almond-shaped brass plate in a recessed socket, with a round pupil boss (front view; depth from
+    # the side view). Spacing is centre to centre; the pupils sit slightly outboard of the almond's centre.
+    "eye": {"z": 0.660, "spacing": 0.620, "width": 0.352, "height": 0.156, "pupil_d": 0.120,
+            "pupil_outboard": 0.020, "recess": 0.025},
+    # Nose: a tapered wedge from the crown (narrow, flush) down to a projecting tip (front and side views).
+    "nose": {"top_width": 0.080, "bottom_z": 0.448, "bottom_width": 0.148, "tip_proud": 0.088},
+    # Grille: stepped outline of two tiers centred on the face (front view and the "Signature grille" detail);
+    # a raised frame round the perforated field.
+    "grille": {"z": 0.264, "tall_width": 0.592, "tall_height": 0.288, "wide_width": 0.732, "wide_height": 0.152,
+               "frame": 0.016},
+    # Side dials: discs with a stepped-cross relief (side view and the "Volume control" detail).
+    "dial": {"z": 0.370, "diameter": 0.296, "y": 0.040, "proud": 0.040, "relief": 0.006,
+             "cross_arm": 0.65, "cross_bar": 0.22, "cross_mid": 0.44},  # cross sizes: fractions of the dial diameter
+    # Top rim: a brass band round the crown, full height at the brow, open at the back (side and rear views).
+    "top_rim": {"bottom_z": 0.888, "back_y": 0.068},
+    # Base ring: an elliptical plinth narrower than the head (front: width; side: depth).
+    "base_ring": {"half_width": 0.354, "half_depth": 0.200, "height": 0.088},
+    # Rear panel: an inset rounded rectangle low on the back (rear view); USB-C on the viewer's left, aux in the
+    # middle. The render's third port ("POWER", a barrel jack at x -0.156) is not modelled: the user's facts say
+    # no separate power jack.
+    "rear_panel": {"z": 0.188, "width": 0.552, "height": 0.200, "corner": 0.030, "port_z": 0.196,
+                   "usb_c_x": 0.164, "aux_x": 0.000},
+}
+
+# Connector openings: typical sizes for a USB-C receptacle and a 3.5 mm jack (confirm with the chosen parts).
 USBC_OPENING = (9.2, 3.6)
 AUX_OPENING_D = 6.0
-CONNECTOR_PITCH = 16.0  # USB-C to aux, centre to centre (placeholder)
-# Placeholder envelopes for the bought-in electronics: space only. Sizes TBD (no driver, battery or board
-# has been specified).
+RING_WALL = 4.0  # base ring and top rim wall (placeholder, TBD)
+SOCKET_BACKING = 2.5  # Jesmonite left behind an eye socket; the wall is thickened locally where it needs to be
+# Placeholder envelopes for the bought-in electronics: space only. Sizes TBD.
 DRIVER_DEPTH = 40.0
 BATTERY_ENVELOPE = (70.0, 40.0, 20.0)
 BOARD_ENVELOPE = (60.0, 8.0, 60.0)
 
 # ---------------------------------------------------------------------------
-# Parameters (every default is a placeholder: TBD)
+# Parameters: the size and the thicknesses, all TBD (the proportions are fixed by the render)
 # ---------------------------------------------------------------------------
-_TBD = "TBD: placeholder, not taken from the concept. "
+_TBD = "TBD: placeholder, not a design value. "
 PARAMS: list[ParamDef] = [
     ParamDef("overall_height", "Overall height", "Overall", 150, 450,
-             help=_TBD + "Ground (base ring underside) to the top of the top rim."),
-    ParamDef("body_width", "Head width", "Overall", 100, 350, step=0.5, help=_TBD + "At the widest, side to side."),
-    ParamDef("body_depth", "Head depth", "Overall", 100, 350, step=0.5, help=_TBD + "At the deepest, front to back."),
+             help=_TBD + "Ground to the top of the rim. Everything else keeps the render's proportions: width about "
+                         "1.10 x and depth about 0.60 x the height."),
     ParamDef("wall_thickness", "Body wall", "Body", 3.0, 15.0, step=0.1,
-             help=_TBD + "Cast Jesmonite shell (Atelier's Jesmonite body used 3.5 mm general, 5 mm locally)."),
-    ParamDef("base_ring_height", "Base ring height", "Metalwork", 3, 40, step=0.5, help=_TBD),
-    ParamDef("top_rim_height", "Top rim height", "Metalwork", 2, 30, step=0.5, help=_TBD),
-    ParamDef("trim_thickness", "Metal trim thickness", "Metalwork", 0.8, 8.0, step=0.1,
-             help=_TBD + "How far the brow-and-nose piece and the eyes stand proud of the body."),
-    ParamDef("brow_height", "Brow centre height", "Face", 60, 420, step=0.5, help=_TBD),
-    ParamDef("brow_width", "Brow width", "Face", 30, 300, step=0.5, help=_TBD),
-    ParamDef("brow_band", "Brow band height", "Face", 3, 40, step=0.5, help=_TBD),
-    ParamDef("nose_width", "Nose width", "Face", 3, 60, step=0.5, help=_TBD),
-    ParamDef("nose_length", "Nose length below the brow", "Face", 5, 150, step=0.5, help=_TBD),
-    ParamDef("eye_height", "Eye centre height", "Face", 50, 420, step=0.5, help=_TBD),
-    ParamDef("eye_spacing", "Eye spacing (centre to centre)", "Face", 20, 250, step=0.5, help=_TBD),
-    ParamDef("eye_diameter", "Eye diameter", "Face", 5, 80, step=0.5, help=_TBD),
-    ParamDef("grille_height", "Grille centre height", "Grille", 30, 400, step=0.5, help=_TBD),
-    ParamDef("grille_diameter", "Grille outer diameter", "Grille", 30, 250, step=0.5, help=_TBD),
-    ParamDef("grille_steps", "Grille steps", "Grille", 1, 6, integer=True, unit="",
-             help=_TBD + "Number of steps in the stepped grille (modelled as concentric rings)."),
-    ParamDef("grille_step_rise", "Grille step rise", "Grille", 0.5, 6, step=0.1, help=_TBD + "Height of each step."),
-    ParamDef("grille_step_inset", "Grille step inset", "Grille", 1, 30, step=0.5,
-             help=_TBD + "Each step's radius is this much smaller than the one below it."),
-    ParamDef("dial_height", "Side dial centre height", "Controls", 30, 420, step=0.5, help=_TBD),
-    ParamDef("dial_diameter", "Side dial diameter", "Controls", 10, 80, step=0.5, help=_TBD),
-    ParamDef("dial_proud", "Side dial projection", "Controls", 2, 40, step=0.5,
-             help=_TBD + "How far the dial stands out from the head at its centre."),
-    ParamDef("rear_panel_height", "Rear panel centre height", "Rear", 20, 400, step=0.5, help=_TBD),
-    ParamDef("rear_panel_width", "Rear panel width", "Rear", 30, 150, step=0.5, help=_TBD),
-    ParamDef("rear_panel_tall", "Rear panel height", "Rear", 15, 120, step=0.5, help=_TBD),
+             help=_TBD + "Cast Jesmonite shell; thickened locally behind the eye sockets."),
+    ParamDef("trim_thickness", "Metal part thickness", "Metalwork", 0.8, 6.0, step=0.1,
+             help=_TBD + "Brass layers on the head (rim, grille frame, eye plates, rear panel inset)."),
     ParamDef("driver_diameter", "Driver envelope diameter", "Internal", 30, 200, step=0.5,
-             help=_TBD + "Space only: no driver has been specified."),
+             help=_TBD + "Space only: no driver has been specified. Capped at the grille opening's height."),
 ]
 PARAM_KEYS = [p.key for p in PARAMS]
 PARAM_BY_KEY = {p.key: p for p in PARAMS}
-TBD_PARAMS = list(PARAM_KEYS)  # every parameter is a placeholder until the user gives the dimension
+TBD_PARAMS = list(PARAM_KEYS)
 
 # Parameters that stay fixed when the speaker is scaled to another height.
-UNSCALED_PARAMS = {"wall_thickness", "trim_thickness", "grille_steps", "grille_step_rise"}
+UNSCALED_PARAMS = {"wall_thickness", "trim_thickness", "driver_diameter"}
 
 CREAM = (0.93, 0.89, 0.80, 1.0)  # cream/ivory (render reference; colour standard TBD)
 BRASS = (0.78, 0.64, 0.36, 1.0)
 DARK = (0.08, 0.08, 0.09, 1.0)
 PART_COLOURS: dict[str, tuple[float, float, float, float]] = {
     "body": CREAM, "brow_nose": BRASS, "eye": BRASS, "grille": BRASS, "dial": BRASS, "top_rim": BRASS,
-    "base_ring": BRASS, "rear_panel": (0.55, 0.52, 0.48, 1.0), "driver": DARK,
+    "base_ring": BRASS, "rear_panel": (0.06, 0.06, 0.07, 1.0), "driver": DARK,
     "battery": (0.2, 0.45, 0.75, 1.0), "main_board": (0.1, 0.35, 0.2, 1.0),
 }
 PART_KEYS = list(PART_COLOURS)
 INSTANCES = {"eye": 2, "dial": 2}  # parts modelled once and fitted twice (mirrored left/right)
 
 # Where the model departs from the concept render, and why (CAD tab and DFM report). INTI has no approved
-# prototype model yet: the "prototype" column is the concept render.
+# prototype model: the "prototype" column is the concept render.
 PRODUCTION_CHANGES: list[dict[str, str]] = [
-    {"feature": "Head form", "prototype": "Concept render: sculpted head-shaped body",
-     "production": "Massing placeholder: an ellipsoid cut flat at the base and crown. The sculpt (a 3D scan or "
-                   "surface model of the master) replaces it; overall dimensions TBD"},
-    {"feature": "Dimensions", "prototype": "Concept render (no dimensions given)",
-     "production": "Every dimension is a placeholder (TBD) so that a model can be built; none is a design value"},
-    {"feature": "Brow-and-nose piece and eyes", "prototype": "Sculpted brass/gold features on the face",
-     "production": "Modelled as flat-outlined layers that follow the head's surface (trim_thickness proud); "
-                   "true form, fixing and fit TBD"},
-    {"feature": "Front grille", "prototype": "Stepped brass/gold grille",
-     "production": "Modelled as solid concentric steps over the sound opening; step form, perforation pattern, "
-                   "open area and sheet thickness TBD"},
-    {"feature": "Side dials", "prototype": "Two brass/gold dials, one the volume control",
-     "production": "Modelled as two plain cylinders; the second dial's function, knurl or detailing, travel and "
-                   "detents TBD"},
-    {"feature": "Rear connection panel", "prototype": "USB-C (power and charging) and 3.5 mm aux; no rear grille",
-     "production": "Rectangular panel with a USB-C and a 3.5 mm opening at typical connector sizes; panel "
-                   "material, size and fixing TBD. No rear grille and no separate power jack, as the concept"},
+    {"feature": "Size", "prototype": "Concept render (no dimensions)",
+     "production": "Proportions measured on the render (front, side and rear views); the overall height is a "
+                   "placeholder (TBD) and the width and depth follow it"},
+    {"feature": "Head form", "prototype": "Sculpted head-shaped body",
+     "production": "Lofted through nine superelliptic sections measured on the render; the sculpted brow ridges "
+                   "above the eyes and the cheek planes are not modelled. A surface model or scan of the master "
+                   "replaces it"},
+    {"feature": "Eyes", "prototype": "Almond-shaped brass eyes in recessed sockets, round pupils",
+     "production": "Almond plate in a socket recessed about 0.025 x H, round pupil standing proud; the wall is "
+                   "thickened behind the sockets"},
+    {"feature": "Brow-and-nose piece", "prototype": "Tapered brass nose from the brow, projecting at the tip",
+     "production": "Wedge from the crown to a tip about 0.09 x H proud; it meets the top rim, whose front reads as "
+                   "the brow. Whether the nose and rim are one part or two is TBD"},
+    {"feature": "Front grille", "prototype": "Stepped (Andean) outline, raised frame, round holes in a hex pattern",
+     "production": "Two-tier stepped outline as the render; the perforation isn't modelled (hole size, pitch and "
+                   "open area TBD)"},
+    {"feature": "Side dials", "prototype": "Brass dials with a stepped-cross relief",
+     "production": "Discs with the stepped cross in relief, on both sides; which is the volume control and what "
+                   "the other does is TBD"},
+    {"feature": "Top rim", "prototype": "Brass band round the crown, full height at the brow, open at the back",
+     "production": "Modelled as the render"},
+    {"feature": "Rear connection panel", "prototype": "Black inset panel: USB-C, AUX and POWER",
+     "production": "USB-C and 3.5 mm aux only: the user's facts say no separate power jack, so the render's "
+                   "POWER socket is not modelled (to be confirmed). Panel material and finish TBD (black in the "
+                   "render). The rear emblem and 'SOUND CONNECTS US' marking are not modelled (TBD)"},
     {"feature": "Electronics", "prototype": "Bluetooth speaker",
      "production": "Driver, battery and main board are space-only placeholder envelopes; none is specified. "
                    "The battery is there only in case INTI is battery-powered: the power source (battery, or mains "
@@ -142,7 +173,10 @@ IMPLEMENTED_CHANGES: dict[str, set[str]] = {}
 
 # What the model doesn't settle yet: shown in the DFM report and the CAD tab, for the user and suppliers.
 OPEN_ITEMS: list[str] = [
-    "Sculpted form: the head is a placeholder ellipsoid until the sculpt's surface model or scan is supplied.",
+    "Render vs design facts: the render's rear panel has a third port marked POWER; the design facts say no "
+    "separate power jack. The model follows the facts; confirm.",
+    "Sculpted form: the head is lofted from sections measured on the render until the sculpt's surface model "
+    "or scan is supplied.",
     "Bottom closure and access: how the electronics go in and how the base is closed (base plate, fixings) "
     "is not decided.",
     "Fixing of the metal parts to the Jesmonite (bonded, cast-in inserts, screws from inside) is not decided.",
@@ -174,21 +208,33 @@ def _coerce(params: dict[str, Any], res: ValidationResult) -> dict[str, float]:
     return p
 
 
+def section_at(z_frac: float) -> tuple[float, float, float]:
+    """Half-width, half-depth and fore-aft centre (fractions of H) at a height, between the measured sections."""
+    zs = [s[0] for s in SECTIONS]
+    z = min(max(z_frac, zs[0]), zs[-1])
+    for (z0, a0, b0, c0), (z1, a1, b1, c1) in zip(SECTIONS, SECTIONS[1:]):
+        if z0 <= z <= z1:
+            t = (z - z0) / (z1 - z0)
+            return a0 + t * (a1 - a0), b0 + t * (b1 - b0), c0 + t * (c1 - c0)
+    raise AssertionError("unreachable")
+
+
+def surface_x(z_frac: float, y_frac: float) -> float:
+    """The head's half-width (fraction of H) at a height and a fore-aft position (superelliptic section)."""
+    a, b, c = section_at(z_frac)
+    u = min(1.0, abs(y_frac - c) / b)
+    return a * (1 - u ** SECTION_N) ** (1 / SECTION_N)
+
+
 def derived(p: dict[str, float]) -> dict[str, float]:
-    """The head ellipsoid and its sections, from the parameters without building (fast)."""
-    hb, ht = p["base_ring_height"], p["top_rim_height"]
-    body_h = p["overall_height"] - hb - ht
-    c = body_h / (BOTTOM_CUT + TOP_CUT)
-    zc = hb + BOTTOM_CUT * c
-    a, b = p["body_width"] / 2, p["body_depth"] / 2
-    return {"body_height": body_h, "a": a, "b": b, "c": c, "zc": zc, "z_bottom": hb, "z_top": hb + body_h,
-            "bottom_section": math.sqrt(1 - BOTTOM_CUT ** 2), "top_section": math.sqrt(1 - TOP_CUT ** 2)}
-
-
-def _section(d: dict[str, float], z: float) -> float:
-    """The head's section scale at height z (1 at its widest, 0 beyond it)."""
-    u = (z - d["zc"]) / d["c"]
-    return math.sqrt(max(0.0, 1 - u * u))
+    """Overall dimensions from the height and the render's proportions (fast, no build)."""
+    H = p["overall_height"]
+    width = 2 * max(s[1] for s in SECTIONS) * H
+    depth = 2 * max(s[2] for s in SECTIONS) * H
+    g = FEATURES["grille"]
+    return {"width": width, "depth": depth, "body_height": (1 - SECTIONS[0][0]) * H,
+            "grille_opening_height": (g["tall_height"] - 2 * g["frame"]) * H,
+            "eye_recess": FEATURES["eye"]["recess"] * H}
 
 
 def validate(params: dict[str, Any], wall_limits: dict[str, WallLimit] | None = None, *args: Any) -> ValidationResult:
@@ -199,47 +245,11 @@ def validate(params: dict[str, Any], wall_limits: dict[str, WallLimit] | None = 
         return res
     err = lambda param, msg: res.errors.append(ValidationIssue(param, msg))  # noqa: E731
     d = derived(p)
-    lo, hi = d["z_bottom"] + 0.1 * d["body_height"], d["z_top"] - 0.1 * d["body_height"]
-    if d["body_height"] < 80:
-        err("overall_height", "The head would be shorter than 80 mm between the base ring and the top rim")
-    for key in ("brow_height", "eye_height", "grille_height", "dial_height", "rear_panel_height"):
-        if not lo <= p[key] <= hi:
-            err(key, f"{PARAM_BY_KEY[key].label} must sit on the head, between {lo:.0f} and {hi:.0f} mm")
-    if res.errors:
-        return res
-    half_w = lambda z: d["a"] * _section(d, z)  # noqa: E731
-    r_g = p["grille_diameter"] / 2
-    if r_g > 0.8 * half_w(p["grille_height"]):
-        err("grille_diameter", "The grille is wider than the face at its height (at most 80% of the head's width)")
-    if p["grille_steps"] > 1 and r_g - (p["grille_steps"] - 1) * p["grille_step_inset"] < 5:
-        err("grille_step_inset", "The innermost grille step would be smaller than Ø10")
-    if r_g - GRILLE_LAND < 5:
-        err("grille_diameter", "The sound opening under the grille would be smaller than Ø10")
-    r_e = p["eye_diameter"] / 2
-    if p["eye_spacing"] < p["eye_diameter"] + p["nose_width"]:
-        err("eye_spacing", "The eyes would touch each other or the nose")
-    if p["eye_spacing"] / 2 + r_e > 0.85 * half_w(p["eye_height"]):
-        err("eye_spacing", "The eyes run off the face at their height")
-    brow_lo = p["brow_height"] - p["brow_band"] / 2
-    if p["eye_height"] + r_e > brow_lo:
-        err("eye_height", "The eyes must sit below the brow")
-    nose_bottom = brow_lo - p["nose_length"]
-    if nose_bottom < p["grille_height"] + r_g:
-        err("nose_length", "The nose would run into the grille")
-    if p["eye_height"] - r_e < p["grille_height"] + r_g:
-        err("eye_height", "The eyes would overlap the grille")
-    if p["brow_width"] / 2 > 0.85 * half_w(p["brow_height"]):
-        err("brow_width", "The brow runs off the face at its height")
-    if p["brow_height"] + p["brow_band"] / 2 > d["z_top"] - 2:
-        err("brow_height", "The brow would run into the top rim")
-    if p["dial_diameter"] / 2 > 0.6 * d["b"] * _section(d, p["dial_height"]):
-        err("dial_diameter", "The side dial is too large for the head's side at its height")
-    if p["rear_panel_width"] / 2 > 0.6 * half_w(p["rear_panel_height"]):
-        err("rear_panel_width", "The rear panel is wider than the back of the head at its height")
-    if p["rear_panel_width"] < CONNECTOR_PITCH + USBC_OPENING[0] + 6 or p["rear_panel_tall"] < 2 * AUX_OPENING_D:
-        err("rear_panel_width", "The rear panel must fit the USB-C and 3.5 mm openings with 3 mm round them")
-    if p["wall_thickness"] * 2 + 10 > 2 * min(d["a"], d["b"]) * d["bottom_section"]:
-        err("wall_thickness", "The wall would close the bottom opening")
+    if p["trim_thickness"] > d["eye_recess"] - 1:
+        err("trim_thickness", f"The eye plates ({p['trim_thickness']:g} mm) must sit at least 1 mm down in their "
+            f"{d['eye_recess']:.1f} mm sockets; use a thinner metal part or a taller head")
+    if p["wall_thickness"] > FEATURES["base_ring"]["half_depth"] * p["overall_height"] - 10:
+        err("wall_thickness", "The wall would close the head's bottom opening")
     for key, param in (("body", "wall_thickness"),):
         lim = (wall_limits or {}).get(key)
         if lim is None:
@@ -260,7 +270,8 @@ def normalise(params: dict[str, Any]) -> dict[str, float | int]:
 
 
 def upgrade(params: dict[str, Any], defaults: dict[str, Any]) -> dict[str, Any]:
-    """Saved parameters plus any parameter added since (taken from the template defaults)."""
+    """Saved parameters plus any parameter added since (taken from the template defaults); parameters the
+    generator no longer has (the placeholder layout before the render) are dropped."""
     out = {k: v for k, v in params.items() if k in PARAM_BY_KEY}
     for k in PARAM_KEYS:
         out.setdefault(k, defaults.get(k))
@@ -276,22 +287,39 @@ class Model:
     info: dict[str, Any] = field(default_factory=dict)
 
 
-def _ellipsoid(d: dict[str, float], grow: float = 0.0) -> Shape:
-    """The head ellipsoid, every semi-axis grown by `grow` (an approximate offset)."""
-    return Pos(0, 0, d["zc"]) * scale(Sphere(1), by=(d["a"] + grow, d["b"] + grow, d["c"] + grow))
+def _section_wire(z: float, a: float, b: float, cy: float) -> Wire:
+    pts = []
+    for i in range(SECTION_POINTS):
+        t = 2 * math.pi * i / SECTION_POINTS
+        c, s = math.cos(t), math.sin(t)
+        pts.append(Vector(a * math.copysign(abs(c) ** (2 / SECTION_N), c),
+                          cy + b * math.copysign(abs(s) ** (2 / SECTION_N), s), z))
+    return Wire([Edge.make_spline(pts + [pts[0]])])
+
+
+def _head(H: float, grow: float = 0.0) -> Solid:
+    """The head lofted through the measured sections, every section grown outwards by `grow` mm (an
+    approximate offset; negative shrinks). The crown stays at H and the underside on the base ring."""
+    return Solid.make_loft([_section_wire(z * H, a * H + grow, b * H + grow, c * H) for z, a, b, c in SECTIONS])
 
 
 def _slab(z0: float, z1: float) -> Shape:
-    return Pos(0, 0, z0) * Box(2000, 2000, z1 - z0, align=MIN)
-
-
-def _y_prism(x: float, z: float, w: float, h: float, front: bool = True) -> Shape:
-    """A box through the front (-Y) or rear (+Y) half, centred on (x, z), w wide and h tall."""
-    return Pos(x, -500 if front else 500, z) * Box(w, 1000, h)
+    return Pos(0, 0, z0) * Box(4000, 4000, z1 - z0, align=MIN)
 
 
 def _y_cyl(x: float, z: float, r: float, front: bool = True) -> Shape:
-    return Pos(x, -250 if front else 250, z) * Rot(90, 0, 0) * Cylinder(r, 500)
+    """A cylinder along Y through the front (-Y) or rear (+Y) half, centred on (x, z)."""
+    return Pos(x, -500 if front else 500, z) * Rot(90, 0, 0) * Cylinder(r, 1000)
+
+
+def _y_box(x: float, z: float, w: float, h: float, front: bool = True) -> Shape:
+    return Pos(x, -500 if front else 500, z) * Box(w, 1000, h)
+
+
+def _almond(x: float, z: float, w: float, h: float) -> Shape:
+    """An almond (vesica) through the front half: two circular arcs meeting at points w apart, h tall."""
+    r = ((w / 2) ** 2 + (h / 2) ** 2) / h
+    return _y_cyl(x, z - (r - h / 2), r) & _y_cyl(x, z + (r - h / 2), r)
 
 
 def _solid(shape: Shape) -> Shape:
@@ -310,76 +338,116 @@ def build_model(params: dict[str, Any]) -> Model:
     if not res.ok:
         raise ValueError("; ".join(e.message for e in res.errors))
     p = {k: float(v) for k, v in normalise(params).items()}
-    d = derived(p)
-    w, t = p["wall_thickness"], p["trim_thickness"]
-    z0, z1 = d["z_bottom"], d["z_top"]
-    outer = _ellipsoid(d)
-    skin = _ellipsoid(d, t) - outer  # the layer the applied metal parts occupy
-    info: dict[str, Any] = {}
+    H, w, t = p["overall_height"], p["wall_thickness"], p["trim_thickness"]
+    z0 = SECTIONS[0][0] * H
+    outer = _head(H)
+    grown = _head(H, t)
+    info: dict[str, Any] = {"height_px": RENDER["height_px"]}
+    front = Pos(0, -1000, 0) * Box(4000, 2000, 4000)  # the y < 0 half-space
+    F = FEATURES
 
-    # Body: hollow head, open at the bottom (closure TBD), closed crown under the top rim.
-    body = (outer & _slab(z0, z1)) - (_ellipsoid(d, -w) & _slab(z0 - 1, z1 - w))
+    # Body: hollow head, open underneath (closure TBD), closed flat crown.
+    inner = _head(H, -w) & _slab(z0 - 1, H - w)
+    body = outer - inner
 
-    # Front grille: concentric steps over the sound opening; the body is cut for the opening.
-    gz, rg = p["grille_height"], p["grille_diameter"] / 2
-    steps = int(p["grille_steps"])
-    grille = None
-    for k in range(steps):
-        layer = _ellipsoid(d, (k + 1) * p["grille_step_rise"]) - outer
-        ring = layer & _y_cyl(0, gz, rg - k * p["grille_step_inset"])
-        grille = ring if grille is None else grille + ring
-    body = body - (_y_cyl(0, gz, rg - GRILLE_LAND) & _slab(z0, z1))
-    info["grille_steps"] = steps
-    info["sound_opening_dia"] = 2 * (rg - GRILLE_LAND)
+    # Eyes: an almond socket recessed into the face, an almond brass plate at its floor and a round pupil
+    # standing proud. The wall is thickened behind each socket where the socket is deeper than the wall allows.
+    e = F["eye"]
+    ex, ez, recess = -e["spacing"] / 2 * H, e["z"] * H, e["recess"] * H
+    almond = _almond(ex, ez, e["width"] * H, e["height"] * H)
+    both = lambda s: s + copy.copy(s).mirror(Plane.YZ)  # noqa: E731  (the body is cut for both eyes)
+    socket_floor = _head(H, -recess)
+    if recess + SOCKET_BACKING > w:
+        backing = _almond(ex, ez, e["width"] * H + 2 * w, e["height"] * H + 2 * w)
+        body = body + (both(backing) & front & (outer - _head(H, -recess - SOCKET_BACKING)))
+        info["eye_socket_backing"] = True
+    body = body - ((both(almond) & front & outer) - socket_floor)
+    plate = (almond & front & _head(H, -recess + t)) - socket_floor
+    px = ex - e["pupil_outboard"] * H  # outboard: away from the centre line
+    pupil = (_y_cyl(px, ez, e["pupil_d"] / 2 * H) & front & grown) - socket_floor
+    eye = plate + pupil
 
-    # Brow-and-nose piece: one T-shaped part.
-    bz, band = p["brow_height"], p["brow_band"]
-    nose_top = bz - band / 2
-    nose_bottom = nose_top - p["nose_length"]
-    t_shape = _y_prism(0, bz, p["brow_width"], band) + _y_prism(0, (nose_top + nose_bottom) / 2 + 0.5,
-                                                               p["nose_width"], p["nose_length"] + 1)
-    brow_nose = skin & t_shape
+    # Brow-and-nose piece: a tapered wedge from the crown, flush there, to a projecting tip.
+    n = F["nose"]
+    zb = n["bottom_z"] * H
+    _, b_top, c_top = section_at(1.0)
+    _, b_bot, c_bot = section_at(n["bottom_z"])
+    y_top = (c_top - b_top) * H - t  # just proud of the crown's front
+    y_tip = (c_bot - b_bot - n["tip_proud"]) * H
+    outline = extrude(Plane.XZ * Polygon((-n["top_width"] / 2 * H, H), (n["top_width"] / 2 * H, H),
+                                         (n["bottom_width"] / 2 * H, zb), (-n["bottom_width"] / 2 * H, zb)),
+                      amount=1000, both=True)
+    profile = extrude(Plane.YZ * Polygon((y_tip, zb), (y_top, H), (0, H), (0, zb)), amount=1000, both=True)
+    brow_nose = (outline & profile) - outer
+    info["nose_tip_proud"] = n["tip_proud"] * H
 
-    # Eyes: the viewer's left eye (-X); the other is its mirror image.
-    eye = skin & _y_cyl(-p["eye_spacing"] / 2, p["eye_height"], p["eye_diameter"] / 2)
+    # Front grille: two-tier stepped outline; the body is cut inside the frame.
+    g = F["grille"]
+    gz = g["z"] * H
+    tiers = [(g["tall_width"], g["tall_height"]), (g["wide_width"], g["wide_height"])]
+    grille_outline = _y_box(0, gz, tiers[0][0] * H, tiers[0][1] * H) + _y_box(0, gz, tiers[1][0] * H, tiers[1][1] * H)
+    fr = g["frame"] * H
+    opening = (_y_box(0, gz, tiers[0][0] * H - 2 * fr, tiers[0][1] * H - 2 * fr)
+               + _y_box(0, gz, tiers[1][0] * H - 2 * fr, tiers[1][1] * H - 2 * fr))
+    grille = (grille_outline & front & grown) - outer
+    body = body - (opening & front & outer)
+    info["grille_tiers"] = len(tiers)
+    info["grille_opening_height"] = tiers[0][1] * H - 2 * fr
 
-    # Side dials: the right dial (+X) as a cylinder standing out of the side; the left is its mirror image.
-    dz, rd = p["dial_height"], p["dial_diameter"] / 2
-    x_side = d["a"] * _section(d, dz)
-    dial = (Pos(0, 0, dz) * Rot(0, 90, 0) * Cylinder(rd, x_side + p["dial_proud"], align=MIN)) - outer
-    info["dial_x"] = x_side
+    # Side dials: discs standing out of the head's left side (+X) with the stepped cross in relief; the right
+    # dial is the mirror image.
+    dl = F["dial"]
+    dz, dy, rd = dl["z"] * H, dl["y"] * H, dl["diameter"] / 2 * H
+    x_face = surface_x(dl["z"], dl["y"]) * H + dl["proud"] * H
+    disc = (Pos(0, dy, dz) * Rot(0, 90, 0) * Cylinder(rd, x_face, align=MIN)) - outer
+    D, rel = 2 * rd, dl["relief"] * H
+    cross = None
+    for cw, ch in ((dl["cross_bar"] * D, dl["cross_arm"] * D), (dl["cross_arm"] * D, dl["cross_bar"] * D),
+                   (dl["cross_mid"] * D, dl["cross_mid"] * D)):
+        bar = Pos(x_face + rel / 2, dy, dz) * Box(rel + 0.2, cw, ch)
+        cross = bar if cross is None else cross + bar
+    dial = disc + cross
+    info["dial_x_face"] = x_face
 
-    # Top rim and base ring: flat elliptical rings on the crown and under the neck.
-    def ring(z_section: float, za: float, zb: float) -> Shape:
-        s = _section(d, z_section)
-        a_o, b_o = d["a"] * s, d["b"] * s
-        outer_r = Pos(0, 0, za) * scale(Cylinder(1, zb - za, align=MIN), by=(a_o, b_o, 1))
-        inner_r = Pos(0, 0, za - 1) * scale(Cylinder(1, zb - za + 2, align=MIN),
-                                            by=(a_o - RING_INSET, b_o - RING_INSET, 1))
-        return outer_r - inner_r
+    # Top rim: a band round the crown on the head's surface, full height at the brow, open at the back.
+    r = F["top_rim"]
+    back = Pos(0, r["back_y"] * H - 1000, 0) * Box(4000, 2000, 4000)  # y < back_y
+    top_rim = (grown - outer) & _slab(r["bottom_z"] * H, H) & back
 
-    top_rim = ring(z1, z1, z1 + p["top_rim_height"])
-    base_ring = ring(z0, 0.0, z0)
+    # Base ring: an elliptical plinth under the head.
+    br = F["base_ring"]
+    a_o, b_o = br["half_width"] * H, br["half_depth"] * H
+    base_ring = (scale(Cylinder(1, z0, align=MIN), by=(a_o, b_o, 1))
+                 - Pos(0, 0, -1) * scale(Cylinder(1, z0 + 2, align=MIN), by=(a_o - RING_WALL, b_o - RING_WALL, 1)))
 
-    # Rear connection panel: USB-C and 3.5 mm aux openings through the panel and the body.
-    rz = p["rear_panel_height"]
-    panel = skin & _y_prism(0, rz, p["rear_panel_width"], p["rear_panel_tall"], front=False)
-    usbc = Pos(-CONNECTOR_PITCH / 2, 250, rz) * Box(USBC_OPENING[0], 500, USBC_OPENING[1])
-    aux = _y_cyl(CONNECTOR_PITCH / 2, rz, AUX_OPENING_D / 2, front=False)
+    # Rear connection panel: an inset rounded rectangle with the USB-C and 3.5 mm aux openings.
+    rp = F["rear_panel"]
+    rz, pz = rp["z"] * H, rp["port_z"] * H
+    pw, ph = rp["width"] * H, rp["height"] * H
+    slab_box = _y_box(0, rz, pw, ph, front=False)
+    slab_box = slab_box.fillet(rp["corner"] * H, slab_box.edges().filter_by(Axis.Y))
+    rear = Pos(0, 1000, 0) * Box(4000, 2000, 4000)
+    inset = slab_box & rear & outer
+    panel = inset - _head(H, -t)
+    usbc = Pos(rp["usb_c_x"] * H, 250, pz) * Box(USBC_OPENING[0], 500, USBC_OPENING[1])
+    aux = _y_cyl(rp["aux_x"] * H, pz, AUX_OPENING_D / 2, front=False)
     holes = usbc + aux
+    body = (body - (inset - _head(H, -t))) - (holes & _slab(z0, H))
     panel = panel - holes
-    body = body - (holes & _slab(z0, z1))
     info["rear_openings"] = ["usb_c", "aux_3_5mm"]
 
     # Bought-in placeholders (space only; sizes TBD).
-    r_drv = min(p["driver_diameter"], 2 * (rg - GRILLE_LAND)) / 2
-    y_front_in = -(d["b"] - w) * _section(d, gz)
-    driver = Pos(0, y_front_in + 2 + DRIVER_DEPTH, gz) * Rot(90, 0, 0) * Cylinder(r_drv, DRIVER_DEPTH, align=MIN)
+    r_drv = min(p["driver_diameter"], info["grille_opening_height"]) / 2
+    _, bg, cg = section_at(g["z"])
+    y_front_in = (cg - bg) * H + w
+    driver = Pos(0, y_front_in + 2, gz) * Rot(-90, 0, 0) * Cylinder(r_drv, DRIVER_DEPTH, align=MIN)
     bw, bd, bh = BATTERY_ENVELOPE
     battery = Pos(0, 0, z0 + 2) * Box(bw, bd, bh, align=MIN)
     ow, od, oh = BOARD_ENVELOPE
-    y_rear_in = (d["b"] - w) * _section(d, rz)
-    board = Pos(0, y_rear_in - od - 6, rz - oh / 2) * Box(ow, od, oh, align=(Align.CENTER, Align.MIN, Align.MIN))
+    board_z = max(pz, z0 + oh / 2 + bh + 6)
+    _, bb, cb = section_at(board_z / H)
+    y_rear_in = (cb + bb) * H - w
+    board = Pos(0, y_rear_in - od - 12, board_z - oh / 2) * Box(ow, od, oh, align=(Align.CENTER, Align.MIN, Align.MIN))
 
     parts = {"body": body, "brow_nose": brow_nose, "eye": eye, "grille": grille, "dial": dial,
              "top_rim": top_rim, "base_ring": base_ring, "rear_panel": panel, "driver": driver,
@@ -429,8 +497,7 @@ def preview_two_tone(params: dict[str, Any]) -> dict[str, dict[str, Any]]:
 def public_derived(params: dict[str, Any]) -> dict[str, Any]:
     """Derived dimensions for the API (fast: from the parameters, no build)."""
     d = derived({k: float(v) for k, v in params.items()})
-    return {"body_height": round(d["body_height"], 2), "neck_width": round(2 * d["a"] * d["bottom_section"], 2),
-            "crown_width": round(2 * d["a"] * d["top_section"], 2)}
+    return {k: round(v, 2) for k, v in d.items()}
 
 
 def derived_traits(part_key: str, params: dict[str, Any]) -> list[str]:
@@ -453,7 +520,8 @@ def estimate_mass(part_info: dict[str, Any], densities: dict[str, float]) -> dic
 
 
 def production_change_checks(params: dict[str, Any]) -> list[dict[str, Any]]:
-    """Check the built solids against what the concept fixes (the PRODUCTION_CHANGES rows geometry can prove)."""
+    """Check the built solids against the render's proportions and the design facts."""
+    H = float(params["overall_height"])
     m = model(params)
     parts, info = m.parts, m.info
     out = []
@@ -461,18 +529,31 @@ def production_change_checks(params: dict[str, Any]) -> list[dict[str, Any]]:
     def check(feature: str, ok: bool, detail: str) -> None:
         out.append({"feature": feature, "ok": bool(ok), "detail": detail})
 
+    bb = parts["body"].bounding_box()
+    w_ratio, d_ratio = bb.size.X / H, bb.size.Y / H
+    check("Proportions", abs(w_ratio - 2 * 0.551) < 0.02 and abs(d_ratio - 2 * 0.300) < 0.02,
+          f"head {w_ratio:.2f} x H wide and {d_ratio:.2f} x H deep (render: 1.10 and 0.60)")
+    top = max(s.bounding_box().max.Z for k, s in parts.items() if k in ("body", "top_rim", "brow_nose"))
+    check("Height", abs(top - H) < 0.05 and abs(parts["base_ring"].bounding_box().min.Z) < 1e-6,
+          f"{top:.1f} mm ground to rim (overall height {H:g}, TBD)")
     metal = ["brow_nose", "eye", "grille", "dial", "top_rim", "base_ring"]
     check("Metal parts", all(k in parts and parts[k].volume > 0 for k in metal),
           "brow-and-nose piece, two eyes, stepped grille, two side dials, top rim and base ring are separate parts")
-    check("Front grille", info.get("grille_steps", 0) >= 1 and parts["grille"].bounding_box().max.Y < 0,
-          f"{info.get('grille_steps', 0)} steps on the front; sound opening Ø{info.get('sound_opening_dia', 0):.1f}")
-    check("No rear grille", parts["grille"].bounding_box().max.Y < 0 and "rear_grille" not in parts,
-          "front grille only; the rear has the connection panel")
-    check("Rear connection panel", info.get("rear_openings") == ["usb_c", "aux_3_5mm"]
-          and parts["rear_panel"].bounding_box().min.Y > 0,
-          "USB-C (power and charging) and 3.5 mm aux; no separate power jack")
-    eyes = [parts["eye"], *_instance_copies(parts).get("eye_2", parts["eye"]).solids()]
-    check("Eyes", len(eyes) == 2 and eyes[0].center().X < 0 < eyes[1].center().X, "two eyes, mirrored")
+    eye_z = parts["eye"].center().Z / H
+    check("Eyes", abs(eye_z - FEATURES["eye"]["z"]) < 0.02 and parts["eye"].center().X < 0,
+          f"centres at {eye_z:.2f} x H (render 0.66), mirrored")
+    gb = parts["grille"].bounding_box()
+    check("Front grille", gb.max.Y < 0 and abs(gb.size.X / H - FEATURES["grille"]["wide_width"]) < 0.02
+          and info.get("grille_tiers") == 2,
+          f"stepped outline {gb.size.X / H:.2f} x H wide, {gb.size.Z / H:.2f} x H tall (render 0.73 and 0.29); "
+          "front only, no rear grille")
+    nb = parts["brow_nose"].bounding_box()
+    check("Nose", abs(nb.min.Z / H - FEATURES["nose"]["bottom_z"]) < 0.01,
+          f"from the crown down to {nb.min.Z / H:.2f} x H, tip {info.get('nose_tip_proud', 0):.1f} mm proud")
     dial2 = _instance_copies(parts)["dial_2"]
-    check("Side dials", parts["dial"].center().X > 0 > dial2.center().X, "one on each side (volume side TBD)")
+    check("Side dials", parts["dial"].center().X > 0 > dial2.center().X,
+          f"Ø{FEATURES['dial']['diameter'] * H:.1f} with the stepped cross, one on each side (volume side TBD)")
+    rb = parts["rear_panel"].bounding_box()
+    check("Rear connection panel", info.get("rear_openings") == ["usb_c", "aux_3_5mm"] and rb.min.Y > 0,
+          "USB-C and 3.5 mm aux; no separate power jack (the render's POWER socket is not modelled)")
     return out

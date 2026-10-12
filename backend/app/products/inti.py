@@ -22,9 +22,10 @@ def dfm_checks(project: "Project", params: dict[str, Any], rules: "RuleSet", _ch
     """What the concept leaves open: placeholder dimensions, the template's TBD list and the model's open items."""
     checks: list[dict[str, Any]] = [_check(
         "Geometry", "warning", "Placeholder dimensions",
-        "No dimension has been given for INTI: every CAD parameter is a placeholder so the massing model builds, "
-        "and the head is an ellipsoid stand-in for the sculpt. Volumes, masses and costs from the CAD are "
-        "indicative only.", unverified=True)]
+        "INTI's proportions come from the concept render (docs/inti/concept.png), but no size has been given: the "
+        "overall height and the wall and metal thicknesses are placeholders, and the head is lofted from sections "
+        "measured on the render, not the sculpt. Volumes, masses and costs from the CAD are indicative only.",
+        unverified=True)]
     for t in load_template("inti").get("tbd", []):
         checks.append(_check("Specification", "warning", f"TBD: {t['topic']}", f"{t['item']}. {t['why']}",
                              unverified=True))
@@ -56,8 +57,10 @@ PRODUCT = Product(
     # The driver, battery and board have no specified mass: left out of the estimate (TBD).
     bought_in_density={},
     factory_pack="",
-    cad_note="INTI massing placeholder from the concept render: cream Jesmonite head (an ellipsoid stand-in for the "
-             "sculpt) with the brass/gold brow-and-nose piece, two eyes, stepped front grille, two side dials, top "
-             "rim and base ring, and the rear USB-C and aux panel. Every dimension is a placeholder (TBD). Each eye "
-             "and dial is modelled once and mirrored. The driver, battery and board are space-only placeholders.",
+    cad_note="INTI in the concept render's proportions (docs/inti/concept.png): cream Jesmonite head lofted from "
+             "sections measured on the render's front, side and rear views, with the brass/gold nose, almond eyes, "
+             "stepped front grille, side dials with the stepped cross, top rim and base ring, and the inset rear USB-C "
+             "and aux panel. The overall height is a placeholder (TBD); width, depth and features follow it. Each "
+             "eye and dial is modelled once and mirrored. The grille's holes aren't modelled; the driver, battery "
+             "and board are space-only placeholders. A build takes about a minute.",
 )

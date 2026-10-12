@@ -73,32 +73,56 @@ def test_metal_parts_get_a_real_metal_route(key):
 
 def test_tbd_list_covers_the_open_points():
     topics = {t["topic"] for t in TPL["tbd"]}
-    assert {"Dimensions", "Body", "Metal", "Grille", "Controls", "Rear panel", "Power", "Electronics", "Commercial"} <= topics
+    assert {"Dimensions", "Form", "Body", "Metal", "Grille", "Controls", "Rear panel", "Power", "Electronics", "Commercial"} <= topics
     assert all(t["item"] and t["why"] for t in TPL["tbd"])
     assert set(inti.TBD_PARAMS) == {d.key for d in inti.PARAMS}  # every CAD default is a placeholder
+    assert any("POWER" in t["item"] for t in TPL["tbd"])  # the render-vs-facts conflict is listed
     assert all(d.help.startswith("TBD") for d in inti.PARAMS)
 
 
-def test_placeholder_model_builds_every_part():
+def test_model_builds_every_part_in_the_renders_proportions():
     assert inti.validate(PARAMS).ok
     parts = inti.build(PARAMS)
     assert set(parts) == set(inti.PART_KEYS)
     for key, s in parts.items():
         assert s.is_valid and s.volume > 0, key
-    assert abs(parts["base_ring"].bounding_box().min.Z) < 1e-6
-    assert abs(parts["top_rim"].bounding_box().max.Z - PARAMS["overall_height"]) < 0.01
-    assert all(c["ok"] for c in inti.production_change_checks(PARAMS)), inti.production_change_checks(PARAMS)
+    checks = inti.production_change_checks(PARAMS)
+    assert all(c["ok"] for c in checks), checks
+    H = PARAMS["overall_height"]
+    body = parts["body"].bounding_box()
+    assert abs(body.size.X / H - 1.10) < 0.02 and abs(body.size.Y / H - 0.60) < 0.02  # measured on the render
+    assert abs(parts["base_ring"].bounding_box().size.X / H - 0.708) < 0.01
+    assert parts["top_rim"].bounding_box().max.Y < 0.07 * H  # open at the back
+    assert parts["rear_panel"].bounding_box().min.Y > 0 and parts["grille"].bounding_box().max.Y < 0
     asm = inti.assembly(parts)
     assert {c.label for c in asm.children} >= {"eye_2", "dial_2"}
     mass = inti.estimate_mass({k: {"volume_mm3": s.volume} for k, s in parts.items()}, {"body": 1.745})
     assert mass["excluded"] == ["driver", "battery", "main_board"]
 
 
+def test_both_eye_sockets_are_cut():
+    """The body is cut for the modelled eye and its mirror copy, so both almond plates show."""
+    m = inti.model(PARAMS)
+    eye2 = inti._instance_copies(m.parts)["eye_2"]
+    for eye in (m.parts["eye"], eye2):
+        overlap = m.parts["body"].intersect(eye)  # None when they don't touch at all
+        assert overlap is None or overlap.volume < 1.0
+
+
+def test_only_size_and_thicknesses_are_parameters():
+    """Proportions are fixed by the render; the parameters are the TBD size and thicknesses."""
+    assert set(PARAMS) == {d.key for d in inti.PARAMS} == {"overall_height", "wall_thickness", "trim_thickness",
+                                                           "driver_diameter"}
+    assert all(0 < z <= 1 and 0 < a < 0.6 and 0 < b < 0.35 for z, a, b, _ in inti.SECTIONS)
+    assert [s[0] for s in inti.SECTIONS] == sorted(s[0] for s in inti.SECTIONS)
+    # an old project's placeholder layout upgrades to the new parameters
+    old = {"overall_height": 300, "body_width": 180, "grille_steps": 3}
+    assert inti.upgrade(old, PARAMS) == {**PARAMS, "overall_height": 300}
+
+
 def test_validation_catches_clashes():
-    assert not inti.validate({**PARAMS, "nose_length": 80}).ok  # nose into the grille
-    assert not inti.validate({**PARAMS, "eye_spacing": 30}).ok  # eyes into the nose
-    assert not inti.validate({**PARAMS, "grille_diameter": 200}).ok
-    assert not inti.validate({k: v for k, v in PARAMS.items() if k != "body_width"}).ok
+    assert not inti.validate({**PARAMS, "trim_thickness": 6.0, "overall_height": 150}).ok  # plate deeper than socket
+    assert not inti.validate({k: v for k, v in PARAMS.items() if k != "overall_height"}).ok
 
 
 def test_every_tab_works_with_tbd_values(client):

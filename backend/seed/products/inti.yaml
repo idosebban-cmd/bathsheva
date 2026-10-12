@@ -1,10 +1,13 @@
 # INTI product template: a home Bluetooth speaker for Bathsheva London. Seeds a new INTI project.
 #
 # Sources, in priority order:
-#   1. The user's design facts from the concept render (front, side, rear and detail views), Oct 2026.
-#   2. Nothing else yet. No dimension or electrical spec has been given: every such value is TBD (null)
-#      and listed under `tbd` below (shown in the DFM report). The CAD defaults are placeholders that
-#      make a buildable massing model; none is a design value (app/cad/inti.py, TBD_PARAMS).
+#   1. The user's design facts (Oct 2026). Where the render disagrees, these win (the render's third rear
+#      port, POWER, is not modelled; see `tbd`).
+#   2. The concept render, docs/inti/concept.png (front, side, rear and detail views): the form and the
+#      proportions. app/cad/inti.py holds the proportions measured on it (fractions of the overall height).
+#   No dimension or electrical spec has been given: every such value is TBD (null) and listed under `tbd`
+#   below (shown in the DFM report). The overall height and the material thicknesses in `cad_parameters` are
+#   placeholders (TBD_PARAMS); the width, depth and every feature follow the render's proportions.
 
 name: INTI
 description: >-
@@ -45,15 +48,18 @@ parts:
   - cad_key: body
     name: Body
     function: >-
-      Sculpted head-shaped shell; carries the face parts, the side dials, the top rim, the base ring and the
-      rear connection panel. Wall, closure and internal fixings TBD.
+      Sculpted head-shaped shell (a mask: flat face, rounded back, narrower crown); recessed almond eye
+      sockets, the grille opening, the dials on its sides, the top rim and base ring, and the inset rear
+      connection panel. Wall, closure and internal fixings TBD.
     material_category: composite
     material: Jesmonite (grade TBD)
     finish: "Cream/ivory, smooth lacquer-like finish (system and gloss TBD)"
     traits: [cosmetic, non_metallic_look, fine_detail, closed_top, side_hole]
   - cad_key: brow_nose
     name: Brow-and-nose piece
-    function: Brass/gold feature on the face, from the brow down the nose. Form, size and fixing TBD.
+    function: >-
+      Brass/gold tapered nose wedge from the brow line at the crown, where it meets the top rim, down to a
+      tip projecting from the face. Whether it is one part with the top rim, and its fixing, TBD.
     material_category: brass
     material: Brass (alloy TBD)
     finish: "Brass/gold (finish TBD)"
@@ -61,7 +67,9 @@ parts:
   - cad_key: eye
     name: Eye
     quantity: 2
-    function: Brass/gold eye on the face (two, mirrored). Form, size and fixing TBD.
+    function: >-
+      Brass/gold almond-shaped eye plate in a recessed socket, with a round pupil boss (two, mirrored).
+      Fixing TBD.
     material_category: brass
     material: Brass (alloy TBD)
     finish: "Brass/gold (finish TBD)"
@@ -69,8 +77,9 @@ parts:
   - cad_key: grille
     name: Front grille
     function: >-
-      Stepped brass/gold grille over the driver; the only grille. Step form, perforation pattern, open area,
-      sheet thickness and fixing TBD.
+      Brass/gold grille over the driver, the only grille: a two-tier stepped (Andean) outline with a raised
+      frame round a perforated field (round holes in a hex pattern in the render). Hole size, pitch, open
+      area, sheet thickness and fixing TBD.
     material_category: brass
     material: Brass (alloy TBD)
     finish: "Brass/gold (finish TBD)"
@@ -79,22 +88,25 @@ parts:
     name: Side dial
     quantity: 2
     function: >-
-      Brass/gold dial on each side of the head; one is the volume control. Which side, the other dial's
-      function, travel, detents and edge detail TBD.
+      Brass/gold disc on each side of the head with a stepped cross in relief on its face; one is the volume
+      control. Which side, the other dial's function, travel and detents TBD.
     material_category: brass
     material: Brass (alloy TBD)
     finish: "Brass/gold (finish TBD)"
     traits: [cosmetic, axisymmetric, short, user_accessible]
   - cad_key: top_rim
     name: Top rim
-    function: Brass/gold rim on the crown of the head. Section, size and fixing TBD.
+    function: >-
+      Brass/gold band round the crown, full height at the brow and open at the back. Section and fixing TBD.
     material_category: brass
     material: Brass (alloy TBD)
     finish: "Brass/gold (finish TBD)"
     traits: [cosmetic, ring]
   - cad_key: base_ring
     name: Base ring
-    function: Brass/gold ring the speaker stands on. Section, size, fixing and any foot or pad TBD.
+    function: >-
+      Brass/gold elliptical plinth under the head, narrower than it; the speaker stands on it. Wall or solid,
+      fixing and any foot or pad TBD.
     material_category: brass
     material: Brass (alloy TBD)
     finish: "Brass/gold (finish TBD)"
@@ -102,8 +114,8 @@ parts:
   - cad_key: rear_panel
     name: Rear connection panel
     function: >-
-      Panel on the back of the head carrying the USB-C port (power and charging) and the 3.5 mm aux input;
-      no separate power jack. Material, finish, size and fixing TBD.
+      Inset rounded-rectangle panel low on the back of the head (black in the render) carrying the USB-C port
+      (power and charging) and the 3.5 mm aux input; no separate power jack. Material, finish and fixing TBD.
     material_category: other
     material: TBD
     finish: TBD
@@ -157,34 +169,12 @@ electrical:
     - "If battery-powered: battery transport and safety testing (UN38.3, IEC 62133-2) once the battery is chosen."
     - "Bluetooth SIG qualification and listing."
 
-# Default CAD parameters (mm). EVERY value is a placeholder (TBD), only so the massing model builds.
+# Default CAD parameters (mm). EVERY value is a placeholder (TBD). The overall height sets the size; the width
+# (about 1.10 x), depth (about 0.60 x) and every feature follow the render's proportions (app/cad/inti.py).
 cad_parameters:
   overall_height: 280
-  body_width: 180
-  body_depth: 200
   wall_thickness: 5.0
-  base_ring_height: 12
-  top_rim_height: 6
   trim_thickness: 2.0
-  brow_height: 200
-  brow_width: 110
-  brow_band: 10
-  nose_width: 14
-  nose_length: 35
-  eye_height: 180
-  eye_spacing: 60
-  eye_diameter: 22
-  grille_height: 105
-  grille_diameter: 100
-  grille_steps: 3
-  grille_step_rise: 1.5
-  grille_step_inset: 8
-  dial_height: 150
-  dial_diameter: 30
-  dial_proud: 8
-  rear_panel_height: 70
-  rear_panel_width: 50
-  rear_panel_tall: 26
   driver_diameter: 76
 
 # No bought-in parts, prices or assembly time have been specified: no default cost items yet (TBD).
@@ -201,13 +191,15 @@ power_options:
 scenarios: []
 
 cost_down_notes:
-  - "INTI's unit cost covers only the manufactured parts on placeholder CAD dimensions: the driver, battery, board, connectors, hardware, packaging, assembly and testing are TBD and not costed yet."
+  - "INTI's unit cost covers only the manufactured parts, at a placeholder size in the render's proportions: the driver, battery, board, connectors, hardware, packaging, assembly and testing are TBD and not costed yet."
 
 # Everything the concept doesn't fix yet. Shown in the DFM report; replace each with the user's answer.
 tbd:
-  - {topic: Dimensions, item: "Overall height, width and depth of the head", why: "Every CAD parameter is a placeholder until these are given."}
-  - {topic: Dimensions, item: "Position and size of the brow-and-nose piece, eyes, grille, side dials, top rim, base ring and rear panel", why: "Placed by eye on a placeholder head."}
-  - {topic: Form, item: "The sculpted head surface (surface model or 3D scan of the master)", why: "The model is an ellipsoid stand-in."}
+  - {topic: Dimensions, item: "Overall height (the width, depth and every feature follow from it in the render's proportions)", why: "The render gives proportions, not size: the CAD's height is a placeholder."}
+  - {topic: Form, item: "The sculpted head surface (surface model or 3D scan of the master), including the brow ridges above the eye sockets", why: "The model is lofted from sections measured on the render."}
+  - {topic: Rear panel, item: "The render shows a third rear port marked POWER (a barrel jack); the design facts say no separate power jack. Which is right?", why: "The model follows the design facts: USB-C and aux only."}
+  - {topic: Rear panel, item: "The rear marking: the stepped emblem and 'SOUND CONNECTS US' (printed, engraved or cast; size and finish)", why: "Shown in the render's rear view; not modelled."}
+  - {topic: Metal, item: "Whether the brow-and-nose piece and the top rim are one part or two", why: "In the render the nose meets the rim, whose front reads as the brow."}
   - {topic: Body, item: "Jesmonite grade and reinforcement, wall thickness, local thickening and cast-in inserts", why: "Sets the mass, strength and the cost."}
   - {topic: Body, item: "Colour standard (cream/ivory reference, e.g. hex or RAL), gloss level and the lacquer-like finish system", why: "Needed for the finish spec and samples."}
   - {topic: Body, item: "How the body is closed at the base and how the electronics go in", why: "No closure or access is defined."}
@@ -215,9 +207,9 @@ tbd:
   - {topic: Metal, item: "Finish of the brass/gold parts (brushed or polished; clear lacquer, plating or PVD) and one matched tone", why: "Sets the finishing route and cost."}
   - {topic: Metal, item: "Process for each metal part (cast, machined, spun, pressed, etched)", why: "The rules engine recommends one until decided."}
   - {topic: Metal, item: "How each metal part is fixed to the Jesmonite", why: "Bonded, cast-in inserts or screws from inside: not decided."}
-  - {topic: Grille, item: "Step form (concentric rings or other), perforation pattern, open area and sheet thickness", why: "Modelled as solid concentric steps."}
+  - {topic: Grille, item: "Perforation: hole size and pitch (round holes in a hex pattern in the render), open area and sheet thickness", why: "The stepped outline and frame are modelled; the holes are not."}
   - {topic: Controls, item: "Which side dial is the volume control, what the other dial does, and travel, detents and edge detail", why: "Only 'one is the volume control' is given."}
-  - {topic: Rear panel, item: "Panel material, finish, size and fixing", why: "If it looks metallic it must be real metal (design constraint)."}
+  - {topic: Rear panel, item: "Panel material, finish and fixing (black in the render)", why: "If it looks metallic it must be real metal (design constraint)."}
   - {topic: Electronics, item: "Driver(s): type, size, power rating; enclosure type (sealed or ported) and air volume", why: "Only 'front grille only' is given."}
   - {topic: Electronics, item: "Amplifier power, Bluetooth version, codecs, range and features (multipoint, app, microphone)", why: "Only 'Bluetooth speaker' is given."}
   - {topic: Power, item: "Power source: a rechargeable battery charged over USB-C, or mains power over USB-C (no battery)", why: "The concept gives USB-C for power and charging; whether there is a battery is not decided (user, Oct 2026)."}
