@@ -22,12 +22,21 @@ export default function AudioCard() {
   return (
     <section className="card">
       <h2>Sound and power {a.unverified && <UnverifiedBadge />}</h2>
-      <p>
-        The {a.box_l?.toFixed(2)} L air space behind the driver gives a sealed-box resonance of {a.fc_hz} Hz (Qtc {a.qtc}); the
-        rear passive radiator tuned to {a.pr_target_fb_hz} Hz extends the bass below that. Loudest clean level about{" "}
-        <b>{a.thermal_spl_db} dB</b> at 1 m (target {a.target_spl_db} dB) <Check ok={a.spl_ok} />. Full level from about{" "}
-        {a.full_spl_from_hz} Hz up; below that the cone runs out of travel and the amplifier must limit the bass.
-      </p>
+      {a.alignment === "passive_radiator" ? (
+        <p>
+          The {a.box_l?.toFixed(2)} L air space behind the driver gives a closed-box resonance of {a.fc_hz} Hz (Qtc {a.qtc}); the
+          rear passive radiator tuned to {a.pr_target_fb_hz} Hz extends the bass below that. Loudest clean level about{" "}
+          <b>{a.thermal_spl_db} dB</b> at 1 m (target {a.target_spl_db} dB) <Check ok={a.spl_ok} />.
+        </p>
+      ) : (
+        <p>
+          A sealed box of {a.box_l?.toFixed(2)} L: resonance {a.fc_hz} Hz (Qtc {a.qtc}), −3 dB at about {a.f3_hz} Hz and −6 dB at
+          about {a.f6_hz} Hz from the box alone. The DSP bass enhancement (up to +{a.dsp_bass_boost_db} dB) extends that to about{" "}
+          <b>{a.f3_dsp_hz} Hz (−3 dB)</b> and {a.f6_dsp_hz} Hz (−6 dB) at normal listening levels. Loudest clean level about{" "}
+          <b>{a.thermal_spl_db} dB</b> at 1 m (target {a.target_spl_db} dB) <Check ok={a.spl_ok} />. Full level from about{" "}
+          {a.full_spl_from_hz} Hz up; below that the DSP's excursion limiter holds the bass back.
+        </p>
+      )}
       <table className="small">
         <thead>
           <tr><th>Check</th><th>Estimate</th><th>Limit or target</th><th /></tr>
@@ -51,9 +60,11 @@ export default function AudioCard() {
               <td>≤ {a.charge_target_h} h</td><td><Check ok={a.charge_ok} /></td>
             </tr>
           )}
-          <tr>
-            <td>Radiator moving mass for {a.pr_target_fb_hz} Hz</td><td>{a.pr_moving_mass_g} g</td><td colSpan={2}>{a.radiator}</td>
-          </tr>
+          {a.alignment === "passive_radiator" && (
+            <tr>
+              <td>Radiator moving mass for {a.pr_target_fb_hz} Hz</td><td>{a.pr_moving_mass_g} g</td><td colSpan={2}>{a.radiator}</td>
+            </tr>
+          )}
         </tbody>
       </table>
       <h3>Bass at full excursion (dB at 1 m)</h3>
@@ -63,11 +74,13 @@ export default function AudioCard() {
         </thead>
         <tbody>
           <tr><td>Driver</td>{a.bass?.map((b) => <td key={b.f_hz}>{b.driver_db}</td>)}</tr>
-          <tr><td>Radiator</td>{a.bass?.map((b) => <td key={b.f_hz}>{b.radiator_db ?? "–"}</td>)}</tr>
+          {a.alignment === "passive_radiator" && (
+            <tr><td>Radiator</td>{a.bass?.map((b) => <td key={b.f_hz}>{b.radiator_db ?? "–"}</td>)}</tr>
+          )}
         </tbody>
       </table>
       <p className="small muted">
-        Closed-box and excursion estimates from the template's driver, radiator and amplifier data (supplier to confirm the
+        Sealed-box and excursion estimates from the template's driver and amplifier data (supplier to confirm the
         Thiele-Small parameters). The air volume comes from the CAD model, so it updates when the body changes.
       </p>
     </section>

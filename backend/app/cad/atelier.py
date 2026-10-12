@@ -71,6 +71,7 @@ PART_MATERIALS = {"body": "pc_abs", "nose_cone": "aluminium", "fins": "zamak_5",
 BATTERY_MASS_G = 100.0  # 2 x 18650 1S2P with protection board and wrap
 DRIVER_MASS_G = 65.0
 PR_MASS_G = 60.0
+PR_W_OPTION, PR_H_OPTION = 40.0, 60.0  # rear passive radiator (comparison only), mm
 BOARD_MASS_G = 30.0
 # Share of the driver's and radiator's envelopes they actually displace: the air behind the cone (inside the
 # basket) and the radiator's travel space is part of the box. Typical values (model-generated); the driver
@@ -106,15 +107,13 @@ PARAMS: list[ParamDef] = [
     ParamDef("fin_tip_radius", "Fin tip distance from the axis", "Fins", 65, 95, step=0.5,
              help="Sets the stance: the fin span is about 1.75 x this."),
     ParamDef("fin_thickness", "Fin thickness", "Fins", 6, 12, step=0.5),
-    ParamDef("pr_width", "Passive radiator width", "Rear", 30, 50, step=0.5),
-    ParamDef("pr_height", "Passive radiator height", "Rear", 40, 70, step=0.5),
 ]
 PARAM_KEYS = [p.key for p in PARAMS]
 PARAM_BY_KEY = {p.key: p for p in PARAMS}
 
 # Parameters that stay fixed when the speaker is scaled to another height.
 UNSCALED_PARAMS = {"target_mass_kg", "wall_thickness", "grille_thickness", "grille_perforated", "knob_diameter",
-                   "fin_thickness", "pr_width", "pr_height"}
+                   "fin_thickness"}
 
 GOLD = (0.77, 0.63, 0.35, 1.0)
 RED = (0.54, 0.11, 0.08, 1.0)
@@ -122,9 +121,8 @@ DARK = (0.08, 0.08, 0.09, 1.0)
 STEEL = (0.55, 0.56, 0.58, 1.0)
 PART_COLOURS: dict[str, tuple[float, float, float, float]] = {
     "body": RED, "nose_cone": GOLD, "fin": GOLD, "fin_pad": DARK, "collar": GOLD, "foot": GOLD,
-    "grille": GOLD, "grille_fabric": (0.17, 0.16, 0.16, 1.0), "bezel": GOLD, "rear_grille": GOLD,
-    "rear_bezel": GOLD, "rear_fabric": (0.17, 0.16, 0.16, 1.0), "knob": GOLD, "chassis": STEEL, "ballast": STEEL, "driver": DARK,
-    "passive_radiator": DARK, "battery": (0.2, 0.45, 0.75, 1.0), "main_board": (0.1, 0.35, 0.2, 1.0),
+    "grille": GOLD, "grille_fabric": (0.17, 0.16, 0.16, 1.0), "bezel": GOLD, "knob": GOLD, "chassis": STEEL, "ballast": STEEL, "driver": DARK,
+    "battery": (0.2, 0.45, 0.75, 1.0), "main_board": (0.1, 0.35, 0.2, 1.0),
 }
 PART_KEYS = list(PART_COLOURS)
 INSTANCES = {"fin": 3, "fin_pad": 3}  # parts modelled once and fitted several times
@@ -137,10 +135,11 @@ PRODUCTION_CHANGES: list[dict[str, str]] = [
      "production": "Ø95 ±0.5 (Technical Specification); the side profile keeps its shape"},
     {"feature": "Body wall", "prototype": "2.5 mm",
      "production": "3.0 mm moulded PC/ABS (spec); primer, colour, two clear coats, polished to 90 GU or more"},
-    {"feature": "Passive radiator", "prototype": "Sealed box, no radiator (radiator layouts only for comparison)",
-     "production": "Rear passive radiator, about 60 × 40 mm oval, behind a perforated gold cover and bezel matching "
-                   "the front (spec, user Oct 2026), with black acoustic fabric behind it like the front grille; the "
-                   "concept base (gold cup + small foot) and the sealed collar USB-C port are kept"},
+    {"feature": "Enclosure", "prototype": "Sealed box, no passive radiator",
+     "production": "Sealed box, as the prototype (user, Oct 2026): only the front grille. The rear passive radiator, "
+                   "its gold perforated cover, bezel and fabric are dropped; kept as a comparison scenario. The DSP "
+                   "bass enhancement (with an excursion limiter) stays. The concept base (gold cup + small foot) and "
+                   "the sealed collar USB-C port are kept"},
     {"feature": "Grille", "prototype": "1.2 mm photo-etched stainless, 2.2 mm hexagons, 0.7 mm webs, recess floor "
                                        "painted black",
      "production": "0.5 mm stainless (spec), same 2.2 mm hexagons and 0.7 mm webs, so every web and hole is at least "
@@ -179,7 +178,7 @@ IMPLEMENTED_CHANGES: dict[str, set[str]] = {}
 
 # What the model doesn't settle yet: shown in the DFM report and the CAD tab, for the user and suppliers.
 OPEN_ITEMS: list[str] = [
-    "Driver and radiator mounting: the spec has the chassis carry them; the model keeps the prototype's moulded "
+    "Driver mounting: the spec has the chassis carry it; the model keeps the prototype's moulded "
     "seats in the shell. The moulder and the electronics supplier should propose the chassis brackets.",
     "Nose-cone bayonet and hidden detent: specified, not modelled.",
     "Moulding the body: the belly is wider than both openings, so it needs a collapsible core or two welded halves.",
@@ -310,8 +309,8 @@ VARIANT_PART_KEY = {"body": "body", "fin": "fins", "collar": "foot", "foot": "fo
 # ballast cup; at 3.5 mm the cup stays one piece.
 JESMONITE_WALL = 3.5
 JESMONITE_LOCAL_WALL = 5.0
-# Cast-in brass inserts for the driver (4), radiator (4) and fin fixings (3 x 2): about 2 g each.
-JESMONITE_INSERTS_G = 14 * 2.0
+# Cast-in brass inserts for the driver (4) and fin fixings (3 x 2): about 2 g each (sealed box, no radiator).
+JESMONITE_INSERTS_G = 10 * 2.0
 WOOD_FIRE_ENCLOSURE_G = 70.0  # steel sheet enclosure round the battery and main board (turned wood body)
 MATERIAL_VARIANTS: dict[str, dict[str, Any]] = {
     "jesmonite_body": {"materials": {"body": "jesmonite_ac100"}, "wall_thickness": JESMONITE_WALL,
@@ -336,6 +335,9 @@ MATERIAL_VARIANTS: dict[str, dict[str, Any]] = {
     "wood_walnut": {"materials": {"body": "walnut"}, "wall_thickness": JESMONITE_WALL,
                     "ns": {"LOCAL_WALL": JESMONITE_LOCAL_WALL},
                     "extra_g": {"glued-in brass inserts": JESMONITE_INSERTS_G, "steel fire enclosure": WOOD_FIRE_ENCLOSURE_G}},
+    # The rear passive radiator, its perforated gold cover, bezel and fabric: the earlier default, now kept for
+    # comparison only (scenario "rear_passive_radiator").
+    "rear_radiator": {"ns": {"PR_POSITION": "rear"}},
     "pu_body": {"materials": {"body": "pu_casting_resin"}},
     "brass_metalwork": {"materials": {"fin": "brass", "collar": "brass", "foot": "brass"}},
 }
@@ -386,7 +388,8 @@ def namespace(params: dict[str, Any], variant: tuple[str, ...] = ()) -> types.Si
     ns.FIN_EDGE_FILLET = min(proto.FIN_EDGE_FILLET, p["fin_thickness"] / 2 - 0.2)
     ns.FIN_PAD, ns.FIN_BOLT_SLOT = FIN_PAD_T, FIN_BOLT_SLOT
     ns.KNOB_DIA, ns.KNOB_BODY_GAP = p["knob_diameter"], KNOB_GAP
-    ns.PR_POSITION, ns.PR_W, ns.PR_H, ns.PR_MASS = "rear", p["pr_width"], p["pr_height"], PR_MASS_G
+    # Sealed box, as the prototype (user, Oct 2026). The rear radiator is a comparison variant ("rear_radiator").
+    ns.PR_POSITION, ns.PR_W, ns.PR_H, ns.PR_MASS = "none", PR_W_OPTION, PR_H_OPTION, PR_MASS_G
     ns.USBC_POSITION = "collar"
     ns.JOINT_SHADOW_LINE = SHADOW_LINE
     ns.CONE_SPIGOT_WALL, ns.CONE_ORING_GROOVE = CONE_SPIGOT_WALL, CONE_ORING_GROOVE
@@ -432,14 +435,16 @@ def build_model(params: dict[str, Any], variant: tuple[str, ...] = ()) -> Model:
     parts["grille"] = g.parts["grille"]
     parts["grille_fabric"] = g.parts["grille_backing"]
     parts["bezel"] = g.parts["bezel"]
-    parts["rear_grille"] = g.parts["rear_grille"]
-    parts["rear_bezel"] = g.parts["rear_bezel"]
-    parts["rear_fabric"] = g.parts["rear_grille_backing"]
+    if "rear_grille" in g.parts:   # only the rear-radiator comparison variant has these
+        parts["rear_grille"] = g.parts["rear_grille"]
+        parts["rear_bezel"] = g.parts["rear_bezel"]
+        parts["rear_fabric"] = g.parts["rear_grille_backing"]
     parts["knob"] = g.parts["knob"]
     parts["chassis"] = g.parts["chassis"]
     parts["ballast"] = g.parts["ballast"]
     parts["driver"] = g.envelopes["driver"]
-    parts["passive_radiator"] = g.envelopes["passive_radiator"]
+    if "passive_radiator" in g.envelopes:
+        parts["passive_radiator"] = g.envelopes["passive_radiator"]
     parts["battery"] = g.envelopes["battery"]
     bw, bd, bhh = BOARD_SIZE
     px, py, pz = I["pcb_pos"]
@@ -587,11 +592,13 @@ def _stability(params_json: str, variant: tuple[str, ...] = ()) -> dict[str, Any
     # Air in the box: the body's inner cavity minus everything in it, plus the hollow nose cone (open to the
     # body through its spigot), less the butyl pads.
     air = m.envelopes["body_cavity"]
-    for key in ("body", "chassis", "ballast", "driver", "passive_radiator", "battery", "main_board", "collar"):
+    for key in [k for k in ("body", "chassis", "ballast", "driver", "passive_radiator", "battery", "main_board", "collar")
+                if k in m.parts]:
         air = air - m.parts[key]
     air_envelopes_l = (air.volume + m.info["cone_cavity_volume"]) / 1e6 - proto.BUTYL_MASS_G / proto.BUTYL_DENSITY / 1000
-    back = ((1 - DRIVER_DISPLACEMENT_FRAC) * (m.parts["driver"] & m.envelopes["body_cavity"]).volume
-            + (1 - PR_DISPLACEMENT_FRAC) * (m.parts["passive_radiator"] & m.envelopes["body_cavity"]).volume)
+    back = (1 - DRIVER_DISPLACEMENT_FRAC) * (m.parts["driver"] & m.envelopes["body_cavity"]).volume
+    if "passive_radiator" in m.parts:   # comparison variant only
+        back += (1 - PR_DISPLACEMENT_FRAC) * (m.parts["passive_radiator"] & m.envelopes["body_cavity"]).volume
     air_l = air_envelopes_l + back / 1e6
     bb = Compound(list(m.parts.values()) + [s for v in m.instances.values() for s in v]).bounding_box()
     return {"total_g": round(total, 1), "com_mm": [round(float(v), 1) for v in com], "tip_deg": worst["angle_deg"],
@@ -652,13 +659,12 @@ def production_change_checks(params: dict[str, Any]) -> list[dict[str, Any]]:
     check("Stability", s["tip_deg"] >= SPEC["tip_min_deg"],
           f"tips over at {s['tip_deg']:.1f}° (worst, towards {s['tip_towards_deg']}°; spec ≥ {SPEC['tip_min_deg']:g}°)")
     lo, hi = SPEC["air_l"]
-    check("Passive radiator", lo <= s["air_l"] <= hi and "passive_radiator" in parts,
-          f"rear radiator {p['pr_width']:g} × {p['pr_height']:g} mm; about {s['air_l']:.2f} L of air (spec 0.7–0.8 L) "
-          f"with typical driver and radiator displacement ({s['air_envelopes_l']:.2f} L if they were solid)")
+    check("Enclosure", lo <= s["air_l"] <= hi and "passive_radiator" not in parts and "rear_grille" not in parts,
+          f"sealed box, front grille only; about {s['air_l']:.2f} L of air (spec 0.7–0.8 L) with the driver's typical "
+          f"displacement ({s['air_envelopes_l']:.2f} L if it were solid)")
     gt = parts["grille"].bounding_box()
-    check("Grille", p["grille_thickness"] <= HEX_WEB and "grille_fabric" in parts and "rear_fabric" in parts,
-          f"{p['grille_thickness']:g} mm sheet, {HEX_HOLE:g} mm holes, {HEX_WEB:g} mm webs; fabric behind the front "
-          "grille and the rear cover")
+    check("Grille", p["grille_thickness"] <= HEX_WEB and "grille_fabric" in parts,
+          f"{p['grille_thickness']:g} mm sheet, {HEX_HOLE:g} mm holes, {HEX_WEB:g} mm webs; black fabric behind it")
     from app.cad import faro as _faro
 
     check("Knob", I.get("knob_logo_mm3", 0) > 0,

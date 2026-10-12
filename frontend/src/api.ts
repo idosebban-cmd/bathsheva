@@ -236,6 +236,12 @@ export interface Audio {
   reason?: string;
   driver?: string;
   radiator?: string;
+  alignment?: "sealed" | "passive_radiator";
+  f3_hz?: number;
+  f6_hz?: number;
+  dsp_bass_boost_db?: number;
+  f3_dsp_hz?: number;
+  f6_dsp_hz?: number;
   box_l?: number;
   alpha?: number;
   fc_hz?: number;

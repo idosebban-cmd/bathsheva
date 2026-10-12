@@ -6,7 +6,8 @@
 #   1. Atelier Technical Specification (key points from the user, Oct 2026; the full
 #      document is to follow). It wins over everything below it.
 #   2. The user's answers (Oct 2026): lacquered PC/ABS body ("anything that looks metallic
-#      must be real metal"), rear passive radiator, Ø20 knurled knob with the Bathsheva
+#      must be real metal"), sealed box with only the front grille (Oct 2026; the rear passive
+#      radiator is a comparison scenario), Ø20 knurled knob with the Bathsheva
 #      emblem tone-on-tone, "ATELIER" etched under the collar cup, battery replaceable after
 #      removing the base collar (standard tools).
 #   3. The approved prototype model on branch claude/rocket-speaker-3d-model-xav3pn
@@ -18,8 +19,8 @@ description: >-
   A premium portable Bluetooth speaker in the form of a retro rocket: an oxblood
   red lacquered body with a gold honeycomb grille and bezel, a gold nose cone, three
   gold fins it stands on and a gold collar and foot. One rotary push knob, a white
-  status LED, 20 W into a 57 mm full-range driver with a rear passive radiator, and
-  15 hours or more on a charge over USB-C. First product of Bathsheva London.
+  status LED, 20 W into a 57 mm full-range driver in a sealed box with DSP bass enhancement,
+  and 15 hours or more on a charge over USB-C. First product of Bathsheva London.
 
 requirements:
   approx_dimensions: {height_mm: 280, width_mm: 140, depth_mm: 140}   # spec: 280 ±1; fin span about 140
@@ -41,7 +42,7 @@ requirements:
   functional_requirements:
     - "Bluetooth 5.3 or later (LE Audio ready), SBC and AAC (aptX Adaptive optional), 10 m range"
     - Multipoint (2 devices), stereo pairing, remembers 8 devices, OTA firmware updates; no microphone, no app
-    - "20 W RMS Class-D; 60 Hz–20 kHz (−6 dB); 90 dB SPL or more at 1 m; THD 1% or less at 85 dB"
+    - "20 W RMS Class-D; sealed box (no passive radiator); 80 Hz–20 kHz (−6 dB) with DSP bass enhancement at normal listening level; 90 dB SPL or more at 1 m; THD 1% or less at 85 dB"
     - DSP bass enhancement, loudness compensation and a limiter
     - "2 x 18650 1S2P (about 6,000 mAh / 21.6 Wh): 15 h or more at 50% volume; USB-C PD 5–9 V up to 20 W; full charge in 3 h or less; play while charging; standby after 20 min"
     - "One knob: turn = volume (24 soft detents); press = play/pause; double press = next; hold 2 s = power, 5 s = pairing, 10 s = reset"
@@ -67,7 +68,7 @@ parts:
     name: Body
     function: >-
       One-piece moulded shell, open at the nose and the base, with the front sound opening, the
-      rear radiator opening, the knob and LED holes and six slots for the fin bolts.
+      knob and LED holes and six slots for the fin bolts. Sealed: no rear opening.
     material_category: polymer
     material: PC/ABS
     finish: "Oxblood red polished lacquer: primer, colour, two clear coats, polished (≥ 90 GU)"
@@ -139,27 +140,6 @@ parts:
     material: Aluminium 6061-T6
     finish: Gold PVD, fine brushed satin, diamond-cut chamfer
     traits: [cosmetic, ring, short, fine_detail]
-  - cad_key: rear_grille
-    name: Rear radiator cover
-    function: Perforated cover over the rear passive radiator (same sheet and hole pattern as the front grille).
-    material_category: stainless
-    material: Stainless steel 304, 0.5 mm
-    finish: Gold PVD, fine brushed satin
-    traits: [cosmetic, fine_detail, perforated, thin_wall, flat_pattern]
-  - cad_key: rear_bezel
-    name: Rear bezel
-    function: Oval bezel round the rear radiator cover, matching the front bezel.
-    material_category: aluminium
-    material: Aluminium 6061-T6
-    finish: Gold PVD, fine brushed satin, diamond-cut chamfer
-    traits: [cosmetic, ring, short, fine_detail]
-  - cad_key: rear_fabric
-    name: Rear acoustic fabric
-    function: Black acoustic fabric behind the rear radiator cover, so no red shows through its holes.
-    material_category: bought_in
-    material: Black acoustic fabric
-    finish: Black
-    traits: [hidden]
   - cad_key: knob
     name: Knob
     function: >-
@@ -192,12 +172,6 @@ parts:
   - cad_key: driver
     name: Driver
     function: 57 mm full-range neodymium driver, front-firing behind the grille.
-    material_category: electrical
-    finish: None (internal)
-    traits: [electrical, internal]
-  - cad_key: passive_radiator
-    name: Passive radiator
-    function: About 60 × 40 mm oval passive radiator, firing to the rear behind the rear cover.
     material_category: electrical
     finish: None (internal)
     traits: [electrical, internal]
@@ -241,7 +215,7 @@ joints:
       - {name: "O-ring, nose cone spigot", quantity: 1, material: "NBR or silicone", notes: "Section and size TBD with the moulder."}
   - between: [collar, body]
     method: clamp_with_gasket
-    note: The collar spigot seals the body's bottom opening with an O-ring (the enclosure is sealed apart from the radiator).
+    note: The collar spigot seals the body's bottom opening with an O-ring (the enclosure is sealed).
     hardware:
       - {name: "O-ring, collar spigot", quantity: 1, material: "NBR or silicone", notes: "Section and size TBD."}
   - between: [grille, bezel]
@@ -284,18 +258,10 @@ decisions:
     process: photo_etching_stainless
     material: stainless_304
     reason: Stainless 304, 0.5 mm, photo-etched hexagons (spec); webs 0.7 mm are above the sheet thickness.
-  - part: rear_grille
-    process: photo_etching_stainless
-    material: stainless_304
-    reason: Same sheet and hole pattern as the front grille.
   - part: bezel
     process: cnc_machining
     material: al_6061
     reason: 6061 CNC with a diamond-cut chamfer (spec), gold PVD.
-  - part: rear_bezel
-    process: cnc_machining
-    material: al_6061
-    reason: As the front bezel.
   - part: knob
     process: cnc_turning_near_net
     material: brass
@@ -306,7 +272,7 @@ decisions:
   - topic: construction
     chosen: {value: chassis_screwed_hidden}
     reason: >-
-      Internal steel chassis carries the driver, radiator, boards and battery tray plate; fins screw into
+      Internal steel chassis carries the driver, boards and battery tray plate; fins screw into
       it through the shell; the base collar screws into the tray plate from below under the foot, and the
       battery is replaceable after removing the collar; the nose cone twist-locks. No visible fasteners (spec).
 
@@ -338,12 +304,14 @@ electrical:
     - "RoHS, REACH and WEEE registration (spec); UK battery producer registration."
     - "EU Batteries Regulation (EU) 2023/1542 if EU sale follows: the battery is replaceable after removing the base collar, with a 1.5 mm hex key (no glue, no soldering); confirm with a compliance consultant that this meets 'readily removable by the end user'."
 
-# Acoustic and power model (pure calculation in app/audio.py) against the spec. The driver and radiator
-# Thiele-Small values are typical for a 57 mm neodymium full-range and a 60 x 40 mm radiator until the
-# supplier's datasheets arrive (model-generated, unverified).
+# Acoustic and power model (pure calculation in app/audio.py) against the spec: a sealed box (user, Oct 2026)
+# with DSP bass enhancement. The driver's Thiele-Small values are typical for a 57 mm neodymium full-range
+# until the supplier's datasheet arrives (model-generated, unverified). The rear passive radiator is kept only
+# for the comparison scenario (passive_radiator_option).
 audio:
   target_spl_db: 90            # spec: 90 dB SPL or more at 1 m
-  target_low_hz: 60            # spec: 60 Hz–20 kHz (−6 dB)
+  target_low_hz: 80            # spec: 80 Hz–20 kHz (−6 dB) with DSP bass enhancement (sealed box)
+  dsp_bass_boost_db: 6         # DSP low-shelf bass enhancement, with an excursion limiter
   driver:
     name: 57 mm full-range, neodymium
     fs_hz: 130
@@ -356,7 +324,7 @@ audio:
     source: model-generated
     confidence: low
     verified: false
-  passive_radiator:
+  passive_radiator_option:      # comparison only (scenario rear_passive_radiator)
     name: About 60 x 40 mm oval
     sd_cm2: 13.0
     xmax_mm: 5.0
@@ -396,13 +364,10 @@ cad_parameters:
   fin_tip_radius: 79.0
   fin_thickness: 8.0
   knob_diameter: 20
-  pr_width: 40
-  pr_height: 60
 
 # Default cost line items (prices come from seed/cost/bought_in.yaml).
 cost_items:
   - {kind: bought_in, price_key: speaker_driver_57, quantity: 1}
-  - {kind: bought_in, price_key: passive_radiator_60x40, quantity: 1}
   - {kind: bought_in, price_key: speaker_main_board, quantity: 1}
   - {kind: bought_in, price_key: battery_pack_1s2p, quantity: 1, power: battery}
   - {kind: bought_in, price_key: usb_c_receptacle_ip67, quantity: 1, power: battery}
@@ -480,25 +445,29 @@ scenarios:
       premium: No change.
       lead_time: Adds 6–10 weeks of testing before launch.
       tooling: None; the testing is a one-off cost shared over the batch.
-  - key: sealed_no_radiator
+  - key: rear_passive_radiator
     letter: r
-    label: Sealed box without the rear passive radiator
+    label: Rear passive radiator (comparison only)
+    # The earlier default (Oct 2026), kept for comparison: the sealed box is the design (user, Oct 2026).
+    reference_only: "Comparison only: the design is a sealed box with only the front grille (user, Oct 2026)."
     design_change: >-
-      Leave out the rear passive radiator, its cover, bezel and fabric: the prototype's sealed box. The back
-      becomes plain red; the bass is thinner and the DSP has to work harder.
+      Add the earlier rear passive radiator (about 60 x 40 mm oval) behind a perforated gold cover and oval bezel
+      matching the front, with black fabric behind the cover. Deeper bass (about 60 Hz −6 dB) at the cost of a
+      second grille on the back, more parts and assembly.
     effect:
-      remove_part: [passive_radiator, rear_grille, rear_bezel, rear_fabric]
-      remove_items: [passive_radiator_60x40]
-      assembly_min: {low: -2, high: -1}
+      add_items:
+        - {price_key: passive_radiator_60x40, quantity: 1}
+        - {price_key: rear_radiator_cover_set, quantity: 1}
+      assembly_min: {low: 1, high: 2}
     premium_impact: slight
     flags:
-      - {kind: performance, message: "Without the radiator the 60 Hz (−6 dB) bass target is unlikely to be met; check with the driver supplier."}
+      - {kind: performance, message: "With the radiator (CAD variant rear_radiator) the speaker reaches 1.80 kg with 8 g of ballast to spare, air about 0.74 L; the radiator tuned to about 65 Hz gives about 76 dB at 60 Hz within its excursion."}
     tradeoffs:
-      finish: A plain red back, as the approved prototype.
-      weight: About 10 g lighter; the ballast makes it up.
-      premium: Thinner bass at the spec's 60 Hz.
-      lead_time: One part and one bezel fewer.
-      tooling: One photo-tool and one CNC programme fewer.
+      finish: A gold perforated cover and bezel on the back, as on the front.
+      weight: About 70 g heavier (radiator, cover, bezel, fabric); reaches 1.8 kg.
+      premium: Deeper bass at the spec's original 60 Hz; a second grille on the back.
+      lead_time: One more photo-etched part, one CNC bezel and the radiator.
+      tooling: One photo-tool and one CNC programme more.
   - key: low_tooling_first_batch
     letter: t
     label: Low-tooling first batch
@@ -534,8 +503,8 @@ scenarios:
     design_change: >-
       The body cast in Jesmonite AC100 with glass-fibre reinforcement in silicone moulds at a UK caster
       (soft tooling; moulds replaced every 20–30 casts), 3.5 mm general wall thickened locally to 5 mm at the
-      fin roots (bolts and inserts) and round the grille and radiator openings, with cast-in brass inserts for
-      the driver, radiator and fin fixings. Sealer and primer, then the same
+      fin roots (bolts and inserts) and round the grille opening, with cast-in brass inserts for the driver
+      and fin fixings. Sealer and primer, then the same
       oxblood lacquer and clear coats. The heavier body takes weight off the ballast cup, so the speaker
       stays at 1.8 kg. The gold parts stay die-cast Zamak, or are CNC-machined in brass.
     conflicts: [low_tooling_first_batch, all_jesmonite, turned_wood_body]
@@ -577,7 +546,7 @@ scenarios:
       caster, each in its own silicone mould: 5 mm body wall, solid fins with cast-in inserts for the fin bolts
       and the TPU tip pads, about 5 mm cone wall, collar with cast-in inserts for the tray screws and foot stud
       and a precise USB-C opening, the ATELIER lettering cast in from the pattern. The knob stays solid brass,
-      the grilles stainless and the bezels metal (a thicker Jesmonite bezel is possible but would cut into the
+      the grille stainless and the bezel metal (a thicker Jesmonite bezel is possible but would cut into the
       grille opening, so it is not costed). Option A: coloured Jesmonite with no gold, body lacquered as before.
       Option B: brass Flex Metal gel coat (real brass powder), polished and sealed, on the parts that are gold
       today.
@@ -618,7 +587,7 @@ scenarios:
       - {kind: performance, message: "Verify on samples (option B): gel-coat wear. The brass skin is about 0.5–1 mm; check edges and fin tips after handling and abrasion tests, and tarnish after humidity."}
       - {kind: compliance, message: "Option B is excluded: a brass-powder gel coat on Jesmonite does not count as real metal (user, Oct 2026), so it breaks the design constraint 'anything that looks metallic must be real metal'. It is shown for comparison only."}
       - {kind: performance, message: "Mass and balance: 1.8 kg can't be met. With the ballast cup full (414 g) the speaker weighs about 1.54 kg, its centre of mass rises to about 107 mm (spec 98 mm or lower) and it tips at about 18.8° (spec 18° or more)."}
-      - {kind: performance, message: "Air volume falls to about 0.65 L (spec 0.7–0.8 L): the 5 mm body wall and the thicker nose cone take room from the box; the radiator tuning must be rechecked."}
+      - {kind: performance, message: "Air volume falls to about 0.65 L (spec 0.7–0.8 L): the 5 mm body wall and the thicker nose cone take room from the box; the bass tuning must be rechecked."}
       - {kind: performance, message: "Inherits the Jesmonite body's open points: drop test, lacquer adhesion over the sealer, Bluetooth range through the wall and the split ballast cup."}
     tradeoffs:
       finish: "A: coloured stone-like parts and a lacquered red body, no gold. B: polished brass-powder skin on the former gold parts; it wears on edges and needs sealing."
@@ -633,7 +602,7 @@ scenarios:
     design_change: >-
       The body CNC-turned and hollowed from kiln-dried hardwood in two halves, glued at the belly with a turned
       spigot joint; 3.5 mm general wall thickened locally to 5 mm at the fin roots and openings, with glued-in
-      brass threaded inserts for the driver, radiator and fin fixings. The internal metal chassis is extended
+      brass threaded inserts for the driver and fin fixings. The internal metal chassis is extended
       into a closed steel fire enclosure round the battery and main board, because the wood can't be the fire
       enclosure. Wood movement: about 0.2–0.4% across the grain per 1% moisture change (up to about 0.4 mm on
       the Ø95 body over a year indoors), so the spigot fits at the nose cone and collar get extra clearance taken
@@ -678,7 +647,7 @@ scenarios:
 # Notes shown under the Cost-down summary.
 cost_down_notes:
   - "One power option: cordless (2 x 18650 1S2P, USB-C PD)."
-  - "Tiers: 'no compromise' uses only changes that keep the look and feel (spun nose cone, custom battery pack); 'slight compromises' also allows the sealed box without the rear radiator, the low-tooling first batch (cast polyurethane body, brass instead of zinc) and the Jesmonite body."
+  - "Tiers: 'no compromise' uses only changes that keep the look and feel (spun nose cone, custom battery pack); 'slight compromises' also allows the low-tooling first batch (cast polyurethane body, brass instead of zinc) and the Jesmonite body."
   - "Turned wood body (w): CNC-turned hardwood body in two glued halves, A oxblood-lacquered beech or ash, B natural walnut; steel fire enclosure round the battery and board (to be confirmed by a test house); seam stability, finish quality and fire safety to verify on samples; its rates are model-generated and unverified."
   - "Jesmonite body (j): cast Jesmonite AC100 body (5 mm, glass-fibre reinforced, UK caster) with the gold parts die-cast or CNC brass; drop test, lacquer adhesion and Bluetooth range to verify on samples; its rates are model-generated and unverified."
   - "Low-tooling first batch (t): soft tooling for the body and no die-casting dies, for a first batch of a few hundred; its rates (polyurethane casting, silicone moulds, CNC or investment-cast brass) are model-generated and unverified."
@@ -692,9 +661,9 @@ rfq_open_questions:
     proposed: "Moulder to propose, with the effect on cost, lead time and where the internal seats go."
   - id: driver_data
     topic: Acoustics
-    question: "Driver and radiator datasheets (Thiele-Small values, Xmax, net displaced volume, rated power)?"
-    why: The air volume (about 0.74 L) and the bass tuning are estimates from typical values until we have them.
-    proposed: Electronics supplier proposes a 57 mm neodymium driver rated 20 W and a mass-tunable 60 x 40 mm radiator.
+    question: "Driver datasheet (Thiele-Small values, Xmax, net displaced volume, rated power) for a sealed box of about 0.75 L?"
+    why: The sealed box's air volume (about 0.75 L) and the bass tuning are estimates from typical values until we have them.
+    proposed: "Electronics supplier proposes a 57 mm neodymium driver rated 20 W for a sealed box; DSP bass enhancement (up to +6 dB) with an excursion limiter."
   - id: boost_and_cells
     topic: Electronics
     question: "20 W from a 1S2P pack: boost converter topology, and the cells' continuous current rating?"
@@ -712,7 +681,7 @@ rfq_open_questions:
     proposed: One PVD house for all parts, matched to the signed master sample; base layers per substrate.
   - id: mass_margin
     topic: Mechanical
-    question: "Part weights (driver, radiator, battery, board, PVD parts) as quoted?"
+    question: "Part weights (driver, battery, board, PVD parts) as quoted?"
     why: The steel ballast cup is at its largest size to reach 1.8 kg; lighter parts would leave the speaker short.
     proposed: Weigh first samples; options are a denser or taller ballast, or a heavier collar.
 
@@ -731,6 +700,6 @@ rfq:
     - {name: Oxblood red polished lacquer, parts: [body], hex: "#8A1C15", ral: ["RAL 3011 Brown red", "RAL 3002 Carmine red"],
        gloss: "≥ 90 GU (60°), primer + colour + two clear coats, polished; ΔE ≤ 1.0 to the master",
        source: "Technical Specification; Atelier params.py RED_HEX"}
-    - {name: "Gold PVD, fine brushed satin", parts: [nose_cone, fin, collar, foot, grille, bezel, rear_grille, rear_bezel, knob],
+    - {name: "Gold PVD, fine brushed satin", parts: [nose_cone, fin, collar, foot, grille, bezel, knob],
        hex: "#C4A15A", ral: [], gloss: "fine brushed satin; one tone, ΔE ≤ 1.5 across parts",
        source: "Technical Specification; prototype GOLD_HEX (render reference only)"}

@@ -3,9 +3,10 @@ Geometry for the ATELIER rocket speaker, ported from the approved prototype mode
 (branch claude/rocket-speaker-3d-model-xav3pn, model.py, Sep 2026). The workbench
 generator (app/cad/atelier.py) builds a parameter namespace and calls `build(p)`.
 
-Changes from the prototype are marked `PORT:` and listed in atelier.PRODUCTION_CHANGES:
-rear passive radiator with the concept base (gold cup + small foot) and the sealed
-USB-C port kept in the collar; Faro's knurled Ø20 knob with the emblem engraved; TPU pads
+Changes from the prototype are marked `PORT:` and listed in atelier.PRODUCTION_CHANGES.
+The default is the prototype's sealed box (PR_POSITION = "none", user Oct 2026); the rear
+passive radiator (PR_POSITION = "rear", comparison only) keeps the concept base (gold cup +
+small foot) and the sealed USB-C port in the collar, as the sealed box does; Faro's knurled Ø20 knob with the emblem engraved; TPU pads
 under the fin tips; slotted fin-bolt holes; an O-ring groove on the nose-cone spigot;
 the base collar screwed up into a chassis battery-tray plate (screws and the foot's stud
 under the foot) with "ATELIER" etched round the foot on its underside.

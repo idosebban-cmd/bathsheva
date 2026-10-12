@@ -67,11 +67,17 @@ def test_cost_down_summary_has_no_faro_assumptions(project):
     assert any("cordless (2 x 18650 1S2P" in n for n in s["notes"])
     assert not any("touch dimmer" in n for n in s["notes"])
     scen = {d["key"] for d in c.get(f"/api/projects/{pid}/scenarios").json()["scenarios"]}
-    assert {"nose_cone_spun", "custom_battery_pack", "sealed_no_radiator"} <= scen
+    assert {"nose_cone_spun", "custom_battery_pack", "rear_passive_radiator"} <= scen
     best = next(r for r in s["rows"] if r["quantity"] == 2000 and r["tier"] == "strict")
     cur = next(r for r in s["rows"] if r["quantity"] == 2000 and r["tier"] == "current")
     assert best["cost"]["mid"] <= cur["cost"]["mid"]
-    assert "sealed_no_radiator" not in [x["key"] for x in best["selection"]]  # slight compromise: not in "strict"
+    cat = {d["key"]: d for d in c.get(f"/api/projects/{pid}/scenarios").json()["scenarios"]}
+    assert "comparison only" in cat["rear_passive_radiator"]["reference_only"].lower()
+    assert cat["rear_passive_radiator"]["options"][0]["saving"]["500"] < 0  # adds cost
+    items = {it["price_key"] for it in c.get(f"/api/projects/{pid}/cost-items").json()}
+    assert "passive_radiator_60x40" not in items  # sealed box: no radiator in the default cost items
+    # the rear radiator is for comparison only: never chosen
+    assert not any(x["key"] == "rear_passive_radiator" for r in s["rows"] for x in r["selection"])
 
 
 def test_cad_tab_mass_matches_the_stability_mass(project):

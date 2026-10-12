@@ -59,7 +59,7 @@ def test_rfqs_say_what_the_spec_says(project):
     emd = c.get(f"/api/projects/{pid}/rfq-electronics.md").text
     for text in ("Bluetooth 5.3", "Multipoint", "stereo pairing", "remembers 8 devices", "OTA", "no microphone",
                  "20 W RMS", "boost converter", "USB-C PD", "hold 10 s = factory reset", "slow breathing",
-                 "1S2P", "UN38.3", "IEC 62133-2", "Thiele-Small", "60 Hz–20 kHz", "THD 1%"):
+                 "1S2P", "UN38.3", "IEC 62133-2", "Thiele-Small", "80 Hz–20 kHz", "sealed box", "THD 1%"):
         assert text in emd, text
     assert "£" not in emd
     assert c.get(f"/api/projects/{pid}/rfq.pdf").content.startswith(b"%PDF")
