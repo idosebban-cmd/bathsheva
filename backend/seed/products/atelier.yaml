@@ -512,7 +512,7 @@ scenarios:
       reroutes:
         - {part: body, process: jesmonite_casting, material: jesmonite_ac100, tooling: low}
       # Body volume (3.5 mm wall, 5 mm locally) / the CAD's 3 mm body, from the CAD (tests/test_atelier_cad.py checks it).
-      volume_scale: {body: 1.183}
+      volume_scale: {body: 1.189}
       reroute:
         parts: [fin, collar, foot]
         options:
@@ -527,7 +527,7 @@ scenarios:
       - {kind: safety, message: "Verify on samples: drop test (0.5 m unpackaged, ISTA 2A packaged) and the IEC 62368-1 enclosure impact test; Jesmonite is brittle compared with PC/ABS and can crack or chip."}
       - {kind: performance, message: "Verify on samples: gloss lacquer adhesion over the sealer and primer (ISO 2409 cross-cut, ≥ 90 GU gloss) and after humidity cycling."}
       - {kind: performance, message: "Verify on samples: Bluetooth range (10 m) through the 3.5–5 mm mineral-filled wall; the antenna position may need to move."}
-      - {kind: performance, message: "Verify on samples: the 3.5 mm general wall's stiffness and the 5 mm local thickening at the fin roots and openings (CAD: 1.80 kg, centre of mass 87 mm, tip-over 23°, air 0.73 L, ballast cup in one piece)."}
+      - {kind: performance, message: "Verify on samples: the 3.5 mm general wall's stiffness and the 5 mm local thickening at the fin roots and openings (CAD, sealed box: 1.80 kg, centre of mass 86 mm, tip-over 23°, air 0.74 L, ballast cup in one piece)."}
     tradeoffs:
       finish: The same oxblood lacquer and clear coats over a sealer and primer; the porous cast surface must be sealed first.
       weight: The body is about 1.8 times heavier (327 g); the ballast cup shrinks to keep 1.8 kg, and the centre of mass rises about 2 mm.
@@ -540,7 +540,7 @@ scenarios:
     label: All-Jesmonite (reference only)
     # Not recommended (user, Oct 2026): it can't meet the mass or balance spec. Kept for reference; the
     # optimiser never chooses it.
-    reference_only: "Fails mass and balance: about 1.54 kg with the ballast cup full (spec 1.8 ±0.1 kg) and a centre of mass of about 107 mm (spec 98 mm or lower)."
+    reference_only: "Fails mass and balance: about 1.47 kg with the ballast cup full (spec 1.8 ±0.1 kg) and a centre of mass of about 106 mm (spec 98 mm or lower)."
     design_change: >-
       The body, nose cone, fins, collar and foot all cast in glass-fibre-reinforced Jesmonite AC100 at a UK
       caster, each in its own silicone mould: 5 mm body wall, solid fins with cast-in inserts for the fin bolts
@@ -555,7 +555,7 @@ scenarios:
       reroutes:
         - {part: body, process: jesmonite_casting, material: jesmonite_ac100, tooling: low}
       # Volumes from the all-Jesmonite build / the CAD's (tests/test_atelier_cad.py checks them).
-      volume_scale: {body: 1.571, nose_cone: 1.929, fin: 1.168, collar: 0.941, foot: 1.0}
+      volume_scale: {body: 1.593, nose_cone: 1.929, fin: 1.168, collar: 0.941, foot: 1.0}
       reroute:
         parts: [nose_cone, fin, collar, foot]
         options:
@@ -586,8 +586,8 @@ scenarios:
       - {kind: performance, message: "Verify on samples: USB-C fit. The opening is cast, not machined: check the plug enters square and the sealed receptacle seats in it, over the mould's life."}
       - {kind: performance, message: "Verify on samples (option B): gel-coat wear. The brass skin is about 0.5–1 mm; check edges and fin tips after handling and abrasion tests, and tarnish after humidity."}
       - {kind: compliance, message: "Option B is excluded: a brass-powder gel coat on Jesmonite does not count as real metal (user, Oct 2026), so it breaks the design constraint 'anything that looks metallic must be real metal'. It is shown for comparison only."}
-      - {kind: performance, message: "Mass and balance: 1.8 kg can't be met. With the ballast cup full (414 g) the speaker weighs about 1.54 kg, its centre of mass rises to about 107 mm (spec 98 mm or lower) and it tips at about 18.8° (spec 18° or more)."}
-      - {kind: performance, message: "Air volume falls to about 0.65 L (spec 0.7–0.8 L): the 5 mm body wall and the thicker nose cone take room from the box; the bass tuning must be rechecked."}
+      - {kind: performance, message: "Mass and balance: 1.8 kg can't be met. With the ballast cup full (414 g) the sealed speaker weighs about 1.47 kg, its centre of mass rises to about 106 mm (spec 98 mm or lower) and it tips at about 18.9° (spec 18° or more)."}
+      - {kind: performance, message: "Air volume falls to about 0.67 L (spec 0.7–0.8 L): the 5 mm body wall and the thicker nose cone take room from the box; the bass tuning must be rechecked."}
       - {kind: performance, message: "Inherits the Jesmonite body's open points: drop test, lacquer adhesion over the sealer, Bluetooth range through the wall and the split ballast cup."}
     tradeoffs:
       finish: "A: coloured stone-like parts and a lacquered red body, no gold. B: polished brass-powder skin on the former gold parts; it wears on edges and needs sealing."
@@ -613,7 +613,7 @@ scenarios:
     conflicts: [low_tooling_first_batch, jesmonite_body, all_jesmonite]
     effect:
       # Body volume (3.5 mm wall, 5 mm locally) / the CAD's 3 mm body, from the CAD (tests/test_atelier_cad.py checks it).
-      volume_scale: {body: 1.183}
+      volume_scale: {body: 1.189}
       reroute:
         part: body
         options:
@@ -636,10 +636,10 @@ scenarios:
       - {kind: performance, message: "Verify on samples: finish quality. Option A: no grain telegraphing through the gloss (90 GU or more) and no crazing at the seam or end grain; option B: an even satin on the walnut."}
       - {kind: safety, message: "Verify with a test house: fire safety. Wood is combustible, so the steel enclosure round the battery and main board must serve as the fire enclosure under IEC 62368-1; confirm the design and openings before tooling."}
       - {kind: performance, message: "Verify on samples: the 3.5 mm turned wall's stiffness and the glued-in inserts' pull-out strength at the fin roots."}
-      - {kind: performance, message: "Mass margin: the wood body is light, so the ballast cup is full or nearly full (CAD: beech 1.80 kg with about 3 g of ballast to spare; walnut 1.78 kg with the cup full, inside the 1.8 ±0.1 kg spec). Recheck once supplier part weights arrive; brass gold parts would add about 150 g of margin."}
+      - {kind: performance, message: "Mass: the wood body is light, so the ballast cup is full (CAD, sealed box: beech about 1.72 kg, walnut about 1.70 kg, at the bottom of the 1.8 ±0.1 kg spec). Brass gold parts bring it to 1.80 kg (CAD); otherwise a denser ballast (brass or copper) is needed. Recheck once supplier part weights arrive."}
     tradeoffs:
       finish: "A: the same oxblood gloss over grain-filled wood. B: natural walnut under a clear satin finish, a different look (a wood edition)."
-      weight: The wood body is lighter than PC/ABS; the steel fire enclosure and inserts add about 100 g, so the ballast stays about the same.
+      weight: The wood body is lighter than PC/ABS; the steel fire enclosure and inserts add about 90 g, but the cup is full and the speaker ends at about 1.70–1.72 kg unless the gold parts are brass.
       premium: Real wood; it moves with humidity and dents more easily than plastic.
       lead_time: CNC programmes and fixtures in 3–6 weeks; no mould.
       tooling: Fixtures, glue-up jigs and CNC programmes only; the gold parts keep their dies.

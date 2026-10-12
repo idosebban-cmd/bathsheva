@@ -40,8 +40,10 @@ def test_validation_ranges_and_rules():
 
 def test_normalise_upgrade_and_scaling_sets():
     assert atelier.normalise(PLAIN)["grille_perforated"] == 0
-    old = {k: v for k, v in DEFAULTS.items() if k != "pr_width"}
-    assert atelier.upgrade(old, DEFAULTS)["pr_width"] == DEFAULTS["pr_width"]
+    old = {k: v for k, v in DEFAULTS.items() if k != "knob_diameter"}
+    assert atelier.upgrade(old, DEFAULTS)["knob_diameter"] == DEFAULTS["knob_diameter"]
+    # saved parameters from before the sealed box (rear radiator size) are dropped
+    assert "pr_width" not in atelier.upgrade({**DEFAULTS, "pr_width": 40, "pr_height": 60}, DEFAULTS)
     assert atelier.UNSCALED_PARAMS <= set(atelier.PARAM_KEYS)
 
 
