@@ -21,10 +21,18 @@ export const ATELIER_FINISH: Record<string, Finish> = {
   knob: "gold_pvd", knob_logo_floor: "gold_matte", collar_etch_floor: "gold_matte", grille_fabric: "fabric", rear_fabric: "fabric",
   fin_pad: "internal", fin_pad_2: "internal", fin_pad_3: "internal", led: "led",
 };
+// INTI (concept render, Oct 2026): cream/ivory Jesmonite with a smooth lacquer-like finish; brass/gold metal parts
+// (their finish is TBD, so the preview uses Faro's brushed, lacquered brass). The rear panel's material is TBD and
+// keeps its exported colour.
+export const INTI_FINISH: Record<string, Finish> = {
+  body: "cream", brow_nose: "brass", eye: "brass", eye_2: "brass", grille: "brass", dial: "brass", dial_2: "brass",
+  top_rim: "brass", base_ring: "brass",
+};
+const FINISHES_BY_PRODUCT: Record<string, Record<string, Finish>> = { atelier: ATELIER_FINISH, inti: INTI_FINISH };
 
 /** The finish map for a product's GLB (Faro's when not given). */
 export function finishesFor(product?: string): Record<string, Finish> {
-  return product === "atelier" ? ATELIER_FINISH : FINISH;
+  return (product && FINISHES_BY_PRODUCT[product]) || FINISH;
 }
 const GLOW = new THREE.Color("#ffb45e");
 

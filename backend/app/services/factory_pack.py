@@ -80,8 +80,11 @@ def pack_module(project: Project):
     import importlib
 
     product = product_for(project)
-    if product is None or not product.factory_pack:
+    if product is None:
         raise FactoryPackError("The Factory Pack needs a parametric product (template project such as Faro).")
+    if not product.factory_pack:
+        raise FactoryPackError(f"{product.label} has no Factory Pack yet: its dimensions and specification are still "
+                               "to be given.")
     return importlib.import_module(product.factory_pack)
 
 
@@ -114,8 +117,11 @@ def _drawn_parts(project: Project) -> list[str]:
 def pack_contents(project: Project) -> dict[str, Any]:
     """Everything the pack needs, gathered once (also served to the Factory Pack tab)."""
     product = product_for(project)
-    if product is None or not product.factory_pack:
+    if product is None:
         raise FactoryPackError("The Factory Pack needs a parametric product (template project such as Faro).")
+    if not product.factory_pack:
+        raise FactoryPackError(f"{product.label} has no Factory Pack yet: its dimensions and specification are still "
+                               "to be given.")
     params = current_parameters(project)
     bom = build_bom(project)
     recs = {r["part_id"]: r for r in project_recommendations(project)}

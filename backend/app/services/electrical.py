@@ -22,6 +22,9 @@ def project_runtime(project: Project) -> dict[str, Any]:
         return {"applicable": False, "reason": "This project has no electrical model."}
     if power not in ("battery", "undecided"):
         return {"applicable": False, "reason": f"Power type is {power}: no battery runtime.", "compliance": []}
+    if not spec.get("battery"):
+        return {"applicable": False, "reason": "The battery and loads are not specified yet (TBD), so there is no "
+                "runtime estimate.", "compliance": list(spec.get("compliance", []))}
     present = {p.cad_key for p in project.parts if p.cad_key}
     removed = {ld["part"] for ld in spec.get("loads", []) if ld.get("part") and ld["part"] not in present}
     target = req.get("battery_runtime_h")
