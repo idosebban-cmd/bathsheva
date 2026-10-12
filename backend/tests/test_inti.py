@@ -30,7 +30,7 @@ def test_requirements_leave_unstated_values_tbd():
     assert req.approx_dimensions.depth_mm is None
     assert req.target_retail_price.amount is None and req.target_unit_cost.amount is None
     assert req.production_volume is None and req.intended_markets == [] and req.battery_runtime_h is None
-    assert req.power_type == "battery"  # USB-C is "power and charging"
+    assert req.power_type == "undecided"  # battery, or mains over USB-C: TBD
     text = " ".join(req.functional_requirements)
     for fact in ("Front grille only", "USB-C (power and charging)", "3.5 mm aux", "no separate power jack",
                  "volume control", "real metal"):
@@ -58,13 +58,14 @@ def test_decisions_reference_real_parts_processes_and_materials():
             assert d["part"] in PARTS and d["process"] in RULES.processes and d["material"] in RULES.materials
             assert d["process"] in RULES.materials[d["material"]].processes
     assert [d["part"] for d in TPL["decisions"] if "part" in d] == ["body"]  # metal processes are TBD
+    assert not any(d.get("topic") == "power" for d in TPL["decisions"])  # the power source is TBD
 
 
 @pytest.mark.parametrize("key", METAL)
 def test_metal_parts_get_a_real_metal_route(key):
     """The solid-metal constraint applies to every brass/gold part and a metal route exists for each."""
     part = {**PARTS[key], "id": 1, "derived_traits": [], "open_questions": []}
-    rec = recommend(RULES, part, Context(power_type="battery", production_volume=None, cad_parameters={}, joints=[]))
+    rec = recommend(RULES, part, Context(power_type="undecided", production_volume=None, cad_parameters={}, joints=[]))
     assert rec["viable"], key
     assert not any(c["violations"] for c in rec["constraints"]), key
     assert any(c["key"] == "visible_parts_solid_metal" for c in rec["constraints"])
@@ -72,7 +73,7 @@ def test_metal_parts_get_a_real_metal_route(key):
 
 def test_tbd_list_covers_the_open_points():
     topics = {t["topic"] for t in TPL["tbd"]}
-    assert {"Dimensions", "Body", "Metal", "Grille", "Controls", "Rear panel", "Electronics", "Commercial"} <= topics
+    assert {"Dimensions", "Body", "Metal", "Grille", "Controls", "Rear panel", "Power", "Electronics", "Commercial"} <= topics
     assert all(t["item"] and t["why"] for t in TPL["tbd"])
     assert set(inti.TBD_PARAMS) == {d.key for d in inti.PARAMS}  # every CAD default is a placeholder
     assert all(d.help.startswith("TBD") for d in inti.PARAMS)

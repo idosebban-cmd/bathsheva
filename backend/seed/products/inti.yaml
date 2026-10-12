@@ -19,8 +19,8 @@ requirements:
   production_volume: null                                                 # TBD
   target_unit_cost: {amount: null, currency: GBP}                         # TBD
   intended_markets: []                                                    # TBD
-  power_type: battery                                                     # USB-C is "power and charging": a rechargeable battery
-  battery_runtime_h: null                                                 # TBD
+  power_type: undecided                                                   # TBD: battery, or mains over USB-C (user, Oct 2026)
+  battery_runtime_h: null                                                 # TBD (only if battery-powered)
   preferred_materials:
     - Cast Jesmonite body (grade, reinforcement and wall thickness TBD)
     - "Brass/gold real-metal parts: brow-and-nose piece, two eyes, stepped front grille, two side dials, top rim, base ring (alloy and process TBD)"
@@ -116,7 +116,9 @@ parts:
     traits: [electrical, internal]
   - cad_key: battery
     name: Battery pack
-    function: Rechargeable battery, charged over USB-C. Chemistry, cells, capacity and certification TBD (space-only placeholder).
+    function: >-
+      Rechargeable battery charged over USB-C, only if INTI is battery-powered (power source TBD: battery, or
+      mains over USB-C). Chemistry, cells, capacity and certification TBD (space-only placeholder).
     material_category: electrical
     finish: None (internal)
     traits: [electrical, internal]
@@ -134,7 +136,8 @@ joints: []
 
 open_decisions: []
 
-# Decisions fixed by the concept (user, Oct 2026), recorded on new projects. The Jesmonite grade is TBD;
+# Decisions fixed by the concept (user, Oct 2026), recorded on new projects. The power source is not one of
+# them: battery or mains over USB-C is TBD (user, Oct 2026). The Jesmonite grade is TBD;
 # AC100 with glass fibre is the only Jesmonite in the rules data, so the route records it and the reason
 # says the grade is still open. The metal parts' processes are not decided: the rules engine recommends.
 decisions:
@@ -144,16 +147,14 @@ decisions:
     reason: >-
       Cast Jesmonite body (concept, user Oct 2026). Grade, reinforcement, wall thickness and the lacquer-like
       finish system are TBD; AC100 is recorded as the only Jesmonite in the rules data.
-  - topic: power
-    chosen: {value: battery}
-    reason: Rear USB-C for power and charging (concept, user Oct 2026); battery spec TBD.
 
-# Electrical model: no battery or loads have been specified, so there is no runtime estimate yet.
+# Electrical model: the power source is TBD and no battery or loads have been specified, so there is no runtime
+# estimate yet.
 electrical:
-  runtime_basis: "on a basis still TBD (battery and listening level not specified)"
+  runtime_basis: "on a basis still TBD (power source, battery and listening level not specified)"
   compliance:
     - "Radio, EMC and safety approval for a Bluetooth speaker in each market (markets TBD), e.g. UKCA under the UK Radio Equipment Regulations 2017 for the UK."
-    - "Battery transport and safety testing (UN38.3, IEC 62133-2) once the battery is chosen."
+    - "If battery-powered: battery transport and safety testing (UN38.3, IEC 62133-2) once the battery is chosen."
     - "Bluetooth SIG qualification and listing."
 
 # Default CAD parameters (mm). EVERY value is a placeholder (TBD), only so the massing model builds.
@@ -194,7 +195,7 @@ pricing:
 
 power_options:
   - key: A
-    label: "A: battery, USB-C power and charging (battery TBD)"
+    label: "A: USB-C power (battery or mains TBD)"
     scenario: null
 
 scenarios: []
@@ -219,7 +220,8 @@ tbd:
   - {topic: Rear panel, item: "Panel material, finish, size and fixing", why: "If it looks metallic it must be real metal (design constraint)."}
   - {topic: Electronics, item: "Driver(s): type, size, power rating; enclosure type (sealed or ported) and air volume", why: "Only 'front grille only' is given."}
   - {topic: Electronics, item: "Amplifier power, Bluetooth version, codecs, range and features (multipoint, app, microphone)", why: "Only 'Bluetooth speaker' is given."}
-  - {topic: Electronics, item: "Battery: chemistry, cells, capacity, runtime target, charge power and time", why: "USB-C powers and charges it; nothing else is given."}
+  - {topic: Power, item: "Power source: a rechargeable battery charged over USB-C, or mains power over USB-C (no battery)", why: "The concept gives USB-C for power and charging; whether there is a battery is not decided (user, Oct 2026)."}
+  - {topic: Electronics, item: "If battery-powered, the battery: chemistry, cells, capacity, runtime target, charge power and time", why: "Nothing about a battery is given."}
   - {topic: Electronics, item: "Status indication (LED or none) and any buttons besides the dials", why: "Not shown in the design facts."}
   - {topic: Commercial, item: "Target retail price, production volume, target unit cost and markets", why: "Needed for the cost model, pricing targets and certification."}
   - {topic: Mass, item: "Target mass and stability", why: "No mass target is given."}

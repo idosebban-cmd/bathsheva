@@ -133,7 +133,9 @@ PRODUCTION_CHANGES: list[dict[str, str]] = [
      "production": "Rectangular panel with a USB-C and a 3.5 mm opening at typical connector sizes; panel "
                    "material, size and fixing TBD. No rear grille and no separate power jack, as the concept"},
     {"feature": "Electronics", "prototype": "Bluetooth speaker",
-     "production": "Driver, battery and main board are space-only placeholder envelopes; none is specified"},
+     "production": "Driver, battery and main board are space-only placeholder envelopes; none is specified. "
+                   "The battery is there only in case INTI is battery-powered: the power source (battery, or mains "
+                   "over USB-C) is TBD"},
 ]
 
 IMPLEMENTED_CHANGES: dict[str, set[str]] = {}
