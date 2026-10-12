@@ -2,8 +2,8 @@
 
 Uses the sheet, dimensioning and section helpers of `drawings` (Faro's drawings), with Atelier's own views:
 sections through the axis for the turned and cast round parts, a section through the front-back plane for
-the body and the bezels, the fin's mid-plane section and plan, and projected front views of the honeycomb
-grilles drawn from the same hole layout the CAD cuts. Pure: CAD parameters plus part metadata in, a
+the body and the bezel, the fin's mid-plane section and plan, and a projected front view of the honeycomb
+grille drawn from the same hole layout the CAD cuts. Pure: CAD parameters plus part metadata in, a
 reportlab Drawing out. No database access.
 """
 
@@ -23,13 +23,13 @@ from app.factory.drawings import (DIM, ENGRAVED_FILL, INK, MARGIN, PAGE_H, PAGE_
                                   _draw_faces, _fmt, _frame_and_title, _notes, _scale_label, _text, _wires_xy)
 
 # Made-to-drawing parts, in drawing order (bought-in parts are specified by datasheet).
-DRAWN_PARTS = ["body", "nose_cone", "fin", "collar", "foot", "knob", "bezel", "grille", "rear_bezel", "rear_grille",
+DRAWN_PARTS = ["body", "nose_cone", "fin", "collar", "foot", "knob", "bezel", "grille",
                "ballast", "chassis", "fin_pad"]
 # The process each drawing's notes are written for (the Factory Pack checks the part's process against it).
 NOTE_PROCESS = {
     "body": "injection_moulding", "nose_cone": "cnc_machining", "fin": "zinc_die_casting", "collar": "zinc_die_casting",
-    "foot": "zinc_die_casting", "knob": "cnc_turning_near_net", "bezel": "cnc_machining", "rear_bezel": "cnc_machining",
-    "grille": "photo_etching_stainless", "rear_grille": "photo_etching_stainless",
+    "foot": "zinc_die_casting", "knob": "cnc_turning_near_net", "bezel": "cnc_machining",
+    "grille": "photo_etching_stainless",
 }
 GOLD_PVD = ("Gold PVD, fine brushed satin, one matched tone across all parts (ΔE ≤ 1.5 to the signed master sample); "
             "base layer as the coater specifies (copper-nickel on zinc, nickel on brass). Grain horizontal as fitted.")
@@ -93,7 +93,7 @@ def _part_notes(key: str, p: dict[str, float], m: atelier.Model) -> list[tuple[s
               ("Oxblood red #8A1C15: primer, colour, two clear coats, cut and polished to ≥ 90 GU; ΔE ≤ 1.0 to the signed "
                "master sample. Class A surface: no sink, weld lines or gate marks on the outside.", INK),
               (f"Front: grille recess and Ø{_fmt(I['sound_opening_dia'])} sound opening; knob hole and Ø3 LED hole below "
-               "it. Rear: radiator opening with its recess. Six vertical slots for the M4 fin screws.", INK),
+               "it. Sealed box: no rear opening. Six vertical slots for the M4 fin screws.", INK),
               ("Seams to the nose cone and collar 0.3 ±0.1 mm, flush within 0.1 mm.", INK)]
     elif key == "nose_cone":
         n += [("6061-T6, CNC turned and hollowed (spec). Spigot with an O-ring groove; bayonet with a hidden detent to "

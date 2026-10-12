@@ -125,6 +125,22 @@ material_prices:
     confidence: low
     verified: false
 
+  - material: hardwood_beech
+    form: kiln-dried beech or ash turning blanks
+    gbp_per_kg: {low: 2.5, high: 4.5}
+    density_g_cm3: 0.72
+    source: model-generated
+    confidence: low
+    verified: false
+
+  - material: walnut
+    form: kiln-dried walnut turning blanks
+    gbp_per_kg: {low: 6.0, high: 11.0}
+    density_g_cm3: 0.61
+    source: model-generated
+    confidence: low
+    verified: false
+
   - material: tpu
     form: moulding pellets
     gbp_per_kg: {low: 4.0, high: 8.0}

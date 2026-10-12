@@ -5,8 +5,12 @@ measurements. Driver and radiator Thiele-Small values in the template are placeh
 datasheet arrives, so every result is flagged unverified.
 
 * Box alignment (closed-box equivalent): alpha = Vas / Vb, fc = Fs x sqrt(1 + alpha), Qtc = Qts x sqrt(1 + alpha).
-* Passive radiator: the moving mass that tunes it to fb in the box, Mmp = rho c^2 Sp^2 / (Vb (2 pi fb)^2), ignoring
-  its own suspension (the supplier adds that).
+* Sealed box (the default, user Oct 2026): a second-order high-pass at fc with Q = Qtc; the -3 and -6 dB points
+  are solved from |H(f)|. DSP bass enhancement: a low-shelf boost of up to `dsp_bass_boost_db` fills the first
+  B dB of the roll-off, so the -3 dB point moves to where the box alone is -(3 + B) dB. An excursion limiter in the
+  DSP holds the cone within xmax, so the boosted bass only reaches full level above `full_spl_from_hz`.
+* Passive radiator (comparison only, when the spec has `passive_radiator`): the moving mass that tunes it to fb in
+  the box, Mmp = rho c^2 Sp^2 / (Vb (2 pi fb)^2), ignoring its own suspension (the supplier adds that).
 * Loudness: the amplifier-limited (thermal) SPL is sensitivity + 10 log10(P). The excursion-limited SPL of a piston
   of area S moving x (peak) at f, on a table (half space) at r = 1 m, is p = rho S x (2 pi f)^2 / (2 pi r).
 * Battery: peak input power = amplifier RMS / (amplifier efficiency x boost efficiency); peak current at the cells'
@@ -35,22 +39,43 @@ def excursion_spl(area_cm2: float, xmax_mm: float, f_hz: float, r_m: float = 1.0
     return _spl(p)
 
 
+def _sealed_db(f: float, fc: float, q: float) -> float:
+    """Response (dB) of a sealed box: second-order high-pass at fc with Q."""
+    x = f / fc
+    return 10 * math.log10(x**4 / ((1 - x * x) ** 2 + (x / q) ** 2))
+
+
+def _sealed_point(fc: float, q: float, db: float) -> float:
+    """Frequency where the sealed box is `db` dB down (db > 0), by bisection below 4 fc."""
+    lo, hi = fc / 20, fc * 4
+    for _ in range(60):
+        mid = math.sqrt(lo * hi)
+        if _sealed_db(mid, fc, q) < -db:
+            lo = mid
+        else:
+            hi = mid
+    return math.sqrt(lo * hi)
+
+
 def evaluate(audio: dict[str, Any], box_l: float, battery: dict[str, Any] | None = None) -> dict[str, Any]:
-    drv, pr, amp = audio["driver"], audio["passive_radiator"], audio["amplifier"]
+    drv, amp = audio["driver"], audio["amplifier"]
+    pr = audio.get("passive_radiator")  # None: sealed box (the default)
     alpha = float(drv["vas_l"]) / box_l
     fc = float(drv["fs_hz"]) * math.sqrt(1 + alpha)
     qtc = float(drv["qts"]) * math.sqrt(1 + alpha)
-    fb = float(pr["target_fb_hz"])
-    sp = float(pr["sd_cm2"]) * 1e-4
-    mmp_g = RHO_C2 * sp**2 / (box_l * 1e-3 * (2 * math.pi * fb) ** 2) * 1000
     p_amp = float(amp["rms_w"])
     thermal = float(drv["sensitivity_db"]) + 10 * math.log10(min(p_amp, float(drv["power_rms_w"])))
     target_spl = float(audio.get("target_spl_db", 90))
     f_low = float(audio.get("target_low_hz", 60))
+    boost = float(audio.get("dsp_bass_boost_db", 0.0))
+    f3, f6 = _sealed_point(fc, qtc, 3.0), _sealed_point(fc, qtc, 6.0)
+    f3_dsp, f6_dsp = _sealed_point(fc, qtc, 3.0 + boost), _sealed_point(fc, qtc, 6.0 + boost)
+    freqs = {f_low, 100.0, 150.0, 200.0} | ({float(pr["target_fb_hz"])} if pr else {round(f3_dsp)})
     bass = []
-    for f in sorted({f_low, fb, 100.0, 150.0, 200.0}):
+    for f in sorted(freqs):
         d = excursion_spl(float(drv["sd_cm2"]), float(drv["xmax_mm"]), f)
-        r = excursion_spl(float(pr["sd_cm2"]), float(pr["xmax_mm"]), f) if f <= 1.5 * fb else None
+        r = (excursion_spl(float(pr["sd_cm2"]), float(pr["xmax_mm"]), f)
+             if pr and f <= 1.5 * float(pr["target_fb_hz"]) else None)
         bass.append({"f_hz": round(f), "driver_db": round(d, 1), "radiator_db": None if r is None else round(r, 1)})
     # lowest frequency at which the driver alone reaches the target SPL within xmax (SPL rises 12 dB/octave)
     d_low = excursion_spl(float(drv["sd_cm2"]), float(drv["xmax_mm"]), 100.0)
@@ -59,12 +84,19 @@ def evaluate(audio: dict[str, Any], box_l: float, battery: dict[str, Any] | None
         "full_spl_from_hz": round(f_full),
         "box_l": round(box_l, 3),
         "alpha": round(alpha, 2), "fc_hz": round(fc), "qtc": round(qtc, 2),
-        "pr_target_fb_hz": round(fb), "pr_moving_mass_g": round(mmp_g, 1),
+        "alignment": "passive_radiator" if pr else "sealed",
+        "f3_hz": round(f3), "f6_hz": round(f6), "dsp_bass_boost_db": boost,
+        "f3_dsp_hz": round(f3_dsp), "f6_dsp_hz": round(f6_dsp),
         "thermal_spl_db": round(thermal, 1), "target_spl_db": target_spl,
         "spl_ok": thermal >= target_spl, "driver_power_ok": float(drv["power_rms_w"]) >= p_amp,
         "bass": bass, "target_low_hz": f_low,
-        "unverified": not all(x.get("verified", False) for x in (drv, pr, amp)),
+        "unverified": not all(x.get("verified", False) for x in (drv, amp, *([pr] if pr else []))),
     }
+    if pr:
+        fb = float(pr["target_fb_hz"])
+        sp = float(pr["sd_cm2"]) * 1e-4
+        mmp_g = RHO_C2 * sp**2 / (box_l * 1e-3 * (2 * math.pi * fb) ** 2) * 1000
+        out.update({"pr_target_fb_hz": round(fb), "pr_moving_mass_g": round(mmp_g, 1)})
     if battery:
         cells = int(battery["cells"])
         p_in = p_amp / (float(amp["efficiency"]) * float(amp["boost_efficiency"]))

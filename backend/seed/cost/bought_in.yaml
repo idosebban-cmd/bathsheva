@@ -141,8 +141,8 @@ bought_in:
     confidence: low
     verified: false
   - key: jesmonite_cast_in_inserts
-    name: "Cast-in brass inserts for the Jesmonite body: driver (4), radiator (4) and fin fixings (6), placed on a jig"
-    gbp: {low: 3.0, high: 7.0}
+    name: "Cast-in brass inserts for the Jesmonite body: driver (4) and fin fixings (6), placed on a jig"
+    gbp: {low: 2.0, high: 5.0}
     source: model-generated
     confidence: low
     verified: false
@@ -163,6 +163,29 @@ bought_in:
   - key: jesmonite_part_inserts
     name: "Cast-in brass inserts for the Jesmonite fins (2 each) and collar (3 x M2.5 and the M4 stud), placed on jigs"
     gbp: {low: 2.0, high: 4.5}
+    source: model-generated
+    confidence: low
+    verified: false
+  - key: wood_threaded_inserts
+    name: "Glued-in brass threaded inserts for the wood body: driver (4) and fin fixings (6), on a jig"
+    gbp: {low: 2.0, high: 5.0}
+    source: model-generated
+    confidence: low
+    verified: false
+  - key: steel_fire_enclosure
+    # Wood can't be the fire enclosure (IEC 62368-1): the internal metal chassis is extended into a closed steel
+    # enclosure round the battery and main board. To be confirmed by a test house.
+    name: Steel fire enclosure round the battery and main board (0.6 mm sheet, folded, zinc plated), extending the chassis
+    gbp: {low: 3.0, high: 7.0}
+    source: model-generated
+    confidence: low
+    verified: false
+  - key: rear_radiator_cover_set
+    # Comparison scenario only (the design is a sealed box): the rear cover (0.5 mm photo-etched stainless, formed,
+    # gold PVD), the oval bezel (CNC 6061, gold PVD) and the black fabric, from the model's earlier part estimates
+    # (cover about £10, bezel about £13 at 500 units, including tooling).
+    name: Rear radiator cover set (photo-etched stainless cover and CNC 6061 bezel, gold PVD, black fabric)
+    gbp: {low: 14.0, high: 34.0}
     source: model-generated
     confidence: low
     verified: false

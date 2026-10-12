@@ -32,7 +32,7 @@ from app.services.recommendations import project_recommendations
 MECHANICAL_TITLE = "Request for quotation: housing, metalwork and finishing"
 ELECTRONICS_TITLE = "Request for quotation: Bluetooth audio electronics, driver and battery"
 ODM_TITLE = "Request for quotation: complete product (ODM)"
-ELECTRONIC_PARTS = {"driver", "passive_radiator", "battery", "main_board"}
+ELECTRONIC_PARTS = {"driver", "battery", "main_board"}
 ELECTRONIC_ITEM_KEYS = {"speaker_driver_57", "passive_radiator_60x40", "speaker_main_board", "battery_pack_1s2p",
                         "battery_pack_1s2p_custom", "usb_c_receptacle_ip67", "rotary_encoder_push",
                         "status_led_light_pipe", "usb_c_cable_braided"}
@@ -127,10 +127,11 @@ def rfq_blocks(c: dict[str, Any]) -> list[Block]:
         f"about {st['footprint_mm'][0]:.0f} mm, mass {p['target_mass_kg']:g} ±0.1 kg. Form and proportions follow our "
         "approved prototype; the STEP files are the reference.",
         f"Body: PC/ABS, injection moulded, {p['wall_thickness']:g} mm wall; primer, colour, two clear coats, polished.",
-        "Gold parts, all gold PVD in one matched tone: 6061 nose cone (CNC turned, hollowed) and bezels (CNC, diamond-cut "
+        "Gold parts, all gold PVD in one matched tone: 6061 nose cone (CNC turned, hollowed) and bezel (CNC, diamond-cut "
         "chamfer); Zamak 5 fins (die-cast, hollow, 3 mm wall), collar and foot (die-cast, foot machined); solid brass C360 "
-        "knob (CNC turned, knurled, emblem engraved); stainless 304 grilles (0.5 mm, photo-etched hexagons, formed).",
-        "Construction: an internal steel chassis carries the driver, radiator, boards and battery tray plate. Fins screw into "
+        "knob (CNC turned, knurled, emblem engraved); stainless 304 front grille (0.5 mm, photo-etched hexagons, formed).",
+        "Enclosure: a sealed box with only the front grille (no rear opening, no passive radiator), as the prototype.",
+        "Construction: an internal steel chassis carries the driver, boards and battery tray plate. Fins screw into "
         "it with M4 through slots in the shell. The nose cone sits on a spigot with an O-ring and a bayonet with a hidden "
         "detent. The base collar screws into the tray plate from below, with the screws hidden under the foot. No visible "
         "fasteners.",
@@ -192,12 +193,12 @@ def electronics_rfq_blocks(c: dict[str, Any]) -> list[Block]:
     r = fp._rfq_settings(project)
     tpl_audio = (c.get("audio") or {})
     m = atelier.model(c["params"])
-    bb = {k: m.parts[k].bounding_box() for k in ("battery", "driver", "passive_radiator", "main_board")}
+    bb = {k: m.parts[k].bounding_box() for k in ("battery", "driver", "main_board")}
     b: list[Block] = fp._header(c, f"Request for quotation: {project.name} speaker electronics, driver and battery")
     b.append(Block("warn", "Values marked UNVERIFIED are design estimates. Items marked COMPLIANCE need certificates from "
                            "an accredited test lab."))
     b.append(Block("h2", "What we would like you to quote"))
-    b.append(Block("p", r.get("first_order", "") + " One set = main board, driver, passive radiator, battery pack, sealed "
+    b.append(Block("p", r.get("first_order", "") + " One set = main board, driver, battery pack, sealed "
                    "USB-C receptacle, encoder, status LED and the braided cable. Quantities: "
                    + " / ".join(f"{q:,}" for q in fp.QUANTITY_TIERS) + ". Tell us your MOQ."))
     b.append(Block("h2", "Main board"))
@@ -206,7 +207,8 @@ def electronics_rfq_blocks(c: dict[str, Any]) -> list[Block]:
         "ready; SBC and AAC (aptX Adaptive optional, price it separately); 10 m range in our enclosure.",
         "Multipoint (2 devices), stereo pairing (two speakers), remembers 8 devices, OTA firmware updates; no microphone, "
         "no app.",
-        "DSP: bass enhancement, loudness compensation and a limiter, tuned to our enclosure and driver.",
+        "DSP: bass enhancement (low-shelf, up to about +6 dB) with an excursion limiter, loudness compensation and a "
+        "limiter, tuned to our sealed box and driver.",
         "20 W RMS Class-D amplifier fed by a boost converter from the 1S battery (about 3.6 V). UNVERIFIED: about 8 A "
         "from the pack at full power; confirm the topology and the cells' rating.",
         "USB-C PD charging 5–9 V up to 20 W; full charge in 3 h or less; play while charging; standby after 20 min.",
@@ -218,13 +220,13 @@ def electronics_rfq_blocks(c: dict[str, Any]) -> list[Block]:
         "Antenna: the board sits on the chassis spine near the top, behind the red PC/ABS body (radio-transparent), away "
         "from the steel chassis and gold PVD trim; confirm the 10 m range.",
     ]))
-    b.append(Block("h2", "Driver and passive radiator"))
+    b.append(Block("h2", "Driver (sealed box)"))
     b.append(Block("bullets", items=[
-        "57 mm full-range neodymium driver rated 20 W RMS; send the datasheet with Thiele-Small values, Xmax and its net "
-        "displaced volume.",
-        "Passive radiator about 60 × 40 mm oval, mass-tunable; tune it with the driver to our box "
-        f"(UNVERIFIED: about {tpl_audio.get('box_l', 0.74):.2f} L of air).",
-        "Targets: 60 Hz–20 kHz (−6 dB); 90 dB SPL or more at 1 m; THD 1% or less at 85 dB.",
+        "57 mm full-range neodymium driver rated 20 W RMS, for a sealed box (no passive radiator) of about "
+        f"{tpl_audio.get('box_l', 0.75):.2f} L of air (UNVERIFIED); send the datasheet with Thiele-Small values, Xmax and "
+        "its net displaced volume.",
+        "Targets: 80 Hz–20 kHz (−6 dB) with the DSP bass enhancement at normal listening level; 90 dB SPL or more at "
+        "1 m; THD 1% or less at 85 dB.",
     ]))
     b.append(Block("h2", "Battery pack"))
     b.append(Block("bullets", items=[
@@ -245,9 +247,7 @@ def electronics_rfq_blocks(c: dict[str, Any]) -> list[Block]:
     b.append(Block("table", widths=[2.5, 7.5], header=["Item", "Space"], rows=[
         ["Main board", f"{sz('main_board')} mm (W × D × H) on the chassis spine"],
         ["Battery", f"{sz('battery')} mm, upright in the ballast cup, standing on the tray plate"],
-        ["Driver", f"Ø{bb['driver'].size.X:.0f} × {bb['driver'].size.Y:.0f} mm deep behind the front grille"],
-        ["Passive radiator", f"{bb['passive_radiator'].size.X:.0f} × {bb['passive_radiator'].size.Z:.0f} mm oval, "
-                             f"{bb['passive_radiator'].size.Y:.0f} mm including travel, at the rear"],
+        ["Driver", f"Ø{bb['driver'].size.X:.0f} × {bb['driver'].size.Y:.0f} mm deep behind the front grille (sealed box)"],
     ]))
     b.append(Block("h2", "Certification"))
     b.append(Block("bullets", items=[f"COMPLIANCE: {x}" for x in (c.get("runtime") or {}).get("compliance", [])] +
@@ -257,7 +257,7 @@ def electronics_rfq_blocks(c: dict[str, Any]) -> list[Block]:
     b.append(Block("bullets", items=[
         "Unit price per set at each quantity; NRE for the DSP tuning and firmware; who owns the firmware.",
         "The module's certificates and Bluetooth SIG qualification ID; what product testing you can support.",
-        "Datasheets for the module, amplifier, boost converter, charger, cells, driver and radiator.",
+        "Datasheets for the module, amplifier, boost converter, charger, cells and driver.",
         "Lead times for samples and production; warranty; country of origin.",
     ]))
     return fp._numbered(b)
@@ -428,7 +428,7 @@ def readme(c: dict[str, Any]) -> str:
         "              artwork/ (Bathsheva emblem for the knob, ATELIER lettering for the collar; 1:1 SVG and DXF)",
         "electronics/  for audio electronics, driver and battery suppliers:",
         "              rfq_electronics.pdf (and .md): main board (Bluetooth, DSP, 20 W amplifier, charger), driver,",
-        "              passive radiator, pre-certified 1S2P pack, sealed USB-C, encoder, LED, cable",
+        "              pre-certified 1S2P pack, sealed USB-C, encoder, LED, cable",
         "",
         "Quantities to quote: " + ", ".join(f"{q:,}" for q in fp.QUANTITY_TIERS) + " units.",
         "Units: millimetres. Values marked UNVERIFIED are working assumptions; SAFETY and COMPLIANCE items need certificates.",
@@ -470,7 +470,7 @@ def build_factory_pack(project: Project) -> tuple[str, bytes]:
 # ---------------------------------------------------------------------------
 # ODM: one supplier quotes the finished speaker (electronics, tooling, assembly)
 # ---------------------------------------------------------------------------
-ODM_ROUTE_PARTS = ["body", "nose_cone", "fin", "collar", "foot", "grille", "bezel", "rear_grille", "rear_bezel", "knob",
+ODM_ROUTE_PARTS = ["body", "nose_cone", "fin", "collar", "foot", "grille", "bezel", "knob",
                    "chassis", "ballast"]
 
 
@@ -493,7 +493,7 @@ def odm_rfq_blocks(c: dict[str, Any]) -> list[Block]:
     b.append(Block("p", r.get("first_order", "") + f" Quantities to quote: {tiers} units."))
     b.append(Block("h2", "Please quote"))
     b.append(Block("bullets", items=[
-        "Your recommended manufacturing route for each main part (body, nose cone, fins, collar, foot, grilles, bezels, "
+        "Your recommended manufacturing route for each main part (body, nose cone, fins, collar, foot, grille, bezel, "
         "knob, chassis, ballast), and any lower-tooling route you would suggest for a first batch of 300 to 500 (for "
         "example soft tooling, CNC or investment casting instead of steel moulds and die-casting dies).",
         "Tooling: an itemised list (each mould, die, fixture and test jig), its cost, expected life and who owns it.",
@@ -510,7 +510,7 @@ def odm_rfq_blocks(c: dict[str, Any]) -> list[Block]:
     b.append(Block("bullets", items=[
         f"Size and mass: {p['overall_height']:g} ±1 mm tall, body Ø{p['body_max_diameter']:g} mm, {p['target_mass_kg']:g} "
         "±0.1 kg, standing on its three fins (tip-over 18° or more).",
-        "Every part that looks like metal is real metal: gold PVD on metal parts, solid brass knob, stainless grilles. No "
+        "Every part that looks like metal is real metal: gold PVD on metal parts, solid brass knob, stainless grille. No "
         "metallised plastic, metal-effect paint or metal-powder coatings.",
         "The battery is replaceable after removing the base collar, with standard tools only (no glue, no soldering).",
         "Playback 15 h or more at 50% volume; 20 W RMS; Bluetooth 5.3 with multipoint and stereo pairing.",
@@ -543,7 +543,7 @@ def odm_quote_sheet_csv(c: dict[str, Any]) -> str:
         pt = by_key.get(key)
         if pt:
             w.writerow([pt["name"], pt["part_no"], *blank])
-    for name in ("Main board (Bluetooth, DSP, amplifier with boost, charger)", "Driver (57 mm, 20 W)", "Passive radiator",
+    for name in ("Main board (Bluetooth, DSP, amplifier with boost, charger)", "Driver (57 mm, 20 W, sealed box)",
                  "Battery pack (2 x 18650 1S2P, protection)", "Sealed USB-C receptacle", "Rotary encoder with push switch",
                  "Status LED and light pipe", "USB-C cable", "Fasteners, seals, fabric, damping pads"):
         w.writerow([name, "electronics RFQ / BOM", *blank])

@@ -38,9 +38,9 @@ def dfm_checks(project: "Project", params: dict[str, Any], rules: "RuleSet", _ch
     checks.append(_check(
         "Geometry", "pass" if margin >= atelier.MASS_MARGIN_MIN_G else "warning", "Risk: mass margin",
         f"{margin:.0f} g of ballast can still be added below the driver (the cup is {s['ballast_g']:.0f} g of at most "
-        f"{s['ballast_max_g']:.0f} g). If the driver, radiator, battery, board or PVD parts come in lighter than "
-        "estimated, the speaker falls short of 1.8 kg. Recheck once supplier part weights arrive; options are a denser "
-        "or taller ballast, or a heavier collar.", unverified=True, part="Ballast cup"))
+        f"{s['ballast_max_g']:.0f} g). If the driver, battery, board or PVD parts come in lighter than estimated, the "
+        "speaker falls further short of 1.8 kg. Recheck once supplier part weights arrive; options are a denser ballast "
+        "(brass or copper instead of steel), a taller cup, or a heavier collar.", unverified=True, part="Ballast cup"))
     checks.append(_check(
         "Geometry", "pass" if s["com_mm"][2] <= spec["com_max_mm"] else "fail", "Centre of mass",
         f"{s['com_mm'][2]:.1f} mm above the ground (spec {spec['com_max_mm']:g} mm or lower).", unverified=True))
@@ -52,11 +52,10 @@ def dfm_checks(project: "Project", params: dict[str, Any], rules: "RuleSet", _ch
     lo, hi = spec["air_l"]
     checks.append(_check(
         "Acoustics", "pass" if lo <= s["air_l"] <= hi else "warning", "Air volume",
-        f"About {s['air_l']:.2f} L of air in the box with the rear passive radiator (spec 0.7–0.8 L): the cavity "
-        "less the battery, ballast, chassis and board, plus the hollow nose cone, with the driver displacing about "
-        f"{atelier.DRIVER_DISPLACEMENT_FRAC:.0%} of its envelope and the radiator {atelier.PR_DISPLACEMENT_FRAC:.0%} "
-        f"(typical; {s['air_envelopes_l']:.2f} L if both were solid). The driver supplier's net volumes replace this.",
-        unverified=True, part="Passive radiator"))
+        f"About {s['air_l']:.2f} L of air in the sealed box (spec 0.7–0.8 L): the cavity less the battery, ballast, "
+        "chassis and board, plus the hollow nose cone, with the driver displacing about "
+        f"{atelier.DRIVER_DISPLACEMENT_FRAC:.0%} of its envelope (typical; {s['air_envelopes_l']:.2f} L if it were "
+        "solid). The driver supplier's net volume replaces this.", unverified=True, part="Driver"))
 
     from app.services.electrical import project_runtime
 
@@ -82,19 +81,19 @@ def dfm_checks(project: "Project", params: dict[str, Any], rules: "RuleSet", _ch
             f"About {au['thermal_spl_db']:.0f} dB SPL at 1 m from 20 W into the driver (sensitivity × power; spec "
             f"{au['target_spl_db']:.0f} dB or more). The driver must be rated for the full 20 W.", unverified=uv,
             part="Driver"))
-        b60 = next(b for b in au["bass"] if b["f_hz"] == round(au["target_low_hz"]))
+        b_low = next(b for b in au["bass"] if b["f_hz"] == round(au["target_low_hz"]))
         checks.append(_check(
             "Acoustics", "info", "Bass at full volume (excursion)",
             f"The driver reaches {au['target_spl_db']:.0f} dB within its excursion from about {au['full_spl_from_hz']} Hz "
-            f"up. At {b60['f_hz']} Hz the radiator alone can make about {b60['radiator_db']:.0f} dB, so the DSP limiter "
-            "must hold back the bass at high volume; the −6 dB point at 60 Hz is a normal-level response, which the "
-            "radiator tuning and DSP bass enhancement give.", unverified=uv, part="Passive radiator"))
+            f"up; at {b_low['f_hz']} Hz it can make about {b_low['driver_db']:.0f} dB. The DSP bass enhancement "
+            f"(up to +{au['dsp_bass_boost_db']:g} dB) works at normal listening levels; its excursion limiter holds back "
+            "the bass at high volume.", unverified=uv, part="Driver"))
         checks.append(_check(
-            "Acoustics", "info", "Box and radiator tuning",
-            f"{au['box_l']:.2f} L: the driver alone would give fc {au['fc_hz']} Hz, Qtc {au['qtc']:.2f} (closed box). "
-            f"The radiator tuned to about {au['pr_target_fb_hz']} Hz needs about {au['pr_moving_mass_g']:.1f} g of moving "
-            "mass before its own suspension; the supplier tunes it with the driver.", unverified=uv,
-            part="Passive radiator"))
+            "Acoustics", "info", "Box tuning (sealed)",
+            f"{au['box_l']:.2f} L sealed box: fc {au['fc_hz']} Hz, Qtc {au['qtc']:.2f}; −3 dB at about {au['f3_hz']} Hz "
+            f"and −6 dB at about {au['f6_hz']} Hz from the box alone, about {au['f3_dsp_hz']} Hz and {au['f6_dsp_hz']} Hz "
+            f"with the DSP bass enhancement (+{au['dsp_bass_boost_db']:g} dB). The supplier confirms it with the "
+            "driver's Thiele-Small values.", unverified=uv, part="Driver"))
         if "peak_current_a" in au:
             checks.append(_check(
                 "Electrical", "pass" if au["current_ok"] else "fail", "20 W from a 1S battery",
@@ -121,10 +120,10 @@ def dfm_checks(project: "Project", params: dict[str, Any], rules: "RuleSet", _ch
 
 
 # Typical densities for bought-in bodies (g/cm³): placeholder envelopes are given the mass of the part they
-# stand for (driver 65 g, radiator 60 g, battery 100 g, board 30 g).
+# stand for (driver 65 g, battery 100 g, board 30 g; the radiator 60 g in the comparison variant).
 BOUGHT_IN_DENSITY = {
     "chassis": ("steel_s275", 7.85), "ballast": ("steel_s275", 7.85), "fin_pad": ("tpu", 1.2),
-    "grille_fabric": (None, 0.5), "rear_fabric": (None, 0.5), "driver": (None, 0.85), "passive_radiator": (None, 2.12),
+    "grille_fabric": (None, 0.5), "driver": (None, 0.85),
     "battery": (None, 2.19), "main_board": (None, 1.56),
 }
 
@@ -136,14 +135,15 @@ PRODUCT = Product(
     generator=atelier,
     validate=validate,
     wall_limit_parts={"body": None},
-    wall_params={"body": "wall_thickness", "grille": "grille_thickness", "rear_grille": "grille_thickness"},
+    wall_params={"body": "wall_thickness", "grille": "grille_thickness"},
     dfm_checks=dfm_checks,
     bought_in_density=BOUGHT_IN_DENSITY,
     factory_pack="app.factory.atelier_pack",
     cad_note="Atelier as approved in the prototype, with the Technical Specification: lacquered PC/ABS body; gold PVD on "
              "every visible metal part (Zamak fins, collar and foot, 6061 nose cone and bezels, brass knob, stainless "
-             "grilles); rear passive radiator. One body per part: each fin and its pad is modelled once and shown three "
-             "times. The driver, radiator, battery and board are placeholders showing space and position. The honeycomb "
+             "grille); sealed box with only the front grille, as the prototype. One body per part: each fin and its pad "
+             "is modelled once and shown three times. The driver, battery and board are placeholders showing space and "
+             "position. The honeycomb "
              "grilles take about a minute to build.",
     mass_part="ballast",
     box_volume_l=lambda params: atelier.stability(params)["air_l"],

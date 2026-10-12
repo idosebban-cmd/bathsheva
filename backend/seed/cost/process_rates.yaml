@@ -161,6 +161,18 @@ process_rates:
     source: model-generated
     confidence: low
     verified: false
+  - process: cnc_wood_turning
+    # Per body: glue-up of the blanks, CNC turning and hollowing of two halves, machining openings and pads,
+    # gluing the halves at the belly, sanding. Material utilisation is the blank against the finished shell.
+    machine_gbp_per_hr: {low: 35, high: 60}
+    lead_time_weeks: {low: 3, high: 6}
+    setup_hours: {low: 1.0, high: 3.0}
+    cycle_min: {low: 30, high: 60}
+    cycle_min_per_kg: {low: 0, high: 0}
+    material_utilisation: {low: 6.0, high: 10.0}
+    source: model-generated
+    confidence: low
+    verified: false
   - process: injection_moulding_clear
     machine_gbp_per_hr: {low: 40, high: 70}
     lead_time_weeks: {low: 6, high: 12}

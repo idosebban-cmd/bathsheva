@@ -23,4 +23,5 @@ def project_audio(project: Project) -> dict[str, Any]:
     box = product.box_volume_l(params)
     battery = (load_template(project.template).get("electrical") or {}).get("battery")
     return {"applicable": True, **audio.evaluate(spec, box, battery),
-            "driver": spec["driver"].get("name", ""), "radiator": spec["passive_radiator"].get("name", "")}
+            "driver": spec["driver"].get("name", ""),
+            "radiator": (spec.get("passive_radiator") or {}).get("name", "")}

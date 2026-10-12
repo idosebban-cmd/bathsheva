@@ -247,6 +247,32 @@ processes:
     confidence: low
     verified: false
 
+  - key: cnc_wood_turning
+    name: CNC-turned and hollowed hardwood (two halves glued at the belly)
+    material_categories: [wood]
+    plain_language: >-
+      Kiln-dried hardwood blanks are glued up, turned on a CNC lathe and hollowed
+      in two halves, which are glued together at the widest point with a turned
+      spigot joint. No moulds; openings, pads and insert holes are machined. Wood
+      keeps moving with humidity, so joints and fits need room for it.
+    requires_all: []
+    excludes: [transparent, electrical]
+    suits: [cosmetic, closed_top, axisymmetric]
+    poor_fit: [thin_wall, ring]
+    volume: {min: 1, max: 5000}
+    tooling_cost: low
+    unit_cost: high
+    finish_quality: good
+    wall_mm: {min: 3.0, max: 20.0, typical_min: 4.0, typical_max: 8.0}
+    when_to_prefer: Small batches of a turned, round housing where real wood is part of the look or a lacquered shell without moulds.
+    risks:
+      - Wood moves with humidity (about 0.2–0.4% across the grain per 1% moisture change); seams and spigot fits need clearance or a flexible seal.
+      - Thin walls can crack along the grain if knocked or dried too fast; choose straight-grained, kiln-dried stock.
+      - Open grain telegraphs through gloss lacquer unless it is grain-filled.
+    source: model-generated
+    confidence: low
+    verified: false
+
   - key: photo_etching_stainless
     name: Photo-etched stainless sheet (formed after etching)
     material_categories: [stainless]

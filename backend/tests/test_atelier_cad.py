@@ -40,8 +40,10 @@ def test_validation_ranges_and_rules():
 
 def test_normalise_upgrade_and_scaling_sets():
     assert atelier.normalise(PLAIN)["grille_perforated"] == 0
-    old = {k: v for k, v in DEFAULTS.items() if k != "pr_width"}
-    assert atelier.upgrade(old, DEFAULTS)["pr_width"] == DEFAULTS["pr_width"]
+    old = {k: v for k, v in DEFAULTS.items() if k != "knob_diameter"}
+    assert atelier.upgrade(old, DEFAULTS)["knob_diameter"] == DEFAULTS["knob_diameter"]
+    # saved parameters from before the sealed box (rear radiator size) are dropped
+    assert "pr_width" not in atelier.upgrade({**DEFAULTS, "pr_width": 40, "pr_height": 60}, DEFAULTS)
     assert atelier.UNSCALED_PARAMS <= set(atelier.PARAM_KEYS)
 
 
@@ -76,7 +78,7 @@ def test_meets_the_technical_specification(built):
 def test_every_production_change_check_passes(built):
     checks = atelier.production_change_checks(PLAIN)
     assert [c["feature"] for c in checks if not c["ok"]] == []
-    assert {"Mass", "Centre of mass", "Stability", "Passive radiator", "Knob", "Name", "Base collar"} <= {c["feature"] for c in checks}
+    assert {"Mass", "Centre of mass", "Stability", "Enclosure", "Knob", "Name", "Base collar"} <= {c["feature"] for c in checks}
 
 
 def test_collar_fixings_hidden_under_the_foot_and_lettering_round_it(built):
@@ -126,7 +128,7 @@ def test_collar_lettering_matches_the_font():
 def test_honeycomb_grilles():
     m = atelier.model(DEFAULTS)
     plain = atelier.model(PLAIN)
-    for key in ("grille", "rear_grille"):
+    for key in ("grille",):
         assert m.parts[key].is_valid
         assert m.parts[key].volume < 0.75 * plain.parts[key].volume  # holes cut
     assert [c["feature"] for c in atelier.production_change_checks(DEFAULTS) if not c["ok"]] == []
@@ -159,7 +161,7 @@ def test_atelier_project_api_and_dfm(client):
     assert au["applicable"] and 0.70 <= au["box_l"] <= 0.80 and au["spl_ok"] and au["charge_ok"] and au["current_ok"]
     for t in ("Loudness (amplifier-limited)", "20 W from a 1S battery", "Charge time"):
         assert titles[t]["level"] == "pass", (t, titles[t])
-    assert {"Bass at full volume (excursion)", "Box and radiator tuning"} <= set(titles)
+    assert {"Bass at full volume (excursion)", "Box tuning (sealed)"} <= set(titles)
     rt = client.get(f"/api/projects/{pid}/runtime").json()
     assert rt["hours"] >= 15 and rt["without_tower_light_h"] is None
     # Atelier has its own factory pack (tests/test_atelier_factory_pack.py), never Faro's
@@ -212,3 +214,39 @@ def test_all_jesmonite_variant():
     sc = next(d for d in load_template("atelier")["scenarios"] if d["key"] == "all_jesmonite")
     for key in ("nose_cone", "fin", "collar", "foot"):
         assert sc["effect"]["volume_scale"][key] == pytest.approx(m.parts[key].volume / base.parts[key].volume, rel=0.01), key
+
+
+def test_turned_wood_body_variant():
+    """Turned wood body: lighter than PC/ABS, but the inserts and steel fire enclosure keep the ballast in range."""
+    from app.services.templates import load_template
+
+    base = atelier.model(PLAIN)
+    lo, hi = atelier.SPEC["mass_g"]
+    lo_air, hi_air = atelier.SPEC["air_l"]
+    for v in (("wood_beech",), ("wood_walnut",)):
+        s = atelier.stability(PLAIN, v)
+        rows = {r["part"]: r["mass_g"] for r in s["parts"]}
+        assert rows["steel fire enclosure"] == atelier.WOOD_FIRE_ENCLOSURE_G
+        assert lo <= s["total_g"] <= hi and s["ballast_g"] <= s["ballast_max_g"] + 1.0, v
+        assert s["tip_deg"] >= atelier.SPEC["tip_min_deg"] and s["com_mm"][2] <= atelier.SPEC["com_max_mm"]
+        assert lo_air <= s["air_l"] <= hi_air
+        assert len(atelier.model(PLAIN, v).parts["ballast"].solids()) == 1
+    sc = next(d for d in load_template("atelier")["scenarios"] if d["key"] == "turned_wood_body")
+    m = atelier.model(PLAIN, ("wood_beech",))
+    assert sc["effect"]["volume_scale"]["body"] == pytest.approx(m.parts["body"].volume / base.parts["body"].volume, rel=0.01)
+
+
+def test_sealed_box_default_and_radiator_comparison():
+    """The default is a sealed box with only the front grille (user, Oct 2026); the rear radiator is a variant."""
+    rear = {"rear_grille", "rear_bezel", "rear_fabric", "passive_radiator"}
+    m = atelier.model(PLAIN)
+    assert not rear & set(m.parts) and not rear & set(atelier.PART_KEYS)
+    assert m.info["pr_position"] == "none"
+    r = atelier.model(PLAIN, ("rear_radiator",))
+    assert rear <= set(r.parts)
+    s, sr = atelier.stability(PLAIN), atelier.stability(PLAIN, ("rear_radiator",))
+    lo, hi = atelier.SPEC["air_l"]
+    assert lo <= s["air_l"] <= hi and s["air_l"] > sr["air_l"]  # the radiator's own volume is gone
+    assert sr["total_g"] > s["total_g"]  # radiator, cover, bezel and fabric weigh about 70 g
+    lo_m, hi_m = atelier.SPEC["mass_g"]
+    assert lo_m <= s["total_g"] <= hi_m  # inside the spec even with the cup full

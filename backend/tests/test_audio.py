@@ -19,7 +19,21 @@ def test_closed_box_alignment_by_hand():
     assert out["fc_hz"] == round(d["fs_hz"] * math.sqrt(1 + alpha))
     assert out["qtc"] == pytest.approx(d["qts"] * math.sqrt(1 + alpha), abs=0.01)
     smaller = audio.evaluate(TPL["audio"], 0.5)
-    assert smaller["fc_hz"] > out["fc_hz"] and smaller["pr_moving_mass_g"] > out["pr_moving_mass_g"]
+    assert smaller["fc_hz"] > out["fc_hz"]
+    assert out["alignment"] == "sealed" and "pr_moving_mass_g" not in out  # sealed box (user, Oct 2026)
+    with_pr = {**TPL["audio"], "passive_radiator": TPL["audio"]["passive_radiator_option"]}
+    a, b = audio.evaluate(with_pr, 0.74), audio.evaluate(with_pr, 0.5)
+    assert a["alignment"] == "passive_radiator" and b["pr_moving_mass_g"] > a["pr_moving_mass_g"]
+
+
+def test_sealed_box_bass_extension_with_dsp():
+    """-3/-6 dB points of a second-order high-pass, and the DSP boost moving them down."""
+    out = audio.evaluate(TPL["audio"], 0.75)
+    assert audio._sealed_db(out["f3_hz"], out["fc_hz"], out["qtc"]) == pytest.approx(-3.0, abs=0.15)
+    assert out["f6_hz"] < out["f3_hz"] < out["fc_hz"] * 1.1
+    assert out["dsp_bass_boost_db"] == TPL["audio"]["dsp_bass_boost_db"] > 0
+    assert out["f3_dsp_hz"] < out["f3_hz"] and out["f6_dsp_hz"] < out["f6_hz"]
+    assert out["f6_dsp_hz"] <= TPL["audio"]["target_low_hz"]  # spec: 80 Hz (−6 dB) with the DSP bass enhancement
 
 
 def test_excursion_spl_rises_12_db_per_octave_and_with_area():
