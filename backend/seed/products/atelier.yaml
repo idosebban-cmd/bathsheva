@@ -162,7 +162,7 @@ parts:
     made_to_drawing: true
   - cad_key: ballast
     name: Ballast cup
-    function: Steel cup round the battery, sized so the speaker weighs 1.8 kg with its centre of mass low.
+    function: Steel cup round the battery, sized toward the 1.75 kg target with the centre of mass low (full at about 1.74 kg).
     material_category: bought_in
     material: Mild steel S275 (zinc plated)
     process: Sawn bar, milled pocket (made to drawing)
@@ -353,7 +353,7 @@ audio:
 cad_parameters:
   overall_height: 280
   body_max_diameter: 95
-  target_mass_kg: 1.8
+  target_mass_kg: 1.75          # 1.75 ±0.1 kg, accepted for the sealed box (user, Oct 2026)
   base_clearance: 25.8
   nose_cone_height: 45.2
   wall_thickness: 3.0
@@ -461,10 +461,10 @@ scenarios:
       assembly_min: {low: 1, high: 2}
     premium_impact: slight
     flags:
-      - {kind: performance, message: "With the radiator (CAD variant rear_radiator) the speaker reaches 1.80 kg with 8 g of ballast to spare, air about 0.74 L; the radiator tuned to about 65 Hz gives about 76 dB at 60 Hz within its excursion."}
+      - {kind: performance, message: "With the radiator (CAD variant rear_radiator) the speaker reaches the 1.75 kg target with ballast to spare, air about 0.74 L; the radiator tuned to about 65 Hz gives about 76 dB at 60 Hz within its excursion."}
     tradeoffs:
       finish: A gold perforated cover and bezel on the back, as on the front.
-      weight: About 70 g heavier (radiator, cover, bezel, fabric); reaches 1.8 kg.
+      weight: About 70 g heavier (radiator, cover, bezel, fabric); reaches the 1.75 kg target with ballast to spare.
       premium: Deeper bass at the spec's original 60 Hz; a second grille on the back.
       lead_time: One more photo-etched part, one CNC bezel and the radiator.
       tooling: One photo-tool and one CNC programme more.
@@ -489,10 +489,10 @@ scenarios:
     premium_impact: slight
     flags:
       - {kind: performance, message: "Cast polyurethane is less tough and less heat-resistant than PC/ABS: repeat the 0.5 m drop test, the lacquer adhesion (ISO 2409) and the 40 °C storage test on cast bodies."}
-      - {kind: performance, message: "Brass instead of Zamak adds about 150 g to the fins, collar and foot; the ballast cup is made lighter to keep 1.8 kg (aluminium was ruled out: about 300 g lighter, and the ballast is already at its maximum)."}
+      - {kind: performance, message: "Brass instead of Zamak adds about 150 g to the fins, collar and foot; the ballast cup is made lighter to keep the 1.75 kg target (aluminium was ruled out: about 300 g lighter, and the ballast is already at its maximum)."}
     tradeoffs:
       finish: Same lacquer and the same gold PVD. Cast bodies need a primer coat; brass takes PVD over a nickel base as Zamak does over copper-nickel.
-      weight: About 150 g more metal in the fins, collar and foot; the ballast is reduced to keep 1.8 kg. The cast body weighs about the same.
+      weight: About 150 g more metal in the fins, collar and foot; the ballast is reduced to keep the 1.75 kg target. The cast body weighs about the same.
       premium: Looks the same; the cast body is less tough, and size and colour drift slightly between silicone moulds.
       lead_time: Soft tooling in 2–4 weeks instead of 8–14 weeks for the steel mould and dies; casting by hand is slower per part.
       tooling: A master pattern for the body, silicone moulds remade about every 20 bodies, and CNC programmes or wax-injection tools for the brass parts.
@@ -506,7 +506,7 @@ scenarios:
       fin roots (bolts and inserts) and round the grille opening, with cast-in brass inserts for the driver
       and fin fixings. Sealer and primer, then the same
       oxblood lacquer and clear coats. The heavier body takes weight off the ballast cup, so the speaker
-      stays at 1.8 kg. The gold parts stay die-cast Zamak, or are CNC-machined in brass.
+      stays at the 1.75 kg target. The gold parts stay die-cast Zamak, or are CNC-machined in brass.
     conflicts: [low_tooling_first_batch, all_jesmonite, turned_wood_body]
     effect:
       reroutes:
@@ -527,10 +527,10 @@ scenarios:
       - {kind: safety, message: "Verify on samples: drop test (0.5 m unpackaged, ISTA 2A packaged) and the IEC 62368-1 enclosure impact test; Jesmonite is brittle compared with PC/ABS and can crack or chip."}
       - {kind: performance, message: "Verify on samples: gloss lacquer adhesion over the sealer and primer (ISO 2409 cross-cut, ≥ 90 GU gloss) and after humidity cycling."}
       - {kind: performance, message: "Verify on samples: Bluetooth range (10 m) through the 3.5–5 mm mineral-filled wall; the antenna position may need to move."}
-      - {kind: performance, message: "Verify on samples: the 3.5 mm general wall's stiffness and the 5 mm local thickening at the fin roots and openings (CAD, sealed box: 1.80 kg, centre of mass 86 mm, tip-over 23°, air 0.74 L, ballast cup in one piece)."}
+      - {kind: performance, message: "Verify on samples: the 3.5 mm general wall's stiffness and the 5 mm local thickening at the fin roots and openings (CAD, sealed box: on the mass target, centre of mass about 86 mm, tip-over 23°, air 0.74 L, ballast cup in one piece)."}
     tradeoffs:
       finish: The same oxblood lacquer and clear coats over a sealer and primer; the porous cast surface must be sealed first.
-      weight: The body is about 1.8 times heavier (327 g); the ballast cup shrinks to keep 1.8 kg, and the centre of mass rises about 2 mm.
+      weight: The body is about 1.8 times heavier (327 g); the ballast cup shrinks to keep the target mass, and the centre of mass rises about 2 mm.
       premium: A heavier, stone-like shell that sounds deader when tapped; more brittle than moulded plastic.
       lead_time: Soft tooling in 3–6 weeks from a UK caster instead of 8–14 weeks for the steel mould.
       tooling: A master pattern and silicone moulds remade every 20–30 casts; the gold parts keep their dies or are CNC-machined.
@@ -540,7 +540,7 @@ scenarios:
     label: All-Jesmonite (reference only)
     # Not recommended (user, Oct 2026): it can't meet the mass or balance spec. Kept for reference; the
     # optimiser never chooses it.
-    reference_only: "Fails mass and balance: about 1.47 kg with the ballast cup full (spec 1.8 ±0.1 kg) and a centre of mass of about 106 mm (spec 98 mm or lower)."
+    reference_only: "Fails mass and balance: about 1.47 kg with the ballast cup full (spec 1.75 ±0.1 kg) and a centre of mass of about 106 mm (spec 98 mm or lower)."
     design_change: >-
       The body, nose cone, fins, collar and foot all cast in glass-fibre-reinforced Jesmonite AC100 at a UK
       caster, each in its own silicone mould: 5 mm body wall, solid fins with cast-in inserts for the fin bolts
@@ -586,7 +586,7 @@ scenarios:
       - {kind: performance, message: "Verify on samples: USB-C fit. The opening is cast, not machined: check the plug enters square and the sealed receptacle seats in it, over the mould's life."}
       - {kind: performance, message: "Verify on samples (option B): gel-coat wear. The brass skin is about 0.5–1 mm; check edges and fin tips after handling and abrasion tests, and tarnish after humidity."}
       - {kind: compliance, message: "Option B is excluded: a brass-powder gel coat on Jesmonite does not count as real metal (user, Oct 2026), so it breaks the design constraint 'anything that looks metallic must be real metal'. It is shown for comparison only."}
-      - {kind: performance, message: "Mass and balance: 1.8 kg can't be met. With the ballast cup full (414 g) the sealed speaker weighs about 1.47 kg, its centre of mass rises to about 106 mm (spec 98 mm or lower) and it tips at about 18.9° (spec 18° or more)."}
+      - {kind: performance, message: "Mass and balance: 1.75 kg can't be met. With the ballast cup full (414 g) the sealed speaker weighs about 1.47 kg, its centre of mass rises to about 106 mm (spec 98 mm or lower) and it tips at about 18.9° (spec 18° or more)."}
       - {kind: performance, message: "Air volume falls to about 0.67 L (spec 0.7–0.8 L): the 5 mm body wall and the thicker nose cone take room from the box; the bass tuning must be rechecked."}
       - {kind: performance, message: "Inherits the Jesmonite body's open points: drop test, lacquer adhesion over the sealer, Bluetooth range through the wall and the split ballast cup."}
     tradeoffs:
@@ -636,7 +636,7 @@ scenarios:
       - {kind: performance, message: "Verify on samples: finish quality. Option A: no grain telegraphing through the gloss (90 GU or more) and no crazing at the seam or end grain; option B: an even satin on the walnut."}
       - {kind: safety, message: "Verify with a test house: fire safety. Wood is combustible, so the steel enclosure round the battery and main board must serve as the fire enclosure under IEC 62368-1; confirm the design and openings before tooling."}
       - {kind: performance, message: "Verify on samples: the 3.5 mm turned wall's stiffness and the glued-in inserts' pull-out strength at the fin roots."}
-      - {kind: performance, message: "Mass: the wood body is light, so the ballast cup is full (CAD, sealed box: beech about 1.72 kg, walnut about 1.70 kg, at the bottom of the 1.8 ±0.1 kg spec). Brass gold parts bring it to 1.80 kg (CAD); otherwise a denser ballast (brass or copper) is needed. Recheck once supplier part weights arrive."}
+      - {kind: performance, message: "Mass: the wood body is light, so the ballast cup is full (CAD, sealed box: beech about 1.72 kg, walnut about 1.70 kg, inside the 1.75 ±0.1 kg spec). Brass gold parts bring it to the target (CAD); otherwise a denser ballast (brass or copper) is needed. Recheck once supplier part weights arrive."}
     tradeoffs:
       finish: "A: the same oxblood gloss over grain-filled wood. B: natural walnut under a clear satin finish, a different look (a wood edition)."
       weight: The wood body is lighter than PC/ABS; the steel fire enclosure and inserts add about 90 g, but the cup is full and the speaker ends at about 1.70–1.72 kg unless the gold parts are brass.
@@ -682,7 +682,7 @@ rfq_open_questions:
   - id: mass_margin
     topic: Mechanical
     question: "Part weights (driver, battery, board, PVD parts) as quoted?"
-    why: The steel ballast cup is at its largest size to reach 1.8 kg; lighter parts would leave the speaker short.
+    why: The steel ballast cup is at its largest size (the speaker is about 1.74 kg against 1.75 ±0.1 kg); much lighter parts would leave it short.
     proposed: Weigh first samples; options are a denser or taller ballast, or a heavier collar.
 
 # What the RFQs state.

@@ -89,7 +89,7 @@ PARAMS: list[ParamDef] = [
     ParamDef("body_max_diameter", "Body diameter at its widest", "Overall", 85, 110, step=0.5,
              help="Spec Ø95 ±0.5 (the prototype was Ø96.8)."),
     ParamDef("target_mass_kg", "Target total mass", "Overall", 1.0, 3.0, step=0.05, unit="kg",
-             help="The steel ballast cup is sized to reach it. Spec 1.8 ±0.1 kg."),
+             help="The steel ballast cup is sized to reach it. Spec 1.75 ±0.1 kg (sealed box, user Oct 2026)."),
     ParamDef("base_clearance", "Body underside above the ground", "Body", 18, 40, step=0.1,
              help="Room for the gold collar cup and the foot."),
     ParamDef("nose_cone_height", "Nose cone height", "Body", 30, 70, step=0.1),
@@ -170,8 +170,9 @@ PRODUCTION_CHANGES: list[dict[str, str]] = [
      "production": "\"ATELIER\" etched 0.15 mm tone-on-tone round the foot on the collar's underside, Cormorant "
                    "Garamond SemiBold 2.4 mm, seen only when lifted (user, Oct 2026)"},
     {"feature": "Mass", "prototype": "1.8 kg target; ballast auto-sized",
-     "production": "1.8 ±0.1 kg (spec) with production materials (Zamak 5 fins and collar, 6061 nose cone and "
-                   "bezels, brass knob, PC/ABS body); the steel ballast cup is resized to reach it"},
+     "production": "1.75 ±0.1 kg (user, Oct 2026: accepted for the sealed box; the spec was 1.8 ±0.1) with production "
+                   "materials (Zamak 5 fins and collar, 6061 nose cone and bezel, brass knob, PC/ABS body); the steel "
+                   "ballast cup is resized to reach it, and is full at about 1.74 kg"},
 ]
 # Design changes from route_changes.yaml that the CAD shows (none for Atelier yet).
 IMPLEMENTED_CHANGES: dict[str, set[str]] = {}
@@ -262,8 +263,8 @@ def validate(params: dict[str, Any], wall_limits: dict[str, WallLimit] | None = 
         warn("overall_height", "The Technical Specification asks for 280 ±1 mm")
     if abs(p["body_max_diameter"] - 95) > 0.5:
         warn("body_max_diameter", "The Technical Specification asks for Ø95 ±0.5 mm")
-    if abs(p["target_mass_kg"] - 1.8) > 0.1:
-        warn("target_mass_kg", "The Technical Specification asks for 1.8 ±0.1 kg")
+    if abs(p["target_mass_kg"] - 1.75) > 0.1:
+        warn("target_mass_kg", "The mass target is 1.75 ±0.1 kg (sealed box, user Oct 2026)")
     if not 130 <= d["fin_span"] <= 150:
         warn("fin_tip_radius", f"Fin span about {d['fin_span']:.0f} mm; the spec says about 140")
     for key, param in (("body", "wall_thickness"),):
@@ -618,7 +619,8 @@ def stability(params: dict[str, Any], variant: tuple[str, ...] = ()) -> dict[str
     return _stability(json.dumps(normalise({**params, **over}), sort_keys=True), tuple(sorted(variant)))
 
 
-# Below this much spare ballast (g) the 1.8 kg target is at risk if supplier parts come in lighter than estimated.
+# Mass margin: how much lighter the supplier parts can come in (g) before the speaker drops below the spec's lower
+# limit, counting any ballast that can still be added. Below this it is flagged as a risk.
 MASS_MARGIN_MIN_G = 50.0
 # Battery replacement after removing the base collar (user, Oct 2026): every step with standard tools.
 BATTERY_SERVICE = [
@@ -631,7 +633,8 @@ BATTERY_SERVICE = [
 ]
 
 # Specification limits checked on the built model.
-SPEC = {"height_mm": (279.0, 281.0), "mass_g": (1700.0, 1900.0), "com_max_mm": 98.0, "tip_min_deg": 18.0,
+# Mass 1.75 ±0.1 kg: accepted for the sealed box (user, Oct 2026; the Technical Specification said 1.8 ±0.1 kg).
+SPEC = {"height_mm": (279.0, 281.0), "mass_g": (1650.0, 1850.0), "com_max_mm": 98.0, "tip_min_deg": 18.0,
         "air_l": (0.70, 0.80), "foot_clearance_mm": 2.0}
 
 
@@ -653,7 +656,7 @@ def production_change_checks(params: dict[str, Any]) -> list[dict[str, Any]]:
     check("Height", lo <= s["height_mm"] <= hi, f"{s['height_mm']:.1f} mm ground to nose tip (spec 280 ±1)")
     lo, hi = SPEC["mass_g"]
     check("Mass", lo <= s["total_g"] <= hi,
-          f"{s['total_g'] / 1000:.2f} kg with production materials (spec 1.8 ±0.1); ballast {s['ballast_g']:.0f} g")
+          f"{s['total_g'] / 1000:.2f} kg with production materials (spec 1.75 ±0.1); ballast {s['ballast_g']:.0f} g")
     check("Centre of mass", s["com_mm"][2] <= SPEC["com_max_mm"],
           f"{s['com_mm'][2]:.1f} mm above the ground (spec ≤ {SPEC['com_max_mm']:g})")
     check("Stability", s["tip_deg"] >= SPEC["tip_min_deg"],

@@ -66,7 +66,8 @@ def test_meets_the_technical_specification(built):
     m, s = built
     assert 279 <= s["height_mm"] <= 281
     assert abs(m.parts["body"].bounding_box().size.X - 95) < 0.3
-    assert 1700 <= s["total_g"] <= 1900
+    lo, hi = atelier.SPEC["mass_g"]
+    assert lo <= s["total_g"] <= hi
     assert s["com_mm"][2] <= 98
     assert s["tip_deg"] >= 18
     assert 130 <= s["footprint_mm"][0] <= 145  # fin span about 140
@@ -153,8 +154,9 @@ def test_atelier_project_api_and_dfm(client):
     assert any(c["title"] == "Open item" for c in dfm["checks"])
     assert titles["Battery replacement (standard tools)"]["level"] == "pass"
     assert "1.5 mm hex key" in titles["Battery replacement (standard tools)"]["detail"]
-    risk = titles["Risk: mass margin"]  # the ballast is at its largest size: flagged until supplier weights arrive
-    assert risk["level"] == "warning" and "Recheck once supplier part weights arrive" in risk["detail"]
+    risk = titles["Risk: mass margin"]  # 1.75 ±0.1 kg accepted: about 87 g above the spec's lower limit
+    assert risk["level"] == "pass" and "Recheck once supplier part weights arrive" in risk["detail"]
+    assert titles["Mass vs target"]["level"] == "pass"
     mass = client.get(f"/api/projects/{pid}/cad").json()["mass"]
     assert 1.6 <= mass["total_kg"] <= 2.0
     au = client.get(f"/api/projects/{pid}/audio").json()
@@ -175,7 +177,7 @@ def test_jesmonite_body_variant_keeps_the_mass():
     jes = atelier.stability(PLAIN, ("jesmonite_body",))
     both = atelier.stability(PLAIN, ("jesmonite_body", "brass_metalwork"))
     for s in (jes, both):
-        assert abs(s["total_g"] - 1800) < 15, s["total_g"]
+        assert abs(s["total_g"] - 1750) < 15, s["total_g"]
         assert 0 < s["ballast_g"] <= s["ballast_max_g"]
         lo, hi = atelier.SPEC["mass_g"]
         assert lo <= s["total_g"] <= hi and s["tip_deg"] >= atelier.SPEC["tip_min_deg"]

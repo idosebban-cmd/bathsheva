@@ -31,16 +31,18 @@ def dfm_checks(project: "Project", params: dict[str, Any], rules: "RuleSet", _ch
     lo, hi = spec["mass_g"]
     checks.append(_check(
         "Geometry", "pass" if lo <= s["total_g"] <= hi else "fail", "Mass vs target",
-        f"{s['total_g'] / 1000:.2f} kg with production materials vs {target / 1000:.2f} kg (spec 1.8 ±0.1 kg); the steel "
+        f"{s['total_g'] / 1000:.2f} kg with production materials vs {target / 1000:.2f} kg (spec 1.75 ±0.1 kg); the steel "
         f"ballast cup is {s['ballast_g']:.0f} g (at most {s['ballast_max_g']:.0f} g fits below the driver).",
         unverified=True, part="Ballast cup"))
-    margin = s["ballast_max_g"] - s["ballast_g"]
+    headroom = s["ballast_max_g"] - s["ballast_g"]
+    margin = s["total_g"] + headroom - lo  # how much lighter supplier parts can be before dropping below the spec
     checks.append(_check(
         "Geometry", "pass" if margin >= atelier.MASS_MARGIN_MIN_G else "warning", "Risk: mass margin",
-        f"{margin:.0f} g of ballast can still be added below the driver (the cup is {s['ballast_g']:.0f} g of at most "
-        f"{s['ballast_max_g']:.0f} g). If the driver, battery, board or PVD parts come in lighter than estimated, the "
-        "speaker falls further short of 1.8 kg. Recheck once supplier part weights arrive; options are a denser ballast "
-        "(brass or copper instead of steel), a taller cup, or a heavier collar.", unverified=True, part="Ballast cup"))
+        f"The driver, battery, board and metal parts can come in about {margin:.0f} g lighter than estimated before the "
+        f"speaker drops below {lo / 1000:.2f} kg (the spec's lower limit), counting {headroom:.0f} g of ballast that can "
+        f"still be added (the cup is {s['ballast_g']:.0f} g of at most {s['ballast_max_g']:.0f} g). Recheck once supplier "
+        "part weights arrive; if it gets tight, a denser ballast (brass or copper) or a heavier collar adds margin.",
+        unverified=True, part="Ballast cup"))
     checks.append(_check(
         "Geometry", "pass" if s["com_mm"][2] <= spec["com_max_mm"] else "fail", "Centre of mass",
         f"{s['com_mm'][2]:.1f} mm above the ground (spec {spec['com_max_mm']:g} mm or lower).", unverified=True))
