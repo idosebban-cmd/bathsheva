@@ -21,7 +21,7 @@ def test_requirements_validate_and_carry_the_spec_values():
     assert req.power_type == "battery" and req.battery_runtime_h == 15
     assert set(TPL["assumed_fields"]) <= set(Requirements.model_fields)
     assert TPL["cad_parameters"]["body_max_diameter"] == 95 and TPL["cad_parameters"]["wall_thickness"] == 3.0
-    assert TPL["cad_parameters"]["target_mass_kg"] == 1.8 and TPL["cad_parameters"]["grille_thickness"] == 0.5
+    assert TPL["cad_parameters"]["target_mass_kg"] == 1.75 and TPL["cad_parameters"]["grille_thickness"] == 0.5
     assert any("Battery replaceable after removing the base collar" in r for r in req.functional_requirements)
     assert not any("doubles as the battery tray" in p.get("function", "") for p in TPL["parts"])
 
