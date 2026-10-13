@@ -305,7 +305,37 @@ A slim 50 mm clear glass cylinder with a single line of warm LED light down its 
 
 ## Open questions across all concepts
 
-1. **Lampholders.** What type and thread is the 10 mm brass lampholder in the Oaklea kit (E27, E14 or BC)? Lune, Bell, Lattice, Prism, Halo and Orbit all rely on it. If it isn't the right type, an S. Lilley brass holder (price not listed) takes its place.
+1. **Lampholders.** This is now partly answered; see "Oaklea kit lampholder: fitting and impact" below. The fitting is still unconfirmed.
 2. **Mains compliance.** Every mains concept needs UKCA/LVD and EMC testing, which is a one-off cost not included here. It's best shared by designing two or three lamps round the same holder and flex.
 3. **Volume pricing.** Almost no library supplier publishes a 500-unit price. Before choosing between concepts, ask J Moncrieff (globes, cylinders, domes) and The Metal Store (brass tube and sheet) for 100/500 prices.
 4. **Custom labour.** Turning, laser cutting, brushing and lacquering are excluded. Get one quote from a UK repetition turner and one from a laser-cut-and-finish shop, then add those costs to the shortlisted concepts.
+
+## Oaklea kit lampholder: fitting and impact
+
+**What the listing says (checked 13 Oct 2026):** the Oaklea Brass Inline Lamp Kit (OAKLK1, £9.86) has a "brass lamp holder with a 10 mm entry". It **doesn't name the cap** (E27, E14 or BC/B22), and it **doesn't say whether the holder is solid brass or brass-plated**. Oaklea's other 10 mm holders are BC/B22, which makes BC the likely fitting, but nothing confirms it. Ask Oaklea, or buy one kit and check, before any concept depends on it.
+
+**Seven concepts use the kit, not six.** The earlier open question left out Tambour (1). The seven are Tambour (1), Lune (2), Bell (4), Lattice (5), Halo (6), Prism (8) and Orbit (9).
+
+**Which cap limits bulb choice in the UK:**
+- **BC/B22** is the most common household cap in the UK, so it doesn't restrict bulb choice there. It does conflict with the E27 shade rings specified below, and it would limit sales in the EU, where E27 is standard.
+- **E14 (SES)** is the cap that limits UK bulb choice: smaller candle and golf-ball bulbs, with less light output.
+- **E27** is widely sold in the UK and matches the shade rings already specified.
+
+| # | Concept | How it uses the holder | If it's BC/B22 (likely) | If it's E14 |
+|---|---|---|---|---|
+| 1 | Tambour | Hidden inside the frosted cylinder; E27 shade ring holds the 40 mm fitter | **Affected:** the E27 shade ring won't fit a BC holder, so it needs a BC shade ring or a different way to seat the cylinder. Bulb choice is fine. | **Affected:** limited bulbs, and the E27 ring doesn't fit. |
+| 2 | Lune | Hidden inside the opal globe; the globe is held by the custom collar | Not affected. | **Affected:** limited bulbs. A small E14 bulb may also sit low in the 150 mm globe and light it unevenly. |
+| 4 | Bell | Visible under the cone; E27 shade ring holds the shade | **Affected:** the E27 shade ring won't fit, so it needs a BC shade-carrier or ring. Bulb choice is fine. | **Affected:** limited bulbs, and the E27 ring doesn't fit. |
+| 5 | Lattice | Hidden inside the frosted tube | Not affected. | **Affected:** limited bulbs (it needs a bulb that fits inside the 50 mm-bore tube; check either way). |
+| 6 | Halo | Visible through the clear dome; the dome's 30 mm fitter is made to sit on a BC holder | Not affected: BC is what the dome needs. | **Affected:** the dome won't seat on an E14 holder, and bulb choice is limited. |
+| 8 | Prism | Hidden inside the frosted acrylic tube | Not affected. | **Affected:** limited bulbs. |
+| 9 | Orbit | Hidden inside the opal globe; E27 shade ring | **Affected:** the E27 shade ring won't fit. Bulb choice is fine. | **Affected:** limited bulbs (a 200 mm globe wants a larger bulb), and the E27 ring doesn't fit. |
+
+**Solid brass:** the listing doesn't say whether the holder is solid brass or brass-plated. Under the brand rule, a plated holder can't be where it shows. That matters for **Bell** (seen under the cone) and **Halo** (seen through the clear dome). In the other five, the holder sits behind frosted or opal glass, acrylic or perforated metal.
+
+**What to do:**
+- **If the kit's holder is BC:** keep it for Lune, Lattice, Halo and Prism. Swap the E27 shade rings in Tambour, Bell and Orbit for BC equivalents, or move those three to an E27 holder (Sinolec brass E27 with 10 mm entry, library §3.3; price not shown).
+- **For Bell and Halo:** use a lampholder that is stated to be solid brass, from Lampspares KIT1B or Lighting Spares KIT4 (both BC and UK-made, prices not shown), unless Oaklea confirms solid brass.
+- **If the kit's holder is E14:** drop the kit for all seven concepts.
+- **Costs:** the parts costs above are unchanged until the alternative holders' prices are known.
+
