@@ -1,7 +1,7 @@
 // Run with: npm test (node --test, Node 22.6+ strips the types).
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { DEFAULT_VIEW, globeGeometry, layoutConcept, lineShape, PLACEHOLDER_SIZE, shapeHeight, viewOf } from "./conceptShapes.ts";
+import { DEFAULT_VIEW, globeGeometry, layoutConcept, linePieces, lineShape, MAX_PIECES, PLACEHOLDER_SIZE, shapeHeight, viewOf } from "./conceptShapes.ts";
 import { plainLines, type ConceptLine, type LibraryPart } from "./standardParts.ts";
 
 const part = (id: string, extra: Partial<LibraryPart>) => ({ id, name: id, units: [], shapes: [], look: "other", ...extra }) as unknown as LibraryPart;
@@ -70,4 +70,24 @@ test("unknown parts are placeholders, and a line's view is saved only when it is
   assert.deepEqual(viewOf(line("ring")), DEFAULT_VIEW);
   assert.equal(plainLines([line("ring", { view: { ...DEFAULT_VIEW } })])[0].view, undefined);
   assert.deepEqual(plainLines([line("ring", { view: { dy: 5 } })])[0].view, { ...DEFAULT_VIEW, dy: 5 });
+});
+
+test("a line is drawn once per unit, its pieces stacked; a share of a length or sheet is one piece", () => {
+  assert.equal(linePieces(line("ring", { quantity: 2 }), RING), 2);
+  assert.equal(linePieces(line("ply", { width_mm: 160, height_mm: 160, count: 3 }), PLY), 3);
+  assert.equal(linePieces(line("ply", { quantity: 0.05 }), PLY), 1);
+  assert.equal(linePieces(line("tube", { quantity: 2 }), TUBE), 1); // two priced lengths drawn as one 5 m tube
+  assert.equal(linePieces(line("kit", { quantity: 0.5 }), KIT), 1);
+  assert.equal(linePieces(line("kit", { quantity: 500 }), KIT), MAX_PIECES);
+  const placed = layoutConcept([line("ring", { quantity: 2 }), line("ring")], PARTS);
+  assert.equal(placed[0].pieces, 2);
+  assert.equal(placed[0].total, 7);
+  assert.equal(placed[1].base, 7);
+});
+
+test("a line repeated round the centre draws one piece per copy instead of stacking", () => {
+  const placed = layoutConcept([line("ring", { quantity: 3, view: { repeat: 3, dx: 40 } }), line("ring")], PARTS);
+  assert.equal(placed[0].pieces, 1);
+  assert.equal(placed[0].instances.length, 3);
+  assert.equal(placed[1].base, 3.5);
 });

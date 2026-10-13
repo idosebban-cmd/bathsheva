@@ -4,8 +4,10 @@
 // Each part's shape comes from the library's hidden <!-- part-shapes --> block (per price variant). A line's own
 // sizes take over where the part is priced by size: a tube's length, a sheet's width × height (or the length or
 // share of a sheet worked out from its quantity). Parts without a shape are drawn as labelled placeholder boxes.
-// By default the parts stack up the vertical axis in table order, each on top of the one before; a line's view
-// settings move, turn and repeat it.
+// A line is drawn once per piece: its quantity for parts bought by the piece, its count for parts sized in mm (a
+// share of a length or sheet is one piece). By default the pieces stack on each other and the lines stack up the
+// vertical axis in table order, each on top of the one before; a line's view settings move, turn and repeat it,
+// and a line repeated round the centre draws its copies round the centre instead of stacking its pieces.
 
 import type { ConceptLine, LibraryPart } from "./standardParts.ts";
 
@@ -53,6 +55,17 @@ export function isDefaultView(v: LineView): boolean {
 }
 
 export const PLACEHOLDER_SIZE = 40;
+/** Most pieces drawn for one line (a line of 500 screws would otherwise be a tower). */
+export const MAX_PIECES = 24;
+
+/** How many pieces a line is drawn as: its count of sized pieces, or its quantity of whole parts. */
+export function linePieces(line: ConceptLine, part: Pick<LibraryPart, "units"> | undefined): number {
+  const sized = line.length_mm != null || line.width_mm != null || line.height_mm != null;
+  const clamp = (n: number) => Math.min(MAX_PIECES, Math.max(1, Math.round(n)));
+  if (sized) return clamp(line.count ?? 1);
+  if (part && unitOf(part, line.option)) return 1; // a share of a priced length or sheet
+  return line.quantity >= 1 ? clamp(line.quantity) : 1;
+}
 
 /** Height of a shape as drawn upright (tubes, rods and bars stand on end; sheets and discs lie flat). */
 export function shapeHeight(s: ShapeSpec): number {
@@ -169,7 +182,9 @@ export interface Placed {
   spec: ShapeSpec | null; // null: a placeholder box
   look: string;
   assumed: string;
-  height: number;
+  height: number; // one piece
+  pieces: number; // pieces stacked on each other (1 when the line repeats round the centre)
+  total: number; // height of the stacked pieces: what the line adds to the stack
   base: number; // where its place in the stack starts (before its own up/down offset)
   view: LineView;
   instances: Instance[];
@@ -184,11 +199,13 @@ export function layoutConcept(lines: ConceptLine[], parts: Map<string, LibraryPa
     const spec = lineShape(line, part);
     const view = viewOf(line);
     const height = spec ? shapeHeight(spec) : PLACEHOLDER_SIZE;
+    const repeat = Math.max(1, Math.round(view.repeat));
+    const pieces = repeat > 1 ? 1 : linePieces(line, part);
+    const total = height * pieces;
     const base = level;
-    if (view.stack) level += height;
+    if (view.stack) level += total;
     const shape = partShape(part, line.option);
     const unit = part ? unitOf(part, line.option) : null;
-    const repeat = Math.max(1, Math.round(view.repeat));
     return {
       index,
       name: part?.name ?? line.part_id,
@@ -196,6 +213,8 @@ export function layoutConcept(lines: ConceptLine[], parts: Map<string, LibraryPa
       look: shape?.look ?? part?.look ?? "other",
       assumed: shape?.assumed ?? "",
       height,
+      pieces,
+      total,
       base,
       view,
       instances: Array.from({ length: repeat }, (_, k) => ({ angle: (360 * k) / repeat })),

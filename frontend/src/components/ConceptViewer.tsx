@@ -83,30 +83,33 @@ function PlacedPart({ placed, selected, materials, highlight, onSelect }: {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const geometries = useMemo(() => geometriesFor(placed.spec), [key]);
   useEffect(() => () => geometries.forEach((g) => g.dispose()), [geometries]);
-  const { view, height, base } = placed;
+  const { view, height, total, base } = placed;
   const material = materials(placed.spec ? placed.look : "placeholder");
   return (
     <>
       {placed.instances.map((inst, k) => (
-        // Outer group: the copy's angle round the axis. Inner: the part's offset and rotation about its centre.
+        // Outer group: the copy's angle round the axis. Inner: the line's offset and rotation about the centre of
+        // its stacked pieces, so a tilted stack stays together.
         <group key={k} rotation-y={deg(inst.angle)}
           onClick={(e) => {
             e.stopPropagation();
             onSelect(placed.index);
           }}>
-          <group position={[view.dx, base + height / 2 + view.dy, view.dz]} rotation={[deg(view.rx), deg(view.ry), deg(view.rz)]}>
-            <group position={[0, -height / 2, 0]}>
-              {geometries.map((g, i) => (
-                <mesh key={i} geometry={g} material={material} castShadow receiveShadow>
-                  {selected && <mesh geometry={g} material={highlight} scale={1.001} />}
-                </mesh>
-              ))}
-              {!placed.spec && k === 0 && (
-                <Html position={[0, PLACEHOLDER_SIZE + 6, 0]} center className="sp-3d-label">
-                  {placed.index + 1}. {placed.name}
-                </Html>
-              )}
-            </group>
+          <group position={[view.dx, base + total / 2 + view.dy, view.dz]} rotation={[deg(view.rx), deg(view.ry), deg(view.rz)]}>
+            {Array.from({ length: placed.pieces }, (_, piece) => (
+              <group key={piece} position={[0, -total / 2 + piece * height, 0]}>
+                {geometries.map((g, i) => (
+                  <mesh key={i} geometry={g} material={material} castShadow receiveShadow>
+                    {selected && <mesh geometry={g} material={highlight} scale={1.001} />}
+                  </mesh>
+                ))}
+                {!placed.spec && k === 0 && piece === placed.pieces - 1 && (
+                  <Html position={[0, PLACEHOLDER_SIZE + 6, 0]} center className="sp-3d-label">
+                    {placed.index + 1}. {placed.name}
+                  </Html>
+                )}
+              </group>
+            ))}
           </group>
         </group>
       ))}
@@ -190,8 +193,10 @@ export default function ConceptViewer({
         {sel && (
           <>
             <p className="small muted">
-              {+sel.height.toFixed(1)} mm tall. Its place in the stack starts at {+sel.base.toFixed(1)} mm, so with the up/down
-              offset its bottom is at {+(sel.base + sel.view.dy).toFixed(1)} mm (the ground is 0).
+              {sel.pieces > 1 ? `${sel.pieces} pieces stacked, ${+sel.height.toFixed(1)} mm each, ${+sel.total.toFixed(1)} mm in all. ` : `${+sel.height.toFixed(1)} mm tall. `}
+              {sel.instances.length > 1 && `${sel.instances.length} copies round the centre, one piece each. `}
+              Its place in the stack starts at {+sel.base.toFixed(1)} mm, so with the up/down offset its bottom is at{" "}
+              {+(sel.base + sel.view.dy).toFixed(1)} mm (the ground is 0).
             </p>
             <div className="sp-view-grid">
               <ViewNumber label="Up / down (mm)" step={1} value={sel.view.dy} onChange={(v) => set({ dy: v })} />

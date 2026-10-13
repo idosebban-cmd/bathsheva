@@ -379,3 +379,18 @@ def test_library_api_sends_shapes_and_looks(client):
     parts = [p for s in client.get("/api/standard-parts").json()["sections"] for sub in s["subsections"] for p in sub["parts"]]
     ring = next(p for p in parts if p["id"] == "es-e27-shade-ring-s-lilley-spare--lampspares-uk")
     assert ring["look"] == "brass" and ring["shapes"][0]["shape"] == "ring"
+
+
+def test_seed_concept_views_are_valid_placements():
+    """Every concept's starting arrangement in the 3D view is one the builder could save."""
+    from app.api.standard_parts import LineView
+
+    placed = 0
+    for concept in sp.load_concepts():
+        for line in concept.lines:
+            if "view" in line:
+                assert set(line["view"]) <= set(LineView.model_fields), (concept.name, line)
+                LineView.model_validate(line["view"])
+                placed += 1
+        assert any("view" in line for line in concept.lines), f"{concept.name} has no arrangement"
+    assert placed >= 15
