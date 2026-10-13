@@ -17,6 +17,8 @@ export interface LibraryPart {
   supplier: string;
   supplier_cell: string;
   links: { label: string; url: string }[];
+  /** Repo files the entry comes from instead of a web page (a supplier's price list export). */
+  source_files: string[];
   price_text: string;
   price_status: "listed" | "quote" | "not_shown";
   price: number | null;

@@ -202,6 +202,12 @@ export function LibraryView() {
                                     </a>
                                   </span>
                                 ))}
+                                {(p.source_files ?? []).map((f) => (
+                                  <div key={f} className="muted">
+                                    From <code>{f}</code>
+                                    {p.supplier_cell.includes("order no.") && ` · ${p.supplier_cell.slice(p.supplier_cell.indexOf("order no."))}`}
+                                  </div>
+                                ))}
                               </div>
                             </td>
                             <td>

@@ -49,7 +49,7 @@ _PRICE_RE = re.compile(_PRICE)
 _BREAK_RE = re.compile(_PRICE + r"[^£€$|]*?\bat (\d[\d,]*)\+?")
 # A figure followed (after an optional "ex VAT" / "inc VAT") by a parenthesised label: one priced variant.
 _LABEL_RE = re.compile(r"\s*(?:(?:ex|inc)\.? VAT\s*)?\(([^)]*)\)")
-_AVAILABILITY = ("discontinued", "no longer", "out of stock", "end of life")
+_AVAILABILITY = ("discontinued", "no longer", "out of stock", "not stocked", "end of life")
 _LINK_RE = re.compile(r"\[([^\]]+)\]\(([^)\s]+)\)")
 _CURRENCY = {"£": "GBP", "€": "EUR", "$": "USD", "US $": "USD"}
 
@@ -93,6 +93,9 @@ class LibraryPart:
     supplier: str
     supplier_cell: str
     links: list[dict[str, str]]
+    # Files in the repo the entry comes from instead of a web page, e.g. a supplier's price list export
+    # (`standard-parts/price-lists/...csv`), written in backticks in the supplier cell.
+    source_files: list[str]
     price_text: str
     price_status: str  # listed | quote | not_shown
     price: float | None
@@ -134,7 +137,8 @@ class LibraryPart:
         return {
             "id": self.id, "category": self.category, "subcategory": self.subcategory, "name": self.name,
             "material": self.material, "sizes": self.sizes, "supplier": self.supplier,
-            "supplier_cell": self.supplier_cell, "links": self.links, "price_text": self.price_text,
+            "supplier_cell": self.supplier_cell, "links": self.links, "source_files": self.source_files,
+            "price_text": self.price_text,
             "price_status": self.price_status, "price": self.price, "currency": self.currency,
             "options": [{"price": o.price, "currency": o.currency, "label": o.label,
                          "price_gbp": round(o.price_gbp, 4)} for o in self.options],
@@ -236,9 +240,11 @@ def _part(cells: list[str], category: str, subcategory: str) -> LibraryPart:
     name, material, sizes, supplier_cell, price_text, breaks_text, moq, note = cells
     supplier = supplier_cell.split(" — ")[0] if " — " in supplier_cell else _LINK_RE.sub(r"\1", supplier_cell)
     links = [{"label": label, "url": url} for label, url in _LINK_RE.findall(supplier_cell)]
+    source_files = re.findall(r"`(standard-parts/[^`]+)`", supplier_cell)
     return LibraryPart(
         id=f"{slug(name)}--{slug(supplier)}", category=category, subcategory=subcategory, name=name,
         material=material, sizes=sizes, supplier=supplier.strip(), supplier_cell=supplier_cell, links=links,
+        source_files=source_files,
         price_text=price_text, breaks_text=breaks_text, breaks=parse_breaks(breaks_text), moq=moq, note=note,
         availability=_availability(f"{price_text} {note} {moq}"),
         **parse_price(price_text),

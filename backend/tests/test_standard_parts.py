@@ -22,8 +22,11 @@ def test_library_parses_every_category():
 
 
 def test_every_part_has_supplier_link_and_price_status():
+    root = sp.LIBRARY_DIR.parent
     for p in PARTS.values():
-        assert p.supplier and p.links, p.id
+        assert p.supplier and (p.links or p.source_files), p.id
+        for f in p.source_files:
+            assert (root / f).is_file(), f"{p.id}: {f} is not in the repo"
         assert p.price_status in {"listed", "quote", "not_shown"}
         assert (p.price is not None) == (p.price_status == "listed"), p.id
 
@@ -68,6 +71,10 @@ def test_availability_flags():
     assert "discontinued" in PARTS["solid-brass-gold-plated-knob-25-mm--hificollective-uk"].availability
     assert "out of stock" in PARTS["brass-tube-10-mm-od-1-m--lampfix-uk"].availability
     assert PARTS["internally-frosted-cylinder-shade--j-moncrieff-uk"].availability == ""
+    # A supplier that stopped stocking a part that is still made: out of stock there, not discontinued.
+    cpc = PARTS["visaton-frs-8-m-8--cpc-farnell-uk"].availability
+    assert "not stocked" in cpc and "no longer" not in cpc and "discontinued" not in cpc
+    assert PARTS["visaton-frs-8-m-8-2001--visaton-price-list-csv-13-oct-2026"].availability == ""
 
 
 def test_fifteen_concepts_with_all_fields():
