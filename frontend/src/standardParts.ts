@@ -255,10 +255,13 @@ export function sizeLabel(l: ConceptLine): string {
   return `${count === 1 ? "" : `${+count.toFixed(3)} × `}${size}${waste}`;
 }
 
-/** A new line for a part: sized in mm (100 mm, or 100 × 100 mm) when the part is priced by size, else 1 unit. */
-export function newLine(part: Pick<LibraryPart, "id" | "units">): ConceptLine {
-  const u = unitFor(part, 0);
-  const base = { part_id: part.id, quantity: 1, note: "", option: 0 };
+/**
+ * A new line for a part (in the given price variant): one piece, sized in mm (100 mm, or 100 × 100 mm) when the
+ * part is priced by size, else 1 unit.
+ */
+export function newLine(part: Pick<LibraryPart, "id" | "units">, option = 0): ConceptLine {
+  const u = unitFor(part, option);
+  const base = { part_id: part.id, quantity: 1, note: "", option };
   if (isLength(u)) return { ...base, length_mm: 100, count: 1 };
   if (isSheet(u)) return { ...base, width_mm: 100, height_mm: 100, count: 1, waste_pct: 0 };
   return base;

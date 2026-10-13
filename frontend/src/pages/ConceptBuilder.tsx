@@ -1,13 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { api, errorText } from "../api";
 import Md from "../components/InlineMarkdown";
 import {
-  allParts,
   extraPriceText,
   factoryTarget,
   gbp,
-  matchesSearch,
   noPriceLabel,
   plainLines,
   priceLabel,
@@ -27,8 +25,10 @@ import {
   type SavedConcept,
   type SeedConcept,
 } from "../standardParts";
-import { AvailabilityBadge, CostTiles, PriceCell, useStandardParts } from "./StandardPartsPage";
+import { AvailabilityBadge, CostTiles, useStandardParts } from "./StandardPartsPage";
 import ConceptViewer from "../components/ConceptViewer";
+import PartsLibraryPanel from "../components/PartsLibraryPanel";
+import { insertOnTop, layoutConcept } from "../conceptShapes";
 
 interface Draft {
   name: string;
@@ -39,7 +39,6 @@ interface Draft {
 }
 
 const BLANK: Draft = { name: "", retail: "", notes: "", basedOn: null, lines: [] };
-const PICKER_LIMIT = 40;
 
 function retailValue(text: string): number | null {
   const v = Number(text);
@@ -53,6 +52,7 @@ export default function ConceptBuilder() {
   const [params] = useSearchParams();
   const from = params.get("from");
   const navigate = useNavigate();
+  const location = useLocation();
   const savedId = conceptId && conceptId !== "new" ? Number(conceptId) : null;
 
   const [draft, setDraft] = useState<Draft | null>(null);
@@ -60,7 +60,6 @@ export default function ConceptBuilder() {
   const [cost, setCost] = useState<ConceptCost | null>(null);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
-  const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<number | null>(null); // the line placed in the 3D view
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -94,7 +93,8 @@ export default function ConceptBuilder() {
     return () => {
       cancelled = true;
     };
-  }, [savedId, from]);
+    // location.key: "New blank concept" starts afresh even when already on /mine/new.
+  }, [savedId, from, location.key]);
 
   // Running total: re-costed by the server on every change (the same calculation as the concept list).
   const linesKey = JSON.stringify(draft?.lines ?? []);
@@ -123,7 +123,7 @@ export default function ConceptBuilder() {
     return () => window.removeEventListener("beforeunload", h);
   }, [dirty]);
 
-  const picks = useMemo(() => allParts(library).filter((p) => query.trim() && matchesSearch(p, query)), [library, query]);
+  const placed = useMemo(() => layoutConcept(draft?.lines ?? [], parts), [draft?.lines, parts]);
 
   if (error && !draft) return <p className="error">{error}</p>;
   if (!draft) return <p>Loading…</p>;
@@ -134,7 +134,16 @@ export default function ConceptBuilder() {
   };
   const setLine = (i: number, patch: Partial<ConceptLine>) => update({ lines: draft.lines.map((l, j) => (j === i ? { ...l, ...patch } : l)) });
   const replaceLine = (i: number, line: ConceptLine) => update({ lines: draft.lines.map((l, j) => (j === i ? line : l)) });
-  const addPart = (p: LibraryPart) => update({ lines: [...draft.lines, newLine(p)] });
+  // A part from the library: on top of the part it was dropped on, else on top of the stack. Selected, to place it.
+  const addPart = (p: LibraryPart, option: number, target: number | null = null) => {
+    const added = insertOnTop(draft.lines, placed, target, newLine(p, option));
+    update({ lines: added.lines });
+    setSelected(added.index);
+  };
+  const newBlank = () => {
+    if (dirty && !window.confirm("Start a new blank concept? Your unsaved changes here will be lost.")) return;
+    navigate("/standard-parts/mine/new");
+  };
   const removeLine = (i: number) => {
     update({ lines: draft.lines.filter((_, j) => j !== i) });
     setSelected((s) => (s === null || s === i ? null : s > i ? s - 1 : s));
@@ -187,6 +196,9 @@ export default function ConceptBuilder() {
       <div className="row" style={{ justifyContent: "space-between" }}>
         <h1>{savedId ? draft.name || "Untitled concept" : "New concept"}</h1>
         <div className="row">
+          <button onClick={newBlank} title="Start a new concept with no parts">
+            + New blank concept
+          </button>
           {dirty && <span className="badge badge-unverified">Unsaved changes</span>}
           <button className="primary" disabled={saving || !draft.name.trim() || (!dirty && savedId !== null)} onClick={save}>
             {saving ? "Saving…" : savedId ? "Save" : "Save concept"}
@@ -257,15 +269,28 @@ export default function ConceptBuilder() {
 
       <section className="card">
         <h2>Parts</h2>
+        <div className="sp-build-grid">
+          <PartsLibraryPanel library={library} onAdd={(p, option) => addPart(p, option)} />
+          <ConceptViewer
+            lines={draft.lines}
+            parts={parts}
+            selected={selected !== null && selected < draft.lines.length ? selected : null}
+            onSelect={setSelected}
+            onViewChange={(i, view) => setLine(i, { view })}
+            onDropPart={(id, option, target) => {
+              const p = parts.get(id);
+              if (p) addPart(p, option, target);
+            }}
+          />
+        </div>
+        <div className="sp-parts-table">
         <p className="small muted">
           Tube, rod, bar and strip parts take a length in mm, and sheet parts a width × height in mm, with how many pieces each product
           needs (and a waste allowance for sheets); they are converted to the share of the priced length or sheet. Other parts take a
           quantity in the unit the price is for (pieces, packs). Price breaks apply when 100 or 500 products need enough to reach them.
         </p>
-        <div className="sp-parts-grid">
-        <div className="sp-parts-table">
         {draft.lines.length === 0 ? (
-          <p className="muted">No parts yet. Search the library below to add some.</p>
+          <p className="muted">No parts yet. Drag parts from the library into the 3D view, or select one and press Add to concept.</p>
         ) : (
           <div className="table-wrap">
             <table className="sp-lines">
@@ -386,57 +411,8 @@ export default function ConceptBuilder() {
           </div>
         )}
         </div>
-        <ConceptViewer
-          lines={draft.lines}
-          parts={parts}
-          selected={selected !== null && selected < draft.lines.length ? selected : null}
-          onSelect={setSelected}
-          onViewChange={(i, view) => setLine(i, { view })}
-        />
-        </div>
       </section>
 
-      <section className="card">
-        <h2>Add parts from the library</h2>
-        <input
-          type="search"
-          className="sp-search"
-          placeholder="Search by part, material, supplier or category (e.g. brass tube, opal globe, battery)"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
-        {query.trim() && (
-          <>
-            <p className="small muted">
-              {picks.length} match{picks.length === 1 ? "" : "es"}
-              {picks.length > PICKER_LIMIT && `; showing the first ${PICKER_LIMIT}`}
-            </p>
-            <div className="table-wrap">
-              <table>
-                <tbody>
-                  {picks.slice(0, PICKER_LIMIT).map((p) => (
-                    <tr key={p.id}>
-                      <td>
-                        <strong>{p.name}</strong> <AvailabilityBadge part={p} />
-                        <div className="small muted">
-                          {p.subcategory} · {p.material} · {p.sizes}
-                        </div>
-                      </td>
-                      <td>{p.supplier}</td>
-                      <td>
-                        <PriceCell part={p} />
-                      </td>
-                      <td>
-                        <button onClick={() => addPart(p)}>Add</button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </>
-        )}
-      </section>
     </>
   );
 }

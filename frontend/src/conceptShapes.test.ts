@@ -2,10 +2,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
-  DEFAULT_VIEW, globeGeometry, isDefaultView, layoutConcept, linePieces, lineShape, madeFrom, MAX_PIECES, PLACEHOLDER_SIZE, shapeHeight,
-  validMade, viewOf,
+  DEFAULT_VIEW, describeShape, dragPayload, globeGeometry, insertOnTop, isDefaultView, layoutConcept, linePieces, lineShape, madeFrom, MAX_PIECES, PLACEHOLDER_SIZE, shapeHeight,
+  readDragPayload, validMade, viewOf,
 } from "./conceptShapes.ts";
-import { plainLines, type ConceptLine, type LibraryPart } from "./standardParts.ts";
+import { newLine, plainLines, type ConceptLine, type LibraryPart } from "./standardParts.ts";
 
 const part = (id: string, extra: Partial<LibraryPart>) => ({ id, name: id, units: [], shapes: [], look: "other", ...extra }) as unknown as LibraryPart;
 const line = (part_id: string, extra: Partial<ConceptLine> = {}): ConceptLine => ({ part_id, quantity: 1, note: "", option: 0, ...extra });
@@ -119,4 +119,48 @@ test("a made shape that can't be drawn falls back to the stock", () => {
   const [p] = layoutConcept([line("blank", { quantity: 2, view: { made: { shape: "cylinder", d: 0, height: 5 } } })], PARTS);
   assert.equal(p.made, false);
   assert.equal(p.pieces, 2);
+});
+
+test("a part dropped on empty space goes on top of the stack", () => {
+  const lines = [line("ring"), line("kit", { view: { stack: false } })];
+  const out = insertOnTop(lines, layoutConcept(lines, PARTS), null, line("ring"));
+  assert.equal(out.index, 2);
+  assert.equal(out.lines.length, 3);
+  assert.equal(layoutConcept(out.lines, PARTS)[2].base, 3.5);
+});
+
+test("a part dropped on a stacking part joins the stack on its top; what was above moves up", () => {
+  const lines = [line("blank", { view: { dx: 10 } }), line("ring")];
+  const out = insertOnTop(lines, layoutConcept(lines, PARTS), 0, line("ring", { quantity: 2 }));
+  assert.equal(out.index, 1);
+  assert.deepEqual(out.lines[1].view, { dx: 10 });
+  const placed = layoutConcept(out.lines, PARTS);
+  assert.equal(placed[1].base, 44.45);
+  assert.equal(placed[2].base, 44.45 + 7);
+});
+
+test("a part dropped on a part that doesn't stack sits on its top without moving anything; one per repeated copy", () => {
+  // A lampholder (placeholder, 40 mm) inside a shade, 20 mm up from its place: the new part sits on it.
+  const lines = [line("blank"), line("kit", { view: { stack: false, dy: 20 } }), line("tube", { length_mm: 200 })];
+  const out = insertOnTop(lines, layoutConcept(lines, PARTS), 1, line("ring"));
+  const placed = layoutConcept(out.lines, PARTS);
+  assert.equal(placed[2].base + placed[2].view.dy, 44.45 + 20 + PLACEHOLDER_SIZE);
+  assert.equal(placed[2].view.stack, false);
+  assert.equal(placed[3].base, 44.45); // the tube hasn't moved
+  // Feet repeated round the centre (stacking): a part on each foot, the rest of the stack unchanged.
+  const feet = [line("ring", { view: { repeat: 3, dx: 38 } }), line("blank")];
+  const on = insertOnTop(feet, layoutConcept(feet, PARTS), 0, line("ring"));
+  const p = layoutConcept(on.lines, PARTS);
+  assert.deepEqual([p[1].view.repeat, p[1].view.dx, p[1].view.stack, p[1].base + p[1].view.dy], [3, 38, false, 3.5]);
+  assert.equal(p[2].base, 3.5);
+});
+
+test("drag payloads, shapes in words and new lines in a variant", () => {
+  assert.deepEqual(readDragPayload(dragPayload("ring", 2)), { part_id: "ring", option: 2 });
+  assert.equal(readDragPayload("not json"), null);
+  assert.deepEqual(readDragPayload('{"part_id": "x", "option": -1}'), { part_id: "x", option: 0 });
+  assert.equal(describeShape({ shape: "tube", od: 80, id: 74, length: 210 }), "tube Ø80 × 210 mm, Ø74 bore");
+  assert.equal(describeShape({ shape: "cylinder", d: 38, height: 61 }), "cylinder Ø38 × 61 mm");
+  assert.deepEqual(newLine(SHEET2, 1), { part_id: "sheet2", quantity: 1, note: "", option: 1, width_mm: 100, height_mm: 100, count: 1, waste_pct: 0 });
+  assert.deepEqual(newLine(RING), { part_id: "ring", quantity: 1, note: "", option: 0 });
 });

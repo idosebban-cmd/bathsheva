@@ -290,3 +290,81 @@ export function layoutConcept(lines: ConceptLine[], parts: Map<string, LibraryPa
     };
   });
 }
+
+const mmText = (v: number) => `${+v.toFixed(1)}`;
+
+/** "tube Ø80 × 210 mm, Ø74 bore": a shape's sizes in words, for the library preview. */
+export function describeShape(s: ShapeSpec): string {
+  switch (s.shape) {
+    case "tube":
+      return `tube Ø${mmText(s.od)} × ${mmText(s.length)} mm${s.id > 0 ? `, Ø${mmText(s.id)} bore` : ""}`;
+    case "rod":
+      return `rod Ø${mmText(s.d)} × ${mmText(s.length)} mm`;
+    case "bar":
+    case "strip":
+      return `${s.shape} ${mmText(s.width)} × ${mmText(s.thickness)} × ${mmText(s.length)} mm`;
+    case "sheet":
+      return `sheet ${mmText(s.width)} × ${mmText(s.height)} × ${mmText(s.thickness)} mm`;
+    case "disc":
+      return `disc Ø${mmText(s.d)} × ${mmText(s.thickness)} mm`;
+    case "ring":
+      return `ring Ø${mmText(s.od)} × ${mmText(s.thickness)} mm${s.id > 0 ? `, Ø${mmText(s.id)} bore` : ""}`;
+    case "cylinder":
+      return `cylinder Ø${mmText(s.d)} × ${mmText(s.height)} mm`;
+    case "dome":
+      return `dome Ø${mmText(s.d)} × ${mmText(s.height)} mm${s.opening ? `, Ø${mmText(s.opening)} opening` : ""}`;
+    case "cone":
+      return `cone Ø${mmText(s.d_bottom)} to Ø${mmText(s.d_top)} × ${mmText(s.height)} mm`;
+    case "sphere":
+      return `sphere Ø${mmText(s.d)}`;
+    case "globe":
+      return `globe Ø${mmText(s.d)} on a Ø${mmText(s.neck_d)} × ${mmText(s.neck_height)} mm neck`;
+    case "box":
+      return `box ${mmText(s.width)} × ${mmText(s.depth)} × ${mmText(s.height)} mm`;
+  }
+}
+
+/**
+ * A part dropped into the 3D view. On empty space (`target` null) it goes at the end of the table, so it sits on
+ * top of the stack. On a part it goes in the row after that part, sitting on its top: in a part that stacks, it
+ * joins the stack there (whatever was above moves up by its height) and keeps the part's sideways offset; on a part
+ * that doesn't stack (a lampholder inside a shade) or one repeated round the centre (feet), it sits on the part's
+ * top without moving anything else, one on each copy. The part's tilt isn't followed.
+ */
+export function insertOnTop(lines: ConceptLine[], placed: Placed[], target: number | null, line: ConceptLine) {
+  const p = target !== null ? placed[target] : undefined;
+  if (!p) return { lines: [...lines, line], index: lines.length };
+  const v = p.view;
+  const view: Partial<LineView> = {};
+  if (v.dx) view.dx = v.dx;
+  if (v.dz) view.dz = v.dz;
+  if (v.stack && v.repeat <= 1) {
+    if (v.dy) view.dy = v.dy; // the next level is the part's top before its own offset
+  } else {
+    if (v.repeat > 1) view.repeat = v.repeat;
+    view.stack = false;
+    const base = p.base + (v.stack ? p.total : 0); // where the new row's place in the stack starts
+    const dy = p.base + v.dy + p.total - base;
+    if (dy) view.dy = +dy.toFixed(3);
+  }
+  const added: ConceptLine = Object.keys(view).length ? { ...line, view } : line;
+  const index = p.index + 1;
+  return { lines: [...lines.slice(0, index), added, ...lines.slice(index)], index };
+}
+
+/** Drag-and-drop from the library panel into the 3D view: the data type and its payload (part id and variant). */
+export const PART_DRAG_TYPE = "application/x-bathsheva-part";
+
+export function dragPayload(partId: string, option: number): string {
+  return JSON.stringify({ part_id: partId, option });
+}
+
+export function readDragPayload(raw: string): { part_id: string; option: number } | null {
+  try {
+    const v = JSON.parse(raw) as { part_id?: unknown; option?: unknown };
+    if (typeof v.part_id !== "string" || !v.part_id) return null;
+    return { part_id: v.part_id, option: Number.isInteger(v.option) && (v.option as number) >= 0 ? (v.option as number) : 0 };
+  } catch {
+    return null;
+  }
+}
