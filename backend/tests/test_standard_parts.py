@@ -135,7 +135,7 @@ def test_seed_concepts_api(client):
     body = client.get("/api/standard-parts/concepts").json()
     assert len(body) == 15
     tambour = body[0]
-    assert tambour["name"] == "Tambour" and tambour["cost"]["total_100"] == 63.45
+    assert tambour["name"] == "Tambour" and tambour["cost"]["total_100"] == 64.84
 
 
 def test_cost_api(client):

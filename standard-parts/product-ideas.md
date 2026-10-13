@@ -39,7 +39,7 @@ Fifteen concepts for Bathsheva London, built mostly from parts in [`library.md`]
 
 | # | Concept | Type | Retail | Parts @100 | Parts @500 | % of DTC target | Verdict |
 |---|---|---|---|---|---|---|---|
-| 1 | Tambour | Mains table lamp, frosted glass cylinder | £250 | £63.45 | £63.45 | 92% | Tight |
+| 1 | Tambour | Mains table lamp, frosted glass cylinder | £250 | £64.84 | £64.84 | 94% | Tight |
 | 2 | Lune | Mains table lamp, opal globe on ply stack | £220 | £55.20 | £55.20 | 91% | Tight |
 | 3 | Morel | Cordless mushroom lamp | £225 | £69.45 | £69.45 | 112% | Over |
 | 4 | Bell | Mains cone-shade table lamp | £195 | £49.51 | £49.51 | 92% | Tight |
@@ -70,18 +70,18 @@ A slim column of internally frosted borosilicate glass stands on a turned beech 
 - **Library parts:**
   - J Moncrieff internally frosted cylinder shade, 80 × 210 mm, 40 mm fitter, £35 (§1.5);
   - Oaklea brass inline lamp kit (§3.3);
-  - S. Lilley E27 brass shade ring (§3.4);
+  - 2 × S. Lilley E27 brass shade rings, one either side of the cylinder's 40 mm fitter (48 mm outer, 37 mm inner Ø) (§3.4);
   - 2 × beech turning blanks, 4 × 4 × 1.75" (§6.1);
   - 3 × Cousins brass bun feet (§4.6).
 - **Custom work:** glue up and turn the two blanks into a 100 mm plinth with a seat for the cylinder; bore the cable path; lacquer; drill and fix the feet.
-- **Parts cost:** £63.45 at 100 and £63.45 at 500 (cylinder £35.00, kit £9.86, ring £1.39, blanks £6.70, feet £10.50).
+- **Parts cost:** £64.84 at 100 and £64.84 at 500 (cylinder £35.00, kit £9.86, two shade rings £2.78, blanks £6.70, feet £10.50).
 - **Not in library:** LED lamp, inline switch or dimmer, plug, packaging.
-- **Main risk:** supply at volume. The cylinder is a retail stock item. At 500 it should come through J Moncrieff's trade cylinders (quote only, MOQ 50–200), and that route sets the real cost. Also check that the kit's lampholder and the ring hold a 40 mm fitter securely.
+- **Main risk:** supply at volume. The cylinder is a retail stock item. At 500 it should come through J Moncrieff's trade cylinders (quote only, MOQ 50–200), and that route sets the real cost. Also check that the kit's lampholder takes E27 shade rings: the 40 mm fitter sits between the rings' 37 mm bore and 48 mm outside, so two rings can clamp it.
 
 <!-- concept-parts
 - {part: internally-frosted-cylinder-shade--j-moncrieff-uk, qty: 1, note: '80 × 210 mm frosted cylinder'}
 - {part: brass-inline-lamp-kit-oaklk1--oaklea-woodcraft-uk, qty: 1, note: 'lampholder, flex, plug, switch'}
-- {part: es-e27-shade-ring-s-lilley-spare--lampspares-uk, qty: 1, note: 'E27 shade ring'}
+- {part: es-e27-shade-ring-s-lilley-spare--lampspares-uk, qty: 2, note: 'two E27 shade rings clamping the 40 mm fitter'}
 - {part: beech-turning-blanks--classic-hand-tools-uk, qty: 2, note: 'two 4 × 4 × 1.75" blanks glued for the plinth'}
 - {part: bun-feet--cousins-uk, qty: 3, note: 'three 20 mm bun feet'}
 -->
@@ -459,7 +459,7 @@ A slim 50 mm clear glass cylinder with a single line of warm LED light down its 
 
 | # | Concept | How it uses the holder | If it's BC/B22 (likely) | If it's E14 |
 |---|---|---|---|---|
-| 1 | Tambour | Hidden inside the frosted cylinder; E27 shade ring holds the 40 mm fitter | **Affected:** the E27 shade ring won't fit a BC holder, so it needs a BC shade ring or a different way to seat the cylinder. Bulb choice is fine. | **Affected:** limited bulbs, and the E27 ring doesn't fit. |
+| 1 | Tambour | Hidden inside the frosted cylinder; two E27 shade rings clamp the 40 mm fitter | **Affected:** the E27 shade ring won't fit a BC holder, so it needs a BC shade ring or a different way to seat the cylinder. Bulb choice is fine. | **Affected:** limited bulbs, and the E27 ring doesn't fit. |
 | 2 | Lune | Hidden inside the opal globe; the globe is held by the custom collar | Not affected. | **Affected:** limited bulbs. A small E14 bulb may also sit low in the 150 mm globe and light it unevenly. |
 | 4 | Bell | Visible under the cone; E27 shade ring holds the shade | **Affected:** the E27 shade ring won't fit, so it needs a BC shade-carrier or ring. Bulb choice is fine. | **Affected:** limited bulbs, and the E27 ring doesn't fit. |
 | 5 | Lattice | Hidden inside the frosted tube | Not affected. | **Affected:** limited bulbs (it needs a bulb that fits inside the 50 mm-bore tube; check either way). |
