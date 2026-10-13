@@ -414,6 +414,91 @@ No UK assembler of custom small-batch 1S2P packs with published terms turned up.
 - **Prices and specs to confirm first** (the snapshot was unclear): the Oaklea lamp kit's lampholder cap and whether it is solid brass, Cree CXA1507 at Farnell, the UK LED Lights strip length, Urban Cottage shade ring currency, Willys-Hifi "$" prices, and Cousins bun feet.
 - **Not yet in the workbench:** these prices are not in `backend/seed/cost/`. If any are used there, add them with `source`, `confidence`, `verified: false` and `price_basis: distributor_small_qty` or `retail`, per the provenance convention.
 
+<!-- part-shapes
+# How the Standard Parts builder draws each part in 3D, in mm. One mapping applies to every price variant;
+# a list gives one per variant, in the order of the "Unit price" cell. Shapes: tube {od, id, length},
+# rod {d, length}, bar and strip {width, thickness, length}, sheet {width, height, thickness}, disc {d, thickness},
+# ring {od, id, thickness}, cylinder {d, height}, dome {d, height, opening?}, cone {d_bottom, d_top, height},
+# sphere {d}, globe {d, neck_d, neck_height}, box {width, depth, height}. Optional: look (overrides the colour
+# taken from the Material column) and assumed (what isn't stated in the row above, listed under the viewer).
+# Parts not listed here are drawn as labelled placeholder boxes.
+cardboard-construction-tubes--specialist-crafts-dryad-uk: {shape: "tube", od: 44, id: 40, length: 240}
+postal-tubes-with-end-caps-raja--morplan-uk: {shape: "tube", od: 63, id: 60, length: 483, assumed: "wall 1.5 mm"}
+round-tube-25-1-6-mm--the-metal-merchant-uk: {shape: "tube", od: 25, id: 21.8, length: 1000, assumed: "length 1000 mm (sold 100–4000 mm)"}
+brass-tube-10-mm-od-1-m--lampfix-uk: {shape: "tube", od: 10, id: 7, length: 1000}
+150-mm-brass-tube-with-10-mm-male-ends-s-lilley--lampspares-uk: {shape: "tube", od: 10, id: 7, length: 150, assumed: "10 mm OD, 1.5 mm wall"}
+cz108-round-tube-polished--the-metal-store-uk: {shape: "tube", od: 12.7, id: 9.44, length: 2500}
+cz108-round-tube-mill-finish--the-metal-store-uk: {shape: "tube", od: 12.7, id: 9.44, length: 5000}
+small-brass-tube-8-mm-od--access-models-uk: {shape: "tube", od: 8, id: 7.1, length: 1000, assumed: "length 1000 mm"}
+clear-extruded-tube-50-2-mm-1-m--the-clear-plastic-shop-uk: {shape: "tube", od: 50, id: 46, length: 1000}
+clear-extruded-tube-50-5-mm-1-m--the-clear-plastic-shop-uk: {shape: "tube", od: 50, id: 40, length: 1000}
+clear-extruded-tube-60-5-mm-1-m--the-clear-plastic-shop-uk: {shape: "tube", od: 60, id: 50, length: 1000}
+clear-tube-100-3-mm--plasticonline-uk: {shape: "tube", od: 100, id: 94, length: 1000, assumed: "length 1000 mm"}
+clear-glass-cylinder-shades--j-moncrieff-uk: [{shape: "tube", od: 50, id: 44, length: 240, assumed: "wall 3 mm"}, {shape: "tube", od: 130, id: 124, length: 240, assumed: "wall 3 mm"}, {shape: "tube", od: 48, id: 44, length: 112, assumed: "wall 2 mm"}]
+internally-frosted-cylinder-shade--j-moncrieff-uk: {shape: "tube", od: 80, id: 74, length: 210, assumed: "wall 3 mm", look: "glass_frosted"}
+150-mm-opal-globe-80-mm-fitter-neck--j-moncrieff-uk: {shape: "globe", d: 150, neck_d: 80, neck_height: 25, assumed: "neck 25 mm high"}
+200-mm-opal-globe-80-mm-fitter-hole--j-moncrieff-uk: {shape: "globe", d: 200, neck_d: 80, neck_height: 25, assumed: "neck 25 mm high"}
+small-clear-glass-dome-30-mm-fitter--j-moncrieff-uk: {shape: "dome", d: 70, height: 75, opening: 30}
+clear-glass-dome-114-mm-base--j-moncrieff-uk: {shape: "dome", d: 114, height: 155, opening: 52}
+internally-frosted-dome-12-mm-fitter--j-moncrieff-uk: {shape: "dome", d: 100, height: 100, opening: 12, look: "glass_frosted"}
+prismatic-dome-shades--j-moncrieff-uk: [{shape: "dome", d: 305, height: 146, opening: 60, assumed: "height from the listing in search results"}, {shape: "dome", d: 380, height: 190, opening: 70, assumed: "height from the listing in search results"}]
+solid-brass-ball-finial-7112--in-the-light-direction-uk: {shape: "sphere", d: 15, assumed: "drawn as a 15 mm ball (13 mm high)"}
+hand-spun-aluminium-shades--etsy-uk-sellers-marketplace: [{shape: "cone", d_bottom: 165, d_top: 40, height: 120, assumed: "40 mm top opening, 120 mm tall"}, {shape: "cone", d_bottom: 210, d_top: 40, height: 150, assumed: "40 mm top opening, 150 mm tall"}]
+m10-finial-cap-patikil--amazon-uk-marketplace: {shape: "cylinder", d: 21.5, height: 54}
+3-screw-gallery-10-5-mm-hole-288525--peter-willetts-associates-uk: {shape: "cone", d_bottom: 57, d_top: 10.5, height: 25, assumed: "25 mm deep, as the polished one"}
+3-screw-gallery-28-mm-hole-288636--peter-willetts: {shape: "cone", d_bottom: 57, d_top: 28, height: 25, assumed: "25 mm deep, as the polished one"}
+3-screw-gallery-polished-25-mm-deep-9229--peter-willetts: {shape: "cone", d_bottom: 57, d_top: 28, height: 25}
+m10-lampholder-fixing-kit-s-lilley--light-and-power-solutions-uk: {shape: "rod", d: 10, length: 50}
+m10-fixing-kit-larger-set--light-and-power-solutions-uk: {shape: "rod", d: 10, length: 50}
+es-e27-shade-ring-s-lilley-spare--lampspares-uk: {shape: "ring", od: 48, id: 37, thickness: 3.5}
+es-e27-threaded-brass-lampholder-s-lilley-7601et-10-mm-base-fixing--lampspares-uk: {shape: "cylinder", d: 38, height: 61}
+e27-shade-ring--urban-cottage-industries-uk: {shape: "ring", od: 43, id: 37, thickness: 3.5, assumed: "37 mm bore and 3.5 mm thick, as the S. Lilley ring"}
+cob-led-strip-24-v-3000-k-cri-90-15-w-m-1500-lm-m--hi-line-lighting-uk: {shape: "strip", width: 10, thickness: 2, length: 5000, assumed: "10 mm wide, 2 mm thick"}
+cob-led-strip-24-v-2700-3000-k-cri-90-7-5-w-m-480-leds-m-atom--uk-led-lights: {shape: "strip", width: 10, thickness: 2, length: 1000, assumed: "2 mm thick, 1000 mm run"}
+cob-strip-24-v-2700-k-cri-90-9-w-m-ip67--electrical4less-uk: {shape: "strip", width: 10, thickness: 3, length: 30000, assumed: "10 mm wide, 3 mm thick"}
+brass-round-bar-5-16-8-mm--metalmania-uk: {shape: "rod", d: 7.94, length: 1000}
+brass-round-bar-18-mm-per-metre--industrial-safety-uk: {shape: "rod", d: 18, length: 1000}
+brass-round-bar-5-8--sdts-engineering-uk: {shape: "rod", d: 15.88, length: 1000, assumed: "length 1000 mm"}
+brass-flat-bar-12-lengths--noggin-end-metals-stoke-on-trent: [{shape: "bar", width: 6.35, thickness: 1.59, length: 304.8}, {shape: "bar", width: 50.8, thickness: 3.18, length: 304.8}]
+brass-sheet-sample-small-sheet--the-metal-store-uk: [{shape: "sheet", width: 45, height: 45, thickness: 0.9}, {shape: "sheet", width: 250, height: 250, thickness: 0.9, assumed: "0.9 mm thick, as the sample"}]
+brass-sheet-1-mm--macc-models-uk: {shape: "sheet", width: 300, height: 300, thickness: 1}
+audio-note-brass-knob-mwk-01-9000-9001--hificollective-uk: [{shape: "cylinder", d: 26, height: 20, assumed: "20 mm tall"}, {shape: "cylinder", d: 12, height: 12, assumed: "12 mm tall"}]
+solid-brass-gold-plated-knob-25-mm--hificollective-uk: {shape: "cylinder", d: 25, height: 30}
+cross-pattern-solid-aluminium-knob--hificollective-uk: {shape: "cylinder", d: 31, height: 26}
+numbered-knob--hificollective-uk: [{shape: "cylinder", d: 35, height: 20, assumed: "20 mm tall"}, {shape: "cylinder", d: 35, height: 20, assumed: "20 mm tall", look: "black"}]
+domed-brass-knob-6-mm-shaft-set-screw--ebay-uk-marketplace: {shape: "dome", d: 18, height: 12, assumed: "12 mm tall"}
+bun-feet--cousins-uk: {shape: "dome", d: 20, height: 12, assumed: "20 mm size drawn, 12 mm tall"}
+perforated-aluminium-small-sheet--modelshop-uk: {shape: "sheet", width: 400, height: 250, thickness: 0.5}
+perforated-aluminium-2-1-m--rackerman-uk: {shape: "sheet", width: 2000, height: 1000, thickness: 1.5, assumed: "1.5 mm thick"}
+perforated-aluminium-r3-t6-1-5-mm--f-h-brundle-uk: {shape: "sheet", width: 2000, height: 1000, thickness: 1.5}
+decorative-perforated-brass-pattern-379--f-h-brundle-uk: {shape: "sheet", width: 1830, height: 915, thickness: 0.7}
+fine-brass-mesh--the-mesh-company-ebay-uk: {shape: "sheet", width: 200, height: 150, thickness: 0.5, assumed: "0.5 mm thick"}
+visaton-grille-10-rs-round--farnell-uk: {shape: "disc", d: 134, thickness: 14, assumed: "size of the Grille 10 R/134"}
+visaton-grille-10-r-134--rs-components-uk: {shape: "disc", d: 134, thickness: 14}
+3-decorative-mesh-covers--ebay-uk-china-shipped-marketplace: {shape: "disc", d: 97, thickness: 5, assumed: "5 mm deep"}
+beech-turning-blanks--classic-hand-tools-uk: [{shape: "box", width: 101.6, depth: 101.6, height: 44.45}, {shape: "box", width: 304.8, depth: 304.8, height: 44.45}]
+beech-board-blank--scottish-wood-uk: {shape: "box", width: 203, depth: 499, height: 60}
+wooden-beech-knob-with-screw--j-penny-ltd-uk: [{shape: "dome", d: 35, height: 25, assumed: "25 mm tall"}, {shape: "dome", d: 46, height: 30, assumed: "30 mm tall"}, {shape: "dome", d: 52, height: 34, assumed: "34 mm tall"}]
+unfinished-beech-cabinet-knob--the-handle-studio-uk: {shape: "dome", d: 45, height: 30, assumed: "30 mm tall"}
+beech-cupboard-knob-face-fix--period-features-uk: {shape: "dome", d: 45, height: 30, assumed: "30 mm tall"}
+tall-beech-knobs-with-screw--ebay-uk: {shape: "dome", d: 45, height: 40, assumed: "40 mm tall"}
+plywood-circle-with-hole--jb-woodcraft-uk: {shape: "disc", d: 100, thickness: 3, assumed: "100 mm size drawn"}
+100-mm-circle--bee-beautiful-uk: {shape: "disc", d: 100, thickness: 5}
+laser-plywood-sheets-cut-your-own-discs--kitronik-uk: {shape: "sheet", width: 600, height: 400, thickness: 3, assumed: "3 mm thick"}
+premium-beech-plywood-18-mm-glue-class-3--cts-diy-uk: {shape: "sheet", width: 2440, height: 1220, thickness: 18}
+visaton-frs-8-m-8--cpc-farnell-uk: {shape: "cylinder", d: 84, height: 44, assumed: "size from the SOS Electronic list"}
+visaton-frs-8-m-8--musicstore-germany: {shape: "cylinder", d: 84, height: 44, assumed: "size from the SOS Electronic list"}
+visaton-frs-8-8--toutlehautparleur-tlhp-france: {shape: "cylinder", d: 84, height: 40, assumed: "size from the SOS Electronic list"}
+visaton-frs-8-m-8-2001--sos-electronic-eu: {shape: "cylinder", d: 84, height: 44}
+visaton-frs-8-8-2004--sos-electronic-eu: {shape: "cylinder", d: 84, height: 40}
+visaton-bg-20-8-3020--sos-electronic-eu: {shape: "cylinder", d: 205, height: 81}
+molicel-p28a-18650-cell--fogstar-uk-official-uk-distributor: {shape: "cylinder", d: 18, height: 65}
+eve-25p-18650-cell--nu-battery-uk: {shape: "cylinder", d: 18, height: 65}
+18650-cells-for-custom-packs--cell-supply-uk: {shape: "cylinder", d: 18, height: 65}
+1s2p-li-ion-pack-3-7-v-7000-mah--battery-101-uk: {shape: "box", width: 37, depth: 18.5, height: 65, assumed: "two 18650 cells side by side, no case"}
+ansmann-1s2p-pack-3-7-v-7000-mah--cpc-farnell-uk: {shape: "box", width: 37, depth: 18.5, height: 65, assumed: "two 18650 cells side by side, no case"}
+-->
+
 <!-- priced-units
 # What one priced unit of a part is, in mm, so the Standard Parts builder can take a length (tube, rod,
 # bar, strip) or a width × height (sheet) and convert it to a fraction of that unit. A mapping applies

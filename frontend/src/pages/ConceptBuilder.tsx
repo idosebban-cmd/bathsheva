@@ -28,6 +28,7 @@ import {
   type SeedConcept,
 } from "../standardParts";
 import { AvailabilityBadge, CostTiles, PriceCell, useStandardParts } from "./StandardPartsPage";
+import ConceptViewer from "../components/ConceptViewer";
 
 interface Draft {
   name: string;
@@ -60,6 +61,7 @@ export default function ConceptBuilder() {
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [query, setQuery] = useState("");
+  const [selected, setSelected] = useState<number | null>(null); // the line placed in the 3D view
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   // Load the saved concept, the product concept it starts from, or a blank one.
@@ -133,11 +135,15 @@ export default function ConceptBuilder() {
   const setLine = (i: number, patch: Partial<ConceptLine>) => update({ lines: draft.lines.map((l, j) => (j === i ? { ...l, ...patch } : l)) });
   const replaceLine = (i: number, line: ConceptLine) => update({ lines: draft.lines.map((l, j) => (j === i ? line : l)) });
   const addPart = (p: LibraryPart) => update({ lines: [...draft.lines, newLine(p)] });
-  const removeLine = (i: number) => update({ lines: draft.lines.filter((_, j) => j !== i) });
+  const removeLine = (i: number) => {
+    update({ lines: draft.lines.filter((_, j) => j !== i) });
+    setSelected((s) => (s === null || s === i ? null : s > i ? s - 1 : s));
+  };
   const moveLine = (i: number, d: -1 | 1) => {
     const lines = [...draft.lines];
     [lines[i], lines[i + d]] = [lines[i + d], lines[i]];
     update({ lines });
+    setSelected((s) => (s === i ? i + d : s === i + d ? i : s));
   };
 
   async function save() {
@@ -256,6 +262,8 @@ export default function ConceptBuilder() {
           needs (and a waste allowance for sheets); they are converted to the share of the priced length or sheet. Other parts take a
           quantity in the unit the price is for (pieces, packs). Price breaks apply when 100 or 500 products need enough to reach them.
         </p>
+        <div className="sp-parts-grid">
+        <div className="sp-parts-table">
         {draft.lines.length === 0 ? (
           <p className="muted">No parts yet. Search the library below to add some.</p>
         ) : (
@@ -280,7 +288,7 @@ export default function ConceptBuilder() {
                   const p = parts.get(l.part_id);
                   const c = costLine(i);
                   return (
-                    <tr key={i}>
+                    <tr key={i} className={selected === i ? "sp-selected" : undefined}>
                       <td>
                         {p ? (
                           <>
@@ -354,6 +362,9 @@ export default function ConceptBuilder() {
                         <button className="link" onClick={() => removeLine(i)}>
                           remove
                         </button>
+                        <button className="link" onClick={() => setSelected(i)} title="Select this part in the 3D view to place it">
+                          place
+                        </button>
                       </td>
                     </tr>
                   );
@@ -374,6 +385,15 @@ export default function ConceptBuilder() {
             </table>
           </div>
         )}
+        </div>
+        <ConceptViewer
+          lines={draft.lines}
+          parts={parts}
+          selected={selected !== null && selected < draft.lines.length ? selected : null}
+          onSelect={setSelected}
+          onViewChange={(i, view) => setLine(i, { view })}
+        />
+        </div>
       </section>
 
       <section className="card">

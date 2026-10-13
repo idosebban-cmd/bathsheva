@@ -1,5 +1,7 @@
 // Standard Parts page: API types and pure helpers (tested with npm test).
 
+import { DEFAULT_VIEW, isDefaultView, type LineView, type PartShape } from "./conceptShapes.ts";
+
 export interface PriceOption {
   price: number;
   currency: string;
@@ -34,6 +36,10 @@ export interface LibraryPart {
   availability: string;
   /** Per price variant: the priced unit in mm (a length or a sheet), or null for a piece or pack. */
   units: (PricedUnit | null)[];
+  /** Per price variant: how the 3D view draws it, or null for a labelled placeholder. */
+  shapes: (PartShape | null)[];
+  /** Material colour for the 3D view (brass, glass, wood, ...). */
+  look: string;
 }
 
 export type PricedUnit = { length_mm: number } | { width_mm: number; height_mm: number };
@@ -68,6 +74,8 @@ export interface ConceptLine {
   height_mm?: number | null;
   count?: number | null;
   waste_pct?: number | null;
+  /** Placement in the builder's 3D view (offsets, rotation, repeat); absent means the default. */
+  view?: Partial<LineView> | null;
 }
 
 const SIZE_KEYS = ["length_mm", "width_mm", "height_mm", "count", "waste_pct"] as const;
@@ -209,6 +217,7 @@ export function plainLines(lines: ConceptLine[]): ConceptLine[] {
   return lines.map((l) => {
     const out: ConceptLine = { part_id: l.part_id, quantity: l.quantity, note: l.note, option: l.option };
     for (const k of SIZE_KEYS) if (l[k] !== undefined && l[k] !== null) out[k] = l[k];
+    if (l.view && !isDefaultView({ ...DEFAULT_VIEW, ...l.view })) out.view = { ...DEFAULT_VIEW, ...l.view };
     return out;
   });
 }

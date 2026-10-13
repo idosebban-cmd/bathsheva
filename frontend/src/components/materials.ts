@@ -133,3 +133,42 @@ export function smoothFaceted(root: THREE.Object3D) {
     node.userData.smoothed = true;
   }
 }
+
+// Standard Parts builder: preview colours by material ("look", from the part's Material column or its shape).
+// Glass and acrylic are semi-transparent so the parts inside them show.
+function seeThrough(color: string, opacity: number, roughness: number): THREE.MeshPhysicalMaterial {
+  return new THREE.MeshPhysicalMaterial({
+    color, transparent: true, opacity, roughness, metalness: 0, clearcoat: 0.6, side: THREE.DoubleSide, depthWrite: false,
+  });
+}
+
+export function lookMaterial(look: string): THREE.Material {
+  switch (look) {
+    case "brass":
+      return material("brass", false);
+    case "glass":
+      return seeThrough("#f4f8f7", 0.28, 0.05);
+    case "glass_frosted":
+      return seeThrough("#fbf6ec", 0.55, 0.6);
+    case "glass_opal":
+      return seeThrough("#f7f1e6", 0.82, 0.7);
+    case "acrylic":
+      return seeThrough("#eef6fb", 0.32, 0.1);
+    case "wood":
+      return new THREE.MeshStandardMaterial({ color: "#c09265", roughness: 0.78 });
+    case "aluminium":
+      return new THREE.MeshPhysicalMaterial({ color: "#c8ccd0", metalness: 1, roughness: 0.34 });
+    case "steel":
+      return new THREE.MeshPhysicalMaterial({ color: "#a9aeb3", metalness: 1, roughness: 0.3 });
+    case "black":
+      return new THREE.MeshPhysicalMaterial({ color: "#161616", roughness: 0.45, clearcoat: 0.3 });
+    case "paper":
+      return new THREE.MeshStandardMaterial({ color: "#b48f62", roughness: 0.92 });
+    case "electronics":
+      return new THREE.MeshStandardMaterial({ color: "#2f3d35", roughness: 0.6 });
+    case "placeholder":
+      return new THREE.MeshStandardMaterial({ color: "#d4d0c8", roughness: 0.9, transparent: true, opacity: 0.55 });
+    default:
+      return new THREE.MeshStandardMaterial({ color: "#8c8c8c", roughness: 0.6 });
+  }
+}

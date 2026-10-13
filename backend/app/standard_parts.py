@@ -110,6 +110,8 @@ class LibraryPart:
     availability: str  # non-empty when the listing or note says discontinued / out of stock
     # Per price variant: {"length_mm": L} or {"width_mm": W, "height_mm": H}, or None (priced per piece/pack).
     units: list[dict[str, float] | None] = field(default_factory=list)
+    # Per price variant: how the 3D view draws it ({"shape": "tube", "od": .., ...}), or None for a placeholder.
+    shapes: list[dict[str, Any] | None] = field(default_factory=list)
 
     @property
     def price_gbp(self) -> float | None:
@@ -148,6 +150,7 @@ class LibraryPart:
             "breaks": [{"quantity": b.quantity, "price": b.price, "currency": b.currency,
                         "price_gbp": round(b.price_gbp, 4)} for b in self.breaks],
             "moq": self.moq, "note": self.note, "availability": self.availability, "units": self.units,
+            "shapes": self.shapes, "look": look_for(self),
         }
 
 
@@ -260,6 +263,7 @@ def _part(cells: list[str], category: str, subcategory: str) -> LibraryPart:
 
 
 _UNITS_RE = re.compile(r"^<!-- priced-units\n(.*?)^-->\n?", re.S | re.M)
+_SHAPES_RE = re.compile(r"^<!-- part-shapes\n(.*?)^-->\n?", re.S | re.M)
 _ALIASES_RE = re.compile(r"^<!-- renamed-parts\n(.*?)^-->\n?", re.S | re.M)
 
 
@@ -286,11 +290,99 @@ def _apply_units(block: str, parts: dict[str, LibraryPart]) -> None:
             part.units = [_unit(value, part_id)] * max(len(part.options), 1)
 
 
+# 3D shapes ------------------------------------------------------------------------------------------------
+
+SHAPE_KEYS: dict[str, tuple[str, ...]] = {
+    "tube": ("od", "id", "length"), "rod": ("d", "length"), "bar": ("width", "thickness", "length"),
+    "strip": ("width", "thickness", "length"), "sheet": ("width", "height", "thickness"), "disc": ("d", "thickness"),
+    "ring": ("od", "id", "thickness"), "cylinder": ("d", "height"), "dome": ("d", "height"),
+    "cone": ("d_bottom", "d_top", "height"), "sphere": ("d",), "globe": ("d", "neck_d", "neck_height"),
+    "box": ("width", "depth", "height"),
+}
+SHAPE_OPTIONAL = {"dome": ("opening",)}
+LOOKS = ("brass", "glass", "glass_frosted", "glass_opal", "acrylic", "wood", "aluminium", "steel", "black", "paper",
+         "electronics", "other")
+
+
+def _shape(value: Any, where: str) -> dict[str, Any]:
+    if not isinstance(value, dict) or value.get("shape") not in SHAPE_KEYS:
+        raise LibraryError(f"part-shapes {where}: shape must be one of {', '.join(SHAPE_KEYS)}")
+    kind = value["shape"]
+    sizes = SHAPE_KEYS[kind] + SHAPE_OPTIONAL.get(kind, ())
+    extra = set(value) - {"shape", "look", "assumed", *sizes}
+    missing = [k for k in SHAPE_KEYS[kind] if k not in value]
+    if extra or missing:
+        raise LibraryError(f"part-shapes {where}: {kind} takes {', '.join(sizes)}"
+                           f"{'; missing ' + ', '.join(missing) if missing else ''}"
+                           f"{'; unknown ' + ', '.join(sorted(extra)) if extra else ''}")
+    out: dict[str, Any] = {"shape": kind}
+    for k in sizes:
+        if k in value:
+            out[k] = float(value[k])
+            if out[k] < 0 or (out[k] == 0 and k not in ("id", "d_top", "opening")):
+                raise LibraryError(f"part-shapes {where}: {k} must be positive")
+    if kind in ("tube", "ring") and out["id"] >= out["od"]:
+        raise LibraryError(f"part-shapes {where}: the bore must be smaller than the outside")
+    if "look" in value:
+        if value["look"] not in LOOKS:
+            raise LibraryError(f"part-shapes {where}: look must be one of {', '.join(LOOKS)}")
+        out["look"] = value["look"]
+    if value.get("assumed"):
+        out["assumed"] = str(value["assumed"])
+    return out
+
+
+def _apply_shapes(block: str, parts: dict[str, LibraryPart]) -> None:
+    for part_id, value in (yaml.safe_load(block) or {}).items():
+        part = parts.get(part_id)
+        if part is None:
+            raise LibraryError(f"part-shapes: unknown part {part_id}")
+        variants = max(len(part.options), 1)
+        if isinstance(value, list):
+            if len(value) != variants:
+                raise LibraryError(f"part-shapes {part_id}: {len(value)} entries for {variants} price variants")
+            part.shapes = [None if v is None else _shape(v, part_id) for v in value]
+        else:
+            part.shapes = [_shape(value, part_id)] * variants
+
+
+# Colour for the 3D view from the part's material, checked in this order (first match wins).
+_LOOK_WORDS: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("electronics", ("paper cone", "aluminium cone", "cob", "led", "li-ion", "18650", "pcb", "module")),
+    ("glass_opal", ("opal",)),
+    ("glass_frosted", ("frosted glass", "internally frosted")),
+    ("glass", ("glass", "borosilicate", "quartz", "duran", "simax")),
+    ("acrylic", ("pmma", "acrylic")),
+    ("brass", ("brass", "cz108", "cz121", "gold")),
+    ("wood", ("beech", "oak", "walnut", "ash", "birch", "ply", "wood", "timber", "veneer", "poplar")),
+    ("black", ("black",)),
+    ("aluminium", ("aluminium", "6063", "6082", "6060", "1050")),
+    ("steel", ("steel", "stainless", "nickel", "chrome")),
+    ("paper", ("paper", "card", "kraft", "fibreboard", "board")),
+)
+
+
+def look_for(part: LibraryPart, option: int = 0) -> str:
+    """The material colour for the 3D view: the shape's `look` if given, else from the Material column and name."""
+    shapes = part.shapes
+    if shapes:
+        shape = shapes[min(max(option, 0), len(shapes) - 1)]
+        if shape and shape.get("look"):
+            return shape["look"]
+    text = f"{part.material} {part.name}".lower()
+    for look, words in _LOOK_WORDS:
+        if any(re.search(rf"\b{re.escape(w)}", text) for w in words):
+            return look
+    return "other"
+
+
 def parse_library(text: str) -> Library:
     units = _UNITS_RE.search(text)
     text = _UNITS_RE.sub("", text)
     renamed = _ALIASES_RE.search(text)
     text = _ALIASES_RE.sub("", text)
+    shapes = _SHAPES_RE.search(text)
+    text = _SHAPES_RE.sub("", text)
     sections: list[Section] = []
     about: list[dict[str, Any]] = []
     section: Section | None = None
@@ -341,6 +433,8 @@ def parse_library(text: str) -> Library:
         raise LibraryError(f"duplicate part ids: {dupes}")
     if units:
         _apply_units(units.group(1), library.parts)
+    if shapes:
+        _apply_shapes(shapes.group(1), library.parts)
     if renamed:
         found = library.parts
         for old, new in (yaml.safe_load(renamed.group(1)) or {}).items():
@@ -506,6 +600,8 @@ def _seed_line(p: dict[str, Any]) -> dict[str, Any]:
     if "length_mm" in p or "size_mm" in p:
         line["count"] = float(p.get("count", 1))
         line["waste_pct"] = float(p.get("waste_pct", 0))
+    if p.get("view"):
+        line["view"] = dict(p["view"])  # 3D placement, as saved by the builder
     return line
 
 

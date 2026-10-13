@@ -296,3 +296,86 @@ def test_saving_a_concept_with_an_old_id_stores_the_current_one(client):
     assert r.status_code == 201, r.text
     assert r.json()["lines"][0]["part_id"] == NEW_ID
     assert client.get("/api/standard-parts").json()["aliases"][OLD_ID] == NEW_ID
+
+
+# --- 3D shapes ---------------------------------------------------------------
+
+
+def test_part_shapes_parse_with_one_entry_per_variant():
+    shaped = {pid: p for pid, p in PARTS.items() if p.shapes}
+    assert len(shaped) >= 70
+    cyl = PARTS["internally-frosted-cylinder-shade--j-moncrieff-uk"].shapes[0]
+    assert cyl == {"shape": "tube", "od": 80, "id": 74, "length": 210, "look": "glass_frosted", "assumed": "wall 3 mm"}
+    sheet = PARTS["brass-sheet-sample-small-sheet--the-metal-store-uk"]
+    assert [s["width"] for s in sheet.shapes] == [45, 250]
+    for p in shaped.values():
+        assert len(p.shapes) == max(len(p.options), 1), p.id
+    # Parts without stated sizes have no shape: the view draws a labelled placeholder.
+    assert PARTS["brass-inline-lamp-kit-oaklk1--oaklea-woodcraft-uk"].shapes == []
+
+
+def test_shape_block_is_validated():
+    table = "## 1. A\n\n### 1.1 B\n\n| a | b | c | d | e | f | g | h |\n|---|---|---|---|---|---|---|---|\n" \
+            "| Tube | Brass | 1 m | S, UK — [l](https://x.uk) | £10 | — | 1 | — |\n"
+    ok = sp.parse_library(table + '\n<!-- part-shapes\ntube--s-uk: {shape: rod, d: 10, length: 50, assumed: "x"}\n-->\n')
+    assert ok.parts["tube--s-uk"].shapes == [{"shape": "rod", "d": 10, "length": 50, "assumed": "x"}]
+    for bad in ("nope--s-uk: {shape: rod, d: 10, length: 50}", "tube--s-uk: {shape: blob, d: 10}",
+                "tube--s-uk: {shape: rod, d: 10}", "tube--s-uk: {shape: rod, d: 10, length: 50, width: 3}",
+                "tube--s-uk: {shape: tube, od: 10, id: 12, length: 5}", "tube--s-uk: {shape: rod, d: 0, length: 5}",
+                "tube--s-uk: {shape: rod, d: 10, length: 50, look: gold}",
+                "tube--s-uk: [{shape: rod, d: 1, length: 2}, {shape: rod, d: 1, length: 2}]"):
+        with pytest.raises(sp.LibraryError):
+            sp.parse_library(table + f"\n<!-- part-shapes\n{bad}\n-->\n")
+
+
+def test_material_looks():
+    look = lambda pid: sp.look_for(PARTS[pid])  # noqa: E731
+    assert look("es-e27-shade-ring-s-lilley-spare--lampspares-uk") == "brass"
+    assert look("cz108-round-tube-polished--the-metal-store-uk") == "brass"
+    assert look("small-clear-glass-dome-30-mm-fitter--j-moncrieff-uk") == "glass"
+    assert look("150-mm-opal-globe-80-mm-fitter-neck--j-moncrieff-uk") == "glass_opal"
+    assert look("internally-frosted-dome-12-mm-fitter--j-moncrieff-uk") == "glass_frosted"
+    assert look("clear-extruded-tube-60-5-mm-1-m--the-clear-plastic-shop-uk") == "acrylic"
+    assert look("premium-beech-plywood-18-mm-glue-class-3--cts-diy-uk") == "wood"
+    assert look("perforated-aluminium-r3-t6-1-5-mm--f-h-brundle-uk") == "aluminium"
+    assert look("postal-tubes-with-end-caps-raja--morplan-uk") == "paper"
+    assert look("visaton-grille-10-rs-round--farnell-uk") == "black"
+    assert look("visaton-frs-8-8-2004--sos-electronic-eu") == "electronics"
+    # "cone" alone isn't a driver: the metal spinners' cones are metal.
+    assert look("cones-domes-hemispheres--winward-engineering-aldridge-uk") == "brass"
+    assert sp.look_for(PARTS["numbered-knob--hificollective-uk"], 1) == "black"
+
+
+def test_most_concept_parts_have_shapes():
+    used = {ln["part_id"] for c in CONCEPTS for ln in c.lines}
+    shaped = {pid for pid in used if PARTS[pid].shapes}
+    # Electronics modules and the lamp kit have no stated sizes; everything else is drawn.
+    assert used - shaped <= {
+        "brass-inline-lamp-kit-oaklk1--oaklea-woodcraft-uk",
+        "adafruit-universal-usb-dc-solar-charger-bq24074-ada4755--the-pi-hut-uk",
+        "wondom-jab3-2-50-w-bt-5-0-adau1701-dsp--ebay-uk",
+        "solid-metal-control-knobs--knobzone-uk",
+    }, used - shaped
+
+
+def test_concept_api_keeps_the_3d_view(client):
+    view = {"dx": 40, "dy": -5, "dz": 0, "rx": 0, "ry": 30, "rz": 0, "repeat": 3, "stack": False, "form": "auto"}
+    body = {"name": "Feet", "lines": [{"part_id": "bun-feet--cousins-uk", "quantity": 3, "view": view}]}
+    r = client.post("/api/concepts", json=body)
+    assert r.status_code == 201, r.text
+    assert r.json()["lines"][0]["view"] == view
+    assert r.json()["cost"]["total_100"] == 10.5  # the view never changes the cost
+    cid = r.json()["id"]
+    assert client.get(f"/api/concepts/{cid}").json()["lines"][0]["view"]["repeat"] == 3
+    for bad in ({"repeat": 0}, {"repeat": 65}, {"dx": 1e6}, {"form": "cube"}):
+        b = {"name": "x", "lines": [{"part_id": "bun-feet--cousins-uk", "quantity": 1, "view": bad}]}
+        assert client.post("/api/concepts", json=b).status_code == 422
+    # Lines without a view are saved without one.
+    r = client.post("/api/concepts", json={"name": "y", "lines": [{"part_id": "bun-feet--cousins-uk", "quantity": 1}]})
+    assert "view" not in r.json()["lines"][0]
+
+
+def test_library_api_sends_shapes_and_looks(client):
+    parts = [p for s in client.get("/api/standard-parts").json()["sections"] for sub in s["subsections"] for p in sub["parts"]]
+    ring = next(p for p in parts if p["id"] == "es-e27-shade-ring-s-lilley-spare--lampspares-uk")
+    assert ring["look"] == "brass" and ring["shapes"][0]["shape"] == "ring"
