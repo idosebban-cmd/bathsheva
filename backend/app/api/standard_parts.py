@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field, field_validator
@@ -16,11 +16,34 @@ from app.services import concepts
 router = APIRouter(tags=["standard-parts"])
 
 
+class LineView(BaseModel):
+    """Where the 3D view puts a line's part: offsets from its place in the stack (mm), rotation (degrees),
+    copies spaced evenly round the vertical axis, whether it adds its height to the stack, and how a sheet
+    part is drawn (as cut: a flat sheet, a disc, or rolled into a tube)."""
+
+    dx: float = Field(default=0, ge=-5000, le=5000)
+    dy: float = Field(default=0, ge=-5000, le=5000)
+    dz: float = Field(default=0, ge=-5000, le=5000)
+    rx: float = Field(default=0, ge=-360, le=360)
+    ry: float = Field(default=0, ge=-360, le=360)
+    rz: float = Field(default=0, ge=-360, le=360)
+    repeat: int = Field(default=1, ge=1, le=64)
+    stack: bool = True
+    form: Literal["auto", "sheet", "disc", "rolled"] = "auto"
+
+
 class LineIn(BaseModel):
     part_id: str
-    quantity: float = Field(ge=0)
+    # In the part's priced unit; ignored when sizes in mm are given for a part priced by length or area.
+    quantity: float = Field(default=0, ge=0)
     note: str = ""
     option: int = Field(default=0, ge=0)
+    length_mm: float | None = Field(default=None, ge=0)
+    width_mm: float | None = Field(default=None, ge=0)
+    height_mm: float | None = Field(default=None, ge=0)
+    count: float | None = Field(default=None, ge=0)
+    waste_pct: float | None = Field(default=None, ge=0, le=500)
+    view: LineView | None = None  # 3D view only; doesn't affect cost
 
 
 class CostIn(BaseModel):

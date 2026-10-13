@@ -259,6 +259,28 @@ a.button.primary { background: var(--accent); color: var(--accent-ink); border-c
 .sp-lines select { max-width: 16rem; }
 .sp-price-text { max-width: 16rem; }
 input.sp-qty { width: 6rem; }
+.sp-size { min-width: 15rem; }
+.sp-size-row { display: flex; gap: 0.3rem; align-items: center; margin-bottom: 0.2rem; }
+input.sp-count { width: 4rem; }
+input.sp-mm { width: 5.5rem; }
 input.sp-note-input { width: 100%; min-width: 9rem; }
 input.sp-search { width: 100%; padding: 0.4rem 0.6rem; }
 @media (max-width: 800px) { .sp-concept-grid { grid-template-columns: 1fr; } .sp-filter input[type="search"] { min-width: 0; width: 100%; } }
+
+/* Standard Parts builder: parts table with the 3D view beside it */
+.standard-parts.page { max-width: 1680px; }
+.sp-parts-grid { display: grid; grid-template-columns: minmax(0, 1fr) 460px; gap: 1rem; align-items: start; }
+.sp-parts-table { min-width: 0; }
+.sp-3d { position: sticky; top: 0.5rem; }
+.sp-3d .viewer.sp-3d-stage { height: 460px; }
+.sp-3d p { margin: 0.3rem 0; }
+.sp-3d-label { background: rgba(255, 255, 255, 0.9); border: 1px solid var(--line); border-radius: 4px; padding: 0.1rem 0.35rem;
+  font-size: 0.75rem; white-space: nowrap; pointer-events: none; }
+.sp-3d-controls { border-top: 1px solid var(--line); padding-top: 0.5rem; margin-top: 0.3rem; }
+.sp-3d-controls select { max-width: 100%; }
+.sp-view-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.4rem 0.6rem; margin: 0.4rem 0; }
+.sp-view-field { display: flex; flex-direction: column; font-size: 0.8rem; gap: 0.15rem; }
+.sp-view-field input, .sp-view-field select { width: 100%; }
+.sp-3d-list { margin: 0.2rem 0 0.5rem; padding-left: 1.1rem; }
+tr.sp-selected td { background: #eef4f4; }
+@media (max-width: 1250px) { .sp-parts-grid { grid-template-columns: minmax(0, 1fr); } .sp-3d { position: static; } }

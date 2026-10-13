@@ -1,5 +1,7 @@
 // Standard Parts page: API types and pure helpers (tested with npm test).
 
+import { DEFAULT_VIEW, isDefaultView, type LineView, type PartShape } from "./conceptShapes.ts";
+
 export interface PriceOption {
   price: number;
   currency: string;
@@ -17,6 +19,8 @@ export interface LibraryPart {
   supplier: string;
   supplier_cell: string;
   links: { label: string; url: string }[];
+  /** Repo files the entry comes from instead of a web page (a supplier's price list export). */
+  source_files: string[];
   price_text: string;
   price_status: "listed" | "quote" | "not_shown";
   price: number | null;
@@ -30,7 +34,15 @@ export interface LibraryPart {
   moq: string;
   note: string;
   availability: string;
+  /** Per price variant: the priced unit in mm (a length or a sheet), or null for a piece or pack. */
+  units: (PricedUnit | null)[];
+  /** Per price variant: how the 3D view draws it, or null for a labelled placeholder. */
+  shapes: (PartShape | null)[];
+  /** Material colour for the 3D view (brass, glass, wood, ...). */
+  look: string;
 }
+
+export type PricedUnit = { length_mm: number } | { width_mm: number; height_mm: number };
 
 export interface LibrarySubsection {
   number: string;
@@ -42,6 +54,8 @@ export interface LibrarySubsection {
 export interface Library {
   sections: { number: string; title: string; subsections: LibrarySubsection[] }[];
   about: { title: string; lines: string[] }[];
+  /** Old part id -> current id, for parts whose name or supplier was corrected. */
+  aliases: Record<string, string>;
   fx: Record<string, number>;
   quantities: number[];
   room_share: number;
@@ -50,14 +64,28 @@ export interface Library {
 
 export interface ConceptLine {
   part_id: string;
+  /** In the part's priced unit (0.12 of a 2.5 m length). The server works it out when sizes are given. */
   quantity: number;
   note: string;
   option: number;
+  /** Sizes in mm for parts priced by length or by sheet; they replace `quantity`. */
+  length_mm?: number | null;
+  width_mm?: number | null;
+  height_mm?: number | null;
+  count?: number | null;
+  waste_pct?: number | null;
+  /** Placement in the builder's 3D view (offsets, rotation, repeat); absent means the default. */
+  view?: Partial<LineView> | null;
 }
+
+const SIZE_KEYS = ["length_mm", "width_mm", "height_mm", "count", "waste_pct"] as const;
 
 export type Verdict = "room" | "tight" | "over";
 
 export interface CostLine extends ConceptLine {
+  mode: "units" | "length" | "area";
+  size_problem: string;
+  unit_size: PricedUnit | null;
   known: boolean;
   priced: boolean;
   unit_100: number | null;
@@ -184,7 +212,68 @@ export function extraPriceText(p: Pick<LibraryPart, "price_text" | "options">): 
   return p.options.length === 1 && t === priceLabel(p.options[0]) ? null : t;
 }
 
-/** Concept lines as sent to the API, dropping fields the server adds. */
+/** Concept lines as sent to the API, dropping fields the server adds and sizes that aren't set. */
 export function plainLines(lines: ConceptLine[]): ConceptLine[] {
-  return lines.map(({ part_id, quantity, note, option }) => ({ part_id, quantity, note, option }));
+  return lines.map((l) => {
+    const out: ConceptLine = { part_id: l.part_id, quantity: l.quantity, note: l.note, option: l.option };
+    for (const k of SIZE_KEYS) if (l[k] !== undefined && l[k] !== null) out[k] = l[k];
+    if (l.view && !isDefaultView({ ...DEFAULT_VIEW, ...l.view })) out.view = { ...DEFAULT_VIEW, ...l.view };
+    return out;
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Sizes in mm
+// ---------------------------------------------------------------------------
+
+export function unitFor(part: Pick<LibraryPart, "units">, option: number): PricedUnit | null {
+  if (!part.units?.length) return null;
+  return part.units[Math.min(Math.max(option, 0), part.units.length - 1)] ?? null;
+}
+
+export const isLength = (u: PricedUnit | null): u is { length_mm: number } => !!u && "length_mm" in u;
+export const isSheet = (u: PricedUnit | null): u is { width_mm: number; height_mm: number } => !!u && "width_mm" in u;
+
+const mm = (v: number) => `${+v.toFixed(1)}`;
+
+/** "2.5 m length", "304.8 mm length", "250 × 250 mm sheet". */
+export function unitLabel(u: PricedUnit): string {
+  if (isLength(u)) return u.length_mm >= 1000 && u.length_mm % 100 === 0 ? `${u.length_mm / 1000} m length` : `${mm(u.length_mm)} mm length`;
+  return `${mm(u.width_mm)} × ${mm(u.height_mm)} mm sheet`;
+}
+
+export function hasSizes(l: ConceptLine): boolean {
+  return l.length_mm != null || l.width_mm != null || l.height_mm != null;
+}
+
+/** "2 × 300 mm", "3 × 160 × 160 mm + 30% waste", or "" when the line is a plain quantity. */
+export function sizeLabel(l: ConceptLine): string {
+  if (!hasSizes(l)) return "";
+  const count = l.count ?? 1;
+  const size = l.length_mm != null ? `${mm(l.length_mm)} mm` : `${mm(l.width_mm ?? 0)} × ${mm(l.height_mm ?? 0)} mm`;
+  const waste = l.waste_pct ? ` + ${+l.waste_pct.toFixed(1)}% waste` : "";
+  return `${count === 1 ? "" : `${+count.toFixed(3)} × `}${size}${waste}`;
+}
+
+/** A new line for a part: sized in mm (100 mm, or 100 × 100 mm) when the part is priced by size, else 1 unit. */
+export function newLine(part: Pick<LibraryPart, "id" | "units">): ConceptLine {
+  const u = unitFor(part, 0);
+  const base = { part_id: part.id, quantity: 1, note: "", option: 0 };
+  if (isLength(u)) return { ...base, length_mm: 100, count: 1 };
+  if (isSheet(u)) return { ...base, width_mm: 100, height_mm: 100, count: 1, waste_pct: 0 };
+  return base;
+}
+
+/** Restate a fraction as sizes giving exactly the same quantity: the length, or a square of the same area. */
+export function toSizes(l: ConceptLine, u: PricedUnit): ConceptLine {
+  if (isLength(u)) return { ...l, length_mm: +(l.quantity * u.length_mm).toFixed(3), count: 1, waste_pct: null };
+  const side = +Math.sqrt(l.quantity * u.width_mm * u.height_mm).toFixed(3);
+  return { ...l, width_mm: side, height_mm: side, count: 1, waste_pct: 0 };
+}
+
+/** Drop the sizes and keep the fraction they came to. */
+export function toQuantity(l: ConceptLine, quantity: number): ConceptLine {
+  const out: ConceptLine = { ...l, quantity };
+  for (const k of SIZE_KEYS) delete out[k];
+  return out;
 }

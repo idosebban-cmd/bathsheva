@@ -13,13 +13,22 @@ import {
   priceLabel,
   QUANTITIES,
   sentence,
+  hasSizes,
+  isLength,
+  newLine,
+  toQuantity,
+  toSizes,
+  unitFor,
+  unitLabel,
   type ConceptCost,
   type ConceptLine,
+  type CostLine,
   type LibraryPart,
   type SavedConcept,
   type SeedConcept,
 } from "../standardParts";
 import { AvailabilityBadge, CostTiles, PriceCell, useStandardParts } from "./StandardPartsPage";
+import ConceptViewer from "../components/ConceptViewer";
 
 interface Draft {
   name: string;
@@ -52,6 +61,7 @@ export default function ConceptBuilder() {
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [query, setQuery] = useState("");
+  const [selected, setSelected] = useState<number | null>(null); // the line placed in the 3D view
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   // Load the saved concept, the product concept it starts from, or a blank one.
@@ -123,12 +133,17 @@ export default function ConceptBuilder() {
     setDirty(true);
   };
   const setLine = (i: number, patch: Partial<ConceptLine>) => update({ lines: draft.lines.map((l, j) => (j === i ? { ...l, ...patch } : l)) });
-  const addPart = (p: LibraryPart) => update({ lines: [...draft.lines, { part_id: p.id, quantity: 1, note: "", option: 0 }] });
-  const removeLine = (i: number) => update({ lines: draft.lines.filter((_, j) => j !== i) });
+  const replaceLine = (i: number, line: ConceptLine) => update({ lines: draft.lines.map((l, j) => (j === i ? line : l)) });
+  const addPart = (p: LibraryPart) => update({ lines: [...draft.lines, newLine(p)] });
+  const removeLine = (i: number) => {
+    update({ lines: draft.lines.filter((_, j) => j !== i) });
+    setSelected((s) => (s === null || s === i ? null : s > i ? s - 1 : s));
+  };
   const moveLine = (i: number, d: -1 | 1) => {
     const lines = [...draft.lines];
     [lines[i], lines[i + d]] = [lines[i + d], lines[i]];
     update({ lines });
+    setSelected((s) => (s === i ? i + d : s === i + d ? i : s));
   };
 
   async function save() {
@@ -243,9 +258,12 @@ export default function ConceptBuilder() {
       <section className="card">
         <h2>Parts</h2>
         <p className="small muted">
-          The quantity is in the unit the price is for: a price &quot;per 2.5 m&quot; with quantity 0.12 is 300 mm; a sheet price with 0.16 is
-          16% of the sheet. Price breaks apply when 100 or 500 products need enough to reach them.
+          Tube, rod, bar and strip parts take a length in mm, and sheet parts a width × height in mm, with how many pieces each product
+          needs (and a waste allowance for sheets); they are converted to the share of the priced length or sheet. Other parts take a
+          quantity in the unit the price is for (pieces, packs). Price breaks apply when 100 or 500 products need enough to reach them.
         </p>
+        <div className="sp-parts-grid">
+        <div className="sp-parts-table">
         {draft.lines.length === 0 ? (
           <p className="muted">No parts yet. Search the library below to add some.</p>
         ) : (
@@ -255,7 +273,7 @@ export default function ConceptBuilder() {
                 <tr>
                   <th>Part</th>
                   <th>Price</th>
-                  <th>Qty</th>
+                  <th>Quantity per product</th>
                   <th>Note</th>
                   {QUANTITIES.map((q) => (
                     <th key={q} className="num">
@@ -270,7 +288,7 @@ export default function ConceptBuilder() {
                   const p = parts.get(l.part_id);
                   const c = costLine(i);
                   return (
-                    <tr key={i}>
+                    <tr key={i} className={selected === i ? "sp-selected" : undefined}>
                       <td>
                         {p ? (
                           <>
@@ -313,13 +331,12 @@ export default function ConceptBuilder() {
                         )}
                       </td>
                       <td>
-                        <input
-                          className="sp-qty"
-                          type="number"
-                          min={0}
-                          step="any"
-                          value={l.quantity}
-                          onChange={(e) => setLine(i, { quantity: Math.max(0, Number(e.target.value) || 0) })}
+                        <QuantityCell
+                          line={l}
+                          part={p}
+                          costed={c}
+                          onPatch={(patch) => setLine(i, patch)}
+                          onReplace={(line) => replaceLine(i, line)}
                         />
                       </td>
                       <td>
@@ -345,6 +362,9 @@ export default function ConceptBuilder() {
                         <button className="link" onClick={() => removeLine(i)}>
                           remove
                         </button>
+                        <button className="link" onClick={() => setSelected(i)} title="Select this part in the 3D view to place it">
+                          place
+                        </button>
                       </td>
                     </tr>
                   );
@@ -365,6 +385,15 @@ export default function ConceptBuilder() {
             </table>
           </div>
         )}
+        </div>
+        <ConceptViewer
+          lines={draft.lines}
+          parts={parts}
+          selected={selected !== null && selected < draft.lines.length ? selected : null}
+          onSelect={setSelected}
+          onViewChange={(i, view) => setLine(i, { view })}
+        />
+        </div>
       </section>
 
       <section className="card">
@@ -409,5 +438,90 @@ export default function ConceptBuilder() {
         )}
       </section>
     </>
+  );
+}
+
+function NumberInput({ value, onChange, className, title }: { value: number | null | undefined; onChange: (v: number) => void; className: string; title: string }) {
+  return (
+    <input
+      className={className}
+      type="number"
+      min={0}
+      step="any"
+      title={title}
+      aria-label={title}
+      value={value ?? 0}
+      onChange={(e) => onChange(Math.max(0, Number(e.target.value) || 0))}
+    />
+  );
+}
+
+/** Pieces × length (or × width × height) in mm for parts priced by size; a plain quantity otherwise. */
+function QuantityCell({
+  line,
+  part,
+  costed,
+  onPatch,
+  onReplace,
+}: {
+  line: ConceptLine;
+  part: LibraryPart | undefined;
+  costed: CostLine | null;
+  onPatch: (patch: Partial<ConceptLine>) => void;
+  onReplace: (line: ConceptLine) => void;
+}) {
+  const unit = part ? unitFor(part, line.option) : null;
+  const fraction = costed ? costed.quantity : line.quantity;
+
+  if (unit && hasSizes(line)) {
+    const sheet = !isLength(unit);
+    return (
+      <div className="sp-size">
+        <div className="sp-size-row">
+          <NumberInput className="sp-count" title="Pieces per product" value={line.count ?? 1} onChange={(v) => onPatch({ count: v })} />
+          <span>×</span>
+          {sheet ? (
+            <>
+              <NumberInput className="sp-mm" title="Width (mm)" value={line.width_mm} onChange={(v) => onPatch({ width_mm: v })} />
+              <span>×</span>
+              <NumberInput className="sp-mm" title="Height (mm)" value={line.height_mm} onChange={(v) => onPatch({ height_mm: v })} />
+            </>
+          ) : (
+            <NumberInput className="sp-mm" title="Length (mm)" value={line.length_mm} onChange={(v) => onPatch({ length_mm: v })} />
+          )}
+          <span>mm</span>
+        </div>
+        {sheet && (
+          <div className="sp-size-row small">
+            <span>+</span>
+            <NumberInput className="sp-count" title="Waste allowance (%)" value={line.waste_pct ?? 0} onChange={(v) => onPatch({ waste_pct: v })} />
+            <span>% waste</span>
+          </div>
+        )}
+        <div className="small muted">
+          = {+fraction.toFixed(4)} of a {unitLabel(unit)}{" "}
+          <button className="link" onClick={() => onReplace(toQuantity(line, fraction))} title="Enter the share of the priced unit instead">
+            enter as a share
+          </button>
+        </div>
+        {costed?.size_problem && <div className="small error">{costed.size_problem}</div>}
+      </div>
+    );
+  }
+
+  return (
+    <div className="sp-size">
+      <NumberInput className="sp-qty" title="Quantity in the priced unit" value={line.quantity} onChange={(v) => onPatch({ quantity: v })} />
+      {unit ? (
+        <div className="small muted">
+          of a {unitLabel(unit)}{" "}
+          <button className="link" onClick={() => onReplace(toSizes(line, unit))}>
+            enter in mm
+          </button>
+        </div>
+      ) : (
+        hasSizes(line) && costed?.size_problem && <div className="small error">Sizes ignored: {costed.size_problem}</div>
+      )}
+    </div>
   );
 }

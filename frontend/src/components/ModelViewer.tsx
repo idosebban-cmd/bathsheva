@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState, type ReactNode } from "react";
 import { Canvas, useThree } from "@react-three/fiber";
 import { Bounds, ContactShadows, Environment, Lightformer, OrbitControls, useBounds, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
@@ -51,7 +51,7 @@ const VIEWS = {
 } as const;
 type View = keyof typeof VIEWS;
 
-function ViewControls({ view }: { view: View }) {
+function ViewControls({ view, fitNonce }: { view: View; fitNonce: number }) {
   const bounds = useBounds();
   const camera = useThree((s) => s.camera);
   useEffect(() => {
@@ -59,7 +59,7 @@ function ViewControls({ view }: { view: View }) {
     camera.position.set(x * 900, 150 + y * 900, z * 900);
     camera.lookAt(0, 150, 0);
     bounds.refresh().clip().fit();
-  }, [view, bounds, camera]);
+  }, [view, bounds, camera, fitNonce]);
   return null;
 }
 
@@ -78,26 +78,50 @@ function Studio() {
   );
 }
 
-/** In-browser preview of a GLB exported by the CAD service (units: mm). */
-export default function ModelViewer({ url, product }: { url: string; product?: string }) {
-  const [lit, setLit] = useState(false);
+/**
+ * The 3D stage shared by the CAD preview and the Standard Parts concept builder: studio lighting, contact
+ * shadow, orbit / zoom / pan, and front / side / ¾ views that fit the camera to the contents (units: mm).
+ * `observe` refits whenever the contents change; without it the view only refits on a view change or "Fit".
+ */
+export function ViewerStage({
+  children,
+  fitKey,
+  observe = true,
+  lit,
+  onLitChange,
+  onPointerMissed,
+  className = "",
+  shadowScale = 500,
+  margin = 1.25,
+}: {
+  children: ReactNode;
+  fitKey?: string;
+  observe?: boolean;
+  lit?: boolean;
+  onLitChange?: (lit: boolean) => void;
+  onPointerMissed?: () => void;
+  className?: string;
+  shadowScale?: number;
+  margin?: number;
+}) {
   const [view, setView] = useState<View>("three_quarter");
+  const [fitNonce, setFitNonce] = useState(0);
   return (
-    <div className="viewer">
+    <div className={`viewer ${className}`}>
       <Canvas shadows dpr={[1, 2]} camera={{ position: [420, 260, 520], fov: 30, near: 1, far: 20000 }}
-        gl={{ toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.15 }}>
+        gl={{ toneMapping: THREE.ACESFilmicToneMapping, toneMappingExposure: 1.15 }} onPointerMissed={onPointerMissed}>
         <color attach="background" args={["#efebe4"]} />
         <Studio />
         <ambientLight intensity={0.15} />
         <directionalLight position={[300, 700, 400]} intensity={0.6} castShadow />
         {lit && <pointLight position={[0, 225, 0]} intensity={60000} distance={600} decay={2} color="#ffcf8a" />}
         <Suspense fallback={null}>
-          <Bounds fit clip observe margin={1.25} key={url}>
-            <Model url={url} lit={lit} product={product} />
-            <ViewControls view={view} />
+          <Bounds fit clip observe={observe} margin={margin} key={fitKey}>
+            {children}
+            <ViewControls view={view} fitNonce={fitNonce} />
           </Bounds>
         </Suspense>
-        <ContactShadows position={[0, -2, 0]} opacity={0.45} scale={500} blur={2.6} far={120} resolution={512} />
+        <ContactShadows position={[0, -2, 0]} opacity={0.45} scale={shadowScale} blur={2.6} far={120} resolution={512} />
         <OrbitControls makeDefault />
       </Canvas>
       <div className="viewer-toggle small">
@@ -105,11 +129,28 @@ export default function ModelViewer({ url, product }: { url: string; product?: s
           <button key={v} className={`link${view === v ? " active" : ""}`} onClick={() => setView(v)}>
             {v === "three_quarter" ? "¾" : v[0].toUpperCase() + v.slice(1)}
           </button>
-        ))}{" "}
-        <label>
-          <input type="checkbox" checked={lit} onChange={(e) => setLit(e.target.checked)} /> Lights on
-        </label>
+        ))}
+        {!observe && (
+          <button className="link" onClick={() => setFitNonce((n) => n + 1)} title="Fit the view to the parts">
+            Fit
+          </button>
+        )}{" "}
+        {onLitChange && (
+          <label>
+            <input type="checkbox" checked={!!lit} onChange={(e) => onLitChange(e.target.checked)} /> Lights on
+          </label>
+        )}
       </div>
     </div>
+  );
+}
+
+/** In-browser preview of a GLB exported by the CAD service (units: mm). */
+export default function ModelViewer({ url, product }: { url: string; product?: string }) {
+  const [lit, setLit] = useState(false);
+  return (
+    <ViewerStage fitKey={url} lit={lit} onLitChange={setLit}>
+      <Model url={url} lit={lit} product={product} />
+    </ViewerStage>
   );
 }

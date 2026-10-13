@@ -11,6 +11,8 @@ import {
   priceLabel,
   QUANTITIES,
   sentence,
+  sizeLabel,
+  unitLabel,
   VERDICT_LABEL,
   VERDICT_TILE,
   type ConceptCost,
@@ -34,10 +36,15 @@ export default function StandardPartsPage() {
   useEffect(() => {
     api.get<Library>("/api/standard-parts").then(setLibrary, (e) => setError(errorText(e)));
   }, []);
-  const parts = useMemo(
-    () => new Map((library?.sections ?? []).flatMap((s) => s.subsections.flatMap((sub) => sub.parts.map((p) => [p.id, p] as const)))),
-    [library],
-  );
+  const parts = useMemo(() => {
+    const byId = new Map((library?.sections ?? []).flatMap((s) => s.subsections.flatMap((sub) => sub.parts.map((p) => [p.id, p] as const))));
+    // Concepts saved before a part was renamed still find it under its old id.
+    for (const [old, current] of Object.entries(library?.aliases ?? {})) {
+      const part = byId.get(current);
+      if (part && !byId.has(old)) byId.set(old, part);
+    }
+    return byId;
+  }, [library]);
   return (
     <div>
       <nav className="tabs">
@@ -200,6 +207,12 @@ export function LibraryView() {
                                     </a>
                                   </span>
                                 ))}
+                                {(p.source_files ?? []).map((f) => (
+                                  <div key={f} className="muted">
+                                    From <code>{f}</code>
+                                    {p.supplier_cell.includes("order no.") && ` · ${p.supplier_cell.slice(p.supplier_cell.indexOf("order no."))}`}
+                                  </div>
+                                ))}
                               </div>
                             </td>
                             <td>
@@ -336,7 +349,14 @@ function CostTable({ cost, parts }: { cost: ConceptCost; parts: Map<string, Libr
                   {p ? p.name : <span className="error">Not in the library: {l.part_id}</span>}
                   {p && <div className="small muted">{p.supplier}</div>}
                 </td>
-                <td className="num">{+l.quantity.toFixed(5)}</td>
+                <td className="num">
+                  {sizeLabel(l) || +l.quantity.toFixed(5)}
+                  {l.unit_size && (
+                    <div className="small muted">
+                      {+l.quantity.toFixed(4)} of a {unitLabel(l.unit_size)}
+                    </div>
+                  )}
+                </td>
                 <td className="small">{l.note}</td>
                 {QUANTITIES.map((q) => (
                   <td key={q} className="num">

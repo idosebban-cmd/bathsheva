@@ -40,6 +40,7 @@ def library_payload() -> dict[str, Any]:
             for s in lib.sections
         ],
         "about": lib.about,
+        "aliases": lib.aliases,
         "fx": sp.FX,
         "quantities": list(sp.QUANTITIES),
         "room_share": sp.ROOM,
@@ -56,8 +57,23 @@ def _clean_lines(lines: list[dict[str, Any]], library: sp.Library) -> list[dict[
     unknown = sorted({ln["part_id"] for ln in lines if ln["part_id"] not in library.parts})
     if unknown:
         raise UnknownParts(unknown)
-    return [{"part_id": ln["part_id"], "quantity": float(ln["quantity"]), "note": ln.get("note", ""),
-             "option": int(ln.get("option") or 0)} for ln in lines]
+    out = []
+    for ln in lines:
+        # Saved under the part's current id, so a renamed part's old id is replaced on the next save.
+        row = {"part_id": library.current_id(ln["part_id"]), "quantity": float(ln.get("quantity") or 0),
+               "note": ln.get("note", ""),
+               "option": int(ln.get("option") or 0)}
+        row.update({k: float(ln[k]) for k in sp.DIM_KEYS if ln.get(k) is not None})
+        if ln.get("view"):
+            row["view"] = dict(ln["view"])  # the 3D view's placement (validated by the API)
+        # Store the fraction the sizes come to as well, so the line still reads sensibly without them.
+        if any(k in row for k in ("length_mm", "width_mm", "height_mm")):
+            part = library.parts[row["part_id"]]
+            qty, mode, _ = sp.line_quantity(row, part, row["option"])
+            if mode != "units":
+                row["quantity"] = round(qty, 6)
+        out.append(row)
+    return out
 
 
 def concept_out(row: Concept, library: sp.Library | None = None) -> dict[str, Any]:

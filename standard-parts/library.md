@@ -8,6 +8,8 @@ Stock parts and materials from UK and EU suppliers that sell in small quantities
 - **Prices are never estimated.** Where no price was visible, the entry says *Price not shown in search results*. Where the supplier only quotes, it says *Quote only*.
 - **VAT:** marked *ex VAT* or *inc VAT* where the listing said so; otherwise *VAT basis not stated*. EUR prices are as listed (usually inc. local VAT).
 - **MOQ:** "1" means the listing sells singles. "Pack of N" means the smallest pack. *Not stated* means the search result didn't say.
+- **S. Lilley dimensions** marked "S. Lilley catalogue 2014–15" come from `standard-parts/catalogues/s-lilley.pdf`, the 2014–2015 edition, with its catalogue numbers and page. That edition is over ten years old, so sizes, codes and finishes may have changed: confirm against a current listing or a sample.
+- **SOS Electronic price list:** the SOS Electronic rows come from `standard-parts/price-lists/visaton-2026-10-13.csv`, exported on 13 Oct 2026 from SOS Electronic's [speakers page](https://www.soselectronic.com/en-gb/speakers) (supplied by the user). Its prices are in GBP **excluding VAT**, with stock at the time of export and 4-off prices. A blank stock figure in the list is recorded as "not shown", not as zero. **SOS Electronic ships from the EU**, so UK orders may carry import VAT and handling fees on top of the listed price.
 - **UK/EU only.** US suppliers (Parts Express, B&P Lamp, Grand Brass, Antique Lamp Supply and others) came up often but are left out, except where a part has no UK/EU source; those cases are marked.
 - Marketplace sellers (eBay, Etsy, Amazon) are listed only where no trade or specialist source turned up, and are marked as marketplaces. Quality and continuity aren't guaranteed for them.
 
@@ -42,7 +44,7 @@ Stock parts and materials from UK and EU suppliers that sell in small quantities
 |---|---|---|---|---|---|---|---|
 | Brass tube, 10 mm OD × 1 m | Brass (alloy not stated) | 10 mm OD × 7 mm ID | Lampfix, UK — [link](https://www.lampfix.co.uk/shop/06626-brass-tube-1m-10mm-od-22348) | £3.24 per 1 m, VAT basis not stated | £2.75 at 50 | 1 | Lamp tube: tappable, fits a 10 mm lampholder directly. Out of stock at the time of the snapshot. |
 | Brass threaded tube, M10 | Brass | M10 × 1, 50 mm or 75 mm pre-cut | Kingschandeliers, UK (via search snippet; see [kingschandeliers.co.uk](https://www.kingschandeliers.co.uk/)) | £4.99 each | £4.74 each at 4+ | 1 | Lamp-making allthread tube. |
-| 150 mm brass tube with 10 mm male ends (S. Lilley) | Brass | 150 mm long, M10 ends | Lampspares, UK — [link](https://www.lampspares.co.uk/150mm-brass-tube-with-10mm-male-ends-7341263/) | £8.39, VAT basis not stated | — | 1 | UK-made (S. Lilley). Shipping from £4.69; free over £75. |
+| 150 mm brass tube with 10 mm male ends (S. Lilley) | Brass | 150 mm long, M10 ends. Not listed as an item in the S. Lilley catalogue 2014–15: it offers brass tube made to order in 1", 5/8", ½", 10 mm and 8 mm, raw, polished or plated (p. 16), so this is probably the 10 mm size (not confirmed). Its M10 brass allthread nipples run 13–75 mm long (7041–7134, p. 8). | Lampspares, UK — [link](https://www.lampspares.co.uk/150mm-brass-tube-with-10mm-male-ends-7341263/) | £8.39, VAT basis not stated | — | 1 | UK-made (S. Lilley). Shipping from £4.69; free over £75. |
 | CZ108 round tube, polished | CZ108 H/H | e.g. 1/2" × 16 swg, 2.5 m lengths | The Metal Store, UK — [range](https://themetalstore.co.uk/brass-tube) · [bright polished](https://themetalstore.co.uk/bright-polished-brass-tube) | ~£60 inc VAT per 2.5 m (1/2" × 16 swg) | — | 1 length | Bright polished. Free custom cutting. |
 | CZ108 round tube, mill finish | CZ108 H/H | e.g. 1/2" × 16 swg, 5 m lengths | The Metal Store, UK — [link](https://www.themetalstore.co.uk/brass-tube-mill-finish) | ~£78 inc VAT per 5 m (1/2" × 16 swg) | — | 1 length | Mill finish. Free custom cutting. |
 | CZ108 round tube, cut to size | CZ108 | Many sizes; some in-store only | Metal Supermarkets, UK — [link](https://www.metalsupermarkets.co.uk/product/brass-round-tube-cz108/) | Price not shown in search results | — | Not stated | Cut to length. |
@@ -139,10 +141,10 @@ UK lamp parts use the M10 × 1 thread (US parts use 1/8 IP). Check before mixing
 
 | Part | Material | Sizes | Supplier & link | Unit price | Price breaks | MOQ | Finish / quality |
 |---|---|---|---|---|---|---|---|
-| 3-screw gallery, 10.5 mm hole (288525) | Raw brass | For 57 mm (2¼") fitter shades | Peter Willetts Associates, UK — [link](https://www.peterwilletts.co.uk/lamp%20parts.html) | £3.75 | £32.95 per pack of 10 | 1 | Raw (unlacquered) brass, fits behind the bulb holder. 32 in stock at the snapshot. |
-| 3-screw gallery, 28 mm hole (288636) | Raw brass | 57 mm fitter | Peter Willetts — [link](https://www.peterwilletts.co.uk/lamp%20parts.html) | £3.95 | £34.95 per pack of 10 | 1 | Out of stock at the snapshot. |
-| 3-screw gallery, polished, 25 mm deep (9229) | Polished brass | 57 mm fitter, 28 mm hole | Peter Willetts — [link](https://www.peterwilletts.co.uk/lamp%20parts.html) | £8.99 | — | 1 | Polished. A 100 mm fitter gallery is also listed. |
-| Fixed brass harp | Brass | 4", 6", 8"; 28 or 40 mm hole | Lampspares, UK — [link](https://www.lampspares.co.uk/harps/) | £10.39 (4", 28 mm) to £11.69 (8", 28 mm), VAT basis not stated | Bulk buying offered | 1 | UK stock. |
+| 3-screw gallery, 10.5 mm hole (288525) | Raw brass | For 57 mm (2¼") fitter shades | Peter Willetts Associates, UK — [link](https://www.peterwilletts.co.uk/lamp%20parts.html) | £3.75 | £32.95 per pack of 10 | 1 | Raw (unlacquered) brass, fits behind the bulb holder. 32 in stock at the snapshot. **Appears to match S. Lilley's 9221 range** (S. Lilley catalogue 2014–15, p. 10): polished brass 3-screw galleries in 2¼", 3¼" and 4¼" diameter, with a 10 mm hole (9221, 9231, 9241) or a 28 mm hole (9229, 9239, 9249); finishes C chrome, Z bronze, N nickel, H old English brass. This one would be 9221 (2¼", 10 mm hole). |
+| 3-screw gallery, 28 mm hole (288636) | Raw brass | 57 mm fitter | Peter Willetts — [link](https://www.peterwilletts.co.uk/lamp%20parts.html) | £3.95 | £34.95 per pack of 10 | 1 | Out of stock at the snapshot. **Appears to match S. Lilley's 9221 range** (S. Lilley catalogue 2014–15, p. 10): polished brass 3-screw galleries in 2¼", 3¼" and 4¼" diameter, with a 10 mm hole (9221, 9231, 9241) or a 28 mm hole (9229, 9239, 9249); finishes C chrome, Z bronze, N nickel, H old English brass. This one would be 9229 (2¼", 28 mm hole). |
+| 3-screw gallery, polished, 25 mm deep (9229) | Polished brass | 57 mm fitter, 28 mm hole | Peter Willetts — [link](https://www.peterwilletts.co.uk/lamp%20parts.html) | £8.99 | — | 1 | Polished. A 100 mm fitter gallery is also listed. **Appears to match S. Lilley's 9221 range** (S. Lilley catalogue 2014–15, p. 10): polished brass 3-screw galleries in 2¼", 3¼" and 4¼" diameter, with a 10 mm hole (9221, 9231, 9241) or a 28 mm hole (9229, 9239, 9249); finishes C chrome, Z bronze, N nickel, H old English brass. Its item number 9229 is S. Lilley's code for the 2¼" gallery with a 28 mm hole. |
+| Fixed brass harp | Brass? Possibly brass-plated (base metal not stated): see note | 4", 6", 8"; 28 or 40 mm hole | Lampspares, UK — [link](https://www.lampspares.co.uk/harps/) | £10.39 (4", 28 mm) to £11.69 (8", 28 mm), VAT basis not stated | Bulk buying offered | 1 | UK stock. **Possibly S. Lilley's fixed harps** LL504P, LL506P, LL508P (28 mm hole) and H4004P, H4006P, H4008P (40 mm hole), which the S. Lilley catalogue 2014–15 lists as **brass-plated** (p. 15): same sizes and holes, and Lampspares sells S. Lilley parts. **Don't use as visible brass until confirmed solid** (ask Lampspares, or test a sample: a file mark on a hidden edge shows plating). |
 | Detachable 8" harp with base | Brass-plated | 8" | Lampspares, UK — [link](https://www.lampspares.co.uk/brass-plated-detachable-8-harp-with-base-4502067/) | £6.49 | — | 1 | US-style harp, usable on UK fittings. Plated, not solid. |
 | Shade carriers and Tiffany harps (Oaks) | Steel, painted | 29 and 42 mm holes; 4.5" and 5.5" harps | Lighting Spares, UK — [link](https://lightingspares.co.uk/collections/lampshades-and-accessories) | ~£4.99–£7.80 | — | 1 | White finish. |
 | Tiffany-style shade carrier | Antique brass finish | 4 sizes | Homestyle Lighting, UK — [link](https://homestylelighting.co.uk/product/tiffany-style-lampshade-harp-antique-brass-shade-carrier-gimble-holder-4-sizes/) | £9.98 | — | 1 | Brass finish (likely plated). |
@@ -153,7 +155,7 @@ No UK/EU source of a ready-made machined brass lamp **base** turned up; machine 
 
 | Part | Material | Sizes | Supplier & link | Unit price | Price breaks | MOQ | Finish / quality |
 |---|---|---|---|---|---|---|---|
-| M10 lampholder fixing kit (S. Lilley) | Brass | 50 mm M10 rod, locknut, washers, 1/2"–10 mm reducer, grommet | Light and Power Solutions, UK — [link](https://www.lightandpowersolutionsltd.co.uk/product/m10-10mm-brass-lamp-holder-fixing-kit-50mm-threaded-rod-with-hex-nut-and-washers/) | £3.99 | — | 1 kit | UK-made. |
+| M10 lampholder fixing kit (S. Lilley) | Brass | 50 mm M10 rod, locknut, washers, 1/2"–10 mm reducer, grommet. The kit isn't in the S. Lilley catalogue 2014–15; its standard parts are (threads M10 × 1 mm): allthread nipple M10 × 50 mm (7136, p. 8); hexagon locknut M10 × ½" AF × 3.3 mm (7051, p. 7); brass washer 10 × 21 mm OD (9012) and red fibre washer 10 × 21 mm (9015, p. 9); ½" M to M10 F reducer in headless, hexagon or knurled head (3077, 3080, 3096, p. 7); 10 mm tube grommet (9003, p. 9). Which of these the kit contains is my match, not stated by the seller. | Light and Power Solutions, UK — [link](https://www.lightandpowersolutionsltd.co.uk/product/m10-10mm-brass-lamp-holder-fixing-kit-50mm-threaded-rod-with-hex-nut-and-washers/) | £3.99 | — | 1 kit | UK-made. |
 | M10 fixing kit, larger set | Brass or nickel | 2 × 50 mm + 2 × 25 mm rods, 4 sets of nuts and washers | Light and Power Solutions, UK — [link](https://www.lightandpowersolutionsltd.co.uk/product/m10-10mm-nickel-or-brass-lamp-holder-fixing-kit-threaded-rod-nuts-washers/) | £4.99 | — | 1 kit | — |
 | Brass inline lamp kit (OAKLK1) | "Brass": the listing doesn't say solid or plated | Complete kit apart from the timber: brass lampholder with 10 mm entry, 2.5 m 3-core flex, moulded plug with 3 A fuse, inline switch 1.5 m from the plug, 10 mm cord grip, 2 grommets, wooden pillar nipple, brass washer, hex nut with serrated washer, threaded rod, large washer, labels | Oaklea Woodcraft, UK — [link](https://www.oakleawoodcraft.co.uk/lamp-kit-no1-brass) | £9.86 | — | 1 (5 in stock at the snapshot) | Woodturners' kit: the quickest route to a working wooden-base lamp. **Lampholder cap not stated** (E27, E14 or BC isn't named), and **solid or plated brass not stated** (checked 13 Oct 2026). Oaklea's other 10 mm holders are BC/B22 ([safer-switched lampholder](https://www.oakleawoodcraft.co.uk/m10-safer-switched-lampholder), 60 W max), which suggests BC, but that's unconfirmed: ask Oaklea before relying on it. |
 | Lamp kit 1, switched lampholder for wooden bases (KIT1B) | Solid brass, UK-made (per listing) | BC/B22 lampholder | Lampspares, UK — [link](https://www.lampspares.co.uk/lamp-kit-1-with-brass-switched-lampholder-for-wooden-lamp-base-kit1b/) | Price not shown in search results | — | 1 | A known-spec alternative to the Oaklea kit: fitting and material are both stated. |
@@ -165,7 +167,8 @@ No UK/EU source of a ready-made machined brass lamp **base** turned up; machine 
 
 | Part | Material | Sizes | Supplier & link | Unit price | Price breaks | MOQ | Finish / quality |
 |---|---|---|---|---|---|---|---|
-| ES/E27 shade ring (S. Lilley spare) | Brass | Fits S. Lilley ES lampholders | Lampspares, UK — [link](https://www.lampspares.co.uk/es-e27-edison-screw-brass-shade-ring/) | £1.39 | Bulk buying offered | 1 | UK-made. Shipping from £4.89. |
+| ES/E27 shade ring (S. Lilley spare) | Brass | Fits S. Lilley ES lampholders; 48 mm outer Ø, 37 mm inner Ø, 3.5 mm thick, 1 mm thread pitch. S. Lilley catalogue 2014–15: ES1 brass shade ring E27, 48 mm Ø (p. 5; the inner Ø, thickness and pitch aren't given there) | Lampspares, UK — [link](https://www.lampspares.co.uk/es-e27-edison-screw-brass-shade-ring/) | £1.39 | Bulk buying offered | 1 | UK-made. Shipping from £4.89. Clamps a shade fitter between 37 and 48 mm; a shade needs two rings, one either side of the fitter. |
+| ES/E27 threaded brass lampholder (S. Lilley 7601ET), 10 mm base fixing | Brass | 61 mm tall, 38 mm Ø (48 mm over the shade rings); M10 × 1 entry; 60 W max. S. Lilley catalogue 2014–15 (p. 5): 7601ET (old no. 7010E), M10 × 1 mm, 48 mm max Ø with the shade ring, 60 mm max height; the plain version without a ring (7601E) is 39 mm Ø. Cord-grip version 7600ET: 48 mm Ø, 68 mm tall. The 20 mm base-thread version is 7606ET (M20 × 1.5 mm, 48 mm Ø, 60 mm); suffix A is the brushed antique finish. Packed in boxes of ten | Lampspares, UK — [10 mm base fixing](https://www.lampspares.co.uk/es-Threaded-brass-lampholder-with-10mm-base-fixing-7601et) · [with cord grip (7600ET)](https://www.lampspares.co.uk/es-Threaded-brass-lampholder-with-cord-grip-7600et/) · [antique brass, 20 mm base thread](https://www.lampspares.co.uk/e27-threaded-antique-brass-lampholder-with-20mm-base-thread-4303533/) | £10.39 (10 mm base fixing; other versions' prices not shown) | — | 1 | UK-made (S. Lilley & Son, Birmingham). **Comes with one shade ring:** a table lamp needs a second ring (above) to clamp a shade. Height: 61 mm per the user's source, 60 mm in the 2014–15 catalogue and CEF, and 58.5 mm in the Lampspares listing in search results; diameter 38 mm per the user, 39 mm in the catalogue. Measure a sample. Solid or plated brass not stated. |
 | E27 shade ring | Solid brass, machined | 43 mm external | Urban Cottage Industries, UK — [link](https://www.urbancottageindustries.com/products/lamp-holder-shade-rings-e27-screw) | Listed as "3.00" (currency unclear; check at checkout) | — | 1 | Precision-machined in the UK from solid brass. |
 | Shade ring for period E27 lampholders | Brass | E27 | Enamel Shades, UK — [link](https://www.enamelshades.co.uk/products/e27shaderings) | £2.00 | — | 1 | Listing is old; check stock. |
 | E27 lampholder + shade ring, threaded collar (Lamparte BRE27THS) | Brass-plated | E27, threaded entry | Lighting Spares, UK — [link](https://lightingspares.co.uk/products/lamparte-bre27ths-brass-plated-es-e27-threaded-collar-lampholder-and-shade-ring) | £4.69 (reduced from £6.99) | — | 1 | Plated. Plain-collar version BRE27PLS also listed ([link](https://lightingspares.co.uk/products/lamparte-bre27pls-brass-plated-es-e27-plain-collar-lampholder-and-shade-ring)). |
@@ -345,15 +348,18 @@ No UK stockist of turned hollow wooden tube turned up. The usual route is a repe
 
 | Part | Material | Sizes | Supplier & link | Unit price | Price breaks | MOQ | Finish / quality |
 |---|---|---|---|---|---|---|---|
-| Visaton FRS 8 M, 8 Ω | Paper cone, steel basket | 80 mm (3.3") | CPC Farnell, UK — [link](https://cpc.farnell.com/visaton/frs-8-m-8-ohm/fullrange-speaker-8-cm/dp/LS06101) | £10.03 ex VAT / £12.04 inc VAT | — | 1 | Page also says "no longer stocked": check. German-made classic small full-range. |
+| Visaton FRS 8 M, 8 Ω | Paper cone, steel basket | 80 mm (3.3") | CPC Farnell, UK — [link](https://cpc.farnell.com/visaton/frs-8-m-8-ohm/fullrange-speaker-8-cm/dp/LS06101) | £10.03 ex VAT / £12.04 inc VAT | — | 1 | Not stocked by CPC any more (its page). **Status (13 Oct 2026): the FRS 8 M itself is still current:** 3 in stock at SOS Electronic at £11.50 ex VAT (row below). German-made classic small full-range. |
+| Visaton FRS 8 M/8 (2001) | Paper cone | 84 mm Ø × 44 mm deep; 8 Ω, 30/50 W, 100–20,000 Hz | SOS Electronic, EU — [speakers page](https://www.soselectronic.com/en-gb/speakers) · price list export (CSV, 13 Oct 2026): `standard-parts/price-lists/visaton-2026-10-13.csv` · order no. 116579 | £11.50 ex VAT (£11.5012) | £10.80 each at 4+ (£10.7967) | 1 | **3 in stock** at export. Ships from the EU: UK orders may carry import VAT and handling fees. |
 | Visaton FRS 8, 8 Ω | Paper cone | 80 mm | Toutlehautparleur (TLHP), France — [link](https://en.toutlehautparleur.com/fullrange-speaker-visaton-frs-8-8-ohm-3-07-3-66-inch.html) | €12.56 (excl. delivery) | — | 1 | FRS 8 M also listed ([link](https://en.toutlehautparleur.com/fullrange-speaker-visaton-frs-8-m-8-ohm-3-07-3-66-inch.html)). |
+| Visaton FRS 8/8 (2004) | Paper cone | 84 mm Ø × 40 mm deep; 8 Ω, 30/50 W, 130–20,000 Hz | SOS Electronic, EU — [speakers page](https://www.soselectronic.com/en-gb/speakers) · price list export (CSV, 13 Oct 2026): `standard-parts/price-lists/visaton-2026-10-13.csv` · order no. 46340 | £11.37 ex VAT (£11.3739) | £10.69 each at 4+ (£10.6949) | 1 | Stock not shown in the list (blank). Ships from the EU: UK orders may carry import VAT and handling fees. |
 | Visaton FRS 8 M, 8 Ω | Paper cone | 80 mm | Musicstore, Germany — [link](https://www.musicstore.com/en_US/USD/Visaton-FRS-8-M-8-Ohm/art-PAH0020347-000) | US $12.90 ex VAT (shown in USD on the international page) | — | 1 | — |
 | Tang Band W3-881SJ | Paper cone, cast frame, neodymium | 3" | Nonsolospeakers, Italy — [link](https://www.nonsolospeakers.com/fullrange-2-to-8-5cm-20cm/1789-tang-band-w3-881sj-3-full-range-tb-speakers.html) | €30.00 | — | 1 | Out of stock at the snapshot. A well-regarded 3" full-range driver. |
 | Peerless TC9FD18-08 | Paper cone | 3.5" | Toutlehautparleur, France — [link](https://en.toutlehautparleur.com/fullrange-speaker-peerless-tc9fd18-08-8-ohm-3-5-inch.html) | €13.66 | — | 1 | Out of stock; Madisound (US) says it no longer stocks it. Possibly end of life. |
 | Dayton Audio PC68-8 | Paper cone | 2.5" | SoundImports, Netherlands — [link](https://www.soundimports.eu/en/dayton-audio-pc68-8.html) | €13.45 | — | 1 | Out of stock at the snapshot. PS95-8 listed at €26.45. |
 | Dayton Audio drivers (UK stock) | Various | Range | Willys-Hifi, UK — [link](https://willys-hifi.com/collections/dayton-audio-drive-units) | Prices shown with a "$" sign; currency unclear | — | 1 | UK stockist and dealer for Dayton. |
 | SB Acoustics small full-range (SB65WBAC25-4, SB36WBAC21) | Aluminium cone | 1", 2.5", 3" | Willys-Hifi, UK — [link](https://willys-hifi.com/collections/sb-acoustics-full-range-drive-units) | $38.00 (SB65), $21.00 (SB36), currency as shown | — | 1 | Premium Danish-designed drivers. |
-| Visaton range | Various | Range | Variant-hifi, Germany — [link](https://variant-hifi.com/en/Speaker-drivers/Visaton/) | e.g. BG 20 8" full range €53.63 | — | 1 | Also stocks SB Acoustics ([link](https://variant-hifi.com/en/Speaker-drivers/SB-Acoustics/)). |
+| Visaton range | Various | Range | Variant-hifi, Germany — [link](https://variant-hifi.com/en/Speaker-drivers/Visaton/) | e.g. BG 20 8" full range €53.63 | — | 1 | Also stocks SB Acoustics ([link](https://variant-hifi.com/en/Speaker-drivers/SB-Acoustics/)). The BG 20 is £30.93 ex VAT at SOS Electronic (row below). |
+| Visaton BG 20/8 (3020) | Paper cone | 205 mm Ø × 81 mm deep; 8 Ω, 40/70 W, up to 18,000 Hz | SOS Electronic, EU — [speakers page](https://www.soselectronic.com/en-gb/speakers) · price list export (CSV, 13 Oct 2026): `standard-parts/price-lists/visaton-2026-10-13.csv` · order no. 46278 | £30.93 ex VAT (£30.9303) | £29.05 each at 4+ (£29.0544) | 1 | **3 in stock** at export. 8" full-range: far bigger than any concept here. Ships from the EU: UK orders may carry import VAT and handling fees. |
 
 ### 7.2 Passive radiators
 
@@ -407,3 +413,123 @@ No UK assembler of custom small-batch 1S2P packs with published terms turned up.
 - **No stock source found** for: large solid brass rings or blanks (> 100 mm); spun dome and cone blanks; machined brass lamp bases; turned hollow wooden tube; large open-ended soda-lime tube; custom small-batch 1S2P packs. All of these are quote-only: the metal spinners (§2.1), Aimer and John Moncrieff (glass), J Moncrieff trade cylinders (MOQ 50–200), Woodware Repetitions (turning) and S. Lilley (lamp parts).
 - **Prices and specs to confirm first** (the snapshot was unclear): the Oaklea lamp kit's lampholder cap and whether it is solid brass, Cree CXA1507 at Farnell, the UK LED Lights strip length, Urban Cottage shade ring currency, Willys-Hifi "$" prices, and Cousins bun feet.
 - **Not yet in the workbench:** these prices are not in `backend/seed/cost/`. If any are used there, add them with `source`, `confidence`, `verified: false` and `price_basis: distributor_small_qty` or `retail`, per the provenance convention.
+
+<!-- part-shapes
+# How the Standard Parts builder draws each part in 3D, in mm. One mapping applies to every price variant;
+# a list gives one per variant, in the order of the "Unit price" cell. Shapes: tube {od, id, length},
+# rod {d, length}, bar and strip {width, thickness, length}, sheet {width, height, thickness}, disc {d, thickness},
+# ring {od, id, thickness}, cylinder {d, height}, dome {d, height, opening?}, cone {d_bottom, d_top, height},
+# sphere {d}, globe {d, neck_d, neck_height}, box {width, depth, height}. Optional: look (overrides the colour
+# taken from the Material column) and assumed (what isn't stated in the row above, listed under the viewer).
+# Parts not listed here are drawn as labelled placeholder boxes.
+cardboard-construction-tubes--specialist-crafts-dryad-uk: {shape: "tube", od: 44, id: 40, length: 240}
+postal-tubes-with-end-caps-raja--morplan-uk: {shape: "tube", od: 63, id: 60, length: 483, assumed: "wall 1.5 mm"}
+round-tube-25-1-6-mm--the-metal-merchant-uk: {shape: "tube", od: 25, id: 21.8, length: 1000, assumed: "length 1000 mm (sold 100–4000 mm)"}
+brass-tube-10-mm-od-1-m--lampfix-uk: {shape: "tube", od: 10, id: 7, length: 1000}
+150-mm-brass-tube-with-10-mm-male-ends-s-lilley--lampspares-uk: {shape: "tube", od: 10, id: 7, length: 150, assumed: "10 mm OD, 1.5 mm wall"}
+cz108-round-tube-polished--the-metal-store-uk: {shape: "tube", od: 12.7, id: 9.44, length: 2500}
+cz108-round-tube-mill-finish--the-metal-store-uk: {shape: "tube", od: 12.7, id: 9.44, length: 5000}
+small-brass-tube-8-mm-od--access-models-uk: {shape: "tube", od: 8, id: 7.1, length: 1000, assumed: "length 1000 mm"}
+clear-extruded-tube-50-2-mm-1-m--the-clear-plastic-shop-uk: {shape: "tube", od: 50, id: 46, length: 1000}
+clear-extruded-tube-50-5-mm-1-m--the-clear-plastic-shop-uk: {shape: "tube", od: 50, id: 40, length: 1000}
+clear-extruded-tube-60-5-mm-1-m--the-clear-plastic-shop-uk: {shape: "tube", od: 60, id: 50, length: 1000}
+clear-tube-100-3-mm--plasticonline-uk: {shape: "tube", od: 100, id: 94, length: 1000, assumed: "length 1000 mm"}
+clear-glass-cylinder-shades--j-moncrieff-uk: [{shape: "tube", od: 50, id: 44, length: 240, assumed: "wall 3 mm"}, {shape: "tube", od: 130, id: 124, length: 240, assumed: "wall 3 mm"}, {shape: "tube", od: 48, id: 44, length: 112, assumed: "wall 2 mm"}]
+internally-frosted-cylinder-shade--j-moncrieff-uk: {shape: "tube", od: 80, id: 74, length: 210, assumed: "wall 3 mm", look: "glass_frosted"}
+150-mm-opal-globe-80-mm-fitter-neck--j-moncrieff-uk: {shape: "globe", d: 150, neck_d: 80, neck_height: 25, assumed: "neck 25 mm high"}
+200-mm-opal-globe-80-mm-fitter-hole--j-moncrieff-uk: {shape: "globe", d: 200, neck_d: 80, neck_height: 25, assumed: "neck 25 mm high"}
+small-clear-glass-dome-30-mm-fitter--j-moncrieff-uk: {shape: "dome", d: 70, height: 75, opening: 30}
+clear-glass-dome-114-mm-base--j-moncrieff-uk: {shape: "dome", d: 114, height: 155, opening: 52}
+internally-frosted-dome-12-mm-fitter--j-moncrieff-uk: {shape: "dome", d: 100, height: 100, opening: 12, look: "glass_frosted"}
+prismatic-dome-shades--j-moncrieff-uk: [{shape: "dome", d: 305, height: 146, opening: 60, assumed: "height from the listing in search results"}, {shape: "dome", d: 380, height: 190, opening: 70, assumed: "height from the listing in search results"}]
+solid-brass-ball-finial-7112--in-the-light-direction-uk: {shape: "sphere", d: 15, assumed: "drawn as a 15 mm ball (13 mm high)"}
+hand-spun-aluminium-shades--etsy-uk-sellers-marketplace: [{shape: "cone", d_bottom: 165, d_top: 40, height: 120, assumed: "40 mm top opening, 120 mm tall"}, {shape: "cone", d_bottom: 210, d_top: 40, height: 150, assumed: "40 mm top opening, 150 mm tall"}]
+m10-finial-cap-patikil--amazon-uk-marketplace: {shape: "cylinder", d: 21.5, height: 54}
+3-screw-gallery-10-5-mm-hole-288525--peter-willetts-associates-uk: {shape: "cone", d_bottom: 57, d_top: 10.5, height: 25, assumed: "25 mm deep, as the polished one"}
+3-screw-gallery-28-mm-hole-288636--peter-willetts: {shape: "cone", d_bottom: 57, d_top: 28, height: 25, assumed: "25 mm deep, as the polished one"}
+3-screw-gallery-polished-25-mm-deep-9229--peter-willetts: {shape: "cone", d_bottom: 57, d_top: 28, height: 25}
+m10-lampholder-fixing-kit-s-lilley--light-and-power-solutions-uk: {shape: "rod", d: 10, length: 50}
+m10-fixing-kit-larger-set--light-and-power-solutions-uk: {shape: "rod", d: 10, length: 50}
+es-e27-shade-ring-s-lilley-spare--lampspares-uk: {shape: "ring", od: 48, id: 37, thickness: 3.5}
+es-e27-threaded-brass-lampholder-s-lilley-7601et-10-mm-base-fixing--lampspares-uk: {shape: "cylinder", d: 38, height: 61}
+e27-shade-ring--urban-cottage-industries-uk: {shape: "ring", od: 43, id: 37, thickness: 3.5, assumed: "37 mm bore and 3.5 mm thick, as the S. Lilley ring"}
+cob-led-strip-24-v-3000-k-cri-90-15-w-m-1500-lm-m--hi-line-lighting-uk: {shape: "strip", width: 10, thickness: 2, length: 5000, assumed: "10 mm wide, 2 mm thick"}
+cob-led-strip-24-v-2700-3000-k-cri-90-7-5-w-m-480-leds-m-atom--uk-led-lights: {shape: "strip", width: 10, thickness: 2, length: 1000, assumed: "2 mm thick, 1000 mm run"}
+cob-strip-24-v-2700-k-cri-90-9-w-m-ip67--electrical4less-uk: {shape: "strip", width: 10, thickness: 3, length: 30000, assumed: "10 mm wide, 3 mm thick"}
+brass-round-bar-5-16-8-mm--metalmania-uk: {shape: "rod", d: 7.94, length: 1000}
+brass-round-bar-18-mm-per-metre--industrial-safety-uk: {shape: "rod", d: 18, length: 1000}
+brass-round-bar-5-8--sdts-engineering-uk: {shape: "rod", d: 15.88, length: 1000, assumed: "length 1000 mm"}
+brass-flat-bar-12-lengths--noggin-end-metals-stoke-on-trent: [{shape: "bar", width: 6.35, thickness: 1.59, length: 304.8}, {shape: "bar", width: 50.8, thickness: 3.18, length: 304.8}]
+brass-sheet-sample-small-sheet--the-metal-store-uk: [{shape: "sheet", width: 45, height: 45, thickness: 0.9}, {shape: "sheet", width: 250, height: 250, thickness: 0.9, assumed: "0.9 mm thick, as the sample"}]
+brass-sheet-1-mm--macc-models-uk: {shape: "sheet", width: 300, height: 300, thickness: 1}
+audio-note-brass-knob-mwk-01-9000-9001--hificollective-uk: [{shape: "cylinder", d: 26, height: 20, assumed: "20 mm tall"}, {shape: "cylinder", d: 12, height: 12, assumed: "12 mm tall"}]
+solid-brass-gold-plated-knob-25-mm--hificollective-uk: {shape: "cylinder", d: 25, height: 30}
+cross-pattern-solid-aluminium-knob--hificollective-uk: {shape: "cylinder", d: 31, height: 26}
+numbered-knob--hificollective-uk: [{shape: "cylinder", d: 35, height: 20, assumed: "20 mm tall"}, {shape: "cylinder", d: 35, height: 20, assumed: "20 mm tall", look: "black"}]
+domed-brass-knob-6-mm-shaft-set-screw--ebay-uk-marketplace: {shape: "dome", d: 18, height: 12, assumed: "12 mm tall"}
+bun-feet--cousins-uk: {shape: "dome", d: 20, height: 12, assumed: "20 mm size drawn, 12 mm tall"}
+perforated-aluminium-small-sheet--modelshop-uk: {shape: "sheet", width: 400, height: 250, thickness: 0.5}
+perforated-aluminium-2-1-m--rackerman-uk: {shape: "sheet", width: 2000, height: 1000, thickness: 1.5, assumed: "1.5 mm thick"}
+perforated-aluminium-r3-t6-1-5-mm--f-h-brundle-uk: {shape: "sheet", width: 2000, height: 1000, thickness: 1.5}
+decorative-perforated-brass-pattern-379--f-h-brundle-uk: {shape: "sheet", width: 1830, height: 915, thickness: 0.7}
+fine-brass-mesh--the-mesh-company-ebay-uk: {shape: "sheet", width: 200, height: 150, thickness: 0.5, assumed: "0.5 mm thick"}
+visaton-grille-10-rs-round--farnell-uk: {shape: "disc", d: 134, thickness: 14, assumed: "size of the Grille 10 R/134"}
+visaton-grille-10-r-134--rs-components-uk: {shape: "disc", d: 134, thickness: 14}
+3-decorative-mesh-covers--ebay-uk-china-shipped-marketplace: {shape: "disc", d: 97, thickness: 5, assumed: "5 mm deep"}
+beech-turning-blanks--classic-hand-tools-uk: [{shape: "box", width: 101.6, depth: 101.6, height: 44.45}, {shape: "box", width: 304.8, depth: 304.8, height: 44.45}]
+beech-board-blank--scottish-wood-uk: {shape: "box", width: 203, depth: 499, height: 60}
+wooden-beech-knob-with-screw--j-penny-ltd-uk: [{shape: "dome", d: 35, height: 25, assumed: "25 mm tall"}, {shape: "dome", d: 46, height: 30, assumed: "30 mm tall"}, {shape: "dome", d: 52, height: 34, assumed: "34 mm tall"}]
+unfinished-beech-cabinet-knob--the-handle-studio-uk: {shape: "dome", d: 45, height: 30, assumed: "30 mm tall"}
+beech-cupboard-knob-face-fix--period-features-uk: {shape: "dome", d: 45, height: 30, assumed: "30 mm tall"}
+tall-beech-knobs-with-screw--ebay-uk: {shape: "dome", d: 45, height: 40, assumed: "40 mm tall"}
+plywood-circle-with-hole--jb-woodcraft-uk: {shape: "disc", d: 100, thickness: 3, assumed: "100 mm size drawn"}
+100-mm-circle--bee-beautiful-uk: {shape: "disc", d: 100, thickness: 5}
+laser-plywood-sheets-cut-your-own-discs--kitronik-uk: {shape: "sheet", width: 600, height: 400, thickness: 3, assumed: "3 mm thick"}
+premium-beech-plywood-18-mm-glue-class-3--cts-diy-uk: {shape: "sheet", width: 2440, height: 1220, thickness: 18}
+visaton-frs-8-m-8--cpc-farnell-uk: {shape: "cylinder", d: 84, height: 44, assumed: "size from the SOS Electronic list"}
+visaton-frs-8-m-8--musicstore-germany: {shape: "cylinder", d: 84, height: 44, assumed: "size from the SOS Electronic list"}
+visaton-frs-8-8--toutlehautparleur-tlhp-france: {shape: "cylinder", d: 84, height: 40, assumed: "size from the SOS Electronic list"}
+visaton-frs-8-m-8-2001--sos-electronic-eu: {shape: "cylinder", d: 84, height: 44}
+visaton-frs-8-8-2004--sos-electronic-eu: {shape: "cylinder", d: 84, height: 40}
+visaton-bg-20-8-3020--sos-electronic-eu: {shape: "cylinder", d: 205, height: 81}
+molicel-p28a-18650-cell--fogstar-uk-official-uk-distributor: {shape: "cylinder", d: 18, height: 65}
+eve-25p-18650-cell--nu-battery-uk: {shape: "cylinder", d: 18, height: 65}
+18650-cells-for-custom-packs--cell-supply-uk: {shape: "cylinder", d: 18, height: 65}
+1s2p-li-ion-pack-3-7-v-7000-mah--battery-101-uk: {shape: "box", width: 37, depth: 18.5, height: 65, assumed: "two 18650 cells side by side, no case"}
+ansmann-1s2p-pack-3-7-v-7000-mah--cpc-farnell-uk: {shape: "box", width: 37, depth: 18.5, height: 65, assumed: "two 18650 cells side by side, no case"}
+-->
+
+<!-- priced-units
+# What one priced unit of a part is, in mm, so the Standard Parts builder can take a length (tube, rod,
+# bar, strip) or a width × height (sheet) and convert it to a fraction of that unit. A mapping applies
+# to every price variant; a list gives one entry per variant, in the order of the "Unit price" cell.
+# Keep in step with the tables above (tests/test_standard_parts.py checks the ids).
+round-tube-5-m-lengths--rackerman-uk: {length_mm: 5000}
+brass-tube-10-mm-od-1-m--lampfix-uk: {length_mm: 1000}
+cz108-round-tube-polished--the-metal-store-uk: {length_mm: 2500}
+cz108-round-tube-mill-finish--the-metal-store-uk: {length_mm: 5000}
+clear-extruded-tube-50-5-mm-1-m--the-clear-plastic-shop-uk: {length_mm: 1000}
+clear-extruded-tube-60-5-mm-1-m--the-clear-plastic-shop-uk: {length_mm: 1000}
+brass-round-bar-5-16-8-mm--metalmania-uk: {length_mm: 1000}
+brass-round-bar-18-mm-per-metre--industrial-safety-uk: {length_mm: 1000}
+brass-flat-bar-12-lengths--noggin-end-metals-stoke-on-trent: {length_mm: 304.8}
+brass-flats-12-lengths--college-engineering-supplies-uk: {length_mm: 304.8}
+cob-led-strip-24-v-3000-k-cri-90-15-w-m-1500-lm-m--hi-line-lighting-uk: {length_mm: 5000}
+cob-strip-24-v-2700-k-cri-90-9-w-m-ip67--electrical4less-uk: {length_mm: 30000}
+brass-sheet-sample-small-sheet--the-metal-store-uk: [{width_mm: 45, height_mm: 45}, {width_mm: 250, height_mm: 250}]
+perforated-aluminium-small-sheet--modelshop-uk: {width_mm: 400, height_mm: 250}
+perforated-aluminium-2-1-m--rackerman-uk: {width_mm: 2000, height_mm: 1000}
+perforated-aluminium-r3-t6-1-5-mm--f-h-brundle-uk: {width_mm: 2000, height_mm: 1000}
+decorative-perforated-brass-pattern-379--f-h-brundle-uk: {width_mm: 1830, height_mm: 915}
+fine-brass-mesh--the-mesh-company-ebay-uk: {width_mm: 200, height_mm: 150}
+premium-beech-plywood-18-mm-glue-class-3--cts-diy-uk: {width_mm: 2440, height_mm: 1220}
+laser-plywood-sheets-cut-your-own-discs--kitronik-uk: {width_mm: 600, height_mm: 400}
+-->
+
+<!-- renamed-parts
+# Old part id: current id. A part's id comes from its name and supplier, so correcting either changes it;
+# saved concepts and concept-parts lists that use an old id keep working through this list.
+visaton-frs-8-m-8-2001--visaton-price-list-csv-13-oct-2026: visaton-frs-8-m-8-2001--sos-electronic-eu
+visaton-frs-8-8-2004--visaton-price-list-csv-13-oct-2026: visaton-frs-8-8-2004--sos-electronic-eu
+visaton-bg-20-8-3020--visaton-price-list-csv-13-oct-2026: visaton-bg-20-8-3020--sos-electronic-eu
+-->
