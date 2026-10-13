@@ -1,4 +1,4 @@
-import { Link, Navigate, Route, Routes } from "react-router-dom";
+import { Link, NavLink, Navigate, Route, Routes } from "react-router-dom";
 import ProjectsPage from "./pages/ProjectsPage";
 import ProjectLayout from "./pages/ProjectLayout";
 import OverviewPage from "./pages/OverviewPage";
@@ -12,6 +12,8 @@ import FactoryPackPage from "./pages/FactoryPackPage";
 import DfmPage from "./pages/DfmPage";
 import RevisionsPage from "./pages/RevisionsPage";
 import RevisionView from "./pages/RevisionView";
+import StandardPartsPage, { ConceptsView, LibraryView, MyConceptsView } from "./pages/StandardPartsPage";
+import ConceptBuilder from "./pages/ConceptBuilder";
 import { STALE_MESSAGE, useServerStale } from "./components/useServerStale";
 
 export default function App() {
@@ -22,6 +24,12 @@ export default function App() {
         <Link to="/" className="brand">
           Product Workbench
         </Link>
+        <nav className="topnav">
+          <NavLink to="/" end>
+            Projects
+          </NavLink>
+          <NavLink to="/standard-parts">Standard Parts</NavLink>
+        </nav>
       </header>
       {stale && (
         <p className="notice stale-server" role="alert">
@@ -43,6 +51,13 @@ export default function App() {
           <Route path="factory-pack" element={<FactoryPackPage />} />
           <Route path="revisions" element={<RevisionsPage />} />
           <Route path="revisions/:number" element={<RevisionView />} />
+        </Route>
+        <Route path="/standard-parts" element={<StandardPartsPage />}>
+          <Route index element={<Navigate to="library" replace />} />
+          <Route path="library" element={<LibraryView />} />
+          <Route path="concepts" element={<ConceptsView />} />
+          <Route path="mine" element={<MyConceptsView />} />
+          <Route path="mine/:conceptId" element={<ConceptBuilder />} />
         </Route>
       </Routes>
     </div>

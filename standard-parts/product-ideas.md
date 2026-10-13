@@ -14,7 +14,8 @@ Fifteen concepts for Bathsheva London, built mostly from parts in [`library.md`]
 
 - **Parts only.** The costs are library prices added as listed. They don't include labour for the custom work, finishing, packaging, freight, certification, or the parts the library doesn't cover (each concept lists those).
 - **Prices come from the library's search snapshots**, a mix of ex-VAT and inc-VAT, and none are verified. If VAT is reclaimed, inc-VAT lines overstate the cost by up to a sixth.
-- **At 500 units**, only price breaks the library lists are applied: Hi-Line LED strip £33.60 per 5 m roll at 200, Morplan tubes £0.75 at 100+, Visaton grille £7.63 at 3+. Everything else is the same price at 100 and 500. In practice suppliers would discount at 500, so the 500 figures are conservative.
+- **Price breaks** are applied only where the library lists one, and only once the order reaches it: the order is the build quantity × the quantity per product. The Morplan tube break (£0.75 at 100+) applies at both 100 and 500. The Hi-Line strip break (£33.60 per 5 m roll at 200 rolls) applies to none of the concepts, which use under a third of a roll each. Everything else is the same price at 100 and 500. In practice suppliers would discount at 500, so the 500 figures are conservative. (Corrected 13 Oct 2026: the first version applied both breaks at 500 only. That understated Morel, Lantern, Reed and Beacon at 500 by up to £0.59 and overstated Reed at 100 by £0.32.)
+- **Machine-readable parts lists:** each concept ends with a hidden `<!-- concept-parts -->` list (part id from the library, quantity in the part's priced unit, note, optional price variant). The workbench's Standard Parts page reads it to cost the concept and to open it in the concept builder, and a test checks it reproduces the costs stated here. Keep the two in step when editing a concept.
 - **Materials for custom pieces are costed from library stock prices:**
 
   | Material | Rate used | Library source |
@@ -40,19 +41,19 @@ Fifteen concepts for Bathsheva London, built mostly from parts in [`library.md`]
 |---|---|---|---|---|---|---|---|
 | 1 | Tambour | Mains table lamp, frosted glass cylinder | £250 | £63.45 | £63.45 | 92% | Tight |
 | 2 | Lune | Mains table lamp, opal globe on ply stack | £220 | £55.20 | £55.20 | 91% | Tight |
-| 3 | Morel | Cordless mushroom lamp | £225 | £69.45 | £69.03 | 112% | Over |
+| 3 | Morel | Cordless mushroom lamp | £225 | £69.45 | £69.45 | 112% | Over |
 | 4 | Bell | Mains cone-shade table lamp | £195 | £49.51 | £49.51 | 92% | Tight |
 | 5 | Lattice | Mains lamp, perforated aluminium shade | £175 | £31.58 | £31.58 | 66% | Room |
 | 6 | Halo | Wall sconce, clear glass dome | £175 | £47.06 | £47.06 | 98% | Tight |
-| 7 | Lantern | Cordless frosted-cylinder lamp | £250 | £102.88 | £102.38 | 150% | Over |
+| 7 | Lantern | Cordless frosted-cylinder lamp | £250 | £102.88 | £102.88 | 150% | Over |
 | 8 | Prism | Mains lamp, frosted acrylic tube | £150 | £29.29 | £29.29 | 71% | Room |
 | 9 | Orbit | Opal globe pendant | £230 | £60.67 | £60.67 | 96% | Tight |
 | 10 | Sonnet | Bluetooth speaker | £250 | £117.40 | £117.40 | 171% | Over |
 | 11 | Pavilion | Passive bookshelf speakers (pair) | £250 | £68.48 | £68.48 | 100% | Tight |
-| 12 | Reed | Cordless paper-tube column lamp | £150 | £42.84 | £41.93 | 104% | Over |
+| 12 | Reed | Cordless paper-tube column lamp | £150 | £42.52 | £42.52 | 103% | Over |
 | 13 | Trio | Candlesticks, set of three | £165 | £47.77 | £47.77 | 105% | Over |
 | 14 | Meridian | Bookends (pair) | £150 | £26.70 | £26.70 | 65% | Room |
-| 15 | Beacon | Small cordless bedside light | £165 | £62.36 | £62.03 | 137% | Over |
+| 15 | Beacon | Small cordless bedside light | £165 | £62.36 | £62.36 | 137% | Over |
 
 **Pattern:** every cordless or Bluetooth concept is over target. The dev-board battery set (£31.34) and the Wondom amplifier (£31.95) are prototype modules, and at 500 units a custom board from an ODM would replace them. So cordless concepts only work through the route Faro and Atelier already take. The mains lamps and the non-electrical objects are where the library is strong.
 
@@ -77,6 +78,14 @@ A slim column of internally frosted borosilicate glass stands on a turned beech 
 - **Not in library:** LED lamp, inline switch or dimmer, plug, packaging.
 - **Main risk:** supply at volume. The cylinder is a retail stock item. At 500 it should come through J Moncrieff's trade cylinders (quote only, MOQ 50–200), and that route sets the real cost. Also check that the kit's lampholder and the ring hold a 40 mm fitter securely.
 
+<!-- concept-parts
+- {part: internally-frosted-cylinder-shade--j-moncrieff-uk, qty: 1, note: '80 × 210 mm frosted cylinder'}
+- {part: brass-inline-lamp-kit-oaklk1--oaklea-woodcraft-uk, qty: 1, note: 'lampholder, flex, plug, switch'}
+- {part: es-e27-shade-ring-s-lilley-spare--lampspares-uk, qty: 1, note: 'E27 shade ring'}
+- {part: beech-turning-blanks--classic-hand-tools-uk, qty: 2, note: 'two 4 × 4 × 1.75" blanks glued for the plinth'}
+- {part: bun-feet--cousins-uk, qty: 3, note: 'three 20 mm bun feet'}
+-->
+
 ### 2. Lune — opal globe on a plywood stack
 
 A 150 mm gloss opal globe sits in a shallow brass collar on a stepped base of three beech-ply discs. The exposed ply edges are a deliberate mid-century nod to moulded plywood furniture. The lamp is low and moon-like, and the opal glass hides the light source completely.
@@ -92,6 +101,14 @@ A 150 mm gloss opal globe sits in a shallow brass collar on a stepped base of th
 - **Not in library:** LED lamp, switch, plug, collar screws.
 - **Main risk:** retaining the globe. The library has no 80 mm screw gallery, so the custom collar and its clamp screws must hold the globe safely against a knock. J Moncrieff also showed low stock on the 200 mm size, so check the 150 mm stock depth before committing.
 
+<!-- concept-parts
+- {part: 150-mm-opal-globe-80-mm-fitter-neck--j-moncrieff-uk, qty: 1, note: '150 mm opal globe'}
+- {part: brass-inline-lamp-kit-oaklk1--oaklea-woodcraft-uk, qty: 1, note: 'lampholder, flex, plug, switch'}
+- {part: premium-beech-plywood-18-mm-glue-class-3--cts-diy-uk, qty: 0.03354, note: 'three 160 mm discs for the stacked base'}
+- {part: brass-sheet-sample-small-sheet--the-metal-store-uk, qty: 0.16, note: '100 mm laser-cut brass collar', option: 1}
+- {part: bun-feet--cousins-uk, qty: 3, note: 'three 20 mm bun feet'}
+-->
+
 ### 3. Morel — cordless mushroom lamp
 
 A small internally frosted glass dome is held on a brushed brass stem by a solid brass ball finial screwed through the dome's 12 mm hole. It stands on a turned beech base that hides the battery. It is a cordless take on the mid-century mushroom lamp, sized for a bedside or dining table and charged by USB-C.
@@ -105,9 +122,20 @@ A small internally frosted glass dome is held on a brushed brass stem by a solid
   - Battery 101 1S2P pack and Adafruit bq24074 charger (§7.4, §7.5);
   - 0.25 m Hi-Line 3000 K CRI 90 strip (§3.5).
 - **Custom work:** turn the base with a battery pocket; cut and brush the tube; run M10 rod through the stem; fit the LED strip to a small spine under the dome; lacquer.
-- **Parts cost:** £69.45 at 100 and £69.03 at 500 (dome £20.00, finial £1.00, tube £4.32, M10 kit £3.99, blanks £6.70, battery set £31.34, strip £2.10 / £1.68).
+- **Parts cost:** £69.45 at 100 and £69.45 at 500 (dome £20.00, finial £1.00, tube £4.32, M10 kit £3.99, blanks £6.70, battery set £31.34, strip £2.10).
 - **Not in library:** LED driver (the 24 V strip needs a boost driver from the 3.7 V pack), touch or rotary dimmer, USB-C port, fire-safe battery enclosure.
 - **Main risk:** cost and certification. The battery set is a dev module with no product certification and takes the concept over target. It's viable only with a custom driver and charger board and a pre-certified pack, as on Faro.
+
+<!-- concept-parts
+- {part: internally-frosted-dome-12-mm-fitter--j-moncrieff-uk, qty: 1, note: '100 × 100 mm frosted dome'}
+- {part: solid-brass-ball-finial-7112--in-the-light-direction-uk, qty: 1, note: 'M10 ball finial holding the dome'}
+- {part: cz108-round-tube-polished--the-metal-store-uk, qty: 0.072, note: '180 mm brass stem'}
+- {part: beech-turning-blanks--classic-hand-tools-uk, qty: 2, note: 'two blanks for the base'}
+- {part: 1s2p-li-ion-pack-3-7-v-7000-mah--battery-101-uk, qty: 1, note: '1S2P battery pack'}
+- {part: adafruit-universal-usb-dc-solar-charger-bq24074-ada4755--the-pi-hut-uk, qty: 1, note: 'USB-C charger board'}
+- {part: m10-lampholder-fixing-kit-s-lilley--light-and-power-solutions-uk, qty: 1, note: 'M10 rod, nut and washers'}
+- {part: cob-led-strip-24-v-3000-k-cri-90-15-w-m-1500-lm-m--hi-line-lighting-uk, qty: 0.05, note: '0.25 m of LED strip'}
+-->
 
 ### 4. Bell — cone shade table lamp
 
@@ -126,6 +154,16 @@ A hand-spun aluminium cone, lacquered inside and out in one of the Bathsheva col
 - **Not in library:** LED lamp, switch, plug.
 - **Main risk:** the shade source. An Etsy maker can't reliably supply 100–500 identical shades. At volume the shade moves to a UK metal spinner (Excell, Winward, Calder: quote only, possibly reusing an existing former), and that quote decides the cost.
 
+<!-- concept-parts
+- {part: hand-spun-aluminium-shades--etsy-uk-sellers-marketplace, qty: 1, note: '8.25" spun aluminium shade', option: 1}
+- {part: brass-inline-lamp-kit-oaklk1--oaklea-woodcraft-uk, qty: 1, note: 'lampholder, flex, plug, switch'}
+- {part: es-e27-shade-ring-s-lilley-spare--lampspares-uk, qty: 1, note: 'E27 shade ring'}
+- {part: cz108-round-tube-polished--the-metal-store-uk, qty: 0.12, note: '300 mm brass stem'}
+- {part: m10-lampholder-fixing-kit-s-lilley--light-and-power-solutions-uk, qty: 1, note: 'M10 rod, nut and washers'}
+- {part: premium-beech-plywood-18-mm-glue-class-3--cts-diy-uk, qty: 0.04245, note: 'three 180 mm discs for the base'}
+- {part: bun-feet--cousins-uk, qty: 3, note: 'three 20 mm bun feet'}
+-->
+
 ### 5. Lattice — perforated aluminium shade lamp
 
 A cylinder of round-hole perforated aluminium, lacquered in a solid colour, wraps a frosted inner tube. The light comes through as a fine dot pattern, recalling mid-century perforated-metal furniture and lighting. Laser-cut brass rings cap the top and bottom, and the cylinder stands on a two-disc beech-ply base. It's the simplest concept to make and has the most cost headroom.
@@ -140,6 +178,14 @@ A cylinder of round-hole perforated aluminium, lacquered in a solid colour, wrap
 - **Parts cost:** £31.58 at 100 and £31.58 at 500 (perforated sheet £2.71, acrylic £7.11, brass rings £10.82, ply £1.09, kit £9.86). Brundle lists a break at 18+ sheets but doesn't show the price, so it isn't applied. For hand-made prototypes, the Modelshop 400 × 250 mm sheet (£11.60, one shade each) is easier to buy.
 - **Not in library:** LED lamp, switch, plug.
 - **Main risk:** the pattern and finish. Brundle's listing gives conflicting open areas (53% and 23%), which changes how bright and how "dotted" the lamp looks, so order a sheet before deciding. Lacquer adhesion and seam neatness on rolled 1.5 mm aluminium need a sample.
+
+<!-- concept-parts
+- {part: perforated-aluminium-r3-t6-1-5-mm--f-h-brundle-uk, qty: 0.04762, note: 'one rolled 120 mm shade (about 21 per 2 × 1 m sheet)'}
+- {part: clear-extruded-tube-60-5-mm-1-m--the-clear-plastic-shop-uk, qty: 0.25, note: '250 mm frosted inner tube'}
+- {part: brass-sheet-sample-small-sheet--the-metal-store-uk, qty: 0.5408, note: 'two 130 mm brass rings', option: 1}
+- {part: premium-beech-plywood-18-mm-glue-class-3--cts-diy-uk, qty: 0.02236, note: 'two 160 mm discs for the base'}
+- {part: brass-inline-lamp-kit-oaklk1--oaklea-woodcraft-uk, qty: 1, note: 'lampholder, flex, plug, switch'}
+-->
 
 ### 6. Halo — glass dome wall sconce
 
@@ -156,6 +202,14 @@ A small clear glass dome sits under a short brushed brass arm on a laser-cut bra
 - **Not in library:** BC lampholder (the dome fits a BC holder; confirm whether the Oaklea kit's holder is BC), wall box, LED lamp.
 - **Main risk:** compliance for fixed wiring. A hard-wired wall light is installed by an electrician, and needs the right enclosure, earthing of the brass, and UKCA/LVD testing. A plug-in version with a fabric flex is simpler to certify.
 
+<!-- concept-parts
+- {part: small-clear-glass-dome-30-mm-fitter--j-moncrieff-uk, qty: 1, note: '70 × 75 mm clear dome'}
+- {part: brass-sheet-sample-small-sheet--the-metal-store-uk, qty: 0.2304, note: '120 mm brass back plate', option: 1}
+- {part: cz108-round-tube-polished--the-metal-store-uk, qty: 0.06, note: '150 mm brass arm'}
+- {part: m10-lampholder-fixing-kit-s-lilley--light-and-power-solutions-uk, qty: 1, note: 'M10 rod, nut and washers'}
+- {part: brass-inline-lamp-kit-oaklk1--oaklea-woodcraft-uk, qty: 1, note: 'lampholder and grommets'}
+-->
+
 ### 7. Lantern — cordless frosted cylinder lamp
 
 A rechargeable version of Tambour, with a turned beech base, a brass cap and a solid brass knob that dims the light. It's a portable lamp for dining tables and terraces, charged by USB-C.
@@ -170,9 +224,21 @@ A rechargeable version of Tambour, with a turned beech base, a brass cap and a s
   - Hificollective Audio Note 12 mm brass knob, £13.23 ex VAT (§4.5);
   - 3 × brass bun feet (§4.6).
 - **Custom work:** turn the base with a battery pocket and knob boss; laser-cut and dome the cap; fit the strip to a central spine; lacquer.
-- **Parts cost:** £102.88 at 100 and £102.38 at 500 (cylinder £35.00, battery set £31.34, strip £2.52 / £2.02, cap £2.59, finial £1.00, blanks £6.70, knob £13.23, feet £10.50).
+- **Parts cost:** £102.88 at 100 and £102.88 at 500 (cylinder £35.00, battery set £31.34, strip £2.52, cap £2.59, finial £1.00, blanks £6.70, knob £13.23, feet £10.50).
 - **Not in library:** LED driver and boost, dimmer potentiometer, USB-C port, fire enclosure.
 - **Main risk:** too close to Faro and too expensive. At 150% of target it only works with a custom board, and it competes with Faro for the same customer. It's better treated as a Faro accessory or a later "Faro Petite".
+
+<!-- concept-parts
+- {part: internally-frosted-cylinder-shade--j-moncrieff-uk, qty: 1, note: '80 × 210 mm frosted cylinder'}
+- {part: 1s2p-li-ion-pack-3-7-v-7000-mah--battery-101-uk, qty: 1, note: '1S2P battery pack'}
+- {part: adafruit-universal-usb-dc-solar-charger-bq24074-ada4755--the-pi-hut-uk, qty: 1, note: 'USB-C charger board'}
+- {part: cob-led-strip-24-v-3000-k-cri-90-15-w-m-1500-lm-m--hi-line-lighting-uk, qty: 0.06, note: '0.3 m of LED strip'}
+- {part: brass-sheet-sample-small-sheet--the-metal-store-uk, qty: 0.1296, note: '90 mm brass cap', option: 1}
+- {part: solid-brass-ball-finial-7112--in-the-light-direction-uk, qty: 1, note: 'ball finial'}
+- {part: beech-turning-blanks--classic-hand-tools-uk, qty: 2, note: 'two blanks for the base'}
+- {part: audio-note-brass-knob-mwk-01-9000-9001--hificollective-uk, qty: 1, note: '12 mm brass dimmer knob', option: 1}
+- {part: bun-feet--cousins-uk, qty: 3, note: 'three 20 mm bun feet'}
+-->
 
 ### 8. Prism — frosted acrylic column lamp
 
@@ -190,6 +256,15 @@ An entry-price lamp: a sandblasted acrylic tube between two laser-cut brass end 
 - **Not in library:** LED lamp, switch, plug.
 - **Main risk:** premium perception. Acrylic can read as cheaper than glass, and it scratches and attracts dust. Test whether the frosted acrylic passes the "premium before cheapest" bar next to Tambour. If it doesn't, drop it rather than discount the brand.
 
+<!-- concept-parts
+- {part: clear-extruded-tube-60-5-mm-1-m--the-clear-plastic-shop-uk, qty: 0.28, note: '280 mm tube, sandblasted'}
+- {part: brass-sheet-sample-small-sheet--the-metal-store-uk, qty: 0.1568, note: 'two 70 mm brass end caps', option: 1}
+- {part: solid-brass-ball-finial-7112--in-the-light-direction-uk, qty: 1, note: 'ball finial'}
+- {part: m10-lampholder-fixing-kit-s-lilley--light-and-power-solutions-uk, qty: 1, note: 'M10 rod, nut and washers'}
+- {part: brass-inline-lamp-kit-oaklk1--oaklea-woodcraft-uk, qty: 1, note: 'lampholder, flex, plug, switch'}
+- {part: beech-turning-blanks--classic-hand-tools-uk, qty: 1, note: 'one blank for the foot'}
+-->
+
 ### 9. Orbit — opal globe pendant
 
 A 200 mm matt opal globe hangs from a brushed brass drop rod, held by a laser-cut brass collar, with a turned beech ceiling cup. It's a classic mid-century globe pendant made in the brand's materials.
@@ -205,6 +280,15 @@ A 200 mm matt opal globe hangs from a brushed brass drop rod, held by a laser-cu
 - **Parts cost:** £60.67 at 100 and £60.67 at 500 (globe £35.00, tube £7.20, blank £3.35, collar £3.87, kit £9.86, ring £1.39).
 - **Not in library:** ceiling plate and bracket, strain relief, LED lamp.
 - **Main risk:** supply and installation. Only 5 globes were in stock at the snapshot. It's a hard-wired ceiling fitting (electrician install, UKCA/LVD), and a wooden ceiling cup needs a non-combustible inner cover over the terminals.
+
+<!-- concept-parts
+- {part: 200-mm-opal-globe-80-mm-fitter-hole--j-moncrieff-uk, qty: 1, note: '200 mm opal globe'}
+- {part: cz108-round-tube-polished--the-metal-store-uk, qty: 0.12, note: '300 mm brass drop rod'}
+- {part: beech-turning-blanks--classic-hand-tools-uk, qty: 1, note: 'one blank for the ceiling cup'}
+- {part: brass-sheet-sample-small-sheet--the-metal-store-uk, qty: 0.1936, note: '110 mm brass collar', option: 1}
+- {part: brass-inline-lamp-kit-oaklk1--oaklea-woodcraft-uk, qty: 1, note: 'lampholder and flex'}
+- {part: es-e27-shade-ring-s-lilley-spare--lampspares-uk, qty: 1, note: 'E27 shade ring'}
+-->
 
 ## Audio
 
@@ -225,6 +309,17 @@ A compact mono speaker: a stack of beech-ply rings, a solid brass mesh front fra
 - **Not in library:** boost converter for the amplifier supply, USB-C port, wiring, damping.
 - **Main risk:** this is a dev-board stack, not a product. Check the JAB3+ supply voltage against a 3.7 V 1S2P pack (a boost converter is probably needed). The module has no radio certification for a finished product. At 171% of target, it only works with an ODM board, the route Atelier already takes. Useful as an acoustic mock-up, not as a product.
 
+<!-- concept-parts
+- {part: visaton-frs-8-8--toutlehautparleur-tlhp-france, qty: 1, note: '80 mm full-range driver'}
+- {part: wondom-jab3-2-50-w-bt-5-0-adau1701-dsp--ebay-uk, qty: 1, note: 'Bluetooth amplifier / DSP board'}
+- {part: 1s2p-li-ion-pack-3-7-v-7000-mah--battery-101-uk, qty: 1, note: '1S2P battery pack'}
+- {part: adafruit-universal-usb-dc-solar-charger-bq24074-ada4755--the-pi-hut-uk, qty: 1, note: 'USB-C charger board'}
+- {part: fine-brass-mesh--the-mesh-company-ebay-uk, qty: 0.5, note: 'half a 200 × 150 mm sheet for the grille'}
+- {part: audio-note-brass-knob-mwk-01-9000-9001--hificollective-uk, qty: 1, note: '26 mm gold brass knob'}
+- {part: premium-beech-plywood-18-mm-glue-class-3--cts-diy-uk, qty: 0.0559, note: 'five 160 mm discs routed as rings'}
+- {part: bun-feet--cousins-uk, qty: 3, note: 'three 20 mm bun feet'}
+-->
+
 ### 11. Pavilion — passive bookshelf speakers (pair)
 
 A pair of small passive speakers in solid-edged beech-ply cabinets, each with a brass mesh front in a laser-cut brass bezel, standing on brass bun feet. They're made for vintage-style amplifiers and turntables: the mid-century hi-fi corner in miniature.
@@ -240,6 +335,14 @@ A pair of small passive speakers in solid-edged beech-ply cabinets, each with a 
 - **Not in library:** speaker terminals, internal wire, damping.
 - **Main risk:** the market. Passive speakers need the customer's own amplifier, which narrows the audience, and a single 80 mm full-range driver has limited bass. Price and position them honestly, as a "desk or bedroom hi-fi" pair.
 
+<!-- concept-parts
+- {part: visaton-frs-8-8--toutlehautparleur-tlhp-france, qty: 2, note: 'two 80 mm full-range drivers'}
+- {part: fine-brass-mesh--the-mesh-company-ebay-uk, qty: 1, note: 'one 200 × 150 mm sheet for both fronts'}
+- {part: brass-sheet-sample-small-sheet--the-metal-store-uk, qty: 0.3872, note: 'two 110 mm brass bezels', option: 1}
+- {part: premium-beech-plywood-18-mm-glue-class-3--cts-diy-uk, qty: 0.13101, note: 'cabinets, about 0.39 m² for the pair'}
+- {part: bun-feet--cousins-uk, qty: 6, note: 'six 20 mm bun feet'}
+-->
+
 ## Lighting from paper and objects
 
 ### 12. Reed — paper tube column lamp
@@ -254,9 +357,19 @@ A tall, thin spiral-wound tube, lacquered in deep oxblood and pierced with a pat
   - 1 × beech blank (§6.1);
   - brass ball finial (§3.1).
 - **Custom work:** cut the tube; seal and lacquer it; drill the hole pattern; laser-cut the caps; turn the foot.
-- **Parts cost:** £42.84 at 100 and £41.93 at 500 (battery set £31.34, strip £2.94 / £2.35, tube £1.07 / £0.75, caps £3.14, blank £3.35, finial £1.00).
+- **Parts cost:** £42.52 at 100 and £42.52 at 500 (battery set £31.34, strip £2.94, tube £0.75 (the 100+ break applies at both quantities), caps £3.14, blank £3.35, finial £1.00).
 - **Not in library:** LED driver, USB-C port, switch, fire enclosure.
 - **Main risk:** both premium feel and fire safety. A 65 gsm postal tube may dent and feel cheap, and a stiffer bespoke tube is quote-only (Essex Tube Windings). Paper can't be the fire enclosure round a Li-ion pack; this is the same issue as Atelier's wood option, and the battery needs a steel enclosure. This is the weakest concept on brand fit.
+
+<!-- concept-parts
+- {part: 1s2p-li-ion-pack-3-7-v-7000-mah--battery-101-uk, qty: 1, note: '1S2P battery pack'}
+- {part: adafruit-universal-usb-dc-solar-charger-bq24074-ada4755--the-pi-hut-uk, qty: 1, note: 'USB-C charger board'}
+- {part: cob-led-strip-24-v-3000-k-cri-90-15-w-m-1500-lm-m--hi-line-lighting-uk, qty: 0.07, note: '0.35 m of LED strip'}
+- {part: postal-tubes-with-end-caps-raja--morplan-uk, qty: 1, note: '63 × 483 mm tube, cut to 400 mm'}
+- {part: brass-sheet-sample-small-sheet--the-metal-store-uk, qty: 0.1568, note: 'two 70 mm brass end caps', option: 1}
+- {part: beech-turning-blanks--classic-hand-tools-uk, qty: 1, note: 'one blank for the foot'}
+- {part: solid-brass-ball-finial-7112--in-the-light-direction-uk, qty: 1, note: 'ball finial'}
+-->
 
 ### 13. Trio — candlesticks, set of three
 
@@ -272,6 +385,13 @@ Three solid brass stems in stepped heights on turned beech feet, each topped wit
 - **Not in library:** felt pads, packaging.
 - **Main risk:** candle fire safety. The candle must sit in a non-combustible socket. A beech cup needs a brass sleeve or a spike in the drip plate, and the set needs a fire-safety assessment and labelling. The cost is also slightly over target: plain M10 studding instead of three full kits would bring it under.
 
+<!-- concept-parts
+- {part: cz108-round-tube-polished--the-metal-store-uk, qty: 0.204, note: 'three stems: 120, 170 and 220 mm'}
+- {part: beech-turning-blanks--classic-hand-tools-uk, qty: 6, note: 'three feet and three cups'}
+- {part: m10-lampholder-fixing-kit-s-lilley--light-and-power-solutions-uk, qty: 3, note: 'joining rod for each candlestick'}
+- {part: brass-sheet-sample-small-sheet--the-metal-store-uk, qty: 0.1728, note: 'three 60 mm drip plates', option: 1}
+-->
+
 ### 14. Meridian — brass and beech bookends (pair)
 
 Each bookend is an L of solid 1/8" × 2" brass flat bar, brushed and lacquered, carrying a turned beech sphere as a counterweight and visual full stop. Strict geometry and warm materials make a quiet mid-century object with no electrics.
@@ -283,6 +403,11 @@ Each bookend is an L of solid 1/8" × 2" brass flat bar, brushed and lacquered, 
 - **Parts cost:** £26.70 per pair at 100 and £26.70 at 500 (flat bar £20.00, blanks £6.70).
 - **Not in library:** felt or cork base pads, packaging.
 - **Main risk:** weight and grip. Each brass L weighs only about 0.4 kg, which is too light to hold a full shelf of books. They may need a longer base leg slipped under the books, or a weighted sphere, and the bend needs a sample to check for cracking at the corner.
+
+<!-- concept-parts
+- {part: brass-flat-bar-12-lengths--noggin-end-metals-stoke-on-trent, qty: 2, note: 'two 1/8 × 2" × 12" bars, one per bookend', option: 1}
+- {part: beech-turning-blanks--classic-hand-tools-uk, qty: 2, note: 'two blanks for the spheres'}
+-->
 
 ### 15. Beacon — small cordless bedside light
 
@@ -297,9 +422,20 @@ A slim 50 mm clear glass cylinder with a single line of warm LED light down its 
   - brass ball finial (§3.1);
   - Knobzone ridged solid aluminium knob, £3.84 (§4.5).
 - **Custom work:** turn the foot with a battery pocket; laser-cut and brush the cap; mount the strip on a central spine; lacquer.
-- **Parts cost:** £62.36 at 100 and £62.03 at 500 (cylinder £20.00, strip £1.68 / £1.34, battery set £31.34, blank £3.35, cap £1.15, finial £1.00, knob £3.84).
+- **Parts cost:** £62.36 at 100 and £62.36 at 500 (cylinder £20.00, strip £1.68, battery set £31.34, blank £3.35, cap £1.15, finial £1.00, knob £3.84).
 - **Not in library:** LED driver, dimmer, USB-C port, fire enclosure.
 - **Main risk:** cost. At 137% of target for a £165 product, the battery electronics alone exceed what the price can carry. It works only on a shared custom board with Faro, or with a much smaller cell.
+
+<!-- concept-parts
+- {part: clear-glass-cylinder-shades--j-moncrieff-uk, qty: 1, note: '50 mm clear cylinder, 240 mm'}
+- {part: cob-led-strip-24-v-3000-k-cri-90-15-w-m-1500-lm-m--hi-line-lighting-uk, qty: 0.04, note: '0.2 m of LED strip'}
+- {part: 1s2p-li-ion-pack-3-7-v-7000-mah--battery-101-uk, qty: 1, note: '1S2P battery pack'}
+- {part: adafruit-universal-usb-dc-solar-charger-bq24074-ada4755--the-pi-hut-uk, qty: 1, note: 'USB-C charger board'}
+- {part: beech-turning-blanks--classic-hand-tools-uk, qty: 1, note: 'one blank for the foot'}
+- {part: brass-sheet-sample-small-sheet--the-metal-store-uk, qty: 0.0576, note: '60 mm brass cap', option: 1}
+- {part: solid-brass-ball-finial-7112--in-the-light-direction-uk, qty: 1, note: 'ball finial'}
+- {part: solid-metal-control-knobs--knobzone-uk, qty: 1, note: 'ridged aluminium dimmer knob', option: 1}
+-->
 
 ---
 

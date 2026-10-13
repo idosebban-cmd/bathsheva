@@ -41,6 +41,7 @@ backend/app/
   products/          Product registry: one entry per template (label, noun, CAD generator, product-only DFM checks,
                      wall/draft parameters, bought-in densities). Services ask `product_for(project)`, never name a product
   cad/               build123d generators (faro.py; interface in generator.py), validation types, export (STEP/STL/GLB)
+  standard_parts.py  Parses standard-parts/library.md and product-ideas.md (pure) and costs a parts list at 100/500
   electrical.py      Battery runtime from the battery spec and loads (pure); the template's runtime_basis says on what basis
   audio.py           Speaker acoustics and power (pure): sealed-box alignment and -3/-6 dB with the DSP bass boost (radiator tuning mass for the comparison), amplifier- and excursion-limited
                      SPL, peak battery current, charge time; from the template's `audio` block and the CAD box volume
@@ -59,6 +60,7 @@ scripts/             stress_cad.py (CAD soak test), trace_logo.py (logo curves f
                      setup_mac.sh + mac_env.sh + workbench_check.py (Mac setup, PATH, migrate/self-test)
 Start Workbench.command  Double-click launcher for macOS (wraps run.sh, opens the browser)
 brand/logo/          Logo master (SVG, PDF, DXF, PNG, loops) and its traced curves
+standard-parts/      library.md (off-the-shelf parts, UK/EU, small quantities) and product-ideas.md (15 concepts); read by the Standard Parts page
 docs/                Generated reports (cost-assumptions-audit.md) and cost-price-research.md
 ~/Bathsheva Workbench/data   Runtime: SQLite DB, uploads, CAD outputs (outside the repo)
 ```
@@ -102,6 +104,8 @@ Other useful commands, run from `backend/`: `.venv/bin/alembic current` and `.ve
 | DFM report | `GET /dfm`, `GET /dfm.md` |
 | Factory Pack | `GET /factory-pack` (incl. consistency checks and open questions), `GET/PUT /factory-pack/contact`, `GET /factory-pack.zip`, `GET /drawings/{cad_key}.svg\|.pdf`, `GET /rfq.md\|.pdf`, `GET /rfq-electronics.md\|.pdf` |
 | Revisions | `GET/POST /revisions`, `GET /revisions/{n}` (no update or delete) |
+
+**Standard Parts page** (`/standard-parts`, top bar; not per project): `GET /api/standard-parts` (the parsed library), `GET /api/standard-parts/concepts` (the concepts in product-ideas.md, costed), `POST /api/standard-parts/cost` (the builder's running total), `GET/POST /api/concepts`, `GET/PUT/DELETE /api/concepts/{id}` (saved concepts, table `concepts`). The markdown files are the source of truth and are parsed on each request, so edits show without a restart. A part's id is `slug(part)--slug(supplier)`; a concept line's quantity is in the part's priced unit (0.16 of a £20 sheet), and `option` picks a bracket-labelled price variant from the "Unit price" cell. EUR and USD convert at `standard_parts.FX`; price breaks apply once 100 or 500 products' worth reaches them. Each concept in product-ideas.md ends with a hidden `<!-- concept-parts -->` YAML list; `tests/test_standard_parts.py` checks it reproduces the stated parts cost and uses only priced parts that aren't flagged discontinued or out of stock. The target is ex-VAT retail × `dtc_factory_share` (pricing.yaml); under 75% of it is "room", up to 100% "tight", above "over". Parts only: no labour, finishing or certification.
 
 The Factory Pack tab has the first part of SPEC §5 (the RFQ pack). Compliance and factory feedback are later milestones; their tables exist in `models.py` but have no API.
 
