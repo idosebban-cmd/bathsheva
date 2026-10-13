@@ -166,3 +166,82 @@ def test_concepts_crud(client):
 
     assert client.delete(f"/api/concepts/{cid}").status_code == 204
     assert client.get(f"/api/concepts/{cid}").status_code == 404
+
+
+# --- Sizes in mm -------------------------------------------------------------
+
+
+def test_priced_units_cover_tube_rod_bar_and_sheet_parts():
+    sized = {pid: p for pid, p in PARTS.items() if p.units}
+    assert len(sized) >= 20
+    assert PARTS["cz108-round-tube-polished--the-metal-store-uk"].unit() == {"length_mm": 2500}
+    sheet = PARTS["brass-sheet-sample-small-sheet--the-metal-store-uk"]
+    assert sheet.unit(0) == {"width_mm": 45, "height_mm": 45} and sheet.unit(1) == {"width_mm": 250, "height_mm": 250}
+    # Every sized part has a listed price, and pieces (finished cylinders, kits) are not sized.
+    assert all(p.price is not None for p in sized.values())
+    assert PARTS["internally-frosted-cylinder-shade--j-moncrieff-uk"].unit() is None
+
+
+def test_priced_units_block_is_validated():
+    table = "## 1. A\n\n### 1.1 B\n\n| a | b | c | d | e | f | g | h |\n|---|---|---|---|---|---|---|---|\n" \
+            "| Tube | Brass | 1 m | S, UK — [l](https://x.uk) | £10 | — | 1 | — |\n"
+    ok = sp.parse_library(table + "\n<!-- priced-units\ntube--s-uk: {length_mm: 1000}\n-->\n")
+    assert ok.parts["tube--s-uk"].unit() == {"length_mm": 1000}
+    for bad in ("nope--s-uk: {length_mm: 1000}", "tube--s-uk: {width_mm: 10}", "tube--s-uk: {length_mm: 0}",
+                "tube--s-uk: [{length_mm: 1}, {length_mm: 2}]"):
+        with pytest.raises(sp.LibraryError):
+            sp.parse_library(table + f"\n<!-- priced-units\n{bad}\n-->\n")
+
+
+def test_length_and_area_convert_to_the_same_cost_as_the_fraction():
+    tube = "cz108-round-tube-polished--the-metal-store-uk"  # £60 per 2.5 m
+    by_mm = sp.cost_lines([{"part_id": tube, "length_mm": 300, "count": 2}], PARTS, None, 0.2, 0.33)
+    by_fraction = sp.cost_lines([{"part_id": tube, "quantity": 0.24}], PARTS, None, 0.2, 0.33)
+    assert by_mm["lines"][0]["mode"] == "length" and by_mm["lines"][0]["quantity"] == pytest.approx(0.24)
+    assert by_mm["total_100"] == by_fraction["total_100"] == 14.4
+
+    ply = "premium-beech-plywood-18-mm-glue-class-3--cts-diy-uk"  # £48.82 per 2440 × 1220
+    line = {"part_id": ply, "width_mm": 1220, "height_mm": 610, "count": 2, "waste_pct": 10}
+    r = sp.cost_lines([line], PARTS, None, 0.2, 0.33)
+    assert r["lines"][0]["mode"] == "area" and r["lines"][0]["quantity"] == pytest.approx(0.55)
+    assert r["total_500"] == pytest.approx(48.82 * 0.55, abs=0.01)
+
+
+def test_size_follows_the_price_variant():
+    """The same 100 × 100 mm piece is a different fraction of the 45 mm sample and the 250 mm sheet."""
+    sheet = "brass-sheet-sample-small-sheet--the-metal-store-uk"
+    big = sp.cost_lines([{"part_id": sheet, "width_mm": 100, "height_mm": 100, "option": 1}], PARTS, None, 0.2, 0.33)
+    assert big["lines"][0]["quantity"] == pytest.approx(0.16) and big["total_100"] == 3.2
+
+
+def test_sizes_on_a_part_priced_per_piece_fall_back_to_the_quantity():
+    r = sp.cost_lines([{"part_id": "bun-feet--cousins-uk", "length_mm": 100, "quantity": 3}], PARTS, None, 0.2, 0.33)
+    row = r["lines"][0]
+    assert row["mode"] == "units" and row["quantity"] == 3 and "per piece" in row["size_problem"]
+    r = sp.cost_lines([{"part_id": "cz108-round-tube-polished--the-metal-store-uk", "width_mm": 10, "height_mm": 10,
+                        "quantity": 1}], PARTS, None, 0.2, 0.33)
+    assert r["lines"][0]["mode"] == "units" and "length" in r["lines"][0]["size_problem"]
+
+
+def test_concepts_give_sizes_in_mm_where_the_part_is_sized():
+    lune = next(c for c in CONCEPTS if c.key == "lune")
+    ply = next(ln for ln in lune.lines if ln["part_id"].startswith("premium-beech-plywood"))
+    assert (ply["width_mm"], ply["height_mm"], ply["count"], ply["waste_pct"]) == (160, 160, 3, 30)
+    for c in CONCEPTS:
+        for ln in c.lines:
+            if "length_mm" in ln or "width_mm" in ln:
+                assert sp.line_quantity(ln, PARTS[ln["part_id"]], ln["option"])[1] != "units", (c.name, ln["part_id"])
+
+
+def test_concept_api_keeps_sizes(client):
+    tube = "cz108-round-tube-polished--the-metal-store-uk"
+    body = {"name": "Stem", "lines": [{"part_id": tube, "length_mm": 250, "count": 1, "note": "stem"}]}
+    r = client.post("/api/concepts", json=body)
+    assert r.status_code == 201, r.text
+    line = r.json()["lines"][0]
+    assert line["length_mm"] == 250 and line["quantity"] == pytest.approx(0.1)
+    assert r.json()["cost"]["total_100"] == 6.0
+    r = client.post("/api/standard-parts/cost", json={"lines": [{"part_id": tube, "length_mm": 500, "count": 2}]})
+    assert r.json()["lines"][0]["mode"] == "length" and r.json()["total_100"] == 24.0
+    bad = {"lines": [{"part_id": tube, "length_mm": -1}]}
+    assert client.post("/api/standard-parts/cost", json=bad).status_code == 422

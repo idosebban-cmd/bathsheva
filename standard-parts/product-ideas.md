@@ -15,7 +15,7 @@ Fifteen concepts for Bathsheva London, built mostly from parts in [`library.md`]
 - **Parts only.** The costs are library prices added as listed. They don't include labour for the custom work, finishing, packaging, freight, certification, or the parts the library doesn't cover (each concept lists those).
 - **Prices come from the library's search snapshots**, a mix of ex-VAT and inc-VAT, and none are verified. If VAT is reclaimed, inc-VAT lines overstate the cost by up to a sixth.
 - **Price breaks** are applied only where the library lists one, and only once the order reaches it: the order is the build quantity × the quantity per product. The Morplan tube break (£0.75 at 100+) applies at both 100 and 500. The Hi-Line strip break (£33.60 per 5 m roll at 200 rolls) applies to none of the concepts, which use under a third of a roll each. Everything else is the same price at 100 and 500. In practice suppliers would discount at 500, so the 500 figures are conservative. (Corrected 13 Oct 2026: the first version applied both breaks at 500 only. That understated Morel, Lantern, Reed and Beacon at 500 by up to £0.59 and overstated Reed at 100 by £0.32.)
-- **Machine-readable parts lists:** each concept ends with a hidden `<!-- concept-parts -->` list (part id from the library, quantity in the part's priced unit, note, optional price variant). The workbench's Standard Parts page reads it to cost the concept and to open it in the concept builder, and a test checks it reproduces the costs stated here. Keep the two in step when editing a concept.
+- **Machine-readable parts lists:** each concept ends with a hidden `<!-- concept-parts -->` list (part id from the library; a quantity in the part's priced unit, or a length or width × height in mm with a count and waste %; a note; an optional price variant). The workbench's Standard Parts page reads it to cost the concept and to open it in the concept builder, and a test checks it reproduces the costs stated here. Keep the two in step when editing a concept.
 - **Materials for custom pieces are costed from library stock prices:**
 
   | Material | Rate used | Library source |
@@ -104,8 +104,8 @@ A 150 mm gloss opal globe sits in a shallow brass collar on a stepped base of th
 <!-- concept-parts
 - {part: 150-mm-opal-globe-80-mm-fitter-neck--j-moncrieff-uk, qty: 1, note: '150 mm opal globe'}
 - {part: brass-inline-lamp-kit-oaklk1--oaklea-woodcraft-uk, qty: 1, note: 'lampholder, flex, plug, switch'}
-- {part: premium-beech-plywood-18-mm-glue-class-3--cts-diy-uk, qty: 0.03354, note: 'three 160 mm discs for the stacked base'}
-- {part: brass-sheet-sample-small-sheet--the-metal-store-uk, qty: 0.16, note: '100 mm laser-cut brass collar', option: 1}
+- {part: premium-beech-plywood-18-mm-glue-class-3--cts-diy-uk, size_mm: [160, 160], count: 3, waste_pct: 30, note: 'three 160 mm discs for the stacked base'}
+- {part: brass-sheet-sample-small-sheet--the-metal-store-uk, size_mm: [100, 100], note: '100 mm laser-cut brass collar', option: 1}
 - {part: bun-feet--cousins-uk, qty: 3, note: 'three 20 mm bun feet'}
 -->
 
@@ -129,12 +129,12 @@ A small internally frosted glass dome is held on a brushed brass stem by a solid
 <!-- concept-parts
 - {part: internally-frosted-dome-12-mm-fitter--j-moncrieff-uk, qty: 1, note: '100 × 100 mm frosted dome'}
 - {part: solid-brass-ball-finial-7112--in-the-light-direction-uk, qty: 1, note: 'M10 ball finial holding the dome'}
-- {part: cz108-round-tube-polished--the-metal-store-uk, qty: 0.072, note: '180 mm brass stem'}
+- {part: cz108-round-tube-polished--the-metal-store-uk, length_mm: 180, note: '180 mm brass stem'}
 - {part: beech-turning-blanks--classic-hand-tools-uk, qty: 2, note: 'two blanks for the base'}
 - {part: 1s2p-li-ion-pack-3-7-v-7000-mah--battery-101-uk, qty: 1, note: '1S2P battery pack'}
 - {part: adafruit-universal-usb-dc-solar-charger-bq24074-ada4755--the-pi-hut-uk, qty: 1, note: 'USB-C charger board'}
 - {part: m10-lampholder-fixing-kit-s-lilley--light-and-power-solutions-uk, qty: 1, note: 'M10 rod, nut and washers'}
-- {part: cob-led-strip-24-v-3000-k-cri-90-15-w-m-1500-lm-m--hi-line-lighting-uk, qty: 0.05, note: '0.25 m of LED strip'}
+- {part: cob-led-strip-24-v-3000-k-cri-90-15-w-m-1500-lm-m--hi-line-lighting-uk, length_mm: 250, note: '0.25 m of LED strip'}
 -->
 
 ### 4. Bell — cone shade table lamp
@@ -158,9 +158,9 @@ A hand-spun aluminium cone, lacquered inside and out in one of the Bathsheva col
 - {part: hand-spun-aluminium-shades--etsy-uk-sellers-marketplace, qty: 1, note: '8.25" spun aluminium shade', option: 1}
 - {part: brass-inline-lamp-kit-oaklk1--oaklea-woodcraft-uk, qty: 1, note: 'lampholder, flex, plug, switch'}
 - {part: es-e27-shade-ring-s-lilley-spare--lampspares-uk, qty: 1, note: 'E27 shade ring'}
-- {part: cz108-round-tube-polished--the-metal-store-uk, qty: 0.12, note: '300 mm brass stem'}
+- {part: cz108-round-tube-polished--the-metal-store-uk, length_mm: 300, note: '300 mm brass stem'}
 - {part: m10-lampholder-fixing-kit-s-lilley--light-and-power-solutions-uk, qty: 1, note: 'M10 rod, nut and washers'}
-- {part: premium-beech-plywood-18-mm-glue-class-3--cts-diy-uk, qty: 0.04245, note: 'three 180 mm discs for the base'}
+- {part: premium-beech-plywood-18-mm-glue-class-3--cts-diy-uk, size_mm: [180, 180], count: 3, waste_pct: 30, note: 'three 180 mm discs for the base'}
 - {part: bun-feet--cousins-uk, qty: 3, note: 'three 20 mm bun feet'}
 -->
 
@@ -181,9 +181,9 @@ A cylinder of round-hole perforated aluminium, lacquered in a solid colour, wrap
 
 <!-- concept-parts
 - {part: perforated-aluminium-r3-t6-1-5-mm--f-h-brundle-uk, qty: 0.04762, note: 'one rolled 120 mm shade (about 21 per 2 × 1 m sheet)'}
-- {part: clear-extruded-tube-60-5-mm-1-m--the-clear-plastic-shop-uk, qty: 0.25, note: '250 mm frosted inner tube'}
-- {part: brass-sheet-sample-small-sheet--the-metal-store-uk, qty: 0.5408, note: 'two 130 mm brass rings', option: 1}
-- {part: premium-beech-plywood-18-mm-glue-class-3--cts-diy-uk, qty: 0.02236, note: 'two 160 mm discs for the base'}
+- {part: clear-extruded-tube-60-5-mm-1-m--the-clear-plastic-shop-uk, length_mm: 250, note: '250 mm frosted inner tube'}
+- {part: brass-sheet-sample-small-sheet--the-metal-store-uk, size_mm: [130, 130], count: 2, note: 'two 130 mm brass rings', option: 1}
+- {part: premium-beech-plywood-18-mm-glue-class-3--cts-diy-uk, size_mm: [160, 160], count: 2, waste_pct: 30, note: 'two 160 mm discs for the base'}
 - {part: brass-inline-lamp-kit-oaklk1--oaklea-woodcraft-uk, qty: 1, note: 'lampholder, flex, plug, switch'}
 -->
 
@@ -204,8 +204,8 @@ A small clear glass dome sits under a short brushed brass arm on a laser-cut bra
 
 <!-- concept-parts
 - {part: small-clear-glass-dome-30-mm-fitter--j-moncrieff-uk, qty: 1, note: '70 × 75 mm clear dome'}
-- {part: brass-sheet-sample-small-sheet--the-metal-store-uk, qty: 0.2304, note: '120 mm brass back plate', option: 1}
-- {part: cz108-round-tube-polished--the-metal-store-uk, qty: 0.06, note: '150 mm brass arm'}
+- {part: brass-sheet-sample-small-sheet--the-metal-store-uk, size_mm: [120, 120], note: '120 mm brass back plate', option: 1}
+- {part: cz108-round-tube-polished--the-metal-store-uk, length_mm: 150, note: '150 mm brass arm'}
 - {part: m10-lampholder-fixing-kit-s-lilley--light-and-power-solutions-uk, qty: 1, note: 'M10 rod, nut and washers'}
 - {part: brass-inline-lamp-kit-oaklk1--oaklea-woodcraft-uk, qty: 1, note: 'lampholder and grommets'}
 -->
@@ -232,8 +232,8 @@ A rechargeable version of Tambour, with a turned beech base, a brass cap and a s
 - {part: internally-frosted-cylinder-shade--j-moncrieff-uk, qty: 1, note: '80 × 210 mm frosted cylinder'}
 - {part: 1s2p-li-ion-pack-3-7-v-7000-mah--battery-101-uk, qty: 1, note: '1S2P battery pack'}
 - {part: adafruit-universal-usb-dc-solar-charger-bq24074-ada4755--the-pi-hut-uk, qty: 1, note: 'USB-C charger board'}
-- {part: cob-led-strip-24-v-3000-k-cri-90-15-w-m-1500-lm-m--hi-line-lighting-uk, qty: 0.06, note: '0.3 m of LED strip'}
-- {part: brass-sheet-sample-small-sheet--the-metal-store-uk, qty: 0.1296, note: '90 mm brass cap', option: 1}
+- {part: cob-led-strip-24-v-3000-k-cri-90-15-w-m-1500-lm-m--hi-line-lighting-uk, length_mm: 300, note: '0.3 m of LED strip'}
+- {part: brass-sheet-sample-small-sheet--the-metal-store-uk, size_mm: [90, 90], note: '90 mm brass cap', option: 1}
 - {part: solid-brass-ball-finial-7112--in-the-light-direction-uk, qty: 1, note: 'ball finial'}
 - {part: beech-turning-blanks--classic-hand-tools-uk, qty: 2, note: 'two blanks for the base'}
 - {part: audio-note-brass-knob-mwk-01-9000-9001--hificollective-uk, qty: 1, note: '12 mm brass dimmer knob', option: 1}
@@ -257,8 +257,8 @@ An entry-price lamp: a sandblasted acrylic tube between two laser-cut brass end 
 - **Main risk:** premium perception. Acrylic can read as cheaper than glass, and it scratches and attracts dust. Test whether the frosted acrylic passes the "premium before cheapest" bar next to Tambour. If it doesn't, drop it rather than discount the brand.
 
 <!-- concept-parts
-- {part: clear-extruded-tube-60-5-mm-1-m--the-clear-plastic-shop-uk, qty: 0.28, note: '280 mm tube, sandblasted'}
-- {part: brass-sheet-sample-small-sheet--the-metal-store-uk, qty: 0.1568, note: 'two 70 mm brass end caps', option: 1}
+- {part: clear-extruded-tube-60-5-mm-1-m--the-clear-plastic-shop-uk, length_mm: 280, note: '280 mm tube, sandblasted'}
+- {part: brass-sheet-sample-small-sheet--the-metal-store-uk, size_mm: [70, 70], count: 2, note: 'two 70 mm brass end caps', option: 1}
 - {part: solid-brass-ball-finial-7112--in-the-light-direction-uk, qty: 1, note: 'ball finial'}
 - {part: m10-lampholder-fixing-kit-s-lilley--light-and-power-solutions-uk, qty: 1, note: 'M10 rod, nut and washers'}
 - {part: brass-inline-lamp-kit-oaklk1--oaklea-woodcraft-uk, qty: 1, note: 'lampholder, flex, plug, switch'}
@@ -283,9 +283,9 @@ A 200 mm matt opal globe hangs from a brushed brass drop rod, held by a laser-cu
 
 <!-- concept-parts
 - {part: 200-mm-opal-globe-80-mm-fitter-hole--j-moncrieff-uk, qty: 1, note: '200 mm opal globe'}
-- {part: cz108-round-tube-polished--the-metal-store-uk, qty: 0.12, note: '300 mm brass drop rod'}
+- {part: cz108-round-tube-polished--the-metal-store-uk, length_mm: 300, note: '300 mm brass drop rod'}
 - {part: beech-turning-blanks--classic-hand-tools-uk, qty: 1, note: 'one blank for the ceiling cup'}
-- {part: brass-sheet-sample-small-sheet--the-metal-store-uk, qty: 0.1936, note: '110 mm brass collar', option: 1}
+- {part: brass-sheet-sample-small-sheet--the-metal-store-uk, size_mm: [110, 110], note: '110 mm brass collar', option: 1}
 - {part: brass-inline-lamp-kit-oaklk1--oaklea-woodcraft-uk, qty: 1, note: 'lampholder and flex'}
 - {part: es-e27-shade-ring-s-lilley-spare--lampspares-uk, qty: 1, note: 'E27 shade ring'}
 -->
@@ -314,9 +314,9 @@ A compact mono speaker: a stack of beech-ply rings, a solid brass mesh front fra
 - {part: wondom-jab3-2-50-w-bt-5-0-adau1701-dsp--ebay-uk, qty: 1, note: 'Bluetooth amplifier / DSP board'}
 - {part: 1s2p-li-ion-pack-3-7-v-7000-mah--battery-101-uk, qty: 1, note: '1S2P battery pack'}
 - {part: adafruit-universal-usb-dc-solar-charger-bq24074-ada4755--the-pi-hut-uk, qty: 1, note: 'USB-C charger board'}
-- {part: fine-brass-mesh--the-mesh-company-ebay-uk, qty: 0.5, note: 'half a 200 × 150 mm sheet for the grille'}
+- {part: fine-brass-mesh--the-mesh-company-ebay-uk, size_mm: [100, 150], note: 'half a 200 × 150 mm sheet for the grille'}
 - {part: audio-note-brass-knob-mwk-01-9000-9001--hificollective-uk, qty: 1, note: '26 mm gold brass knob'}
-- {part: premium-beech-plywood-18-mm-glue-class-3--cts-diy-uk, qty: 0.0559, note: 'five 160 mm discs routed as rings'}
+- {part: premium-beech-plywood-18-mm-glue-class-3--cts-diy-uk, size_mm: [160, 160], count: 5, waste_pct: 30, note: 'five 160 mm discs routed as rings'}
 - {part: bun-feet--cousins-uk, qty: 3, note: 'three 20 mm bun feet'}
 -->
 
@@ -337,9 +337,9 @@ A pair of small passive speakers in solid-edged beech-ply cabinets, each with a 
 
 <!-- concept-parts
 - {part: visaton-frs-8-8--toutlehautparleur-tlhp-france, qty: 2, note: 'two 80 mm full-range drivers'}
-- {part: fine-brass-mesh--the-mesh-company-ebay-uk, qty: 1, note: 'one 200 × 150 mm sheet for both fronts'}
-- {part: brass-sheet-sample-small-sheet--the-metal-store-uk, qty: 0.3872, note: 'two 110 mm brass bezels', option: 1}
-- {part: premium-beech-plywood-18-mm-glue-class-3--cts-diy-uk, qty: 0.13101, note: 'cabinets, about 0.39 m² for the pair'}
+- {part: fine-brass-mesh--the-mesh-company-ebay-uk, size_mm: [200, 150], note: 'one 200 × 150 mm sheet for both fronts'}
+- {part: brass-sheet-sample-small-sheet--the-metal-store-uk, size_mm: [110, 110], count: 2, note: 'two 110 mm brass bezels', option: 1}
+- {part: premium-beech-plywood-18-mm-glue-class-3--cts-diy-uk, size_mm: [650, 600], note: 'cabinets, about 0.39 m² for the pair'}
 - {part: bun-feet--cousins-uk, qty: 6, note: 'six 20 mm bun feet'}
 -->
 
@@ -364,9 +364,9 @@ A tall, thin spiral-wound tube, lacquered in deep oxblood and pierced with a pat
 <!-- concept-parts
 - {part: 1s2p-li-ion-pack-3-7-v-7000-mah--battery-101-uk, qty: 1, note: '1S2P battery pack'}
 - {part: adafruit-universal-usb-dc-solar-charger-bq24074-ada4755--the-pi-hut-uk, qty: 1, note: 'USB-C charger board'}
-- {part: cob-led-strip-24-v-3000-k-cri-90-15-w-m-1500-lm-m--hi-line-lighting-uk, qty: 0.07, note: '0.35 m of LED strip'}
+- {part: cob-led-strip-24-v-3000-k-cri-90-15-w-m-1500-lm-m--hi-line-lighting-uk, length_mm: 350, note: '0.35 m of LED strip'}
 - {part: postal-tubes-with-end-caps-raja--morplan-uk, qty: 1, note: '63 × 483 mm tube, cut to 400 mm'}
-- {part: brass-sheet-sample-small-sheet--the-metal-store-uk, qty: 0.1568, note: 'two 70 mm brass end caps', option: 1}
+- {part: brass-sheet-sample-small-sheet--the-metal-store-uk, size_mm: [70, 70], count: 2, note: 'two 70 mm brass end caps', option: 1}
 - {part: beech-turning-blanks--classic-hand-tools-uk, qty: 1, note: 'one blank for the foot'}
 - {part: solid-brass-ball-finial-7112--in-the-light-direction-uk, qty: 1, note: 'ball finial'}
 -->
@@ -386,10 +386,10 @@ Three solid brass stems in stepped heights on turned beech feet, each topped wit
 - **Main risk:** candle fire safety. The candle must sit in a non-combustible socket. A beech cup needs a brass sleeve or a spike in the drip plate, and the set needs a fire-safety assessment and labelling. The cost is also slightly over target: plain M10 studding instead of three full kits would bring it under.
 
 <!-- concept-parts
-- {part: cz108-round-tube-polished--the-metal-store-uk, qty: 0.204, note: 'three stems: 120, 170 and 220 mm'}
+- {part: cz108-round-tube-polished--the-metal-store-uk, length_mm: 510, note: 'three stems: 120, 170 and 220 mm'}
 - {part: beech-turning-blanks--classic-hand-tools-uk, qty: 6, note: 'three feet and three cups'}
 - {part: m10-lampholder-fixing-kit-s-lilley--light-and-power-solutions-uk, qty: 3, note: 'joining rod for each candlestick'}
-- {part: brass-sheet-sample-small-sheet--the-metal-store-uk, qty: 0.1728, note: 'three 60 mm drip plates', option: 1}
+- {part: brass-sheet-sample-small-sheet--the-metal-store-uk, size_mm: [60, 60], count: 3, note: 'three 60 mm drip plates', option: 1}
 -->
 
 ### 14. Meridian — brass and beech bookends (pair)
@@ -405,7 +405,7 @@ Each bookend is an L of solid 1/8" × 2" brass flat bar, brushed and lacquered, 
 - **Main risk:** weight and grip. Each brass L weighs only about 0.4 kg, which is too light to hold a full shelf of books. They may need a longer base leg slipped under the books, or a weighted sphere, and the bend needs a sample to check for cracking at the corner.
 
 <!-- concept-parts
-- {part: brass-flat-bar-12-lengths--noggin-end-metals-stoke-on-trent, qty: 2, note: 'two 1/8 × 2" × 12" bars, one per bookend', option: 1}
+- {part: brass-flat-bar-12-lengths--noggin-end-metals-stoke-on-trent, length_mm: 304.8, count: 2, note: 'two 1/8 × 2" × 12" bars, one per bookend', option: 1}
 - {part: beech-turning-blanks--classic-hand-tools-uk, qty: 2, note: 'two blanks for the spheres'}
 -->
 
@@ -428,11 +428,11 @@ A slim 50 mm clear glass cylinder with a single line of warm LED light down its 
 
 <!-- concept-parts
 - {part: clear-glass-cylinder-shades--j-moncrieff-uk, qty: 1, note: '50 mm clear cylinder, 240 mm'}
-- {part: cob-led-strip-24-v-3000-k-cri-90-15-w-m-1500-lm-m--hi-line-lighting-uk, qty: 0.04, note: '0.2 m of LED strip'}
+- {part: cob-led-strip-24-v-3000-k-cri-90-15-w-m-1500-lm-m--hi-line-lighting-uk, length_mm: 200, note: '0.2 m of LED strip'}
 - {part: 1s2p-li-ion-pack-3-7-v-7000-mah--battery-101-uk, qty: 1, note: '1S2P battery pack'}
 - {part: adafruit-universal-usb-dc-solar-charger-bq24074-ada4755--the-pi-hut-uk, qty: 1, note: 'USB-C charger board'}
 - {part: beech-turning-blanks--classic-hand-tools-uk, qty: 1, note: 'one blank for the foot'}
-- {part: brass-sheet-sample-small-sheet--the-metal-store-uk, qty: 0.0576, note: '60 mm brass cap', option: 1}
+- {part: brass-sheet-sample-small-sheet--the-metal-store-uk, size_mm: [60, 60], note: '60 mm brass cap', option: 1}
 - {part: solid-brass-ball-finial-7112--in-the-light-direction-uk, qty: 1, note: 'ball finial'}
 - {part: solid-metal-control-knobs--knobzone-uk, qty: 1, note: 'ridged aluminium dimmer knob', option: 1}
 -->

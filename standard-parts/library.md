@@ -407,3 +407,30 @@ No UK assembler of custom small-batch 1S2P packs with published terms turned up.
 - **No stock source found** for: large solid brass rings or blanks (> 100 mm); spun dome and cone blanks; machined brass lamp bases; turned hollow wooden tube; large open-ended soda-lime tube; custom small-batch 1S2P packs. All of these are quote-only: the metal spinners (§2.1), Aimer and John Moncrieff (glass), J Moncrieff trade cylinders (MOQ 50–200), Woodware Repetitions (turning) and S. Lilley (lamp parts).
 - **Prices and specs to confirm first** (the snapshot was unclear): the Oaklea lamp kit's lampholder cap and whether it is solid brass, Cree CXA1507 at Farnell, the UK LED Lights strip length, Urban Cottage shade ring currency, Willys-Hifi "$" prices, and Cousins bun feet.
 - **Not yet in the workbench:** these prices are not in `backend/seed/cost/`. If any are used there, add them with `source`, `confidence`, `verified: false` and `price_basis: distributor_small_qty` or `retail`, per the provenance convention.
+
+<!-- priced-units
+# What one priced unit of a part is, in mm, so the Standard Parts builder can take a length (tube, rod,
+# bar, strip) or a width × height (sheet) and convert it to a fraction of that unit. A mapping applies
+# to every price variant; a list gives one entry per variant, in the order of the "Unit price" cell.
+# Keep in step with the tables above (tests/test_standard_parts.py checks the ids).
+round-tube-5-m-lengths--rackerman-uk: {length_mm: 5000}
+brass-tube-10-mm-od-1-m--lampfix-uk: {length_mm: 1000}
+cz108-round-tube-polished--the-metal-store-uk: {length_mm: 2500}
+cz108-round-tube-mill-finish--the-metal-store-uk: {length_mm: 5000}
+clear-extruded-tube-50-5-mm-1-m--the-clear-plastic-shop-uk: {length_mm: 1000}
+clear-extruded-tube-60-5-mm-1-m--the-clear-plastic-shop-uk: {length_mm: 1000}
+brass-round-bar-5-16-8-mm--metalmania-uk: {length_mm: 1000}
+brass-round-bar-18-mm-per-metre--industrial-safety-uk: {length_mm: 1000}
+brass-flat-bar-12-lengths--noggin-end-metals-stoke-on-trent: {length_mm: 304.8}
+brass-flats-12-lengths--college-engineering-supplies-uk: {length_mm: 304.8}
+cob-led-strip-24-v-3000-k-cri-90-15-w-m-1500-lm-m--hi-line-lighting-uk: {length_mm: 5000}
+cob-strip-24-v-2700-k-cri-90-9-w-m-ip67--electrical4less-uk: {length_mm: 30000}
+brass-sheet-sample-small-sheet--the-metal-store-uk: [{width_mm: 45, height_mm: 45}, {width_mm: 250, height_mm: 250}]
+perforated-aluminium-small-sheet--modelshop-uk: {width_mm: 400, height_mm: 250}
+perforated-aluminium-2-1-m--rackerman-uk: {width_mm: 2000, height_mm: 1000}
+perforated-aluminium-r3-t6-1-5-mm--f-h-brundle-uk: {width_mm: 2000, height_mm: 1000}
+decorative-perforated-brass-pattern-379--f-h-brundle-uk: {width_mm: 1830, height_mm: 915}
+fine-brass-mesh--the-mesh-company-ebay-uk: {width_mm: 200, height_mm: 150}
+premium-beech-plywood-18-mm-glue-class-3--cts-diy-uk: {width_mm: 2440, height_mm: 1220}
+laser-plywood-sheets-cut-your-own-discs--kitronik-uk: {width_mm: 600, height_mm: 400}
+-->

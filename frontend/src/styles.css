@@ -259,6 +259,10 @@ a.button.primary { background: var(--accent); color: var(--accent-ink); border-c
 .sp-lines select { max-width: 16rem; }
 .sp-price-text { max-width: 16rem; }
 input.sp-qty { width: 6rem; }
+.sp-size { min-width: 15rem; }
+.sp-size-row { display: flex; gap: 0.3rem; align-items: center; margin-bottom: 0.2rem; }
+input.sp-count { width: 4rem; }
+input.sp-mm { width: 5.5rem; }
 input.sp-note-input { width: 100%; min-width: 9rem; }
 input.sp-search { width: 100%; padding: 0.4rem 0.6rem; }
 @media (max-width: 800px) { .sp-concept-grid { grid-template-columns: 1fr; } .sp-filter input[type="search"] { min-width: 0; width: 100%; } }

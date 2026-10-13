@@ -11,6 +11,8 @@ import {
   priceLabel,
   QUANTITIES,
   sentence,
+  sizeLabel,
+  unitLabel,
   VERDICT_LABEL,
   VERDICT_TILE,
   type ConceptCost,
@@ -336,7 +338,14 @@ function CostTable({ cost, parts }: { cost: ConceptCost; parts: Map<string, Libr
                   {p ? p.name : <span className="error">Not in the library: {l.part_id}</span>}
                   {p && <div className="small muted">{p.supplier}</div>}
                 </td>
-                <td className="num">{+l.quantity.toFixed(5)}</td>
+                <td className="num">
+                  {sizeLabel(l) || +l.quantity.toFixed(5)}
+                  {l.unit_size && (
+                    <div className="small muted">
+                      {+l.quantity.toFixed(4)} of a {unitLabel(l.unit_size)}
+                    </div>
+                  )}
+                </td>
                 <td className="small">{l.note}</td>
                 {QUANTITIES.map((q) => (
                   <td key={q} className="num">

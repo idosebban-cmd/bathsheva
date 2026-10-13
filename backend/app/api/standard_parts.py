@@ -18,9 +18,15 @@ router = APIRouter(tags=["standard-parts"])
 
 class LineIn(BaseModel):
     part_id: str
-    quantity: float = Field(ge=0)
+    # In the part's priced unit; ignored when sizes in mm are given for a part priced by length or area.
+    quantity: float = Field(default=0, ge=0)
     note: str = ""
     option: int = Field(default=0, ge=0)
+    length_mm: float | None = Field(default=None, ge=0)
+    width_mm: float | None = Field(default=None, ge=0)
+    height_mm: float | None = Field(default=None, ge=0)
+    count: float | None = Field(default=None, ge=0)
+    waste_pct: float | None = Field(default=None, ge=0, le=500)
 
 
 class CostIn(BaseModel):
