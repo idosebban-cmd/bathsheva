@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.orm import Session
 
+from app import standard_parts as sp
 from app.db import get_session
 from app.models import Concept
 from app.services import concepts
@@ -19,7 +20,7 @@ router = APIRouter(tags=["standard-parts"])
 class LineView(BaseModel):
     """Where the 3D view puts a line's part: offsets from its place in the stack (mm), rotation (degrees),
     copies spaced evenly round the vertical axis, whether it adds its height to the stack, and how a sheet
-    part is drawn (as cut: a flat sheet, a disc, or rolled into a tube)."""
+    part is drawn (as cut: a flat sheet, a disc, or rolled into a tube), or the shape the line is made into."""
 
     dx: float = Field(default=0, ge=-5000, le=5000)
     dy: float = Field(default=0, ge=-5000, le=5000)
@@ -30,6 +31,17 @@ class LineView(BaseModel):
     repeat: int = Field(default=1, ge=1, le=64)
     stack: bool = True
     form: Literal["auto", "sheet", "disc", "rolled"] = "auto"
+    made: dict[str, Any] | None = None  # drawn as the part the line is made into (a turned plinth), not its stock
+
+    @field_validator("made")
+    @classmethod
+    def _made(cls, v: dict[str, Any] | None) -> dict[str, Any] | None:
+        if v is None:
+            return None
+        try:
+            return sp.made_shape(v)
+        except sp.LibraryError as e:
+            raise ValueError(str(e)) from e
 
 
 class LineIn(BaseModel):

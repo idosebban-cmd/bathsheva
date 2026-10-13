@@ -1,7 +1,10 @@
 // Run with: npm test (node --test, Node 22.6+ strips the types).
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { DEFAULT_VIEW, globeGeometry, layoutConcept, linePieces, lineShape, MAX_PIECES, PLACEHOLDER_SIZE, shapeHeight, viewOf } from "./conceptShapes.ts";
+import {
+  DEFAULT_VIEW, globeGeometry, isDefaultView, layoutConcept, linePieces, lineShape, madeFrom, MAX_PIECES, PLACEHOLDER_SIZE, shapeHeight,
+  validMade, viewOf,
+} from "./conceptShapes.ts";
 import { plainLines, type ConceptLine, type LibraryPart } from "./standardParts.ts";
 
 const part = (id: string, extra: Partial<LibraryPart>) => ({ id, name: id, units: [], shapes: [], look: "other", ...extra }) as unknown as LibraryPart;
@@ -12,11 +15,12 @@ const PLY = part("ply", { units: [{ width_mm: 2440, height_mm: 1220 }], shapes: 
 const RING = part("ring", { shapes: [{ shape: "ring", od: 48, id: 37, thickness: 3.5 }], look: "brass" });
 const GLOBE = part("globe", { shapes: [{ shape: "globe", d: 150, neck_d: 80, neck_height: 25, assumed: "neck 25 mm high" }], look: "glass_opal" });
 const KIT = part("kit", {});
+const BLANK = part("blank", { shapes: [{ shape: "box", width: 101.6, depth: 101.6, height: 44.45 }], look: "wood" });
 const SHEET2 = part("sheet2", {
   units: [{ width_mm: 45, height_mm: 45 }, { width_mm: 250, height_mm: 250 }],
   shapes: [{ shape: "sheet", width: 45, height: 45, thickness: 0.9 }, { shape: "sheet", width: 250, height: 250, thickness: 0.9 }],
 });
-const PARTS = new Map([TUBE, PLY, RING, GLOBE, KIT, SHEET2].map((p) => [p.id, p]));
+const PARTS = new Map([TUBE, PLY, RING, GLOBE, KIT, SHEET2, BLANK].map((p) => [p.id, p]));
 
 test("a tube takes the line's length, or its share of the priced length", () => {
   assert.deepEqual(lineShape(line("tube", { length_mm: 300 }), TUBE), { shape: "tube", od: 12.7, id: 9.44, length: 300 });
@@ -90,4 +94,29 @@ test("a line repeated round the centre draws one piece per copy instead of stack
   assert.equal(placed[0].pieces, 1);
   assert.equal(placed[0].instances.length, 3);
   assert.equal(placed[1].base, 3.5);
+});
+
+test("a line can be drawn as the part it's made into: two blanks turned into one round plinth", () => {
+  const plinth = { shape: "cylinder", d: 100, height: 88.9 } as const;
+  const placed = layoutConcept([line("blank", { quantity: 2, view: { made: plinth } }), line("ring")], PARTS);
+  assert.deepEqual(placed[0].spec, plinth);
+  assert.equal(placed[0].pieces, 1);
+  assert.equal(placed[0].made, true);
+  assert.equal(placed[0].look, "wood");
+  assert.equal(placed[1].base, 88.9);
+  // Its starting size: as wide as the square blank, as tall as the two stacked.
+  const stock = layoutConcept([line("blank", { quantity: 2 })], PARTS)[0];
+  assert.equal(stock.total, 88.9);
+  assert.deepEqual(madeFrom(stock.spec, "cylinder", stock.total), { shape: "cylinder", d: 101.6, height: 88.9 });
+  assert.equal(isDefaultView({ ...DEFAULT_VIEW, made: null }), true);
+  assert.equal(isDefaultView({ ...DEFAULT_VIEW, made: plinth }), false);
+});
+
+test("a made shape that can't be drawn falls back to the stock", () => {
+  assert.equal(validMade({ shape: "ring", od: 10, id: 12, thickness: 2 }), false);
+  assert.equal(validMade({ shape: "cylinder", d: 0, height: 5 }), false);
+  assert.equal(validMade({ shape: "cone", d_bottom: 50, d_top: 0, height: 20 }), true);
+  const [p] = layoutConcept([line("blank", { quantity: 2, view: { made: { shape: "cylinder", d: 0, height: 5 } } })], PARTS);
+  assert.equal(p.made, false);
+  assert.equal(p.pieces, 2);
 });

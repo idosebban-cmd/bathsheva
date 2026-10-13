@@ -80,9 +80,9 @@ A slim column of internally frosted borosilicate glass stands on a turned beech 
 
 <!-- concept-parts
 - {part: bun-feet--cousins-uk, qty: 3, note: 'three 20 mm bun feet', view: {dx: 38, repeat: 3}}
-- {part: beech-turning-blanks--classic-hand-tools-uk, qty: 2, note: 'two 4 × 4 × 1.75" blanks glued for the plinth'}
+- {part: beech-turning-blanks--classic-hand-tools-uk, qty: 2, note: 'two 4 × 4 × 1.75" blanks glued and turned into the 100 mm plinth', view: {made: {shape: cylinder, d: 100, height: 88.9}}}
 - {part: brass-inline-lamp-kit-oaklk1--oaklea-woodcraft-uk, qty: 1, note: 'lampholder, flex, plug, switch', view: {stack: false}}
-- {part: es-e27-shade-ring-s-lilley-spare--lampspares-uk, qty: 2, note: 'two E27 shade rings clamping the 40 mm fitter', view: {dy: 27.1, stack: false}}
+- {part: es-e27-shade-ring-s-lilley-spare--lampspares-uk, qty: 2, note: 'two E27 shade rings clamping the 40 mm fitter', view: {dy: 50, stack: false}}
 - {part: internally-frosted-cylinder-shade--j-moncrieff-uk, qty: 1, note: '80 × 210 mm frosted cylinder'}
 -->
 
@@ -160,8 +160,8 @@ A hand-spun aluminium cone, lacquered inside and out in one of the Bathsheva col
 - {part: m10-lampholder-fixing-kit-s-lilley--light-and-power-solutions-uk, qty: 1, note: 'M10 rod, nut and washers', view: {dy: -36, stack: false}}
 - {part: cz108-round-tube-polished--the-metal-store-uk, length_mm: 300, note: '300 mm brass stem'}
 - {part: brass-inline-lamp-kit-oaklk1--oaklea-woodcraft-uk, qty: 1, note: 'lampholder, flex, plug, switch', view: {stack: false}}
-- {part: hand-spun-aluminium-shades--etsy-uk-sellers-marketplace, qty: 1, note: '8.25" spun aluminium shade', option: 1, view: {dy: -110, stack: false}}
-- {part: es-e27-shade-ring-s-lilley-spare--lampspares-uk, qty: 1, note: 'E27 shade ring', view: {dy: 36.5, stack: false}}
+- {part: hand-spun-aluminium-shades--etsy-uk-sellers-marketplace, qty: 1, note: '8.25" spun aluminium shade', option: 1, view: {dy: -89, stack: false}}
+- {part: es-e27-shade-ring-s-lilley-spare--lampspares-uk, qty: 1, note: 'E27 shade ring', view: {dy: 57.5, stack: false}}
 -->
 
 ### 5. Lattice — perforated aluminium shade lamp
