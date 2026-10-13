@@ -170,10 +170,18 @@ class Section:
 class Library:
     sections: list[Section]
     about: list[dict[str, Any]]  # unnumbered sections ("How to read this", "Gaps and next steps")
+    # Old part id -> current id, from the `<!-- renamed-parts` block: an id changes when a part's name or
+    # supplier is corrected, and saved concepts and concept-parts lists keep working through these.
+    aliases: dict[str, str] = field(default_factory=dict)
 
     @property
     def parts(self) -> dict[str, LibraryPart]:
-        return {p.id: p for s in self.sections for sub in s.subsections for p in sub.parts}
+        """Every part by id, plus each renamed part under its old id as well."""
+        found = {p.id: p for s in self.sections for sub in s.subsections for p in sub.parts}
+        return {**{old: found[new] for old, new in self.aliases.items()}, **found}
+
+    def current_id(self, part_id: str) -> str:
+        return self.aliases.get(part_id, part_id)
 
 
 def slug(text: str) -> str:
@@ -252,6 +260,7 @@ def _part(cells: list[str], category: str, subcategory: str) -> LibraryPart:
 
 
 _UNITS_RE = re.compile(r"^<!-- priced-units\n(.*?)^-->\n?", re.S | re.M)
+_ALIASES_RE = re.compile(r"^<!-- renamed-parts\n(.*?)^-->\n?", re.S | re.M)
 
 
 def _unit(value: Any, where: str) -> dict[str, float]:
@@ -280,6 +289,8 @@ def _apply_units(block: str, parts: dict[str, LibraryPart]) -> None:
 def parse_library(text: str) -> Library:
     units = _UNITS_RE.search(text)
     text = _UNITS_RE.sub("", text)
+    renamed = _ALIASES_RE.search(text)
+    text = _ALIASES_RE.sub("", text)
     sections: list[Section] = []
     about: list[dict[str, Any]] = []
     section: Section | None = None
@@ -330,6 +341,14 @@ def parse_library(text: str) -> Library:
         raise LibraryError(f"duplicate part ids: {dupes}")
     if units:
         _apply_units(units.group(1), library.parts)
+    if renamed:
+        found = library.parts
+        for old, new in (yaml.safe_load(renamed.group(1)) or {}).items():
+            if new not in found:
+                raise LibraryError(f"renamed-parts: {old} -> {new}, but there is no part {new}")
+            if old in found:
+                raise LibraryError(f"renamed-parts: {old} is still a current part id")
+            library.aliases[str(old)] = str(new)
     return library
 
 

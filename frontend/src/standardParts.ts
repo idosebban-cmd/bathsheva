@@ -48,6 +48,8 @@ export interface LibrarySubsection {
 export interface Library {
   sections: { number: string; title: string; subsections: LibrarySubsection[] }[];
   about: { title: string; lines: string[] }[];
+  /** Old part id -> current id, for parts whose name or supplier was corrected. */
+  aliases: Record<string, string>;
   fx: Record<string, number>;
   quantities: number[];
   room_share: number;

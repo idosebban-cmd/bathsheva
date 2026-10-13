@@ -74,7 +74,7 @@ def test_availability_flags():
     # A supplier that stopped stocking a part that is still made: out of stock there, not discontinued.
     cpc = PARTS["visaton-frs-8-m-8--cpc-farnell-uk"].availability
     assert "not stocked" in cpc and "no longer" not in cpc and "discontinued" not in cpc
-    assert PARTS["visaton-frs-8-m-8-2001--visaton-price-list-csv-13-oct-2026"].availability == ""
+    assert PARTS["visaton-frs-8-m-8-2001--sos-electronic-eu"].availability == ""
 
 
 def test_fifteen_concepts_with_all_fields():
@@ -252,3 +252,47 @@ def test_concept_api_keeps_sizes(client):
     assert r.json()["lines"][0]["mode"] == "length" and r.json()["total_100"] == 24.0
     bad = {"lines": [{"part_id": tube, "length_mm": -1}]}
     assert client.post("/api/standard-parts/cost", json=bad).status_code == 422
+
+
+
+# --- Renamed parts -----------------------------------------------------------
+
+OLD_ID = "visaton-frs-8-8-2004--visaton-price-list-csv-13-oct-2026"
+NEW_ID = "visaton-frs-8-8-2004--sos-electronic-eu"
+
+
+def test_sos_electronic_rows():
+    for pid in (NEW_ID, "visaton-frs-8-m-8-2001--sos-electronic-eu", "visaton-bg-20-8-3020--sos-electronic-eu"):
+        part = PARTS[pid]
+        assert part.supplier == "SOS Electronic, EU"
+        assert part.links[0]["url"] == "https://www.soselectronic.com/en-gb/speakers"
+        assert part.source_files == ["standard-parts/price-lists/visaton-2026-10-13.csv"]
+        assert "import VAT" in part.note
+
+
+def test_renamed_part_keeps_its_old_id():
+    assert LIB.aliases[OLD_ID] == NEW_ID and LIB.current_id(OLD_ID) == NEW_ID
+    assert PARTS[OLD_ID] is PARTS[NEW_ID]
+    old = sp.cost_lines([{"part_id": OLD_ID, "quantity": 2}], PARTS, None, 0.2, 0.33)
+    new = sp.cost_lines([{"part_id": NEW_ID, "quantity": 2}], PARTS, None, 0.2, 0.33)
+    assert old["total_100"] == new["total_100"] and not old["unknown"]
+    # Each part is listed once, under its current id.
+    listed = [p.id for s in LIB.sections for sub in s.subsections for p in sub.parts]
+    assert OLD_ID not in listed and NEW_ID in listed
+
+
+def test_renamed_parts_block_is_validated():
+    table = "## 1. A\n\n### 1.1 B\n\n| a | b | c | d | e | f | g | h |\n|---|---|---|---|---|---|---|---|\n" \
+            "| Tube | Brass | 1 m | S, UK — [l](https://x.uk) | £10 | — | 1 | — |\n"
+    ok = sp.parse_library(table + "\n<!-- renamed-parts\ntube--old: tube--s-uk\n-->\n")
+    assert ok.parts["tube--old"].id == "tube--s-uk"
+    for bad in ("tube--old: nope--s-uk", "tube--s-uk: tube--s-uk"):
+        with pytest.raises(sp.LibraryError):
+            sp.parse_library(table + f"\n<!-- renamed-parts\n{bad}\n-->\n")
+
+
+def test_saving_a_concept_with_an_old_id_stores_the_current_one(client):
+    r = client.post("/api/concepts", json={"name": "Old id", "lines": [{"part_id": OLD_ID, "quantity": 1}]})
+    assert r.status_code == 201, r.text
+    assert r.json()["lines"][0]["part_id"] == NEW_ID
+    assert client.get("/api/standard-parts").json()["aliases"][OLD_ID] == NEW_ID

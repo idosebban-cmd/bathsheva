@@ -36,10 +36,15 @@ export default function StandardPartsPage() {
   useEffect(() => {
     api.get<Library>("/api/standard-parts").then(setLibrary, (e) => setError(errorText(e)));
   }, []);
-  const parts = useMemo(
-    () => new Map((library?.sections ?? []).flatMap((s) => s.subsections.flatMap((sub) => sub.parts.map((p) => [p.id, p] as const)))),
-    [library],
-  );
+  const parts = useMemo(() => {
+    const byId = new Map((library?.sections ?? []).flatMap((s) => s.subsections.flatMap((sub) => sub.parts.map((p) => [p.id, p] as const))));
+    // Concepts saved before a part was renamed still find it under its old id.
+    for (const [old, current] of Object.entries(library?.aliases ?? {})) {
+      const part = byId.get(current);
+      if (part && !byId.has(old)) byId.set(old, part);
+    }
+    return byId;
+  }, [library]);
   return (
     <div>
       <nav className="tabs">

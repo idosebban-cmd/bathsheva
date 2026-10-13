@@ -9,7 +9,7 @@ Stock parts and materials from UK and EU suppliers that sell in small quantities
 - **VAT:** marked *ex VAT* or *inc VAT* where the listing said so; otherwise *VAT basis not stated*. EUR prices are as listed (usually inc. local VAT).
 - **MOQ:** "1" means the listing sells singles. "Pack of N" means the smallest pack. *Not stated* means the search result didn't say.
 - **S. Lilley dimensions** marked "S. Lilley catalogue 2014–15" come from `standard-parts/catalogues/s-lilley.pdf`, the 2014–2015 edition, with its catalogue numbers and page. That edition is over ten years old, so sizes, codes and finishes may have changed: confirm against a current listing or a sample.
-- **Visaton price list:** rows whose supplier is "Visaton price list (CSV, 13 Oct 2026)" come from `standard-parts/price-lists/visaton-2026-10-13.csv`, a price list export the user supplied on 13 Oct 2026. Its prices are in GBP **excluding VAT**, with stock at the time of export and 4-off prices. The file doesn't name the seller, so ask who it's from before ordering. A blank stock figure in the list is recorded as "not shown", not as zero.
+- **SOS Electronic price list:** the SOS Electronic rows come from `standard-parts/price-lists/visaton-2026-10-13.csv`, exported on 13 Oct 2026 from SOS Electronic's [speakers page](https://www.soselectronic.com/en-gb/speakers) (supplied by the user). Its prices are in GBP **excluding VAT**, with stock at the time of export and 4-off prices. A blank stock figure in the list is recorded as "not shown", not as zero. **SOS Electronic ships from the EU**, so UK orders may carry import VAT and handling fees on top of the listed price.
 - **UK/EU only.** US suppliers (Parts Express, B&P Lamp, Grand Brass, Antique Lamp Supply and others) came up often but are left out, except where a part has no UK/EU source; those cases are marked.
 - Marketplace sellers (eBay, Etsy, Amazon) are listed only where no trade or specialist source turned up, and are marked as marketplaces. Quality and continuity aren't guaranteed for them.
 
@@ -348,18 +348,18 @@ No UK stockist of turned hollow wooden tube turned up. The usual route is a repe
 
 | Part | Material | Sizes | Supplier & link | Unit price | Price breaks | MOQ | Finish / quality |
 |---|---|---|---|---|---|---|---|
-| Visaton FRS 8 M, 8 Ω | Paper cone, steel basket | 80 mm (3.3") | CPC Farnell, UK — [link](https://cpc.farnell.com/visaton/frs-8-m-8-ohm/fullrange-speaker-8-cm/dp/LS06101) | £10.03 ex VAT / £12.04 inc VAT | — | 1 | Not stocked by CPC any more (its page). **Status (13 Oct 2026): the FRS 8 M itself is still current:** 3 in stock on the Visaton price list at £11.50 ex VAT (row below). German-made classic small full-range. |
-| Visaton FRS 8 M/8 (2001) | Paper cone | 84 mm Ø × 44 mm deep; 8 Ω, 30/50 W, 100–20,000 Hz | Visaton price list (CSV, 13 Oct 2026) — `standard-parts/price-lists/visaton-2026-10-13.csv` · order no. 116579 | £11.50 ex VAT (£11.5012) | £10.80 each at 4+ (£10.7967) | 1 | **3 in stock** at export. Seller not named in the list. |
+| Visaton FRS 8 M, 8 Ω | Paper cone, steel basket | 80 mm (3.3") | CPC Farnell, UK — [link](https://cpc.farnell.com/visaton/frs-8-m-8-ohm/fullrange-speaker-8-cm/dp/LS06101) | £10.03 ex VAT / £12.04 inc VAT | — | 1 | Not stocked by CPC any more (its page). **Status (13 Oct 2026): the FRS 8 M itself is still current:** 3 in stock at SOS Electronic at £11.50 ex VAT (row below). German-made classic small full-range. |
+| Visaton FRS 8 M/8 (2001) | Paper cone | 84 mm Ø × 44 mm deep; 8 Ω, 30/50 W, 100–20,000 Hz | SOS Electronic, EU — [speakers page](https://www.soselectronic.com/en-gb/speakers) · price list export (CSV, 13 Oct 2026): `standard-parts/price-lists/visaton-2026-10-13.csv` · order no. 116579 | £11.50 ex VAT (£11.5012) | £10.80 each at 4+ (£10.7967) | 1 | **3 in stock** at export. Ships from the EU: UK orders may carry import VAT and handling fees. |
 | Visaton FRS 8, 8 Ω | Paper cone | 80 mm | Toutlehautparleur (TLHP), France — [link](https://en.toutlehautparleur.com/fullrange-speaker-visaton-frs-8-8-ohm-3-07-3-66-inch.html) | €12.56 (excl. delivery) | — | 1 | FRS 8 M also listed ([link](https://en.toutlehautparleur.com/fullrange-speaker-visaton-frs-8-m-8-ohm-3-07-3-66-inch.html)). |
-| Visaton FRS 8/8 (2004) | Paper cone | 84 mm Ø × 40 mm deep; 8 Ω, 30/50 W, 130–20,000 Hz | Visaton price list (CSV, 13 Oct 2026) — `standard-parts/price-lists/visaton-2026-10-13.csv` · order no. 46340 | £11.37 ex VAT (£11.3739) | £10.69 each at 4+ (£10.6949) | 1 | Stock not shown in the list (blank). Seller not named in the list. |
+| Visaton FRS 8/8 (2004) | Paper cone | 84 mm Ø × 40 mm deep; 8 Ω, 30/50 W, 130–20,000 Hz | SOS Electronic, EU — [speakers page](https://www.soselectronic.com/en-gb/speakers) · price list export (CSV, 13 Oct 2026): `standard-parts/price-lists/visaton-2026-10-13.csv` · order no. 46340 | £11.37 ex VAT (£11.3739) | £10.69 each at 4+ (£10.6949) | 1 | Stock not shown in the list (blank). Ships from the EU: UK orders may carry import VAT and handling fees. |
 | Visaton FRS 8 M, 8 Ω | Paper cone | 80 mm | Musicstore, Germany — [link](https://www.musicstore.com/en_US/USD/Visaton-FRS-8-M-8-Ohm/art-PAH0020347-000) | US $12.90 ex VAT (shown in USD on the international page) | — | 1 | — |
 | Tang Band W3-881SJ | Paper cone, cast frame, neodymium | 3" | Nonsolospeakers, Italy — [link](https://www.nonsolospeakers.com/fullrange-2-to-8-5cm-20cm/1789-tang-band-w3-881sj-3-full-range-tb-speakers.html) | €30.00 | — | 1 | Out of stock at the snapshot. A well-regarded 3" full-range driver. |
 | Peerless TC9FD18-08 | Paper cone | 3.5" | Toutlehautparleur, France — [link](https://en.toutlehautparleur.com/fullrange-speaker-peerless-tc9fd18-08-8-ohm-3-5-inch.html) | €13.66 | — | 1 | Out of stock; Madisound (US) says it no longer stocks it. Possibly end of life. |
 | Dayton Audio PC68-8 | Paper cone | 2.5" | SoundImports, Netherlands — [link](https://www.soundimports.eu/en/dayton-audio-pc68-8.html) | €13.45 | — | 1 | Out of stock at the snapshot. PS95-8 listed at €26.45. |
 | Dayton Audio drivers (UK stock) | Various | Range | Willys-Hifi, UK — [link](https://willys-hifi.com/collections/dayton-audio-drive-units) | Prices shown with a "$" sign; currency unclear | — | 1 | UK stockist and dealer for Dayton. |
 | SB Acoustics small full-range (SB65WBAC25-4, SB36WBAC21) | Aluminium cone | 1", 2.5", 3" | Willys-Hifi, UK — [link](https://willys-hifi.com/collections/sb-acoustics-full-range-drive-units) | $38.00 (SB65), $21.00 (SB36), currency as shown | — | 1 | Premium Danish-designed drivers. |
-| Visaton range | Various | Range | Variant-hifi, Germany — [link](https://variant-hifi.com/en/Speaker-drivers/Visaton/) | e.g. BG 20 8" full range €53.63 | — | 1 | Also stocks SB Acoustics ([link](https://variant-hifi.com/en/Speaker-drivers/SB-Acoustics/)). The BG 20 is £30.93 ex VAT on the Visaton price list (row below). |
-| Visaton BG 20/8 (3020) | Paper cone | 205 mm Ø × 81 mm deep; 8 Ω, 40/70 W, up to 18,000 Hz | Visaton price list (CSV, 13 Oct 2026) — `standard-parts/price-lists/visaton-2026-10-13.csv` · order no. 46278 | £30.93 ex VAT (£30.9303) | £29.05 each at 4+ (£29.0544) | 1 | **3 in stock** at export. 8" full-range: far bigger than any concept here. Seller not named in the list. |
+| Visaton range | Various | Range | Variant-hifi, Germany — [link](https://variant-hifi.com/en/Speaker-drivers/Visaton/) | e.g. BG 20 8" full range €53.63 | — | 1 | Also stocks SB Acoustics ([link](https://variant-hifi.com/en/Speaker-drivers/SB-Acoustics/)). The BG 20 is £30.93 ex VAT at SOS Electronic (row below). |
+| Visaton BG 20/8 (3020) | Paper cone | 205 mm Ø × 81 mm deep; 8 Ω, 40/70 W, up to 18,000 Hz | SOS Electronic, EU — [speakers page](https://www.soselectronic.com/en-gb/speakers) · price list export (CSV, 13 Oct 2026): `standard-parts/price-lists/visaton-2026-10-13.csv` · order no. 46278 | £30.93 ex VAT (£30.9303) | £29.05 each at 4+ (£29.0544) | 1 | **3 in stock** at export. 8" full-range: far bigger than any concept here. Ships from the EU: UK orders may carry import VAT and handling fees. |
 
 ### 7.2 Passive radiators
 
@@ -439,4 +439,12 @@ decorative-perforated-brass-pattern-379--f-h-brundle-uk: {width_mm: 1830, height
 fine-brass-mesh--the-mesh-company-ebay-uk: {width_mm: 200, height_mm: 150}
 premium-beech-plywood-18-mm-glue-class-3--cts-diy-uk: {width_mm: 2440, height_mm: 1220}
 laser-plywood-sheets-cut-your-own-discs--kitronik-uk: {width_mm: 600, height_mm: 400}
+-->
+
+<!-- renamed-parts
+# Old part id: current id. A part's id comes from its name and supplier, so correcting either changes it;
+# saved concepts and concept-parts lists that use an old id keep working through this list.
+visaton-frs-8-m-8-2001--visaton-price-list-csv-13-oct-2026: visaton-frs-8-m-8-2001--sos-electronic-eu
+visaton-frs-8-8-2004--visaton-price-list-csv-13-oct-2026: visaton-frs-8-8-2004--sos-electronic-eu
+visaton-bg-20-8-3020--visaton-price-list-csv-13-oct-2026: visaton-bg-20-8-3020--sos-electronic-eu
 -->

@@ -5,7 +5,7 @@ Fifteen concepts for Bathsheva London, built mostly from parts in [`library.md`]
 ## Ground rules applied
 
 - **Real metal only.** Anything that looks metallic is real metal. Visible brass is solid brass (CZ108/CZ121 stock, S. Lilley or Peter Willetts parts, The Mesh Company brass mesh). No brass-plated steel is used where it shows, so the Lampspares brass-plated harp, the Lamparte plated lampholders and the Mesh Warehouse "brass" meshes are all left out. The Lampspares fixed "brass" harps may be S. Lilley's brass-plated harps, so they're left out too until confirmed solid; no concept uses a harp (checked 13 Oct 2026). Black-painted steel (the Visaton grilles) is real metal and reads as black, so it's allowed.
-- **Avoided parts:** nothing flagged as discontinued or no longer stocked (the Hificollective 25 mm brass knob, Visaton FRS 8 M at CPC (the driver itself is still current: in stock on the Visaton price list, 13 Oct 2026), Peerless TC9FD18-08, Bridgelux 2916910), and nothing out of stock at the snapshot (Lampfix brass tube, Dayton PC68-8, Tang Band W3-881SJ, Wondom AA-JA32173).
+- **Avoided parts:** nothing flagged as discontinued or no longer stocked (the Hificollective 25 mm brass knob, Visaton FRS 8 M at CPC (the driver itself is still current: in stock at SOS Electronic, 13 Oct 2026), Peerless TC9FD18-08, Bridgelux 2916910), and nothing out of stock at the snapshot (Lampfix brass tube, Dayton PC68-8, Tang Band W3-881SJ, Wondom AA-JA32173).
 - **Listed prices over quote-only parts.** Quote-only parts (metal spinners, trade glass cylinders, Essex Tube Windings) appear only as the route to scale, never in a cost.
 - **Premium before cheapest.** Glass before acrylic, solid brass before plated, and ply-stack or turned beech before MDF.
 - **Wording:** "mid-century inspired". No claims of Italian design.
@@ -297,7 +297,7 @@ A 200 mm matt opal globe hangs from a brushed brass drop rod, held by a laser-cu
 A compact mono speaker: a stack of beech-ply rings, a solid brass mesh front framed by a brass ring, and a gold Audio Note brass knob for volume. It's a smaller, simpler sibling to Atelier, with an 80 mm German full-range driver.
 
 - **Library parts:**
-  - Visaton FRS 8/8 (2004) from the Visaton price list, £11.37 ex VAT, £10.69 at 4+ (§7.1; was €12.56 from Toutlehautparleur);
+  - Visaton FRS 8/8 (2004) from SOS Electronic, £11.37 ex VAT, £10.69 at 4+ (§7.1; was €12.56 from Toutlehautparleur);
   - Wondom JAB3+ 2 × 50 W Bluetooth 5.0 / ADAU1701 DSP board from eBay UK, ~£31.95 (§7.3);
   - battery set (§7.4, §7.5);
   - The Mesh Company fine brass mesh, 200 × 150 mm, two grilles per sheet (§5.2);
@@ -310,7 +310,7 @@ A compact mono speaker: a stack of beech-ply rings, a solid brass mesh front fra
 - **Main risk:** this is a dev-board stack, not a product. Check the JAB3+ supply voltage against a 3.7 V 1S2P pack (a boost converter is probably needed). The module has no radio certification for a finished product. At 171% of target, it only works with an ODM board, the route Atelier already takes. Useful as an acoustic mock-up, not as a product.
 
 <!-- concept-parts
-- {part: visaton-frs-8-8-2004--visaton-price-list-csv-13-oct-2026, qty: 1, note: '80 mm full-range driver'}
+- {part: visaton-frs-8-8-2004--sos-electronic-eu, qty: 1, note: '80 mm full-range driver'}
 - {part: wondom-jab3-2-50-w-bt-5-0-adau1701-dsp--ebay-uk, qty: 1, note: 'Bluetooth amplifier / DSP board'}
 - {part: 1s2p-li-ion-pack-3-7-v-7000-mah--battery-101-uk, qty: 1, note: '1S2P battery pack'}
 - {part: adafruit-universal-usb-dc-solar-charger-bq24074-ada4755--the-pi-hut-uk, qty: 1, note: 'USB-C charger board'}
@@ -325,7 +325,7 @@ A compact mono speaker: a stack of beech-ply rings, a solid brass mesh front fra
 A pair of small passive speakers in solid-edged beech-ply cabinets, each with a brass mesh front in a laser-cut brass bezel, standing on brass bun feet. They're made for vintage-style amplifiers and turntables: the mid-century hi-fi corner in miniature.
 
 - **Library parts:**
-  - 2 × Visaton FRS 8/8 (2004) from the Visaton price list, £11.37 ex VAT, £10.69 each at 4+ (§7.1; was €12.56 from Toutlehautparleur);
+  - 2 × Visaton FRS 8/8 (2004) from SOS Electronic, £11.37 ex VAT, £10.69 each at 4+ (§7.1; was €12.56 from Toutlehautparleur);
   - The Mesh Company fine brass mesh, 200 × 150 mm, enough for two fronts (§5.2);
   - 1 mm brass sheet, two 110 mm bezels (§4.3);
   - 18 mm beech plywood, about 0.39 m² per pair (§6.3);
@@ -336,7 +336,7 @@ A pair of small passive speakers in solid-edged beech-ply cabinets, each with a 
 - **Main risk:** the market. Passive speakers need the customer's own amplifier, which narrows the audience, and a single 80 mm full-range driver has limited bass. Price and position them honestly, as a "desk or bedroom hi-fi" pair.
 
 <!-- concept-parts
-- {part: visaton-frs-8-8-2004--visaton-price-list-csv-13-oct-2026, qty: 2, note: 'two 80 mm full-range drivers'}
+- {part: visaton-frs-8-8-2004--sos-electronic-eu, qty: 2, note: 'two 80 mm full-range drivers'}
 - {part: fine-brass-mesh--the-mesh-company-ebay-uk, size_mm: [200, 150], note: 'one 200 × 150 mm sheet for both fronts'}
 - {part: brass-sheet-sample-small-sheet--the-metal-store-uk, size_mm: [110, 110], count: 2, note: 'two 110 mm brass bezels', option: 1}
 - {part: premium-beech-plywood-18-mm-glue-class-3--cts-diy-uk, size_mm: [650, 600], note: 'cabinets, about 0.39 m² for the pair'}
