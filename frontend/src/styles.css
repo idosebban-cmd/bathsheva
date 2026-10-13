@@ -27,8 +27,11 @@ h1 { font-size: 1.6rem; margin: 0 0 1rem; }
 h2 { font-size: 1.15rem; margin: 0 0 0.75rem; }
 h3 { font-size: 1rem; margin: 0 0 0.5rem; }
 
-.topbar { background: var(--ink); color: #fff; padding: 0.6rem 1.25rem; }
+.topbar { background: var(--ink); color: #fff; padding: 0.6rem 1.25rem; display: flex; align-items: baseline; gap: 1.5rem; }
 .brand { color: #fff; text-decoration: none; font-weight: 600; letter-spacing: 0.02em; }
+.topnav { display: flex; gap: 1rem; }
+.topnav a { color: rgba(255, 255, 255, 0.7); text-decoration: none; font-size: 0.92rem; }
+.topnav a.active, .topnav a:hover { color: #fff; }
 
 .tabs { display: flex; gap: 0.25rem; align-items: center; padding: 0 1.25rem; background: var(--surface); border-bottom: 1px solid var(--line); overflow-x: auto; }
 .tabs a { padding: 0.7rem 0.8rem; text-decoration: none; color: var(--muted); border-bottom: 2px solid transparent; white-space: nowrap; }
@@ -233,3 +236,29 @@ tr.row-current td { background: #f7f5f1; }
 .badge-constraint { background: #efe7fb; color: #4a2a8a; border: 1px solid #cdb8f0; }
 .source-cell { min-width: 220px; max-width: 360px; word-break: break-word; }
 .warning-text { color: #8a5a00; }
+
+/* Standard Parts page */
+a.button { display: inline-block; font: inherit; padding: 0.4rem 0.8rem; border-radius: 5px; border: 1px solid var(--line); background: #fff; color: var(--ink); text-decoration: none; }
+a.button.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.num { text-align: right; }
+.standard-parts .card { margin-bottom: 1rem; }
+.sp-about summary { font-weight: 600; cursor: pointer; }
+.sp-about p { margin: 0.3rem 0; }
+.sp-filter input[type="search"] { min-width: 22rem; padding: 0.35rem 0.5rem; }
+.sp-subsection { margin-top: 1rem; }
+.sp-table td:nth-child(1) { min-width: 14rem; }
+.sp-table td:nth-child(5) { min-width: 12rem; max-width: 20rem; }
+.sp-note { margin: 0.4rem 0; color: var(--muted); }
+.sp-concept h2 { margin: 0; }
+.sp-concept-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.sp-concept-grid ul { padding-left: 1.1rem; margin: 0 0 0.5rem; }
+.sp-total td { font-weight: 600; background: #faf8f5; }
+.sp-builder-head .row { align-items: flex-start; gap: 1.25rem; }
+.sp-builder-head .field input { padding: 0.35rem 0.5rem; }
+.sp-builder-head textarea { width: 100%; font: inherit; }
+.sp-lines select { max-width: 16rem; }
+.sp-price-text { max-width: 16rem; }
+input.sp-qty { width: 6rem; }
+input.sp-note-input { width: 100%; min-width: 9rem; }
+input.sp-search { width: 100%; padding: 0.4rem 0.6rem; }
+@media (max-width: 800px) { .sp-concept-grid { grid-template-columns: 1fr; } .sp-filter input[type="search"] { min-width: 0; width: 100%; } }

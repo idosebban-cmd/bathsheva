@@ -6,6 +6,9 @@ EngineeringDecision, Revision.
 Costing: CostItem holds editable bought-in / assembly / packaging lines; all
 rates live in seed/cost/*.yaml.
 
+Standard parts: Concept holds product concepts built from the off-the-shelf parts library
+(`standard-parts/*.md`), independent of any project.
+
 Quotes: ExternalQuote records real supplier quotes / DFM feedback per part
 for manual comparison. They never feed the rules engine automatically.
 
@@ -256,6 +259,26 @@ class CostScenario(Base):
     region: Mapped[str] = mapped_column(String(30), default="uk")
     notes: Mapped[str] = mapped_column(Text, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class Concept(Base):
+    """A product concept built from standard off-the-shelf parts (Standard Parts page). Not tied to a project.
+
+    `lines` reference parts in `standard-parts/library.md` by id; costs are worked out when read, so they
+    follow the library. `based_on` is the key of the product-ideas.md concept it was opened from, if any.
+    """
+
+    __tablename__ = "concepts"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(200))
+    retail_price: Mapped[float | None] = mapped_column(Float, nullable=True)  # GBP inc. VAT
+    based_on: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    # [{"part_id": str, "quantity": float, "note": str, "option": int}]
+    lines: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list)
+    notes: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
 
 # ---------------------------------------------------------------------------
