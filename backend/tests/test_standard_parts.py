@@ -311,7 +311,12 @@ def test_part_shapes_parse_with_one_entry_per_variant():
     for p in shaped.values():
         assert len(p.shapes) == max(len(p.options), 1), p.id
     # Parts without stated sizes have no shape: the view draws a labelled placeholder.
-    assert PARTS["brass-inline-lamp-kit-oaklk1--oaklea-woodcraft-uk"].shapes == []
+    assert PARTS["lamp-kit-1-switched-lampholder-for-wooden-bases-kit1b--lampspares-uk"].shapes == []
+    # The Oaklea kit's holder isn't sized: it's drawn at the S. Lilley E27 lampholder's size, marked assumed.
+    kit = PARTS["brass-inline-lamp-kit-oaklk1--oaklea-woodcraft-uk"].shapes[0]
+    holder = PARTS["es-e27-threaded-brass-lampholder-s-lilley-7601et-10-mm-base-fixing--lampspares-uk"].shapes[0]
+    assert (kit["shape"], kit["d"], kit["height"]) == (holder["shape"], holder["d"], holder["height"])
+    assert "7601ET" in kit["assumed"]
 
 
 def test_shape_block_is_validated():
@@ -359,7 +364,8 @@ def test_most_concept_parts_have_shapes():
 
 
 def test_concept_api_keeps_the_3d_view(client):
-    view = {"dx": 40, "dy": -5, "dz": 0, "rx": 0, "ry": 30, "rz": 0, "repeat": 3, "stack": False, "form": "auto"}
+    view = {"dx": 40, "dy": -5, "dz": 0, "rx": 0, "ry": 30, "rz": 0, "repeat": 3, "stack": False, "form": "auto",
+            "made": None}
     body = {"name": "Feet", "lines": [{"part_id": "bun-feet--cousins-uk", "quantity": 3, "view": view}]}
     r = client.post("/api/concepts", json=body)
     assert r.status_code == 201, r.text
@@ -367,7 +373,15 @@ def test_concept_api_keeps_the_3d_view(client):
     assert r.json()["cost"]["total_100"] == 10.5  # the view never changes the cost
     cid = r.json()["id"]
     assert client.get(f"/api/concepts/{cid}").json()["lines"][0]["view"]["repeat"] == 3
-    for bad in ({"repeat": 0}, {"repeat": 65}, {"dx": 1e6}, {"form": "cube"}):
+    # A line drawn as the part it's made into (two blanks turned into one round plinth).
+    made = {**view, "made": {"shape": "cylinder", "d": 100, "height": 88.9}}
+    r = client.post("/api/concepts", json={"name": "Plinth", "lines": [
+        {"part_id": "beech-turning-blanks--classic-hand-tools-uk", "quantity": 2, "view": made}]})
+    assert r.status_code == 201, r.text
+    assert r.json()["lines"][0]["view"]["made"] == {"shape": "cylinder", "d": 100, "height": 88.9}
+    for bad in ({"repeat": 0}, {"repeat": 65}, {"dx": 1e6}, {"form": "cube"}, {"made": {"shape": "globe", "d": 5}},
+                {"made": {"shape": "cylinder", "d": 100}}, {"made": {"shape": "ring", "od": 10, "id": 12, "thickness": 2}},
+                {"made": {"shape": "cylinder", "d": 100, "height": 50, "look": "brass"}}):
         b = {"name": "x", "lines": [{"part_id": "bun-feet--cousins-uk", "quantity": 1, "view": bad}]}
         assert client.post("/api/concepts", json=b).status_code == 422
     # Lines without a view are saved without one.
@@ -393,4 +407,7 @@ def test_seed_concept_views_are_valid_placements():
                 LineView.model_validate(line["view"])
                 placed += 1
         assert any("view" in line for line in concept.lines), f"{concept.name} has no arrangement"
+    tambour = next(c for c in sp.load_concepts() if c.key == "tambour")
+    plinth = next(line for line in tambour.lines if line["part_id"].startswith("beech-turning-blanks"))
+    assert plinth["quantity"] == 2 and plinth["view"]["made"] == {"shape": "cylinder", "d": 100, "height": 88.9}
     assert placed >= 15

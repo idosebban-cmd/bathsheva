@@ -332,6 +332,19 @@ def _shape(value: Any, where: str) -> dict[str, Any]:
     return out
 
 
+# Shapes a concept line can be drawn as once it's made (turned, cut or glued up), in the builder's 3D view.
+MADE_SHAPES = ("cylinder", "disc", "ring", "tube", "rod", "box", "cone", "dome", "sphere")
+
+
+def made_shape(value: Any) -> dict[str, Any]:
+    """A line's `view.made`: one of MADE_SHAPES with its sizes in mm (no colour or note). Raises LibraryError."""
+    if not isinstance(value, dict) or value.get("shape") not in MADE_SHAPES:
+        raise LibraryError(f"made: shape must be one of {', '.join(MADE_SHAPES)}")
+    if {"look", "assumed"} & set(value):
+        raise LibraryError("made: takes sizes only")
+    return _shape(value, "made")
+
+
 def _apply_shapes(block: str, parts: dict[str, LibraryPart]) -> None:
     for part_id, value in (yaml.safe_load(block) or {}).items():
         part = parts.get(part_id)

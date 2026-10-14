@@ -452,6 +452,7 @@ m10-lampholder-fixing-kit-s-lilley--light-and-power-solutions-uk: {shape: "rod",
 m10-fixing-kit-larger-set--light-and-power-solutions-uk: {shape: "rod", d: 10, length: 50}
 es-e27-shade-ring-s-lilley-spare--lampspares-uk: {shape: "ring", od: 48, id: 37, thickness: 3.5}
 es-e27-threaded-brass-lampholder-s-lilley-7601et-10-mm-base-fixing--lampspares-uk: {shape: "cylinder", d: 38, height: 61}
+brass-inline-lamp-kit-oaklk1--oaklea-woodcraft-uk: {shape: "cylinder", d: 38, height: 61, look: "brass", assumed: "lampholder drawn at the S. Lilley 7601ET E27 size (38 × 61 mm); the kit's holder size and cap aren't stated"}
 e27-shade-ring--urban-cottage-industries-uk: {shape: "ring", od: 43, id: 37, thickness: 3.5, assumed: "37 mm bore and 3.5 mm thick, as the S. Lilley ring"}
 cob-led-strip-24-v-3000-k-cri-90-15-w-m-1500-lm-m--hi-line-lighting-uk: {shape: "strip", width: 10, thickness: 2, length: 5000, assumed: "10 mm wide, 2 mm thick"}
 cob-led-strip-24-v-2700-3000-k-cri-90-7-5-w-m-480-leds-m-atom--uk-led-lights: {shape: "strip", width: 10, thickness: 2, length: 1000, assumed: "2 mm thick, 1000 mm run"}
