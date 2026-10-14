@@ -420,8 +420,9 @@ No UK assembler of custom small-batch 1S2P packs with published terms turned up.
 # rod {d, length}, bar and strip {width, thickness, length}, sheet {width, height, thickness}, disc {d, thickness},
 # ring {od, id, thickness}, cylinder {d, height}, dome {d, height, opening?}, cone {d_bottom, d_top, height},
 # sphere {d}, globe {d, neck_d, neck_height}, box {width, depth, height}. Optional: look (overrides the colour
-# taken from the Material column) and assumed (what isn't stated in the row above, listed under the viewer).
-# Parts not listed here are drawn as labelled placeholder boxes.
+# taken from the Material column), assumed (what is estimated rather than found, listed under the viewer) and
+# source (where sizes the row doesn't state were found: a datasheet or listing). Circuit boards and modules are
+# thin boxes at their board size. Parts not listed here are drawn as labelled placeholder boxes.
 cardboard-construction-tubes--specialist-crafts-dryad-uk: {shape: "tube", od: 44, id: 40, length: 240}
 postal-tubes-with-end-caps-raja--morplan-uk: {shape: "tube", od: 63, id: 60, length: 483, assumed: "wall 1.5 mm"}
 round-tube-25-1-6-mm--the-metal-merchant-uk: {shape: "tube", od: 25, id: 21.8, length: 1000, assumed: "length 1000 mm (sold 100–4000 mm)"}

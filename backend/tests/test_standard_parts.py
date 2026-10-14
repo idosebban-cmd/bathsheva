@@ -324,6 +324,8 @@ def test_shape_block_is_validated():
             "| Tube | Brass | 1 m | S, UK — [l](https://x.uk) | £10 | — | 1 | — |\n"
     ok = sp.parse_library(table + '\n<!-- part-shapes\ntube--s-uk: {shape: rod, d: 10, length: 50, assumed: "x"}\n-->\n')
     assert ok.parts["tube--s-uk"].shapes == [{"shape": "rod", "d": 10, "length": 50, "assumed": "x"}]
+    sourced = sp.parse_library(table + '\n<!-- part-shapes\ntube--s-uk: {shape: rod, d: 10, length: 50, source: "https://x.uk/ds.pdf"}\n-->\n')
+    assert sourced.parts["tube--s-uk"].shapes[0]["source"] == "https://x.uk/ds.pdf"
     for bad in ("nope--s-uk: {shape: rod, d: 10, length: 50}", "tube--s-uk: {shape: blob, d: 10}",
                 "tube--s-uk: {shape: rod, d: 10}", "tube--s-uk: {shape: rod, d: 10, length: 50, width: 3}",
                 "tube--s-uk: {shape: tube, od: 10, id: 12, length: 5}", "tube--s-uk: {shape: rod, d: 0, length: 5}",
