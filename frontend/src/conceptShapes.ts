@@ -28,7 +28,7 @@ export type ShapeSpec =
   | { shape: "box"; width: number; depth: number; height: number };
 
 /** A part's shape as the library gives it (sizes plus an optional colour and a note of what was assumed). */
-export type PartShape = ShapeSpec & { look?: string; assumed?: string };
+export type PartShape = ShapeSpec & { look?: string; assumed?: string; source?: string };
 
 export type SheetForm = "auto" | "sheet" | "disc" | "rolled";
 
@@ -203,7 +203,7 @@ export function lineShape(line: ConceptLine, part: Pick<LibraryPart, "shapes" | 
 export function stockShape(line: ConceptLine, part: Pick<LibraryPart, "shapes" | "units"> | undefined): ShapeSpec | null {
   const base = partShape(part, line.option);
   if (!base || !part) return null;
-  const { look: _look, assumed: _assumed, ...shape } = base;
+  const { look: _look, assumed: _assumed, source: _source, ...shape } = base;
   let spec = { ...shape } as ShapeSpec;
   const unit = unitOf(part, line.option);
   if (unit && "length_mm" in unit && "length" in spec) {

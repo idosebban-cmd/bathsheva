@@ -7,6 +7,15 @@ import { geometriesFor } from "./conceptMeshes";
 import { lookMaterial } from "./materials";
 import { ViewerStage } from "./ModelViewer";
 
+/** "farnell.com" for a link, or the text itself if it doesn't parse. */
+function hostOf(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return url;
+  }
+}
+
 /** The part's shape on its own, to turn round in the preview. */
 function PreviewShape({ spec, look }: { spec: ShapeSpec | null; look: string }) {
   const key = JSON.stringify(spec);
@@ -60,6 +69,18 @@ function PartPreview({ part, option, onOption, onAdd }: {
           <dd>
             {stock ? describeShape(stock) : "a placeholder box (no sizes in the library)"}
             {stock?.assumed && <div className="muted">Assumed: {stock.assumed}</div>}
+            {stock?.source && (
+              <div className="muted">
+                Sizes from{" "}
+                {/^https?:\/\//.test(stock.source) ? (
+                  <a href={stock.source} target="_blank" rel="noreferrer">
+                    {hostOf(stock.source)} ↗
+                  </a>
+                ) : (
+                  stock.source
+                )}
+              </div>
+            )}
             {unit && drawn && (
               <div className="muted">
                 Priced per {unitLabel(unit)}; added as one piece, {describeShape(drawn)} (change the size in the parts table)

@@ -301,6 +301,26 @@ def test_saving_a_concept_with_an_old_id_stores_the_current_one(client):
 # --- 3D shapes ---------------------------------------------------------------
 
 
+# Parts (or a price variant) with no size in the row, the supplier's listings or a datasheet (searched Oct 2026).
+NO_SIZE_FOUND = {
+    "bespoke-cardboard-tubes-and-cores--essex-tube-windings-uk",
+    "cardboard-cores-and-tubes--jpt-cores-uk",
+    "custom-trade-cylinders--j-moncrieff-uk",
+    "soda-lime-glass-tube--goodfellow-uk-global",
+    "spun-parts-small-and-large-batch--calder-metal-spinning-uk-est-1947",
+    "spun-cone-shade-finished--dyke-dean-uk",
+    "period-lamp-parts-back-plates-domed-sconce-cups-galleries--peter-willetts-associates-uk",
+    "small-hand-blown-glass-cloche--glass-cloche-uk",
+    "wooden-natural-lamp-bases-finished--exclusive-lighting-ltd-uk",
+    "solid-metal-control-knobs--knobzone-uk",  # the ridged variant
+    "custom-nameplates-and-badges--rand-markings-hull-uk",
+    "brass-plaques-custom--metal-sheets-ltd-uk",
+    "beech-turning-blank--oaklea-woodcraft-uk",
+    "custom-wooden-cylinder-tubes--dandowoodlatvia-etsy-ships-from-latvia",
+    "adafruit-universal-usb-dc-solar-charger-bq24074-ada4755--the-pi-hut-uk",
+}
+
+
 def test_part_shapes_parse_with_one_entry_per_variant():
     shaped = {pid: p for pid, p in PARTS.items() if p.shapes}
     assert len(shaped) >= 70
@@ -310,8 +330,9 @@ def test_part_shapes_parse_with_one_entry_per_variant():
     assert [s["width"] for s in sheet.shapes] == [45, 250]
     for p in shaped.values():
         assert len(p.shapes) == max(len(p.options), 1), p.id
-    # Parts without stated sizes have no shape: the view draws a labelled placeholder.
-    assert PARTS["lamp-kit-1-switched-lampholder-for-wooden-bases-kit1b--lampspares-uk"].shapes == []
+    # Every part has a shape unless no size could be found anywhere (drawn as a labelled placeholder).
+    no_shape = {pid for pid, p in PARTS.items() if not p.shapes or None in p.shapes}
+    assert no_shape == NO_SIZE_FOUND
     # The Oaklea kit's holder isn't sized: it's drawn at the S. Lilley E27 lampholder's size, marked assumed.
     kit = PARTS["brass-inline-lamp-kit-oaklk1--oaklea-woodcraft-uk"].shapes[0]
     holder = PARTS["es-e27-threaded-brass-lampholder-s-lilley-7601et-10-mm-base-fixing--lampspares-uk"].shapes[0]
@@ -324,6 +345,8 @@ def test_shape_block_is_validated():
             "| Tube | Brass | 1 m | S, UK — [l](https://x.uk) | £10 | — | 1 | — |\n"
     ok = sp.parse_library(table + '\n<!-- part-shapes\ntube--s-uk: {shape: rod, d: 10, length: 50, assumed: "x"}\n-->\n')
     assert ok.parts["tube--s-uk"].shapes == [{"shape": "rod", "d": 10, "length": 50, "assumed": "x"}]
+    sourced = sp.parse_library(table + '\n<!-- part-shapes\ntube--s-uk: {shape: rod, d: 10, length: 50, source: "https://x.uk/ds.pdf"}\n-->\n')
+    assert sourced.parts["tube--s-uk"].shapes[0]["source"] == "https://x.uk/ds.pdf"
     for bad in ("nope--s-uk: {shape: rod, d: 10, length: 50}", "tube--s-uk: {shape: blob, d: 10}",
                 "tube--s-uk: {shape: rod, d: 10}", "tube--s-uk: {shape: rod, d: 10, length: 50, width: 3}",
                 "tube--s-uk: {shape: tube, od: 10, id: 12, length: 5}", "tube--s-uk: {shape: rod, d: 0, length: 5}",

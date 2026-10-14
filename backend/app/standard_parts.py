@@ -309,7 +309,7 @@ def _shape(value: Any, where: str) -> dict[str, Any]:
         raise LibraryError(f"part-shapes {where}: shape must be one of {', '.join(SHAPE_KEYS)}")
     kind = value["shape"]
     sizes = SHAPE_KEYS[kind] + SHAPE_OPTIONAL.get(kind, ())
-    extra = set(value) - {"shape", "look", "assumed", *sizes}
+    extra = set(value) - {"shape", "look", "assumed", "source", *sizes}
     missing = [k for k in SHAPE_KEYS[kind] if k not in value]
     if extra or missing:
         raise LibraryError(f"part-shapes {where}: {kind} takes {', '.join(sizes)}"
@@ -329,6 +329,8 @@ def _shape(value: Any, where: str) -> dict[str, Any]:
         out["look"] = value["look"]
     if value.get("assumed"):
         out["assumed"] = str(value["assumed"])
+    if value.get("source"):
+        out["source"] = str(value["source"])  # where sizes the row doesn't state came from (a datasheet or listing)
     return out
 
 
@@ -340,7 +342,7 @@ def made_shape(value: Any) -> dict[str, Any]:
     """A line's `view.made`: one of MADE_SHAPES with its sizes in mm (no colour or note). Raises LibraryError."""
     if not isinstance(value, dict) or value.get("shape") not in MADE_SHAPES:
         raise LibraryError(f"made: shape must be one of {', '.join(MADE_SHAPES)}")
-    if {"look", "assumed"} & set(value):
+    if {"look", "assumed", "source"} & set(value):
         raise LibraryError("made: takes sizes only")
     return _shape(value, "made")
 

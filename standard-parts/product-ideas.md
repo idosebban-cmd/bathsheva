@@ -315,7 +315,7 @@ A compact mono speaker: a stack of beech-ply rings, a solid brass mesh front fra
 - {part: bun-feet--cousins-uk, qty: 3, note: 'three 20 mm bun feet', view: {dx: 55, repeat: 3}}
 - {part: premium-beech-plywood-18-mm-glue-class-3--cts-diy-uk, size_mm: [160, 160], count: 5, waste_pct: 30, note: 'five 160 mm discs routed as rings', view: {form: disc}}
 - {part: visaton-frs-8-8-2004--sos-electronic-eu, qty: 1, note: '80 mm full-range driver', view: {dy: -40, stack: false}}
-- {part: wondom-jab3-2-50-w-bt-5-0-adau1701-dsp--ebay-uk, qty: 1, note: 'Bluetooth amplifier / DSP board', view: {dx: 30, dy: -84, stack: false}}
+- {part: wondom-jab3-2-50-w-bt-5-0-adau1701-dsp--ebay-uk, qty: 1, note: 'Bluetooth amplifier / DSP board', view: {dy: -90, stack: false}}
 - {part: 1s2p-li-ion-pack-3-7-v-7000-mah--battery-101-uk, qty: 1, note: '1S2P battery pack', view: {dx: -30, dy: -88, stack: false}}
 - {part: adafruit-universal-usb-dc-solar-charger-bq24074-ada4755--the-pi-hut-uk, qty: 1, note: 'USB-C charger board', view: {dx: -30, dy: -84, dz: 40, stack: false}}
 - {part: audio-note-brass-knob-mwk-01-9000-9001--hificollective-uk, qty: 1, note: '26 mm gold brass knob', view: {dx: 90, dy: -52, rz: 90, stack: false}}
