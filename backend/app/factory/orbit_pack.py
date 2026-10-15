@@ -1,4 +1,4 @@
-"""Atelier's Factory Pack: RFQs (mechanical and electronics), drawings, STEP files, supplier BOM and artwork.
+"""Orbit's Factory Pack: RFQs (mechanical and electronics), drawings, STEP files, supplier BOM and artwork.
 
 Same interface as Faro's pack (`app.services.factory_pack`), which also provides the shared machinery reused
 here: contact details, the RFQ writers (markdown and PDF), supplier questions and the commercial terms.
@@ -15,10 +15,10 @@ from datetime import date
 from pathlib import Path
 from typing import Any
 
-from app.cad import atelier
+from app.cad import orbit
 from app.config import settings
 from app.costing.data import load_cost_data
-from app.factory import atelier_drawings as adr
+from app.factory import orbit_drawings as adr
 from app.factory import drawings as dr
 from app.factory import logo
 from app.models import Project
@@ -43,14 +43,14 @@ OPERATION_ITEM_KEYS = {"knob_logo_engrave": "knob", "knob_knurl": "knob", "colla
 OPERATION_TEXT = {
     "knob_logo_engrave": "Engrave the Bathsheva emblem 0.2 mm deep in the knob face, tone-on-tone (before PVD)",
     "knob_knurl": "Fine straight knurl on the knob edge (DIN 82 RAA 0.5), on the lathe (before PVD)",
-    "collar_lettering_etch": "Laser-etch \"ATELIER\" 0.15 mm deep round the foot on the collar's underside (before PVD)",
+    "collar_lettering_etch": "Laser-etch \"ORBIT\" 0.15 mm deep round the foot on the collar's underside (before PVD)",
 }
-LETTERING_STEM = "A-01_collar_lettering"
+LETTERING_STEM = "O-01_collar_lettering"
 
 
 def pack_contents(project: Project) -> dict[str, Any]:
     params = current_parameters(project)
-    if not atelier.validate(params).ok:
+    if not orbit.validate(params).ok:
         raise FactoryPackError("The CAD parameters are invalid: fix them on the CAD tab first.")
     bom = build_bom(project)
     recs = {r["part_id"]: r for r in project_recommendations(project)}
@@ -75,7 +75,7 @@ def pack_contents(project: Project) -> dict[str, Any]:
         safety = []
         if key in ("fin", "ballast"):
             safety.append("Stability: static tip-over 18° or more on the three fin pads (IEC 62368-1); verify on a sample.")
-        no = f"A-{int(row['item']):02d}"
+        no = f"O-{int(row['item']):02d}"
         stem = f"{no}_{fp._slug(row['name'])}"
         parts.append({
             "cad_key": key, "part_no": no, "name": row["name"], "quantity": row["quantity"], "material": row["material"],
@@ -95,7 +95,7 @@ def pack_contents(project: Project) -> dict[str, Any]:
         "project": project, "params": params, "bom": bom, "parts": parts, "bought_in": bought, "hardware": hardware,
         "cad_version": latest.version if latest else None, "flags": [], "mass": mass_estimate(project),
         "assumed": sorted(assumed), "date": date.today().isoformat(), "runtime": project_runtime(project),
-        "audio": project_audio(project), "stability": atelier.stability(params),
+        "audio": project_audio(project), "stability": orbit.stability(params),
     }
 
 
@@ -167,12 +167,12 @@ def rfq_blocks(c: dict[str, Any]) -> list[Block]:
     ]))
     b.append(Block("h2", "Battery replacement (service)"))
     b.append(Block("p", "The battery must be replaceable after removing the base collar, with standard tools only:"))
-    b.append(Block("bullets", items=list(atelier.BATTERY_SERVICE)))
+    b.append(Block("bullets", items=list(orbit.BATTERY_SERVICE)))
     b.append(Block("h2", "Where production departs from the prototype"))
     b.append(Block("table", widths=[2.0, 3.5, 5.5], header=["Feature", "Prototype", "Production"],
-                   rows=[[x["feature"], x["prototype"], x["production"]] for x in atelier.PRODUCTION_CHANGES]))
+                   rows=[[x["feature"], x["prototype"], x["production"]] for x in orbit.PRODUCTION_CHANGES]))
     b.append(Block("h2", "Open points for your proposal"))
-    b.append(Block("bullets", items=[f"UNVERIFIED: {x}" for x in atelier.OPEN_ITEMS]))
+    b.append(Block("bullets", items=[f"UNVERIFIED: {x}" for x in orbit.OPEN_ITEMS]))
     b += fp._commercial(c)
     b.append(Block("h2", "What to include in your quote"))
     b.append(Block("bullets", items=[
@@ -192,7 +192,7 @@ def electronics_rfq_blocks(c: dict[str, Any]) -> list[Block]:
     project: Project = c["project"]
     r = fp._rfq_settings(project)
     tpl_audio = (c.get("audio") or {})
-    m = atelier.model(c["params"])
+    m = orbit.model(c["params"])
     bb = {k: m.parts[k].bounding_box() for k in ("battery", "driver", "main_board")}
     b: list[Block] = fp._header(c, f"Request for quotation: {project.name} speaker electronics, driver and battery")
     b.append(Block("warn", "Values marked UNVERIFIED are design estimates. Items marked COMPLIANCE need certificates from "
@@ -288,7 +288,7 @@ def supplier_bom_csv(c: dict[str, Any]) -> str:
         else:
             supply, files, notes = "Bought-in", "", row.get("supplier_notes") or ""
         colour, gloss = colours.get(key or "", ("", ""))
-        w.writerow([f"A-{int(item):02d}" if item.isdigit() else item, row["name"], f"{row['quantity']:g}", row["material"],
+        w.writerow([f"O-{int(item):02d}" if item.isdigit() else item, row["name"], f"{row['quantity']:g}", row["material"],
                     row["process"], row["finish"], colour, gloss, row["size_mm"], supply, files, notes])
     return buf.getvalue()
 
@@ -309,15 +309,15 @@ def drawing_files(c: dict[str, Any], cad_key: str) -> tuple[str, bytes]:
 
 
 def collar_lettering_files(params: dict[str, Any]) -> dict[str, bytes]:
-    """"ATELIER" as etched under the collar (seen from below, rear at the top), 1:1 SVG and DXF in millimetres."""
+    """"ORBIT" as etched under the collar (seen from below, rear at the top), 1:1 SVG and DXF in millimetres."""
     import math
 
     from build123d import ExportDXF, ExportSVG, Face, Unit, Vector, Wire
 
-    loops = atelier._lettering()
+    loops = orbit._lettering()
     ys = [q[1] for f in loops for lp in f for q in lp]
-    k = atelier.LETTERING_CAP / (max(ys) - min(ys))
-    r_text = atelier.model(params).info["collar_lettering_radius"]  # the same circle as the 3D etch
+    k = orbit.LETTERING_CAP / (max(ys) - min(ys))
+    r_text = orbit.model(params).info["collar_lettering_radius"]  # the same circle as the 3D etch
 
     def ring(q):
         x, y = q[0] * k, q[1] * k
@@ -367,7 +367,7 @@ def consistency_checks(project: Project, c: dict[str, Any] | None = None) -> lis
     if model is None:
         check("CAD generated", False, "Generate CAD first: drawings and STEP files come from the latest CAD version.")
         return out
-    built = atelier.model(c["params"]).parts
+    built = orbit.model(c["params"]).parts
     info = model.part_info or {}
     differ = [pt["part_no"] + " " + pt["name"] for pt in c["parts"] if pt["cad_key"] in info and pt["cad_key"] in built
               and abs(built[pt["cad_key"]].volume - info[pt["cad_key"]]["volume_mm3"]) > 0.005 * info[pt["cad_key"]]["volume_mm3"] + 1]
@@ -375,9 +375,9 @@ def consistency_checks(project: Project, c: dict[str, Any] | None = None) -> lis
           f"CAD v{model.version}: drawings and STEP agree for all {len(c['parts'])} parts" if not differ else
           f"CAD v{model.version} was generated with an older generator ({', '.join(differ)}); regenerate CAD")
     bodies = set(info)
-    check("All bodies in the model", set(atelier.PART_KEYS) <= bodies,
-          f"{len(bodies)} bodies" + ("" if set(atelier.PART_KEYS) <= bodies else
-                                    f"; missing {', '.join(sorted(set(atelier.PART_KEYS) - bodies))}"))
+    check("All bodies in the model", set(orbit.PART_KEYS) <= bodies,
+          f"{len(bodies)} bodies" + ("" if set(orbit.PART_KEYS) <= bodies else
+                                    f"; missing {', '.join(sorted(set(orbit.PART_KEYS) - bodies))}"))
     steps = {o.part_key: o.path for o in model.outputs if o.format == "step" and o.part_key}
     missing = [pt["part_no"] for pt in c["parts"] if pt["cad_key"] not in steps or not (settings.data_dir / steps[pt["cad_key"]]).is_file()]
     check("STEP file for every drawing", not missing,
@@ -392,10 +392,10 @@ def consistency_checks(project: Project, c: dict[str, Any] | None = None) -> lis
     mism = cad_mismatches(project)
     check("CAD shows every chosen route's design changes", not mism,
           "; ".join(f"{m['part']}: {', '.join(m['changes'])}" for m in mism) or "no mismatches")
-    for g in atelier.production_change_checks(c["params"]):
+    for g in orbit.production_change_checks(c["params"]):
         check(f"Production change: {g['feature']}", g["ok"], g["detail"])
     rows = {r.get("cad_key") for r in c["bom"]["rows"]}
-    check("BOM lists every drawn part", all(pt["cad_key"] in rows for pt in c["parts"]), "part numbers A-xx follow the BOM items")
+    check("BOM lists every drawn part", all(pt["cad_key"] in rows for pt in c["parts"]), "part numbers O-xx follow the BOM items")
     texts = {"rfq": fp.rfq_markdown(rfq_blocks(c)), "electronics rfq": fp.rfq_markdown(electronics_rfq_blocks(c)),
              "bom.csv": supplier_bom_csv(c), "ODM cover note": fp.rfq_markdown(odm_rfq_blocks(c)),
              "ODM quote sheet": odm_quote_sheet_csv(c)}
@@ -425,7 +425,7 @@ def readme(c: dict[str, Any]) -> str:
         "",
         "mechanical/   for moulding, metalwork and finishing suppliers:",
         "              rfq.pdf (and rfq.md), drawings/ (PDF + SVG per part), step/ (STEP per part + assembly), bom.csv,",
-        "              artwork/ (Bathsheva emblem for the knob, ATELIER lettering for the collar; 1:1 SVG and DXF)",
+        "              artwork/ (Bathsheva emblem for the knob, ORBIT lettering for the collar; 1:1 SVG and DXF)",
         "electronics/  for audio electronics, driver and battery suppliers:",
         "              rfq_electronics.pdf (and .md): main board (Bluetooth, DSP, 20 W amplifier, charger), driver,",
         "              pre-certified 1S2P pack, sealed USB-C, encoder, LED, cable",
@@ -606,7 +606,7 @@ def pack_summary(project: Project) -> dict[str, Any]:
         "safety": sorted({f"{pt['part_no']} {pt['name']}: {x}" for pt in c["parts"] for x in pt["safety"]}),
         "compliance": [fp._rfq_settings(project).get("marking", ""),
                        *[f"Compliance: {x}" for x in (c.get("runtime") or {}).get("compliance", [])]],
-        "runtime": c.get("runtime"), "production_changes": atelier.PRODUCTION_CHANGES,
+        "runtime": c.get("runtime"), "production_changes": orbit.PRODUCTION_CHANGES,
         "consistency": consistency_checks(project, c) if c["cad_version"] is not None else [],
         "open_questions": fp.open_questions(project, c), "placeholders": fp.placeholders(project),
         "contact": fp.contact(project),

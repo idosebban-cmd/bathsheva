@@ -344,7 +344,7 @@ bought_in:
     source: model-generated
     confidence: low
     verified: false
-  # Atelier (rocket Bluetooth speaker), Oct 2026
+  # Orbit (rocket Bluetooth speaker), Oct 2026
   - key: speaker_driver_57
     name: "57 mm full-range neodymium driver, rated 20 W RMS (datasheet with Thiele-Small values)"
     gbp: {low: 3.5, high: 7.5}
@@ -436,7 +436,7 @@ bought_in:
     confidence: low
     verified: false
   - key: collar_lettering_etch
-    name: Laser-etch "ATELIER" under the collar before PVD (0.15 mm, tone-on-tone)
+    name: Laser-etch "ORBIT" under the collar before PVD (0.15 mm, tone-on-tone)
     gbp: {low: 0.3, high: 1.0}
     source: model-generated
     confidence: low

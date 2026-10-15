@@ -1,6 +1,6 @@
-"""2D quotation drawings for Atelier (SVG and PDF), from the same solids that are exported to STEP.
+"""2D quotation drawings for Orbit (SVG and PDF), from the same solids that are exported to STEP.
 
-Uses the sheet, dimensioning and section helpers of `drawings` (Faro's drawings), with Atelier's own views:
+Uses the sheet, dimensioning and section helpers of `drawings` (Faro's drawings), with Orbit's own views:
 sections through the axis for the turned and cast round parts, a section through the front-back plane for
 the body and the bezel, the fin's mid-plane section and plan, and a projected front view of the honeycomb
 grille drawn from the same hole layout the CAD cuts. Pure: CAD parameters plus part metadata in, a
@@ -16,7 +16,7 @@ from build123d import Plane, Pos, Rectangle, Rot
 from reportlab.graphics.shapes import Drawing, Group
 from reportlab.lib import colors
 
-from app.cad import atelier
+from app.cad import orbit
 from app.factory import drawings as dr
 from app.factory.drawings import (DIM, ENGRAVED_FILL, INK, MARGIN, PAGE_H, PAGE_W, PT_PER_MM, SECTION_FILL, TITLE_H,
                                   TITLE_W, UNV, WARN, PartSheet, _bounds, _centreline, _choose_scale, _dim_h, _dim_v,
@@ -40,7 +40,7 @@ def _turn(cad_key: str, solid):
     if cad_key == "knob":
         solid = Rot(-90, 0, 0) * solid  # the knob's axis points out of the front (-Y): stand it up
     elif cad_key in ("fin", "fin_pad"):
-        solid = Rot(0, 0, 90 - atelier.proto.FIN_ANGLE_OFFSET_DEG) * solid  # the first fin points along +X
+        solid = Rot(0, 0, 90 - orbit.proto.FIN_ANGLE_OFFSET_DEG) * solid  # the first fin points along +X
     elif cad_key in ("body", "bezel", "rear_bezel", "chassis"):
         solid = Rot(0, 0, 90) * solid  # front-back plane onto XZ (front, -Y, to the left)
     bb = solid.bounding_box()
@@ -60,11 +60,11 @@ def _plan(solid, z: float) -> list:
 
 
 def _hexes(a: float, b: float) -> list:
-    """The honeycomb the CAD cuts (atelier_geometry._cut_honeycomb), as faces in the front view (x, z)."""
-    pitch = atelier.HEX_HOLE + atelier.HEX_WEB
+    """The honeycomb the CAD cuts (orbit_geometry._cut_honeycomb), as faces in the front view (x, z)."""
+    pitch = orbit.HEX_HOLE + orbit.HEX_WEB
     dz = pitch * math.sqrt(3) / 2
-    hex_r = atelier.HEX_HOLE / math.sqrt(3)
-    m_ = atelier.HEX_WEB + hex_r
+    hex_r = orbit.HEX_HOLE / math.sqrt(3)
+    m_ = orbit.HEX_WEB + hex_r
     la, lb = a - m_, b - m_
     out, j, z = [], 0, -lb
     while z <= lb + 1e-6:
@@ -83,7 +83,7 @@ def _ellipse(a: float, b: float, n: int = 120) -> list:
     return [(a * math.cos(2 * math.pi * i / n), b * math.sin(2 * math.pi * i / n)) for i in range(n)]
 
 
-def _part_notes(key: str, p: dict[str, float], m: atelier.Model) -> list[tuple[str, Any]]:
+def _part_notes(key: str, p: dict[str, float], m: orbit.Model) -> list[tuple[str, Any]]:
     I = m.info
     n: list[tuple[str, Any]] = []
     if key == "body":
@@ -106,10 +106,10 @@ def _part_notes(key: str, p: dict[str, float], m: atelier.Model) -> list[tuple[s
     elif key == "collar":
         n += [("Zamak die-cast, machined at the USB-C port face and the screw seats. Sealed (IP67) USB-C receptacle "
                "pocket at 120° facing 45° down; wire channel to the battery bay.", INK),
-              (f"Underside: three M2.5 countersunk holes on Ø{_fmt(atelier.COLLAR_SCREW_PCD)} and the M4 stud hole, "
+              (f"Underside: three M2.5 countersunk holes on Ø{_fmt(orbit.COLLAR_SCREW_PCD)} and the M4 stud hole, "
                "all under the foot.", INK),
-              (f"\"ATELIER\" laser-etched {atelier.LETTERING_DEPTH:g} deep, tone-on-tone, round the foot on the "
-               f"underside (Cormorant Garamond SemiBold, {atelier.LETTERING_CAP:g} cap height); artwork/A-01_collar_lettering.svg / .dxf. "
+              (f"\"ORBIT\" laser-etched {orbit.LETTERING_DEPTH:g} deep, tone-on-tone, round the foot on the "
+               f"underside (Cormorant Garamond SemiBold, {orbit.LETTERING_CAP:g} cap height); artwork/O-01_collar_lettering.svg / .dxf. "
                "Etch before PVD.", INK), (GOLD_PVD, INK)]
     elif key == "foot":
         n += [("Zamak die-cast, machined; tapped M4 at the centre of the top face: screws onto the collar's stud by hand "
@@ -124,8 +124,8 @@ def _part_notes(key: str, p: dict[str, float], m: atelier.Model) -> list[tuple[s
         n += [("6061-T6, CNC machined to follow the body's double curve, diamond-cut chamfer on the outer edge. The "
                "grille is bonded to it and the pair is fixed from inside (no visible fasteners).", INK), (GOLD_PVD, INK)]
     elif key in ("grille", "rear_grille"):
-        n += [(f"Stainless 304, {_fmt(p['grille_thickness'])} sheet, photo-etched: {_fmt(atelier.HEX_HOLE)} mm hexagons "
-               f"(across flats), {_fmt(atelier.HEX_WEB)} mm webs, solid border; then formed to the body's double curve "
+        n += [(f"Stainless 304, {_fmt(p['grille_thickness'])} sheet, photo-etched: {_fmt(orbit.HEX_HOLE)} mm hexagons "
+               f"(across flats), {_fmt(orbit.HEX_WEB)} mm webs, solid border; then formed to the body's double curve "
                "(the projected view shows the hole layout).", INK),
               ("Black acoustic fabric behind it. Bonded to its bezel.", INK), (GOLD_PVD, INK)]
     elif key == "ballast":
@@ -141,9 +141,9 @@ def _part_notes(key: str, p: dict[str, float], m: atelier.Model) -> list[tuple[s
 
 
 def part_drawing(params: dict[str, Any], sheet: PartSheet) -> Drawing:
-    """A4 landscape quotation drawing for one Atelier made-to-drawing part."""
+    """A4 landscape quotation drawing for one Orbit made-to-drawing part."""
     p = {k: float(v) for k, v in params.items()}
-    m = atelier.model(params)
+    m = orbit.model(params)
     key = sheet.cad_key
     I = m.info
     solid = _turn(key, m.parts[key])
@@ -202,7 +202,7 @@ def part_drawing(params: dict[str, Any], sheet: PartSheet) -> Drawing:
         side = (_plan(solid, zc), f"PLAN VIEW (cut at z = {_fmt(zc)})")
     elif key in ("bezel", "rear_bezel"):
         if key == "bezel":
-            a_o, b_o = I["grille_front_width"] / 2 + atelier.proto.BEZEL_WIDTH, I["bezel_od"] / 2
+            a_o, b_o = I["grille_front_width"] / 2 + orbit.proto.BEZEL_WIDTH, I["bezel_od"] / 2
             a_i, b_i = I["grille_front_width"] / 2, I["grille_dia"] / 2
         else:
             (bw, bh), (cw, chh) = I["rear_bezel_size"], I["rear_cover_size"]

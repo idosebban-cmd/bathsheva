@@ -1,10 +1,10 @@
-"""Atelier, the rocket Bluetooth speaker: its registry entry and the checks only Atelier has."""
+"""Orbit, the rocket Bluetooth speaker: its registry entry and the checks only Orbit has."""
 
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from app.cad import atelier
+from app.cad import orbit
 from app.cad.validation import ValidationResult, WallLimit
 from app.products import CheckFn, Product
 
@@ -14,19 +14,19 @@ if TYPE_CHECKING:
 
 
 def validate(params: dict[str, Any], wall_limits: dict[str, WallLimit], rules: "RuleSet") -> ValidationResult:
-    return atelier.validate(params, wall_limits)
+    return orbit.validate(params, wall_limits)
 
 
 def dfm_checks(project: "Project", params: dict[str, Any], rules: "RuleSet", _check: CheckFn) -> list[dict[str, Any]]:
     """Mass, centre of mass, tip-over and air volume on the built model; runtime; open items."""
     checks: list[dict[str, Any]] = []
-    if not atelier.validate(params).ok:
+    if not orbit.validate(params).ok:
         return checks
     try:
-        s = atelier.stability(params)
+        s = orbit.stability(params)
     except Exception as e:  # pragma: no cover - geometry kernel failure
-        return [_check("Geometry", "fail", "Atelier model failed to build", str(e))]
-    spec = atelier.SPEC
+        return [_check("Geometry", "fail", "Orbit model failed to build", str(e))]
+    spec = orbit.SPEC
     target = float(params["target_mass_kg"]) * 1000
     lo, hi = spec["mass_g"]
     checks.append(_check(
@@ -37,7 +37,7 @@ def dfm_checks(project: "Project", params: dict[str, Any], rules: "RuleSet", _ch
     headroom = s["ballast_max_g"] - s["ballast_g"]
     margin = s["total_g"] + headroom - lo  # how much lighter supplier parts can be before dropping below the spec
     checks.append(_check(
-        "Geometry", "pass" if margin >= atelier.MASS_MARGIN_MIN_G else "warning", "Risk: mass margin",
+        "Geometry", "pass" if margin >= orbit.MASS_MARGIN_MIN_G else "warning", "Risk: mass margin",
         f"The driver, battery, board and metal parts can come in about {margin:.0f} g lighter than estimated before the "
         f"speaker drops below {lo / 1000:.2f} kg (the spec's lower limit), counting {headroom:.0f} g of ballast that can "
         f"still be added (the cup is {s['ballast_g']:.0f} g of at most {s['ballast_max_g']:.0f} g). Recheck once supplier "
@@ -56,7 +56,7 @@ def dfm_checks(project: "Project", params: dict[str, Any], rules: "RuleSet", _ch
         "Acoustics", "pass" if lo <= s["air_l"] <= hi else "warning", "Air volume",
         f"About {s['air_l']:.2f} L of air in the sealed box (spec 0.7–0.8 L): the cavity less the battery, ballast, "
         "chassis and board, plus the hollow nose cone, with the driver displacing about "
-        f"{atelier.DRIVER_DISPLACEMENT_FRAC:.0%} of its envelope (typical; {s['air_envelopes_l']:.2f} L if it were "
+        f"{orbit.DRIVER_DISPLACEMENT_FRAC:.0%} of its envelope (typical; {s['air_envelopes_l']:.2f} L if it were "
         "solid). The driver supplier's net volume replaces this.", unverified=True, part="Driver"))
 
     from app.services.electrical import project_runtime
@@ -111,13 +111,13 @@ def dfm_checks(project: "Project", params: dict[str, Any], rules: "RuleSet", _ch
     checks.append(_check(
         "Assembly", "pass", "Battery replacement (standard tools)",
         "Battery replaceable after removing the base collar: " + " ".join(
-            f"{i + 1}. {step}" for i, step in enumerate(atelier.BATTERY_SERVICE)) + " Needs a plug-in battery lead and "
+            f"{i + 1}. {step}" for i, step in enumerate(orbit.BATTERY_SERVICE)) + " Needs a plug-in battery lead and "
         "a USB-C lead connector at the collar (main-board RFQ).", unverified=True, part="Battery pack"))
-    for item in atelier.OPEN_ITEMS:
+    for item in orbit.OPEN_ITEMS:
         checks.append(_check("Assembly", "warning", "Open item", item, unverified=True))
     checks.append(_check(
         "Process", "info", "Prototype features changed for production",
-        "; ".join(f"{c['feature']}: {c['production']}" for c in atelier.PRODUCTION_CHANGES[:5]) + ". Full list in the CAD tab."))
+        "; ".join(f"{c['feature']}: {c['production']}" for c in orbit.PRODUCTION_CHANGES[:5]) + ". Full list in the CAD tab."))
     return checks
 
 
@@ -130,23 +130,23 @@ BOUGHT_IN_DENSITY = {
 }
 
 PRODUCT = Product(
-    key="atelier",
-    label="Atelier",
+    key="orbit",
+    label="Orbit",
     summary="rocket Bluetooth speaker",
     noun="speaker",
-    generator=atelier,
+    generator=orbit,
     validate=validate,
     wall_limit_parts={"body": None},
     wall_params={"body": "wall_thickness", "grille": "grille_thickness"},
     dfm_checks=dfm_checks,
     bought_in_density=BOUGHT_IN_DENSITY,
-    factory_pack="app.factory.atelier_pack",
-    cad_note="Atelier as approved in the prototype, with the Technical Specification: lacquered PC/ABS body; gold PVD on "
+    factory_pack="app.factory.orbit_pack",
+    cad_note="Orbit as approved in the prototype, with the Technical Specification: lacquered PC/ABS body; gold PVD on "
              "every visible metal part (Zamak fins, collar and foot, 6061 nose cone and bezels, brass knob, stainless "
              "grille); sealed box with only the front grille, as the prototype. One body per part: each fin and its pad "
              "is modelled once and shown three times. The driver, battery and board are placeholders showing space and "
              "position. The honeycomb "
              "grilles take about a minute to build.",
     mass_part="ballast",
-    box_volume_l=lambda params: atelier.stability(params)["air_l"],
+    box_volume_l=lambda params: orbit.stability(params)["air_l"],
 )

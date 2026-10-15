@@ -1,14 +1,14 @@
-"""Atelier's Factory Pack: RFQs, drawings, STEP, supplier BOM, artwork and consistency checks."""
+"""Orbit's Factory Pack: RFQs, drawings, STEP, supplier BOM, artwork and consistency checks."""
 
 import io
 import zipfile
 
 import pytest
 
-from app.factory import atelier_drawings as adr
+from app.factory import orbit_drawings as adr
 from app.services.templates import load_template
 
-PLAIN = {**load_template("atelier")["cad_parameters"], "grille_perforated": 0}
+PLAIN = {**load_template("orbit")["cad_parameters"], "grille_perforated": 0}
 
 
 @pytest.fixture(scope="module")
@@ -21,7 +21,7 @@ def project(tmp_path_factory):
     app = create_app()
     init_db(f"sqlite:///{tmp_path_factory.mktemp('db') / 'pack.db'}")
     with TestClient(app) as c:
-        pid = c.post("/api/projects", json={"name": "Atelier", "template": "atelier"}).json()["id"]
+        pid = c.post("/api/projects", json={"name": "Orbit", "template": "orbit"}).json()["id"]
         assert c.post(f"/api/projects/{pid}/cad/generate", json={"parameters": PLAIN}).status_code == 201
         yield c, pid
 
@@ -81,11 +81,11 @@ def test_zip_contents(project):
     assert r.status_code == 200
     zf = zipfile.ZipFile(io.BytesIO(r.content))
     names = set(zf.namelist())
-    root = "atelier_rfq_pack_v1/"
+    root = "orbit_rfq_pack_v1/"
     mech, elec = root + "mechanical/", root + "electronics/"
     assert {root + "README.txt", mech + "rfq.pdf", mech + "rfq.md", mech + "bom.csv", elec + "rfq_electronics.pdf",
-            mech + "step/atelier_assembly.step", mech + "artwork/A-01_collar_lettering.svg",
-            mech + "artwork/A-01_collar_lettering.dxf"} <= names
+            mech + "step/orbit_assembly.step", mech + "artwork/O-01_collar_lettering.svg",
+            mech + "artwork/O-01_collar_lettering.dxf"} <= names
     assert len([n for n in names if n.startswith(mech + "drawings/") and n.endswith(".pdf")]) == len(adr.DRAWN_PARTS)
     assert len([n for n in names if n.startswith(mech + "step/A-")]) == len(adr.DRAWN_PARTS)
     bom = zf.read(mech + "bom.csv").decode()
@@ -109,10 +109,10 @@ def test_odm_rfq(project):
     r = c.get(f"/api/projects/{pid}/factory-pack-odm.zip")
     assert r.status_code == 200
     names = set(zipfile.ZipFile(io.BytesIO(r.content)).namelist())
-    root = "atelier_odm_rfq_pack_v1/"
+    root = "orbit_odm_rfq_pack_v1/"
     assert {root + "README.txt", root + "odm/odm_cover_note.pdf", root + "odm/odm_cover_note.md",
             root + "odm/odm_quote_sheet.csv", root + "mechanical/rfq.pdf", root + "electronics/rfq_electronics.pdf",
-            root + "mechanical/step/atelier_assembly.step"} <= names
+            root + "mechanical/step/orbit_assembly.step"} <= names
     s = c.get(f"/api/projects/{pid}/factory-pack").json()
     assert s["odm"]["available"] and "Cover note" in s["odm"]["markdown"]
     checks = {ch["check"]: ch for ch in s["consistency"]}

@@ -12,7 +12,7 @@ description: >-
   base with a brass nameplate, cream tower with a red lower section and five
   glowing windows spiralling up it, brass gallery and railing, frosted lantern
   and a red twist-lock cap with a brass finial. Rechargeable over USB-C.
-  Second product of Bathsheva London, after the Atelier speaker.
+  Second product of Bathsheva London, after the Orbit speaker.
 
 requirements:
   approx_dimensions: {height_mm: 300, width_mm: 113, depth_mm: 113}     # prototype (confirmed Oct 2026); felt adds 1.9 mm
@@ -636,7 +636,7 @@ rfq_open_questions:
     question: Exact colours and gloss for the black, cream and red lacquer, and the brass finish.
     why: Finishers need colour references and gloss levels to quote and match.
     proposed: "Send physical colour samples or RAL references; brass polished and clear-lacquered."
-    answer: "Hex values from the prototype (black #121212, cream #F9F2E1) and Atelier (oxblood red #8A1C15), with the nearest RAL marked approximate (red: RAL 3011 and RAL 3002); physical colour samples are the master. Gloss: base satin 30–50 GU, cream and red 80+ GU. Brass brushed and clear-lacquered."
+    answer: "Hex values from the prototype (black #121212, cream #F9F2E1) and Orbit (oxblood red #8A1C15), with the nearest RAL marked approximate (red: RAL 3011 and RAL 3002); physical colour samples are the master. Gloss: base satin 30–50 GU, cream and red 80+ GU. Brass brushed and clear-lacquered."
   - id: artwork
     topic: Nameplate
     question: Nameplate artwork (FARO lettering, font, fill colour).
@@ -709,7 +709,7 @@ rfq:
        source: "prototype faro/params.py CREAM_HEX"}
     - {name: Oxblood red lacquer, parts: [tower, cap], hex: "#8A1C15", ral: ["RAL 3011 Brown red", "RAL 3002 Carmine red"],
        gloss: "gloss, 80+ GU (60°), clear-coated",
-       source: "Atelier params.py RED_HEX (warm deep oxblood lacquer); prototype faro/params.py uses the same value"}
+       source: "Orbit params.py RED_HEX (warm deep oxblood lacquer); prototype faro/params.py uses the same value"}
     - {name: "Brushed brass, clear lacquer", parts: [gallery, railing, lantern_frame, finial, knob, nameplate], hex: "#C4A15A",
        ral: [], gloss: "brushed satin grain, clear lacquer",
        source: "prototype faro/params.py BRASS_HEX (render reference only); brushed satin brass, clear lacquer (user, Oct 2026)"}

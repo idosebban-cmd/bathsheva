@@ -1,4 +1,4 @@
-"""The Atelier template against the rules data and the Technical Specification's key values."""
+"""The Orbit template against the rules data and the Technical Specification's key values."""
 
 import pytest
 
@@ -9,7 +9,7 @@ from app.schemas import Requirements
 from app.services.templates import load_template
 
 RULES = load_rules()
-TPL = load_template("atelier")
+TPL = load_template("orbit")
 PARTS = {p["cad_key"]: p for p in TPL["parts"]}
 KNOWN_CATEGORIES = {m.category for m in RULES.materials.values()} | {"bought_in", "electrical"}
 

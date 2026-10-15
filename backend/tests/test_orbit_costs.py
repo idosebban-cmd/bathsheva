@@ -1,11 +1,11 @@
-"""Atelier cost items, compliance one-offs, scenarios and the cost-down summary (no Faro assumptions)."""
+"""Orbit cost items, compliance one-offs, scenarios and the cost-down summary (no Faro assumptions)."""
 
 import pytest
 
 from app.costing.data import load_cost_data
 from app.services.templates import load_template
 
-TPL = load_template("atelier")
+TPL = load_template("orbit")
 PLAIN = {**TPL["cad_parameters"], "grille_perforated": 0}
 
 
@@ -35,7 +35,7 @@ def project(tmp_path_factory):
     app = create_app()
     init_db(f"sqlite:///{tmp_path_factory.mktemp('db') / 'costs.db'}")
     with TestClient(app) as c:
-        pid = c.post("/api/projects", json={"name": "Atelier", "template": "atelier"}).json()["id"]
+        pid = c.post("/api/projects", json={"name": "Orbit", "template": "orbit"}).json()["id"]
         assert c.post(f"/api/projects/{pid}/cad/generate", json={"parameters": PLAIN}).status_code == 201
         yield c, pid
 
@@ -63,7 +63,7 @@ def test_cost_down_summary_has_no_faro_assumptions(project):
     c, pid = project
     s = c.get(f"/api/projects/{pid}/cost-down/summary").json()
     assert {r["power"] for r in s["rows"]} == {"A"}
-    assert s["premium"]["rows"] == []  # no brass edition for Atelier
+    assert s["premium"]["rows"] == []  # no brass edition for Orbit
     assert any("cordless (2 x 18650 1S2P" in n for n in s["notes"])
     assert not any("touch dimmer" in n for n in s["notes"])
     scen = {d["key"] for d in c.get(f"/api/projects/{pid}/scenarios").json()["scenarios"]}
@@ -82,11 +82,11 @@ def test_cost_down_summary_has_no_faro_assumptions(project):
 
 def test_cad_tab_mass_matches_the_stability_mass(project):
     """The CAD tab's estimate (rules densities) and the DFM mass check (stability) count the same things."""
-    from app.cad import atelier
+    from app.cad import orbit
 
     c, pid = project
     est = c.get(f"/api/projects/{pid}/cad").json()["mass"]["total_kg"]
-    assert est == pytest.approx(atelier.stability(PLAIN)["total_g"] / 1000, abs=0.01)
+    assert est == pytest.approx(orbit.stability(PLAIN)["total_g"] / 1000, abs=0.01)
 
 
 def test_low_tooling_first_batch_seed_is_unverified():

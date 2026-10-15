@@ -43,7 +43,7 @@ export interface ProjectSummary {
   product?: ProductInfo | null;
 }
 
-/** What the project's product is, for wording ("per speaker", "Atelier's real dimensions"). */
+/** What the project's product is, for wording ("per speaker", "Orbit's real dimensions"). */
 export interface ProductInfo {
   key: string;
   label: string;

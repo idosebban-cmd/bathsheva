@@ -13,9 +13,9 @@ export const FINISH: Record<string, Finish> = {
   finial: "brass", nameplate_fill: "etch_fill", knob_logo_floor: "brass_matte",
   lantern_glass: "frosted", diffuser: "opal",
 };
-// Atelier (Technical Specification): oxblood red gloss 90+ GU over two clear coats; every visible metal part gold
+// Orbit (Technical Specification): oxblood red gloss 90+ GU over two clear coats; every visible metal part gold
 // PVD, fine brushed satin, one tone; black acoustic fabric behind the grille; white status LED.
-export const ATELIER_FINISH: Record<string, Finish> = {
+export const ORBIT_FINISH: Record<string, Finish> = {
   body: "red", nose_cone: "gold_pvd", fin: "gold_pvd", fin_2: "gold_pvd", fin_3: "gold_pvd", collar: "gold_pvd",
   foot: "gold_pvd", grille: "gold_pvd", bezel: "gold_pvd", rear_grille: "gold_pvd", rear_bezel: "gold_pvd",
   knob: "gold_pvd", knob_logo_floor: "gold_matte", collar_etch_floor: "gold_matte", grille_fabric: "fabric", rear_fabric: "fabric",
@@ -24,7 +24,7 @@ export const ATELIER_FINISH: Record<string, Finish> = {
 
 /** The finish map for a product's GLB (Faro's when not given). */
 export function finishesFor(product?: string): Record<string, Finish> {
-  return product === "atelier" ? ATELIER_FINISH : FINISH;
+  return product === "orbit" ? ORBIT_FINISH : FINISH;
 }
 const GLOW = new THREE.Color("#ffb45e");
 

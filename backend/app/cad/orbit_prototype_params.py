@@ -1,9 +1,9 @@
-# The approved Atelier prototype's parameters, copied verbatim from branch
-# claude/rocket-speaker-3d-model-xav3pn (params.py, Sep 2026). Do not edit: app/cad/atelier.py
-# overrides what production changes (atelier.PRODUCTION_CHANGES) and what the workbench parameters set.
+# The approved Orbit prototype's parameters, copied verbatim from branch
+# claude/rocket-speaker-3d-model-xav3pn (params.py, Sep 2026). Do not edit: app/cad/orbit.py
+# overrides what production changes (orbit.PRODUCTION_CHANGES) and what the workbench parameters set.
 # fmt: off
 """
-ATELIER rocket speaker: every design parameter lives in this file.
+ORBIT rocket speaker: every design parameter lives in this file.
 
 Change a value, then run `python build.py` to regenerate the CAD, STLs,
 renders and report in ./output.
@@ -48,7 +48,7 @@ BODY_BOTTOM_FULLNESS = 2.4   # same for the lower body (higher = rounder "belly"
 # from the simple "fullness" curves above ("fullness").
 BODY_PROFILE_MODE = "points"
 # (height fraction 0 = bottom .. 1 = cone joint, radius / max radius), measured
-# from reference/atelier_concept.png by reference/fit_concept.py. Below knob
+# from reference/orbit_concept.png by reference/fit_concept.py. Below knob
 # height (t < 0.34) the points are halfway between the fitted concept profile and
 # a smooth taper, ending at a wide bottom that meets a wide, shallow collar.
 BODY_PROFILE_POINTS = [

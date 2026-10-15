@@ -1,20 +1,20 @@
-# Atelier product template: the retro-rocket Bluetooth speaker. Seeds a new Atelier project.
+# Orbit product template: the retro-rocket Bluetooth speaker. Seeds a new Orbit project.
 # Every value here is editable. Placeholder commercial inputs are listed in
 # `assumed_fields` so the UI labels them as assumptions.
 #
 # Sources, in priority order:
-#   1. Atelier Technical Specification (key points from the user, Oct 2026; the full
+#   1. Orbit Technical Specification (key points from the user, Oct 2026; the full
 #      document is to follow). It wins over everything below it.
 #   2. The user's answers (Oct 2026): lacquered PC/ABS body ("anything that looks metallic
 #      must be real metal"), sealed box with only the front grille (Oct 2026; the rear passive
 #      radiator is a comparison scenario), Ø20 knurled knob with the Bathsheva
-#      emblem tone-on-tone, "ATELIER" etched under the collar cup, battery replaceable after
+#      emblem tone-on-tone, "ORBIT" etched under the collar cup, battery replaceable after
 #      removing the base collar (standard tools).
 #   3. The approved prototype model on branch claude/rocket-speaker-3d-model-xav3pn
 #      (model.py, params.py, renders, report): the form and proportions. Every departure is
-#      listed in atelier.PRODUCTION_CHANGES.
+#      listed in orbit.PRODUCTION_CHANGES.
 
-name: Atelier
+name: Orbit
 description: >-
   A premium portable Bluetooth speaker in the form of a retro rocket: an oxblood
   red lacquered body with a gold honeycomb grille and bezel, a gold nose cone, three
@@ -107,7 +107,7 @@ parts:
     function: >-
       Gold cup under the body. Screws up into the battery tray plate with three M2.5 screws hidden
       under the foot; the battery is replaceable after removing it. Carries the sealed USB-C port
-      (facing 45° down between two fins) and "ATELIER" etched on its underside.
+      (facing 45° down between two fins) and "ORBIT" etched on its underside.
     material_category: zinc
     material: Zamak 5
     finish: Gold PVD, fine brushed satin
@@ -511,7 +511,7 @@ scenarios:
     effect:
       reroutes:
         - {part: body, process: jesmonite_casting, material: jesmonite_ac100, tooling: low}
-      # Body volume (3.5 mm wall, 5 mm locally) / the CAD's 3 mm body, from the CAD (tests/test_atelier_cad.py checks it).
+      # Body volume (3.5 mm wall, 5 mm locally) / the CAD's 3 mm body, from the CAD (tests/test_orbit_cad.py checks it).
       volume_scale: {body: 1.189}
       reroute:
         parts: [fin, collar, foot]
@@ -545,7 +545,7 @@ scenarios:
       The body, nose cone, fins, collar and foot all cast in glass-fibre-reinforced Jesmonite AC100 at a UK
       caster, each in its own silicone mould: 5 mm body wall, solid fins with cast-in inserts for the fin bolts
       and the TPU tip pads, about 5 mm cone wall, collar with cast-in inserts for the tray screws and foot stud
-      and a precise USB-C opening, the ATELIER lettering cast in from the pattern. The knob stays solid brass,
+      and a precise USB-C opening, the ORBIT lettering cast in from the pattern. The knob stays solid brass,
       the grille stainless and the bezel metal (a thicker Jesmonite bezel is possible but would cut into the
       grille opening, so it is not costed). Option A: coloured Jesmonite with no gold, body lacquered as before.
       Option B: brass Flex Metal gel coat (real brass powder), polished and sealed, on the parts that are gold
@@ -554,7 +554,7 @@ scenarios:
     effect:
       reroutes:
         - {part: body, process: jesmonite_casting, material: jesmonite_ac100, tooling: low}
-      # Volumes from the all-Jesmonite build / the CAD's (tests/test_atelier_cad.py checks them).
+      # Volumes from the all-Jesmonite build / the CAD's (tests/test_orbit_cad.py checks them).
       volume_scale: {body: 1.593, nose_cone: 1.929, fin: 1.168, collar: 0.941, foot: 1.0}
       reroute:
         parts: [nose_cone, fin, collar, foot]
@@ -612,7 +612,7 @@ scenarios:
       (natural wood edition).
     conflicts: [low_tooling_first_batch, jesmonite_body, all_jesmonite]
     effect:
-      # Body volume (3.5 mm wall, 5 mm locally) / the CAD's 3 mm body, from the CAD (tests/test_atelier_cad.py checks it).
+      # Body volume (3.5 mm wall, 5 mm locally) / the CAD's 3 mm body, from the CAD (tests/test_orbit_cad.py checks it).
       volume_scale: {body: 1.189}
       reroute:
         part: body
@@ -699,7 +699,7 @@ rfq:
   colours:
     - {name: Oxblood red polished lacquer, parts: [body], hex: "#8A1C15", ral: ["RAL 3011 Brown red", "RAL 3002 Carmine red"],
        gloss: "≥ 90 GU (60°), primer + colour + two clear coats, polished; ΔE ≤ 1.0 to the master",
-       source: "Technical Specification; Atelier params.py RED_HEX"}
+       source: "Technical Specification; Orbit params.py RED_HEX"}
     - {name: "Gold PVD, fine brushed satin", parts: [nose_cone, fin, collar, foot, grille, bezel, knob],
        hex: "#C4A15A", ral: [], gloss: "fine brushed satin; one tone, ΔE ≤ 1.5 across parts",
        source: "Technical Specification; prototype GOLD_HEX (render reference only)"}

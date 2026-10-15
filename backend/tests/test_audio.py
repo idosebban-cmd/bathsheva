@@ -8,7 +8,7 @@ import yaml
 from app import audio, electrical
 from app.config import SEED_DIR
 
-TPL = yaml.safe_load((SEED_DIR / "products" / "atelier.yaml").read_text())
+TPL = yaml.safe_load((SEED_DIR / "products" / "orbit.yaml").read_text())
 FARO = yaml.safe_load((SEED_DIR / "products" / "faro.yaml").read_text())
 
 

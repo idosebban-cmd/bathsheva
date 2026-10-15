@@ -113,7 +113,7 @@ def test_pack_contents(client, faro_project):
                  "Brass parts: please quote two ways", "your preferred method", "near-net basis",
                  "Spun from a 1.0 mm CZ108 brass disc", "separate RFQ", "Battery bay"):
         assert text in md, text
-    assert "matching Atelier" not in md and "matching our Atelier" not in md  # Faro's brass is its own finish
+    assert "matching Orbit" not in md and "matching our Orbit" not in md  # Faro's brass is its own finish
     # Not components: our one-off testing cost, and electronics (separate RFQ) aren't priced here.
     assert "EMC testing" not in md and "| Pre-certified Li-ion battery pack" not in md
     brass_rows = md.split("Brass parts: please quote two ways")[1].split("\n## ")[0]

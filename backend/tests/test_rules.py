@@ -295,11 +295,11 @@ def test_metal_effect_finish_is_a_violation():
     assert not any("PVD" in q for q in band_q)
 
 
-# --- Atelier seed data (zinc, stainless, PC/ABS; gold PVD) --------------------
+# --- Orbit seed data (zinc, stainless, PC/ABS; gold PVD) --------------------
 
 
 def speaker_part(**kw):
-    """A part as the Atelier template will describe it; no CAD-derived traits."""
+    """A part as the Orbit template will describe it; no CAD-derived traits."""
     return {"id": 1, "cad_key": kw.pop("cad_key", "x"), "name": kw.pop("name", "Part"), "derived_traits": [],
             "open_questions": [], **kw}
 

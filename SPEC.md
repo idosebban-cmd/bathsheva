@@ -49,7 +49,7 @@ This document describes the full vision. Only the section marked **Milestone 1**
 
 ## 2. Faro (first product)
 
-A premium decorative electrical table lamp inspired by a lighthouse. Second product of Bathsheva London, after the Atelier speaker.
+A premium decorative electrical table lamp inspired by a lighthouse. Second product of Bathsheva London, after the Orbit speaker.
 
 **Aesthetic:** smooth, sculptural, playful, premium, influenced by mid-century Italian product design. Never toy-like or cheap. Aimed at a middle-class, design-conscious customer rather than luxury buyers.
 

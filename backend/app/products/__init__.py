@@ -56,9 +56,9 @@ class Product:
 
 
 def _registry() -> dict[str, Product]:
-    from app.products import atelier, faro
+    from app.products import orbit, faro
 
-    return {p.key: p for p in (faro.PRODUCT, atelier.PRODUCT)}
+    return {p.key: p for p in (faro.PRODUCT, orbit.PRODUCT)}
 
 
 _PRODUCTS: dict[str, Product] | None = None

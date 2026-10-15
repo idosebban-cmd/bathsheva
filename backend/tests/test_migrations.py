@@ -195,3 +195,38 @@ def test_migrations_never_cascade_delete_with_foreign_keys_on(tmp_path):
         conn.commit()
     with engine.connect() as conn:
         assert conn.execute(text("select count(*) from parts")).scalar() == 1
+
+
+def test_atelier_to_orbit_rename_migration(tmp_path):
+    """0008 moves Atelier projects and their CAD versions to the key "orbit", and concepts opened from the
+    pendant that was called Orbit to "globe" (its new key), without mixing the two up; downgrade reverses it."""
+    url = f"sqlite:///{tmp_path / 'o.db'}"
+    engine = create_engine(url)
+    cfg = alembic_config(url)
+    with engine.begin() as conn:
+        cfg.attributes["connection"] = conn
+        command.upgrade(cfg, "0007")
+        for pid, tpl in ((1, "atelier"), (2, "faro")):
+            conn.execute(text(
+                "insert into projects (id, name, slug, description, template, requirements, assumed_fields, created_at, "
+                f"updated_at) values ({pid}, 'P{pid}', 'p{pid}', '', '{tpl}', '{{}}', '[]', '2026-01-01', '2026-01-01')"))
+            conn.execute(text(
+                "insert into cad_models (project_id, version, generator, parameters, part_info, created_at) "
+                f"values ({pid}, 1, '{tpl}', '{{}}', '{{}}', '2026-01-01')"))
+        conn.execute(text("insert into concepts (name, based_on, lines, notes, created_at, updated_at) "
+                          "values ('Pendant', 'orbit', '[]', '', '2026-01-01', '2026-01-01')"))
+
+    def state():
+        with engine.connect() as conn:
+            return (conn.execute(text("select template from projects order by id")).scalars().all(),
+                    conn.execute(text("select generator from cad_models order by project_id")).scalars().all(),
+                    conn.execute(text("select based_on from concepts")).scalar())
+
+    with engine.begin() as conn:
+        cfg.attributes["connection"] = conn
+        command.upgrade(cfg, "0008")
+    assert state() == (["orbit", "faro"], ["orbit", "faro"], "globe")
+    with engine.begin() as conn:
+        cfg.attributes["connection"] = conn
+        command.downgrade(cfg, "0007")
+    assert state() == (["atelier", "faro"], ["atelier", "faro"], "orbit")

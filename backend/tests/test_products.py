@@ -70,12 +70,12 @@ def test_blank_project_has_no_product(client):
 def test_project_carries_its_product_wording(client):
     """The front end words every page from `project.product` (noun, label, runtime basis), never from a literal."""
     faro = client.post("/api/projects", json={"name": "F", "template": "faro"}).json()
-    atelier = client.post("/api/projects", json={"name": "A", "template": "atelier"}).json()
+    orbit = client.post("/api/projects", json={"name": "A", "template": "orbit"}).json()
     assert faro["product"]["noun"] == "lamp" and faro["product"]["label"] == "Faro"
     assert faro["product"]["runtime_basis"] == "at full brightness with every light on"
-    assert atelier["product"] == {**atelier["product"], "key": "atelier", "label": "Atelier", "noun": "speaker"}
-    assert "volume" in atelier["product"]["runtime_basis"]
-    assert {p["id"]: p["product"]["noun"] for p in client.get("/api/projects").json()}[atelier["id"]] == "speaker"
+    assert orbit["product"] == {**orbit["product"], "key": "orbit", "label": "Orbit", "noun": "speaker"}
+    assert "volume" in orbit["product"]["runtime_basis"]
+    assert {p["id"]: p["product"]["noun"] for p in client.get("/api/projects").json()}[orbit["id"]] == "speaker"
     # Only a template with a premium edition shows its price and targets on the Cost-down page
     assert client.get(f"/api/projects/{faro['id']}/pricing").json()["premium_edition"] is True
-    assert client.get(f"/api/projects/{atelier['id']}/pricing").json()["premium_edition"] is False
+    assert client.get(f"/api/projects/{orbit['id']}/pricing").json()["premium_edition"] is False

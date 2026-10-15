@@ -47,7 +47,7 @@ Fifteen concepts for Bathsheva London, built mostly from parts in [`library.md`]
 | 6 | Halo | Wall sconce, clear glass dome | £175 | £47.06 | £47.06 | 98% | Tight |
 | 7 | Lantern | Cordless frosted-cylinder lamp | £250 | £102.88 | £102.88 | 150% | Over |
 | 8 | Prism | Mains lamp, frosted acrylic tube | £150 | £29.29 | £29.29 | 71% | Room |
-| 9 | Orbit | Opal globe pendant | £230 | £60.67 | £60.67 | 96% | Tight |
+| 9 | Globe | Opal globe pendant | £230 | £60.67 | £60.67 | 96% | Tight |
 | 10 | Sonnet | Bluetooth speaker | £250 | £117.41 | £117.41 | 171% | Over |
 | 11 | Pavilion | Passive bookshelf speakers (pair) | £250 | £68.51 | £68.51 | 100% | Tight |
 | 12 | Reed | Cordless paper-tube column lamp | £150 | £42.52 | £42.52 | 103% | Over |
@@ -55,7 +55,7 @@ Fifteen concepts for Bathsheva London, built mostly from parts in [`library.md`]
 | 14 | Meridian | Bookends (pair) | £150 | £26.70 | £26.70 | 65% | Room |
 | 15 | Beacon | Small cordless bedside light | £165 | £62.36 | £62.36 | 137% | Over |
 
-**Pattern:** every cordless or Bluetooth concept is over target. The dev-board battery set (£31.34) and the Wondom amplifier (£31.95) are prototype modules, and at 500 units a custom board from an ODM would replace them. So cordless concepts only work through the route Faro and Atelier already take. The mains lamps and the non-electrical objects are where the library is strong.
+**Pattern:** every cordless or Bluetooth concept is over target. The dev-board battery set (£31.34) and the Wondom amplifier (£31.95) are prototype modules, and at 500 units a custom board from an ODM would replace them. So cordless concepts only work through the route Faro and Orbit already take. The mains lamps and the non-electrical objects are where the library is strong.
 
 **Shortlist to prototype first:** Lattice (5), Bell (4), Lune (2), Tambour (1), Meridian (14). Then Prism (8) if a cheaper entry product is wanted.
 
@@ -267,7 +267,7 @@ An entry-price lamp: a sandblasted acrylic tube between two laser-cut brass end 
 - {part: solid-brass-ball-finial-7112--in-the-light-direction-uk, qty: 1, note: 'ball finial'}
 -->
 
-### 9. Orbit — opal globe pendant
+### 9. Globe — opal globe pendant
 
 A 200 mm matt opal globe hangs from a brushed brass drop rod, held by a laser-cut brass collar, with a turned beech ceiling cup. It's a classic mid-century globe pendant made in the brand's materials.
 
@@ -296,7 +296,7 @@ A 200 mm matt opal globe hangs from a brushed brass drop rod, held by a laser-cu
 
 ### 10. Sonnet — Bluetooth desk speaker
 
-A compact mono speaker: a stack of beech-ply rings, a solid brass mesh front framed by a brass ring, and a gold Audio Note brass knob for volume. It's a smaller, simpler sibling to Atelier, with an 80 mm German full-range driver.
+A compact mono speaker: a stack of beech-ply rings, a solid brass mesh front framed by a brass ring, and a gold Audio Note brass knob for volume. It's a smaller, simpler sibling to Orbit, with an 80 mm German full-range driver.
 
 - **Library parts:**
   - Visaton FRS 8/8 (2004) from SOS Electronic, £11.37 ex VAT, £10.69 at 4+ (§7.1; was €12.56 from Toutlehautparleur);
@@ -309,7 +309,7 @@ A compact mono speaker: a stack of beech-ply rings, a solid brass mesh front fra
 - **Custom work:** rout and laminate the ply rings into a sealed box; laser-cut a brass bezel; tension and lacquer the mesh; tune the DSP (bass boost and limiter).
 - **Parts cost:** £117.41 at 100 and £117.41 at 500 (driver £10.69 at the 4-off price, amplifier £31.95, battery set £31.34, mesh £6.00, knob £24.21, ply £2.73, feet £10.50).
 - **Not in library:** boost converter for the amplifier supply, USB-C port, wiring, damping.
-- **Main risk:** this is a dev-board stack, not a product. Check the JAB3+ supply voltage against a 3.7 V 1S2P pack (a boost converter is probably needed). The module has no radio certification for a finished product. At 171% of target, it only works with an ODM board, the route Atelier already takes. Useful as an acoustic mock-up, not as a product.
+- **Main risk:** this is a dev-board stack, not a product. Check the JAB3+ supply voltage against a 3.7 V 1S2P pack (a boost converter is probably needed). The module has no radio certification for a finished product. At 171% of target, it only works with an ODM board, the route Orbit already takes. Useful as an acoustic mock-up, not as a product.
 
 <!-- concept-parts
 - {part: bun-feet--cousins-uk, qty: 3, note: 'three 20 mm bun feet', view: {dx: 55, repeat: 3}}
@@ -361,7 +361,7 @@ A tall, thin spiral-wound tube, lacquered in deep oxblood and pierced with a pat
 - **Custom work:** cut the tube; seal and lacquer it; drill the hole pattern; laser-cut the caps; turn the foot.
 - **Parts cost:** £42.52 at 100 and £42.52 at 500 (battery set £31.34, strip £2.94, tube £0.75 (the 100+ break applies at both quantities), caps £3.14, blank £3.35, finial £1.00).
 - **Not in library:** LED driver, USB-C port, switch, fire enclosure.
-- **Main risk:** both premium feel and fire safety. A 65 gsm postal tube may dent and feel cheap, and a stiffer bespoke tube is quote-only (Essex Tube Windings). Paper can't be the fire enclosure round a Li-ion pack; this is the same issue as Atelier's wood option, and the battery needs a steel enclosure. This is the weakest concept on brand fit.
+- **Main risk:** both premium feel and fire safety. A 65 gsm postal tube may dent and feel cheap, and a stiffer bespoke tube is quote-only (Essex Tube Windings). Paper can't be the fire enclosure round a Li-ion pack; this is the same issue as Orbit's wood option, and the battery needs a steel enclosure. This is the weakest concept on brand fit.
 
 <!-- concept-parts
 - {part: beech-turning-blanks--classic-hand-tools-uk, qty: 1, note: 'one blank for the foot'}
@@ -460,7 +460,7 @@ A slim 50 mm clear glass cylinder with a single line of warm LED light down its 
 
 **What the listing says (checked 13 Oct 2026):** the Oaklea Brass Inline Lamp Kit (OAKLK1, £9.86) has a "brass lamp holder with a 10 mm entry". It **doesn't name the cap** (E27, E14 or BC/B22), and it **doesn't say whether the holder is solid brass or brass-plated**. Oaklea's other 10 mm holders are BC/B22, which makes BC the likely fitting, but nothing confirms it. Ask Oaklea, or buy one kit and check, before any concept depends on it.
 
-**Seven concepts use the kit, not six.** The earlier open question left out Tambour (1). The seven are Tambour (1), Lune (2), Bell (4), Lattice (5), Halo (6), Prism (8) and Orbit (9).
+**Seven concepts use the kit, not six.** The earlier open question left out Tambour (1). The seven are Tambour (1), Lune (2), Bell (4), Lattice (5), Halo (6), Prism (8) and Globe (9).
 
 **Which cap limits bulb choice in the UK:**
 - **BC/B22** is the most common household cap in the UK, so it doesn't restrict bulb choice there. It does conflict with the E27 shade rings specified below, and it would limit sales in the EU, where E27 is standard.
@@ -475,12 +475,12 @@ A slim 50 mm clear glass cylinder with a single line of warm LED light down its 
 | 5 | Lattice | Hidden inside the frosted tube | Not affected. | **Affected:** limited bulbs (it needs a bulb that fits inside the 50 mm-bore tube; check either way). |
 | 6 | Halo | Visible through the clear dome; the dome's 30 mm fitter is made to sit on a BC holder | Not affected: BC is what the dome needs. | **Affected:** the dome won't seat on an E14 holder, and bulb choice is limited. |
 | 8 | Prism | Hidden inside the frosted acrylic tube | Not affected. | **Affected:** limited bulbs. |
-| 9 | Orbit | Hidden inside the opal globe; E27 shade ring | **Affected:** the E27 shade ring won't fit. Bulb choice is fine. | **Affected:** limited bulbs (a 200 mm globe wants a larger bulb), and the E27 ring doesn't fit. |
+| 9 | Globe | Hidden inside the opal globe; E27 shade ring | **Affected:** the E27 shade ring won't fit. Bulb choice is fine. | **Affected:** limited bulbs (a 200 mm globe wants a larger bulb), and the E27 ring doesn't fit. |
 
 **Solid brass:** the listing doesn't say whether the holder is solid brass or brass-plated. Under the brand rule, a plated holder can't be where it shows. That matters for **Bell** (seen under the cone) and **Halo** (seen through the clear dome). In the other five, the holder sits behind frosted or opal glass, acrylic or perforated metal.
 
 **What to do:**
-- **If the kit's holder is BC:** keep it for Lune, Lattice, Halo and Prism. Swap the E27 shade rings in Tambour, Bell and Orbit for BC equivalents, or move those three to an E27 holder (Sinolec brass E27 with 10 mm entry, library §3.3; price not shown).
+- **If the kit's holder is BC:** keep it for Lune, Lattice, Halo and Prism. Swap the E27 shade rings in Tambour, Bell and Globe for BC equivalents, or move those three to an E27 holder (Sinolec brass E27 with 10 mm entry, library §3.3; price not shown).
 - **For Bell and Halo:** use a lampholder that is stated to be solid brass, from Lampspares KIT1B or Lighting Spares KIT4 (both BC and UK-made, prices not shown), unless Oaklea confirms solid brass.
 - **If the kit's holder is E14:** drop the kit for all seven concepts.
 - **Costs:** the parts costs above are unchanged until the alternative holders' prices are known.

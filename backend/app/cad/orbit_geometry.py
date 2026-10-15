@@ -1,15 +1,15 @@
 """
-Geometry for the ATELIER rocket speaker, ported from the approved prototype model
+Geometry for the ORBIT rocket speaker, ported from the approved prototype model
 (branch claude/rocket-speaker-3d-model-xav3pn, model.py, Sep 2026). The workbench
-generator (app/cad/atelier.py) builds a parameter namespace and calls `build(p)`.
+generator (app/cad/orbit.py) builds a parameter namespace and calls `build(p)`.
 
-Changes from the prototype are marked `PORT:` and listed in atelier.PRODUCTION_CHANGES.
+Changes from the prototype are marked `PORT:` and listed in orbit.PRODUCTION_CHANGES.
 The default is the prototype's sealed box (PR_POSITION = "none", user Oct 2026); the rear
 passive radiator (PR_POSITION = "rear", comparison only) keeps the concept base (gold cup +
 small foot) and the sealed USB-C port in the collar, as the sealed box does; Faro's knurled Ø20 knob with the emblem engraved; TPU pads
 under the fin tips; slotted fin-bolt holes; an O-ring groove on the nose-cone spigot;
 the base collar screwed up into a chassis battery-tray plate (screws and the foot's stud
-under the foot) with "ATELIER" etched round the foot on its underside.
+under the foot) with "ORBIT" etched round the foot on its underside.
 
 `build(p)` takes the params namespace and returns a `Model` holding every part as
 a separate build123d solid, plus the derived dimensions that the report and
@@ -1179,7 +1179,7 @@ def build(p, visual_only=False) -> Model:
 
 def _collar_fixings(p, I, m, collar, foot, z0, z_cb, foot_r, r_cb, g):
     """PORT: the base collar screws up into the chassis tray plate with countersunk screws on a small
-    circle, all hidden under the foot; the foot screws onto an M4 stud at the centre; "ATELIER" is
+    circle, all hidden under the foot; the foot screws onto an M4 stud at the centre; "ORBIT" is
     etched tone-on-tone round the foot on the collar's flat underside (seen only when lifted)."""
     from build123d import Compound
 
@@ -1204,7 +1204,7 @@ def _collar_fixings(p, I, m, collar, foot, z0, z_cb, foot_r, r_cb, g):
                                                                           align=MIN))
     I.update(foot_stud_depth=p.FOOT_STUD_DEPTH, collar_screw_pcd=p.COLLAR_SCREW_PCD)
 
-    # "ATELIER" round the foot, tops outward, centred at the rear, reading correctly from below
+    # "ORBIT" round the foot, tops outward, centred at the rear, reading correctly from below
     loops = p.COLLAR_LETTERING
     if loops:
         xs = [q[0] for f in loops for lp in f for q in lp]

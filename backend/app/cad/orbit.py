@@ -1,8 +1,8 @@
-"""Atelier parametric model: parameters, validation, geometry, mass and stability.
+"""Orbit parametric model: parameters, validation, geometry, mass and stability.
 
 The form is the approved prototype (branch claude/rocket-speaker-3d-model-xav3pn, model.py and
-params.py, Sep 2026), ported into `atelier_geometry` with the prototype's parameters kept verbatim
-in `atelier_prototype_params`. This module sets what production changes (the Technical
+params.py, Sep 2026), ported into `orbit_geometry` with the prototype's parameters kept verbatim
+in `orbit_prototype_params`. This module sets what production changes (the Technical
 Specification, Oct 2026, and the user's answers) on top of them, and every change is a row in
 PRODUCTION_CHANGES.
 
@@ -25,12 +25,12 @@ from typing import Any
 import numpy as np
 from build123d import Box, Color, Compound, Cylinder, Pos, Rot, Shape
 
-from app.cad import atelier_geometry as geo
-from app.cad import atelier_prototype_params as proto
+from app.cad import orbit_geometry as geo
+from app.cad import orbit_prototype_params as proto
 from app.cad.validation import ParamDef, ValidationIssue, ValidationResult, WallLimit
 from app.config import SEED_DIR
 
-GENERATOR = "atelier"
+GENERATOR = "orbit"
 
 # ---------------------------------------------------------------------------
 # Production values (Technical Specification, Oct 2026, and the user's answers)
@@ -54,9 +54,9 @@ COLLAR_SCREW_TAP = 2.1
 TRAY_SCREW_DEPTH = 6.0  # the tray plate's two M2.5 screws: tapped this deep into the ballast cup
 FOOT_STUD_TAP = 3.3  # M4 stud: tapped in the collar, the foot screws onto it
 FOOT_STUD_DEPTH = 6.0
-LETTERING_CAP = 2.4  # "ATELIER" etched under the collar (user, Oct 2026: option 1)
+LETTERING_CAP = 2.4  # "ORBIT" etched under the collar (user, Oct 2026: option 1)
 LETTERING_DEPTH = 0.15
-COLLAR_LETTERING_FILE = SEED_DIR / "artwork" / "A-01_collar_lettering_loops.json"
+COLLAR_LETTERING_FILE = SEED_DIR / "artwork" / "O-01_collar_lettering_loops.json"
 
 # Production materials (g/cm³) for the ballast sizing inside the build; the workbench's mass
 # estimate uses the rules data's densities for the decided materials.
@@ -167,14 +167,14 @@ PRODUCTION_CHANGES: list[dict[str, str]] = [
                    "foot off by hand, 3 screws, collar off, 2 screws, the tray drops out with the battery, unplug it "
                    "(1.5 mm hex key only; user, Oct 2026)"},
     {"feature": "Name", "prototype": "None",
-     "production": "\"ATELIER\" etched 0.15 mm tone-on-tone round the foot on the collar's underside, Cormorant "
+     "production": "\"ORBIT\" etched 0.15 mm tone-on-tone round the foot on the collar's underside, Cormorant "
                    "Garamond SemiBold 2.4 mm, seen only when lifted (user, Oct 2026)"},
     {"feature": "Mass", "prototype": "1.8 kg target; ballast auto-sized",
      "production": "1.75 ±0.1 kg (user, Oct 2026: accepted for the sealed box; the spec was 1.8 ±0.1) with production "
                    "materials (Zamak 5 fins and collar, 6061 nose cone and bezel, brass knob, PC/ABS body); the steel "
                    "ballast cup is resized to reach it, and is full at about 1.74 kg"},
 ]
-# Design changes from route_changes.yaml that the CAD shows (none for Atelier yet).
+# Design changes from route_changes.yaml that the CAD shows (none for Orbit yet).
 IMPLEMENTED_CHANGES: dict[str, set[str]] = {}
 
 # What the model doesn't settle yet: shown in the DFM report and the CAD tab, for the user and suppliers.
@@ -482,7 +482,7 @@ def _instance_copies(parts: dict[str, Shape]) -> dict[str, Shape]:
     return out
 
 
-def assembly(parts: dict[str, Shape], name: str = "atelier") -> Compound:
+def assembly(parts: dict[str, Shape], name: str = "orbit") -> Compound:
     """A labelled, coloured compound for STEP and glTF export, with all three fins and pads."""
     kids = []
     for key, shape in {**parts, **_instance_copies(parts)}.items():
@@ -683,6 +683,6 @@ def production_change_checks(params: dict[str, Any]) -> list[dict[str, Any]]:
           f"{len(I.get('collar_screw_xy', []))} × M2.5 on Ø{COLLAR_SCREW_PCD:g} under the Ø{I['foot_dia']:.1f} foot; "
           f"tray plate on 2 × M2.5 at R{abs(sum(I.get('tray_screw_xy', [(0, 0)])[0])):.1f}, outside the battery")
     check("Name", I.get("collar_lettering_mm3", 0) > 0.3,
-          f"\"ATELIER\" etched {LETTERING_DEPTH:g} mm on R{I.get('collar_lettering_radius', 0):.1f} "
+          f"\"ORBIT\" etched {LETTERING_DEPTH:g} mm on R{I.get('collar_lettering_radius', 0):.1f} "
           f"({I.get('collar_lettering_mm3', 0):.2f} mm³)")
     return out

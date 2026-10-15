@@ -20,7 +20,7 @@ design_constraints:
       Anything that looks metallic must be real metal: every visible or
       touchable metal-look part is solid metal, or glass for transparent parts.
       No metallised plastic or metal-effect paint, at any volume. A part whose
-      finish doesn't look metallic (Atelier's red lacquered body) may be
+      finish doesn't look metallic (Orbit's red lacquered body) may be
       plastic. Hidden functional parts (grommets, gaskets, insulators, strain
       relief, pads) may be plastic or rubber.
     applies_traits_any: [cosmetic, transparent, visible_trim]
@@ -30,6 +30,6 @@ design_constraints:
     allowed_kinds: [metal]
     transparent_kinds: [glass]
     trim_traits: [visible_trim]
-    source: "user requirement (Oct 2026); clarified for Atelier: anything that looks metallic must be real metal"
+    source: "user requirement (Oct 2026); clarified for Orbit: anything that looks metallic must be real metal"
     confidence: high
     verified: false

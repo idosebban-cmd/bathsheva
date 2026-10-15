@@ -30,7 +30,7 @@ def test_create_faro_from_template(db):
 def test_multiple_projects_get_unique_slugs(db):
     a = create_project(db, "Faro", template="faro")
     b = create_project(db, "Faro", template="faro")
-    c = create_project(db, "Atelier")
+    c = create_project(db, "Orbit")
     assert len({a.slug, b.slug, c.slug}) == 3
     assert c.parts == []
 

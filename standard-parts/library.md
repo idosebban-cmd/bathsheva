@@ -1,6 +1,6 @@
 # Standard off-the-shelf parts library
 
-Stock parts and materials from UK and EU suppliers that sell in small quantities (ideally 1–500 units), for prototypes and first batches of Faro, Atelier and later products.
+Stock parts and materials from UK and EU suppliers that sell in small quantities (ideally 1–500 units), for prototypes and first batches of Faro, Orbit and later products.
 
 ## How to read this
 
@@ -373,7 +373,7 @@ No UK stockist of turned hollow wooden tube turned up. The usual route is a repe
 
 | Part | Material | Sizes | Supplier & link | Unit price | Price breaks | MOQ | Finish / quality |
 |---|---|---|---|---|---|---|---|
-| Sure Electronics / Wondom AA-JA33286 (JAB5), 4 × 100 W, BT 5.0, ADAU1701 DSP | PCB module | — | SoundImports, Netherlands — [link](https://www.soundimports.eu/en/sure-electronics-aa-ja33286.html) | €69.38 (list €83.95) | — | 1 | DSP lets you add bass boost and a limiter. Far more power than Atelier needs. |
+| Sure Electronics / Wondom AA-JA33286 (JAB5), 4 × 100 W, BT 5.0, ADAU1701 DSP | PCB module | — | SoundImports, Netherlands — [link](https://www.soundimports.eu/en/sure-electronics-aa-ja33286.html) | €69.38 (list €83.95) | — | 1 | DSP lets you add bass boost and a limiter. Far more power than Orbit needs. |
 | Wondom AA-JA32173, 2 × 50 W, BT 5.0 | PCB module | — | SoundImports, Netherlands — [link](https://www.soundimports.eu/en/sure-electronics-aa-ja32173.html) | €47.48 | — | 1 | Out of stock at the snapshot. |
 | Wondom JAB3+, 2 × 50 W, BT 5.0, ADAU1701 DSP | PCB module | — | eBay UK — [link](https://www.ebay.co.uk/itm/353485297439) | ~£31.95 (listed US $43.26) | — | 1 | Programmable DSP (SigmaStudio). |
 | Wondom / Sure Electronics range, incl. QCC5171 BT 5.3 receiver | PCB modules | — | Audiophonics, France — [link](https://www.audiophonics.fr/en/189_sure-electronics-wondom) | QCC5171 receiver €41.58 ex VAT / €49.90 inc VAT | — | 1 | — |
@@ -381,7 +381,7 @@ No UK stockist of turned hollow wooden tube turned up. The usual route is a repe
 | BT 5.1 receiver QCC5125, aptX HD / LDAC, ES9038Q2M DAC | PCB module | — | Audiophonics, France — [link](https://www.audiophonics.fr/en/bluetooth-modules-wireless-reception/bluetooth-51-receiver-module-qcc5125-aptx-hd-ldac-dac-es9038q2m-p-17780.html) | €54.90 inc VAT | — | 1 | Receiver only (line out); needs a separate amplifier. |
 | BT 5.1 receiver QCC5125, ES9023 DAC | PCB module | — | Audiophonics, France — [link](https://www.audiophonics.fr/en/bluetooth-modules-wireless-reception/bluetooth-51-receiver-board-qcc5125-aptx-hd-ldac-dac-es9023-p-16840.html) | €32.90 inc VAT | — | 1 | Available on order. |
 
-All of these are dev and prototype modules. A production speaker uses a custom board from the ODM (see the Atelier electronics RFQ). These modules carry no radio certification for a finished product.
+All of these are dev and prototype modules. A production speaker uses a custom board from the ODM (see the Orbit electronics RFQ). These modules carry no radio certification for a finished product.
 
 ### 7.4 Rechargeable cells and battery packs
 
