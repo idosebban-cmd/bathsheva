@@ -34,7 +34,7 @@ def test_summary_and_consistency(project):
     assert [pt["cad_key"] for pt in s["parts"]] == [k for k in adr.DRAWN_PARTS if k in {pt["cad_key"] for pt in s["parts"]}] \
         or len(s["parts"]) == len(adr.DRAWN_PARTS)
     assert {pt["cad_key"] for pt in s["parts"]} == set(adr.DRAWN_PARTS)
-    assert all(pt["part_no"].startswith("A-") for pt in s["parts"])
+    assert all(pt["part_no"].startswith("O-") for pt in s["parts"])
     checks = {ch["check"]: ch for ch in s["consistency"]}
     must_pass = ["Drawings and STEP files show the same solids", "All bodies in the model", "STEP file for every drawing",
                  "Drawing notes match each part's process", "BOM lists every drawn part",
@@ -87,7 +87,7 @@ def test_zip_contents(project):
             mech + "step/orbit_assembly.step", mech + "artwork/O-01_collar_lettering.svg",
             mech + "artwork/O-01_collar_lettering.dxf"} <= names
     assert len([n for n in names if n.startswith(mech + "drawings/") and n.endswith(".pdf")]) == len(adr.DRAWN_PARTS)
-    assert len([n for n in names if n.startswith(mech + "step/A-")]) == len(adr.DRAWN_PARTS)
+    assert len([n for n in names if n.startswith(mech + "step/O-")]) == len(adr.DRAWN_PARTS)
     bom = zf.read(mech + "bom.csv").decode()
     assert "Qty/speaker" in bom and "£" not in bom and "Electronics (separate RFQ)" in bom
     assert "speaker" in zf.read(root + "README.txt").decode()

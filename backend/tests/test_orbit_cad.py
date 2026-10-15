@@ -168,7 +168,7 @@ def test_orbit_project_api_and_dfm(client):
     assert rt["hours"] >= 15 and rt["without_tower_light_h"] is None
     # Orbit has its own factory pack (tests/test_orbit_factory_pack.py), never Faro's
     pack = client.get(f"/api/projects/{pid}/factory-pack")
-    assert pack.status_code == 200 and all(pt["part_no"].startswith("A-") for pt in pack.json()["parts"])
+    assert pack.status_code == 200 and all(pt["part_no"].startswith("O-") for pt in pack.json()["parts"])
 
 
 def test_jesmonite_body_variant_keeps_the_mass():
